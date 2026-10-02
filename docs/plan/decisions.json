@@ -1,0 +1,4901 @@
+{
+  "title": "jadero.dev v2: plan review",
+  "summary": "The build plan for jadero.dev v2, a multilingual (es, en, de) portfolio that proves broad engineering skills: backend architecture, reliability and messaging, testing, CI/CD and infrastructure, security, frontend craft, engineering process and applied AI. It supports an internal move to the agentic team and stands equally for any future role. The backend is a modular monolith plus a few services where isolation pays, with RabbitMQ between them, deployed by CI/CD to the owner's Hetzner CX33; the ask-me agent, RAG and MCP work is one strong showcase among those pillars. Each card is one decision with options, trade-offs and a recommendation; full reasoning lives in the ADRs of report.md, and nothing gets built until these are decided (WP-0).",
+  "areas": [
+    {
+      "id": "foundation",
+      "name": "Repo and ways of working",
+      "intro": "How the code is organized and how humans and agents work in it: the monorepo tool, linting, the agent setup and how learning work packages run."
+    },
+    {
+      "id": "architecture",
+      "name": "Architecture and services",
+      "intro": "Which processes exist, where the boundaries between them are, how traffic reaches them and how data is separated. This is where the modular monolith vs microservices question is answered."
+    },
+    {
+      "id": "backend",
+      "name": "Backend engineering",
+      "intro": "The NestJS foundation inside each service: framework version, database access, validation, configuration and testing."
+    },
+    {
+      "id": "messaging",
+      "name": "Messaging and reliability",
+      "intro": "How services talk without depending on each other being up: the broker, the message format, and the patterns that make delivery reliable."
+    },
+    {
+      "id": "content",
+      "name": "Content and admin",
+      "intro": "How the site's content is modeled, edited, published and which portfolio items make the cut."
+    },
+    {
+      "id": "agent",
+      "name": "Agent and RAG",
+      "intro": "The ask-me agent: provider abstraction, models, graph shape, retrieval pipeline, memory, MCP and evaluation."
+    },
+    {
+      "id": "security",
+      "name": "Security and abuse",
+      "intro": "Protecting the agent, the forms and the admin: guardrails, rate limits, bot checks, spend caps and admin authentication."
+    },
+    {
+      "id": "contact",
+      "name": "Contact service",
+      "intro": "The contact form as a small, independent service: how messages are accepted, stored and delivered."
+    },
+    {
+      "id": "frontend",
+      "name": "Frontend and i18n",
+      "intro": "Result-only area: languages, visual direction and the PDF CV. The owner picks; agents build."
+    },
+    {
+      "id": "delivery",
+      "name": "CI/CD and releases",
+      "intro": "How code becomes a running version: repo visibility, versioning and how deploys reach the server."
+    },
+    {
+      "id": "hosting",
+      "name": "Hosting and operations",
+      "intro": "Running everything on one CX33: observability, staging, uptime monitoring."
+    },
+    {
+      "id": "features",
+      "name": "Product features",
+      "intro": "Features approved after the first review: recruiter mode, the Under the hood page, the build journal and the /now page."
+    },
+    {
+      "id": "mcp",
+      "name": "MCP servers",
+      "intro": "The five Model Context Protocol pieces: a public profile server, job matching, intro requests, a private admin server and a catalog of the owner's framework."
+    },
+    {
+      "id": "narrative",
+      "name": "Positioning and narrative",
+      "intro": "How the site presents the owner: a broad engineering profile with applied AI as one strong pillar, so the site serves an internal move and any future role equally."
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D-1",
+      "area": "foundation",
+      "title": "Monorepo tooling",
+      "question": "Which tool should manage the monorepo that holds every app and shared package?",
+      "context": "A monorepo keeps several apps and shared packages in one repository so a contract change and all its consumers ship in one pull request. A monorepo tool understands which package depends on which, so it can run only the tasks affected by a change and cache results it has already computed. Without one, every CI run rebuilds and retests everything.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Turborepo + pnpm",
+          "description": "pnpm workspaces for packages, Turborepo for the task graph and caching.",
+          "pros": [
+            "Small config",
+            "Local and remote caching",
+            "Affected-only runs",
+            "pnpm catalogs pin shared versions once",
+            "The Next.js ecosystem assumes it"
+          ],
+          "cons": [
+            "No code generators",
+            "Module boundaries need a separate tool (dependency-cruiser)"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Nx",
+          "description": "A full monorepo platform with generators, a project graph and boundary rules.",
+          "pros": [
+            "Generators",
+            "Built-in module-boundary lint",
+            "Nest plugin"
+          ],
+          "cons": [
+            "Many more concepts and config",
+            "Its Nest plugin lags new Nest majors",
+            "Heavy for this size"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "pnpm workspaces only",
+          "description": "Just the package manager's workspace feature.",
+          "pros": [
+            "Zero extra tool"
+          ],
+          "cons": [
+            "No caching",
+            "No affected-only CI: everything rebuilds every time"
+          ]
+        },
+        {
+          "id": "d",
+          "label": "Separate repos per app",
+          "description": "One repository per deployable.",
+          "pros": [
+            "Fully independent lifecycles"
+          ],
+          "cons": [
+            "Contracts drift between repos",
+            "Several CIs and release flows",
+            "Agents cannot see both sides of an API change"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Turborepo gives caching and affected runs with very little configuration, and pnpm is the fastest, strictest package manager for workspaces. Nx is more than this project needs, plain workspaces waste CI time, and separate repos break shared contracts.",
+      "adr": "ADR-001",
+      "learn": "Task graph, build cache, affected runs, internal packages (compiled vs just-in-time).",
+      "status": "open"
+    },
+    {
+      "id": "D-2",
+      "area": "architecture",
+      "title": "Runtime topology and edge",
+      "question": "How should traffic reach the services, and where does the admin live?",
+      "context": "The edge is the first thing a request hits: it terminates TLS, decides which service gets the request and can apply cross-cutting rules like rate limits and authentication. The server already runs nginx, which can do all of that. Same origin means the browser sees the API on the same domain as the page, so cookies work simply and there is no CORS configuration.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Host nginx as gateway, same origin per audience",
+          "description": "nginx routes jadero.dev/api/* and admin.jadero.dev/api/* to each service, rate-limits, checks admin sessions with auth_request and serves stale pages if web is down.",
+          "pros": [
+            "Already installed and proven",
+            "Near-zero memory",
+            "One place for edge rules",
+            "No CORS"
+          ],
+          "cons": [
+            "Config is not TypeScript (checked with nginx -t in CI)"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Dedicated gateway (Traefik or Kong)",
+          "description": "A container that routes by Docker labels or plugins.",
+          "pros": [
+            "Dynamic routing",
+            "Plugin ecosystem"
+          ],
+          "cons": [
+            "Another process in every request's path",
+            "Duplicates what nginx already does"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "A NestJS gateway service",
+          "description": "Every request goes through a Nest app that proxies to the others.",
+          "pros": [
+            "Routing in TypeScript",
+            "Can aggregate responses"
+          ],
+          "cons": [
+            "Becomes the single point of failure and coupling the service split tries to remove"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "nginx already does routing, TLS, rate limits and auth checks well and costs nothing extra. A gateway service would put a new shared dependency in front of everything, which defeats the purpose of splitting services.",
+      "adr": "ADR-002",
+      "learn": "API gateway, gateway offloading, same-origin policy, CORS.",
+      "status": "open"
+    },
+    {
+      "id": "D-3",
+      "area": "architecture",
+      "title": "Architecture inside each service",
+      "question": "How should code be organized inside each NestJS service?",
+      "context": "Layered architecture groups code by technical role (controller, service, repository) and lets business code import the database library directly. Hexagonal architecture (ports and adapters) puts business rules in the center and makes them depend only on interfaces (ports); databases and APIs plug in as adapters, so the core can be tested without any infrastructure. Both can be used in the same codebase, module by module.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Hexagonal where it pays, layered for trivial modules",
+          "description": "Content, auth, knowledge, chat, usage and submissions are hexagonal; health, revalidation and cv stay layered.",
+          "pros": [
+            "Each pattern used where its benefit is visible",
+            "Core logic testable with fakes",
+            "Provider switches never touch business code"
+          ],
+          "cons": [
+            "Two styles to recognize (documented per module)"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Layered everywhere",
+          "description": "Classic Nest structure: controllers call services that call the ORM.",
+          "pros": [
+            "Least ceremony",
+            "What the Nest CLI scaffolds"
+          ],
+          "cons": [
+            "Business code coupled to Drizzle and SDKs",
+            "Tests need a database or heavy mocks"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Hexagonal everywhere",
+          "description": "Every module gets domain, application, infrastructure and presentation layers.",
+          "pros": [
+            "Uniform",
+            "Very testable"
+          ],
+          "cons": [
+            "Ceremony on modules that only pass data through",
+            "Teaches that patterns are free"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Using hexagonal only where there are real rules or external systems shows judgment and keeps the core testable, without adding layers to code that does not need them.",
+      "adr": "ADR-003",
+      "learn": "Ports and adapters, dependency inversion, use case, repository, anti-corruption layer.",
+      "status": "open"
+    },
+    {
+      "id": "D-4",
+      "area": "backend",
+      "title": "NestJS major version",
+      "question": "Should the backend start on NestJS 12 (released 2026-08-27) or the mature NestJS 11?",
+      "context": "NestJS 12 ships its packages as ECMAScript modules (ESM), validates requests with Standard Schema libraries such as Zod, makes Vitest the default test runner for ESM projects and requires Node 20.19+ or 22.12+. NestJS 11 is the battle-tested line with CommonJS and Jest. Starting on the old major means a migration later; starting on the new one means some third-party modules may lag for a while.",
+      "options": [
+        {
+          "id": "a",
+          "label": "NestJS 12, ESM, Vitest, Node 22",
+          "description": "Current major, with a compatibility spike in WP-3 before features depend on it.",
+          "pros": [
+            "Current for years",
+            "ESM matches Next and the LangChain packages",
+            "Zod validation built in",
+            "Faster tests"
+          ],
+          "cons": [
+            "One month old",
+            "Some modules may not declare v12 support yet"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "NestJS 11, CommonJS, Jest",
+          "description": "The mature line.",
+          "pros": [
+            "Everything in the ecosystem works today"
+          ],
+          "cons": [
+            "A major upgrade later",
+            "ESM interop friction with AI packages"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "A greenfield project should start on the current major; the WP-3 spike catches any incompatible module early, and the fallback is a thin own wrapper rather than a downgrade.",
+      "adr": "ADR-004",
+      "learn": "ESM vs CommonJS, require(esm), Standard Schema.",
+      "status": "open"
+    },
+    {
+      "id": "D-5",
+      "area": "backend",
+      "title": "Database access (ORM)",
+      "question": "Which library should services use to talk to Postgres?",
+      "context": "An ORM or query builder maps database tables to TypeScript types and builds queries. This project needs pgvector columns and indexes for the agent and plain relational tables for content, and the owner wants to learn SQL rather than hide it. Migrations (versioned schema changes) should be reviewable SQL.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Drizzle ORM",
+          "description": "TypeScript schema, SQL-like queries, generated SQL migrations.",
+          "pros": [
+            "Native vector columns, HNSW indexes and distance helpers",
+            "No runtime engine",
+            "Reviewable SQL migrations",
+            "Teaches SQL"
+          ],
+          "cons": [
+            "Fewer guard rails",
+            "No official Nest module (a small own provider)"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Prisma",
+          "description": "Schema DSL with a generated client.",
+          "pros": [
+            "Polished developer experience"
+          ],
+          "cons": [
+            "Prisma 7 treats vector as Unsupported (raw SQL)",
+            "Prisma 8 is a release candidate with breaking moves",
+            "Hides SQL"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "TypeORM",
+          "description": "Decorator-based entities.",
+          "pros": [
+            "The owner already knows it"
+          ],
+          "cons": [
+            "Weak type inference",
+            "No first-class pgvector",
+            "Teaches the least"
+          ]
+        },
+        {
+          "id": "d",
+          "label": "Kysely or raw pg",
+          "description": "A typed query builder or plain driver.",
+          "pros": [
+            "Maximal control"
+          ],
+          "cons": [
+            "Hand-rolled migrations and schema typing"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Drizzle supports pgvector natively and keeps SQL visible, which matches both the agent's needs and the learning goal. Prisma is mid-transition, and TypeORM teaches nothing new.",
+      "adr": "ADR-005",
+      "learn": "Schema migrations, query builders, repository pattern, transactions.",
+      "status": "open"
+    },
+    {
+      "id": "D-6",
+      "area": "backend",
+      "title": "Validation and shared contracts",
+      "question": "How should request, response and event data be validated and shared between apps?",
+      "context": "Every boundary (HTTP request, event, environment variable, agent tool input) needs validation so bad data fails early with a clear error. Zod lets you write one schema and get both runtime validation and the TypeScript type. NestJS 12 can now validate requests directly with Zod through Standard Schema.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Zod via Standard Schema in a shared contracts package",
+          "description": "One schema per DTO or event in packages/contracts, used by forms, services and agent tools.",
+          "pros": [
+            "One schema language end to end",
+            "Types inferred once",
+            "Same schemas generate the OpenAPI document"
+          ],
+          "cons": [
+            "OpenAPI generation from Zod may need a bridge (verify)"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "class-validator DTO classes",
+          "description": "Nest's classic decorator-based validation.",
+          "pros": [
+            "Integrates with Swagger decorators"
+          ],
+          "cons": [
+            "Classes cannot be shared with the browser cleanly",
+            "Duplicate schemas for forms and tools"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "A single Zod schema per contract removes drift between the admin forms, the services, the events and the agent tools.",
+      "adr": "ADR-006",
+      "learn": "Validation at boundaries, contracts, RFC 9457 problem details.",
+      "status": "open"
+    },
+    {
+      "id": "D-7",
+      "area": "backend",
+      "title": "Runtime secrets",
+      "question": "Where should production secrets (API keys, passwords) live?",
+      "context": "A secret's blast radius is everything that can read it. If CI can read production keys, a leaked CI token leaks production. Keeping runtime secrets only on the server, and giving CI only low-limit keys of its own, keeps the blast radius small.",
+      "options": [
+        {
+          "id": "a",
+          "label": "On the server only",
+          "description": "A .env file per service and environment, mode 600, loaded by compose; CI never sees runtime secrets.",
+          "pros": [
+            "Smallest blast radius",
+            "Simple"
+          ],
+          "cons": [
+            "Rotating a key is a manual step on the server (runbook)"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "GitHub secrets written at deploy",
+          "description": "CI pushes secrets to the server on every deploy.",
+          "pros": [
+            "One place to manage"
+          ],
+          "cons": [
+            "CI can read every production secret",
+            "Environment secrets need a public repo or paid plan"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "SOPS + age",
+          "description": "Encrypted .env files in the repo, decrypted on the server.",
+          "pros": [
+            "Versioned, reviewable secret changes"
+          ],
+          "cons": [
+            "Key management to learn on day one"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Server-only secrets are the simplest safe default; SOPS stays available as an optional later work package (WP-34).",
+      "adr": "ADR-007",
+      "learn": "Blast radius, least privilege, fail-fast configuration.",
+      "status": "open"
+    },
+    {
+      "id": "D-8",
+      "area": "security",
+      "title": "Admin authentication",
+      "question": "How should the owner log in to the admin?",
+      "context": "There is exactly one admin user. A session is a random id stored server-side and sent as an httpOnly cookie; a JWT is a signed token the client holds, which is harder to revoke and easy to leak if stored in browser storage. OAuth lets GitHub prove who you are, so the app never stores a password.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Better Auth with GitHub OAuth allow-list",
+          "description": "Database sessions, only one allow-listed GitHub user id, CSRF protection, audit log, passkey later.",
+          "pros": [
+            "No password to store",
+            "Maintained library",
+            "Passkeys and 2FA as plugins"
+          ],
+          "cons": [
+            "A library's model to learn",
+            "Login depends on GitHub availability"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Hand-rolled password + TOTP sessions",
+          "description": "argon2id hashes, TOTP second factor, own session table.",
+          "pros": [
+            "Teaches every mechanism"
+          ],
+          "cons": [
+            "Easy to get subtly wrong",
+            "More security surface to own"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Passport + JWT",
+          "description": "Access and refresh tokens.",
+          "pros": [
+            "Common tutorial path"
+          ],
+          "cons": [
+            "Revocation needs a denylist",
+            "Wrong tool for a single-user, same-origin app"
+          ]
+        },
+        {
+          "id": "d",
+          "label": "Network-only (Tailscale) without app auth",
+          "description": "Admin reachable only over the private network.",
+          "pros": [
+            "Strong exposure reduction"
+          ],
+          "cons": [
+            "Teaches nothing about auth",
+            "One proxy mistake exposes an open admin"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "OAuth with an allow-listed immutable user id and server-side sessions is the safe modern default for one user; hand-rolling is the classic place for subtle bugs, and JWT does not fit this shape.",
+      "adr": "ADR-008",
+      "learn": "Sessions vs tokens, OAuth authorization code + PKCE, cookie flags, CSRF.",
+      "status": "open"
+    },
+    {
+      "id": "D-9",
+      "area": "backend",
+      "title": "Testing strategy and coverage",
+      "question": "What testing layers and coverage targets should the project enforce?",
+      "context": "A test pyramid has many fast unit tests, fewer integration tests against real infrastructure and a few end-to-end tests. Fake adapters let business logic run in milliseconds, while Testcontainers starts a real Postgres or RabbitMQ in Docker for integration tests. Contract tests check that every adapter (and every event consumer) honors the same expectations.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Pyramid + contract suites + Testcontainers, with targets",
+          "description": "Unit tests with fakes, contract suites per port and per event, integration on real Postgres and RabbitMQ; 90% lines and 85% branches on domain and application, 80% per service.",
+          "pros": [
+            "Fast feedback",
+            "Real infrastructure where it matters",
+            "Contract breaks caught in CI"
+          ],
+          "cons": [
+            "Fakes and contract suites are code to maintain"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Mostly end-to-end tests",
+          "description": "Boot everything and test through HTTP.",
+          "pros": [
+            "Tests real behavior"
+          ],
+          "cons": [
+            "Slow",
+            "Flaky",
+            "Hard to localize failures"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Unit tests with mocks only",
+          "description": "Mock every dependency.",
+          "pros": [
+            "Fast"
+          ],
+          "cons": [
+            "Mocks drift from reality",
+            "SQL and broker behavior never tested"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Fakes keep most tests fast and meaningful, Testcontainers proves the SQL and messaging really work, and contract tests stop services from breaking each other.",
+      "adr": "ADR-009",
+      "learn": "Test pyramid, test doubles, contract testing, Testcontainers, coverage vs correctness.",
+      "status": "open"
+    },
+    {
+      "id": "D-10",
+      "area": "hosting",
+      "title": "Observability",
+      "question": "How should logs, metrics and traces be collected across services?",
+      "context": "Logs say what happened, metrics say how much, traces say where time went across services. With several services and a broker, a single user action crosses many processes, so a trace id must travel in HTTP headers and in message headers to stitch the story together. OpenTelemetry is the vendor-neutral standard for producing that data.",
+      "options": [
+        {
+          "id": "a",
+          "label": "pino logs + OpenTelemetry to a free hosted tier",
+          "description": "Structured logs with trace ids, OTel traces and metrics exported over OTLP, trace context propagated through RabbitMQ, per-service health, dead-letter alerts.",
+          "pros": [
+            "Real cross-service traces",
+            "Nothing heavy on the server"
+          ],
+          "cons": [
+            "Telemetry leaves the server (no visitor data in spans)"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Logs + Uptime Kuma only",
+          "description": "JSON logs and uptime checks.",
+          "pros": [
+            "Almost free"
+          ],
+          "cons": [
+            "No way to follow a request across services"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Self-hosted Grafana stack",
+          "description": "Loki, Tempo, Prometheus and Grafana on the box.",
+          "pros": [
+            "Full control"
+          ],
+          "cons": [
+            "Over 1 GB RAM and real operations work on an 8 GB server"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Distributed tracing becomes essential once there are services and a broker, and a free hosted backend gives it without eating the server's memory.",
+      "adr": "ADR-010",
+      "learn": "Three signals, W3C traceparent, context propagation, health checks.",
+      "status": "open"
+    },
+    {
+      "id": "D-11",
+      "area": "content",
+      "title": "Content management approach",
+      "question": "How should site content be stored and edited?",
+      "context": "MDX files in the repo make git the CMS but need a deploy per edit. Payload is a full CMS inside Next.js that the owner already knows. An own content module in NestJS is the most work but is the backend showcase, and its content can be shaped for the agent. MDX compiles to JavaScript, so MDX stored in a database is code execution; Markdown with a fixed set of safe directives is not.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Own NestJS content module + admin app, Markdown bodies",
+          "description": "Aggregates, translations, revisions, publish workflow, events; bodies in sanitized Markdown.",
+          "pros": [
+            "Backend showcase",
+            "Content shaped for the agent",
+            "Publish events feed the index"
+          ],
+          "cons": [
+            "Most work",
+            "Admin UI built by hand"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Payload CMS",
+          "description": "CMS inside the Next app with admin UI and localization.",
+          "pros": [
+            "Admin for free",
+            "Known territory"
+          ],
+          "cons": [
+            "Hides the backend",
+            "Low learning",
+            "A second data model"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "MDX in the repo",
+          "description": "Content as files, git as CMS.",
+          "pros": [
+            "Zero backend",
+            "Versioned"
+          ],
+          "cons": [
+            "Every edit is a deploy",
+            "No backend showcase"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "The own module is the part of the backend a reviewer will read, and it produces exactly the structured content the agent needs; Markdown keeps rich formatting without executing content.",
+      "adr": "ADR-011",
+      "learn": "Aggregates, translation tables, revisions, publish state machine.",
+      "status": "open"
+    },
+    {
+      "id": "D-12",
+      "area": "messaging",
+      "title": "Reliable asynchronous work",
+      "question": "How should a service reliably tell other services that something happened?",
+      "context": "The dual-write problem: if a service saves data and then crashes before sending the message, other services never find out. The transactional outbox fixes it by writing the message into the same database transaction as the data, then a relay publishes it to the broker. Because the relay may publish twice after a crash, consumers record processed message ids (an inbox) so duplicates are harmless.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Outbox per service + relay to RabbitMQ + idempotent consumers",
+          "description": "Outbox rows commit with the change; a relay publishes with confirms; consumers dedupe by event id; retry tiers and dead-letter queues.",
+          "pros": [
+            "No lost events",
+            "No broker in the request path",
+            "Duplicates are safe"
+          ],
+          "cons": [
+            "More moving parts",
+            "A second or two of latency"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Publish right after commit",
+          "description": "Send the message in the request after saving.",
+          "pros": [
+            "Trivial"
+          ],
+          "cons": [
+            "A crash loses the event",
+            "A broker outage breaks user requests"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Outbox + pg-boss",
+          "description": "A Postgres-based queue shared by producer and consumers.",
+          "pros": [
+            "No broker"
+          ],
+          "cons": [
+            "Services would share a database, breaking their isolation"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "The outbox plus idempotent consumers is the standard way to get reliable messaging between services that each own their database.",
+      "adr": "ADR-012",
+      "learn": "Dual-write problem, transactional outbox, at-least-once delivery, idempotent consumer, dead-letter queue.",
+      "status": "open"
+    },
+    {
+      "id": "D-13",
+      "area": "agent",
+      "title": "Provider-agnostic AI layer",
+      "question": "How should the code stay independent of which AI provider is used for chat, embeddings, reranking and guard checks?",
+      "context": "Ports and adapters means the core code depends on an interface (a port) and each provider gets an adapter that implements it, chosen by configuration. LangChain already ships interfaces for chat models and embeddings, but its embeddings interface does not know a model's identity or vector dimension, so nothing would stop mixing vectors from two models in one index. Vectors from different embedding models are not comparable, so switching embedding provider always means re-embedding everything.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Hybrid: own ports where we own an invariant, LangChain's chat model as the chat port",
+          "description": "Own EmbeddingsPort (with model id and dimension), RerankerPort, KnowledgeIndexPort, GuardClassifierPort; LangChain BaseChatModel for chat; config-driven factory; vector(1024) + index_version + blue-green re-index.",
+          "pros": [
+            "Invariants enforced",
+            "All LangGraph features for chat",
+            "Provider swap is config"
+          ],
+          "cons": [
+            "Two styles of port to explain"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Own ports for everything",
+          "description": "Own LlmPort too, with adapters over raw vendor SDKs.",
+          "pros": [
+            "Purest pattern",
+            "No framework leakage"
+          ],
+          "cons": [
+            "Re-implements tool calling and streaming per provider",
+            "Blocks LangGraph features"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "LangChain abstractions as the ports",
+          "description": "BaseChatModel, Embeddings, VectorStore everywhere.",
+          "pros": [
+            "Least code"
+          ],
+          "cons": [
+            "Embedding identity and dimension unprotected",
+            "Core coupled to LangChain everywhere",
+            "SQL hidden"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Own the port where the domain has rules (embedding identity, index versions, reranking); reuse LangChain where it already does the hard, non-transferable work (tool calling and streaming across providers).",
+      "adr": "ADR-013",
+      "learn": "Ports and adapters, abstract factory, strategy, blue-green re-index, expand/contract, contract tests.",
+      "status": "open"
+    },
+    {
+      "id": "D-14",
+      "area": "agent",
+      "title": "Model and provider per role",
+      "question": "Which provider and model should each AI role use by default?",
+      "context": "The agent has four AI roles: answering (chat model), screening input (guard classifier), turning text into vectors (embeddings) and re-sorting search results by relevance (reranker). Each can use a different provider. Costs are per million tokens; a typical chat turn here is about 5,000 input tokens and 300 output tokens. Prompt caching makes repeated prompt prefixes cheaper, but Haiku 4.5 only caches prefixes of at least 4,096 tokens.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Haiku 4.5 chat and guard, voyage-4-lite embeddings, rerank-2.5-lite",
+          "description": "About USD 0.0075 per turn; embeddings and reranking inside Voyage's free 200M tokens; OpenAI adapters as the tested alternative; confirmed by an eval experiment.",
+          "pros": [
+            "Haiku-class price",
+            "Strong multilingual output",
+            "Free embeddings at this corpus size",
+            "One vendor for embeddings and reranking"
+          ],
+          "cons": [
+            "Haiku's cache minimum needs a stable owner brief in the prompt to benefit"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "OpenAI for everything (GPT-5.4-mini, text-embedding-3-small)",
+          "description": "One vendor for all roles.",
+          "pros": [
+            "One account",
+            "Slightly cheaper chat per token"
+          ],
+          "cons": [
+            "No reranker from the same vendor",
+            "Less familiar to the owner"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Sonnet 5.5 for chat",
+          "description": "A stronger model for answers.",
+          "pros": [
+            "Higher answer quality"
+          ],
+          "cons": [
+            "About twice the cost per turn"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It fits the Haiku-class budget, handles es, en and de well, and costs almost nothing for retrieval; the provider-agnostic layer means an eval can overturn it with a config change.",
+      "adr": "ADR-014",
+      "learn": "Embeddings, reranking, prompt caching, cost per turn, model evaluation.",
+      "status": "open"
+    },
+    {
+      "id": "D-15",
+      "area": "agent",
+      "title": "Agent graph shape",
+      "question": "How should the agent's LangGraph graph be structured?",
+      "context": "A workflow is a fixed path you code; an agent is a loop where the model decides which tool to call next. LangGraph lets you mix both: deterministic nodes for steps you always want (guards, retrieval, checks) and a bounded tool-calling loop where the model needs to decide. Putting safety in code nodes instead of the prompt makes it testable and impossible for the model to skip.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Custom StateGraph, retrieve first, bounded tool subgraph",
+          "description": "Preflight, input guard, retrieval, a small tool-calling agent with call limits, citation check, output guard, usage record.",
+          "pros": [
+            "Safety in code",
+            "One fewer model round trip per turn",
+            "Teaches both patterns"
+          ],
+          "cons": [
+            "More code than the prebuilt agent"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Prebuilt createAgent (ReAct) with middleware",
+          "description": "The model decides when to search or refuse.",
+          "pros": [
+            "A few lines"
+          ],
+          "cons": [
+            "Safety depends on prompt and middleware order",
+            "Teaches less LangGraph"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Fixed workflow only",
+          "description": "Guard, retrieve, answer, check with no tool loop.",
+          "pros": [
+            "Predictable",
+            "Cheapest"
+          ],
+          "cons": [
+            "No follow-up lookups for multi-part questions"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Deterministic guard and retrieval nodes make the agent safe and cheap by construction, while the bounded loop still handles questions that need a second lookup.",
+      "adr": "ADR-015",
+      "learn": "Workflow vs agent, router, guard node, ReAct loop, corrective RAG, circuit breaker.",
+      "status": "open"
+    },
+    {
+      "id": "D-16",
+      "area": "agent",
+      "title": "RAG pipeline details",
+      "question": "How should content be chunked, stored and retrieved for the agent?",
+      "context": "Retrieval-augmented generation finds the content most relevant to a question and gives it to the model to answer from. Vector search finds passages with similar meaning; full-text search finds exact words and names; Reciprocal Rank Fusion merges the two ranked lists without comparing their incompatible scores. A reranker then reorders the top candidates by reading them against the question.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Structure-aware chunks, hybrid search + RRF + rerank, pgvector",
+          "description": "One chunk per structured item, headings for long text, deterministic contextual headers; vector + full-text in Postgres fused with RRF; rerank top 20 to 5.",
+          "pros": [
+            "Finds both meaning and exact names",
+            "One database",
+            "Measurable with recall@5"
+          ],
+          "cons": [
+            "More moving parts than vector-only search"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Vector-only search",
+          "description": "Embeddings and nearest neighbors only.",
+          "pros": [
+            "Simplest"
+          ],
+          "cons": [
+            "Misses exact names, versions and acronyms"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Dedicated vector database (Qdrant)",
+          "description": "A separate service for vectors.",
+          "pros": [
+            "Built for huge scale"
+          ],
+          "cons": [
+            "Another service and RAM for a corpus of a few hundred chunks"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Hybrid search with fusion is the reliable default for a small, name-heavy corpus, and pgvector keeps everything in one database the agent already owns.",
+      "adr": "ADR-016",
+      "learn": "Embeddings, chunking, HNSW, full-text search, Reciprocal Rank Fusion, reranking.",
+      "status": "open"
+    },
+    {
+      "id": "D-17",
+      "area": "agent",
+      "title": "Conversation state and streaming",
+      "question": "How should chat threads be remembered and answers streamed to the browser?",
+      "context": "A LangGraph checkpointer saves the conversation state after every step, keyed by a thread id, so the next message continues the same thread. Server-Sent Events stream tokens one way from server to browser over plain HTTP. An output check that runs after generation cannot un-show streamed text, so checks must also run on the stream itself.",
+      "options": [
+        {
+          "id": "a",
+          "label": "PostgresSaver, anonymous 24 h threads, SSE with incremental output checks",
+          "description": "Thread id in a signed cookie, purge after 24 hours, stream tokens and abort if a check trips.",
+          "pros": [
+            "Fast perceived answers",
+            "No visitor accounts",
+            "Privacy by short retention"
+          ],
+          "cons": [
+            "Incremental checks are more complex than a final check"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Buffer the full answer, then send JSON",
+          "description": "Generate, check, then send.",
+          "pros": [
+            "Simplest safety"
+          ],
+          "cons": [
+            "Slow perceived latency"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "WebSockets",
+          "description": "Two-way connection.",
+          "pros": [
+            "Bidirectional"
+          ],
+          "cons": [
+            "More moving parts than needed for request and response chat"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Streaming feels fast and is safe here because nothing secret is ever in the model's context; the checks still abort a stream on a hit.",
+      "adr": "ADR-017",
+      "learn": "Checkpointing, Server-Sent Events, streaming vs post-hoc checks.",
+      "status": "open"
+    },
+    {
+      "id": "D-18",
+      "area": "agent",
+      "title": "Where MCP is used",
+      "question": "Where should the Model Context Protocol be used?",
+      "context": "MCP is a standard protocol so any AI client (Claude Desktop, Claude Code, an IDE) can use tools and resources from any server, across process and vendor boundaries. Inside one service, tools are just functions; calling them over MCP only adds a network hop. A public MCP server lets anyone connect their own AI client to ask about the owner.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Public read-only MCP server later; none inside the agent",
+          "description": "An mcp process type of the agent service on mcp.jadero.dev, after launch.",
+          "pros": [
+            "A real, demonstrable integration any AI client can use",
+            "Reuses the same read model"
+          ],
+          "cons": [
+            "One more public surface to rate-limit"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "The site agent calls its own tools over MCP",
+          "description": "Expose tools on an MCP server and load them with the MCP adapters.",
+          "pros": [
+            "Exercises the MCP client side"
+          ],
+          "cons": [
+            "Network hop and new failure modes for no user value"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "No MCP",
+          "description": "Skip it.",
+          "pros": [
+            "Less work"
+          ],
+          "cons": [
+            "Misses the clearest AI-integration showcase"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "MCP adds value where it crosses a boundary to other people's clients; inside the agent it would only add latency and failure modes. Timing superseded by D-58: the owner approved the public MCP at launch (WP-36).",
+      "adr": "ADR-018",
+      "learn": "MCP tools, resources, transports; driving adapters.",
+      "status": "open"
+    },
+    {
+      "id": "D-19",
+      "area": "frontend",
+      "title": "Default locale",
+      "question": "Which language should the site show when nothing else is known?",
+      "context": "The site has es, en and de. The default applies when the browser's Accept-Language header matches none of them, and the visitor's choice is remembered in a cookie. The audience is international: engineering teams and recruiters inside and outside the current employer, where English is the common working language.",
+      "options": [
+        {
+          "id": "a",
+          "label": "English, with detection and a remembered choice",
+          "description": "Default en; Accept-Language picks es or de when it matches.",
+          "pros": [
+            "Fits the main audience"
+          ],
+          "cons": [
+            "Spanish-first visitors land on English if their browser says so"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Spanish",
+          "description": "Default es.",
+          "pros": [
+            "The owner's first language"
+          ],
+          "cons": [
+            "Less natural for an international team"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "English serves the widest professional audience; detection still gives Spanish and German speakers their language.",
+      "adr": "ADR-022",
+      "status": "open"
+    },
+    {
+      "id": "D-20",
+      "area": "frontend",
+      "title": "Locales required to publish",
+      "question": "Which translations must exist before an item can be published?",
+      "context": "Every content item has a translation per locale. Requiring all three slows publishing; requiring none risks half-translated pages. The admin shows completeness per locale either way.",
+      "options": [
+        {
+          "id": "a",
+          "label": "en and es required, de warned",
+          "description": "Publishing needs English and Spanish; German shows a warning until complete.",
+          "pros": [
+            "Keeps the two strongest languages complete",
+            "German can follow"
+          ],
+          "cons": [
+            "German may lag"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "All three required",
+          "description": "No publish without es, en and de.",
+          "pros": [
+            "Always complete"
+          ],
+          "cons": [
+            "Slows every publish"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Only en required",
+          "description": "Other languages fall back to English.",
+          "pros": [
+            "Fastest publishing"
+          ],
+          "cons": [
+            "Spanish pages may show English"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Requiring the two languages the owner writes best keeps quality high without blocking on German, which can also get machine drafts later (WP-32).",
+      "adr": "ADR-022",
+      "status": "open"
+    },
+    {
+      "id": "D-21",
+      "area": "agent",
+      "title": "LangSmith setup",
+      "question": "How should agent tracing be configured?",
+      "context": "LangSmith records every agent run as a trace: each node, model call, tool call, tokens and timing. The free Developer plan includes 5,000 base traces per month with 14-day retention, and EU data residency is available on every plan. Visitor messages are personal data, so tracing must appear in the privacy notice and unnecessary fields should be masked.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Tracing in staging and production, EU region, masking, free plan",
+          "description": "One project per environment.",
+          "pros": [
+            "Full visibility",
+            "EU data residency",
+            "Free at this volume"
+          ],
+          "cons": [
+            "Visitor text leaves the server (masked where possible)"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Tracing in staging only",
+          "description": "Production untraced.",
+          "pros": [
+            "Less personal data shared"
+          ],
+          "cons": [
+            "Blind to real-world failures and attacks"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Self-hosted Langfuse instead",
+          "description": "Open-source alternative on the box.",
+          "pros": [
+            "Data stays on the server"
+          ],
+          "cons": [
+            "Uses scarce RAM",
+            "The owner chose LangSmith"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Production traces are where attacks and failures show up; the EU region and masking keep the privacy cost low.",
+      "adr": "ADR-019",
+      "learn": "Tracing, spans, privacy by design.",
+      "status": "open"
+    },
+    {
+      "id": "D-22",
+      "area": "agent",
+      "title": "Eval gates in CI",
+      "question": "When should agent evaluations run, and what should block a merge?",
+      "context": "Evals measure agent quality on fixed datasets: answers grounded in sources, valid citations, correct refusals on attacks. Unlike unit tests they cost money per run and are statistical. Gates turn the most important results into merge blockers.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Path-filtered PRs + nightly, budget per run, adversarial 100% gate",
+          "description": "Run when agent, AI or prompt files change and every night; block on any adversarial regression or a drop in groundedness or recall.",
+          "pros": [
+            "Catches regressions before merge",
+            "Spend bounded"
+          ],
+          "cons": [
+            "Small cost per relevant PR"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Nightly only",
+          "description": "No PR gating.",
+          "pros": [
+            "Cheapest"
+          ],
+          "cons": [
+            "Regressions found after merge"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Manual runs",
+          "description": "Run when someone remembers.",
+          "pros": [
+            "No CI cost"
+          ],
+          "cons": [
+            "Regressions slip through"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Security regressions in a public agent must never merge, and path filters keep the cost to the PRs that can cause them.",
+      "adr": "ADR-019",
+      "learn": "Evals vs tests, LLM-as-judge, experiment baselines.",
+      "status": "open"
+    },
+    {
+      "id": "D-23",
+      "area": "frontend",
+      "title": "Visual direction",
+      "question": "Which visual direction should the site take?",
+      "context": "Three directions were proposed: terminal editorial (developer-native, monospace accents, a command-palette agent prompt), Swiss editorial (calm, large serif headings, generous whitespace) and bento glass (bento-grid cards, soft gradients, glass surfaces). All share Tailwind v4 tokens, shadcn/ui, light and dark modes and accessibility targets. WP-15 builds three throwaway hero mockups so the choice is made from screenshots.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Swiss editorial base + terminal-style agent prompt",
+          "description": "An editorial base that reads as credible to any engineering audience, with the terminal-style ask-me prompt as one memorable interactive element.",
+          "pros": [
+            "Timeless and senior",
+            "Signature agent moment"
+          ],
+          "cons": [
+            "Less overtly AI-flavored overall"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Terminal editorial",
+          "description": "Developer-native throughout.",
+          "pros": [
+            "Strong developer-tooling feel"
+          ],
+          "cons": [
+            "Can feel cliche if overdone",
+            "Frames the whole site around the agent"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Bento glass",
+          "description": "Contemporary and showy.",
+          "pros": [
+            "Shows frontend polish"
+          ],
+          "cons": [
+            "Trend-dated soon",
+            "Glass contrast is hard in light mode"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "The editorial base reads as senior and credible to any engineering audience, and the terminal-style prompt adds one memorable interaction without making the agent the whole story; the final call comes from the mockups.",
+      "adr": "ADR-023",
+      "status": "open"
+    },
+    {
+      "id": "D-24",
+      "area": "frontend",
+      "title": "PDF CV generation",
+      "question": "How should the per-language PDF CV be produced?",
+      "context": "The CV must come from the same content as the site, in three languages, and refresh when content is published. Rendering can use a React-to-PDF library in Node, a headless browser printing a web page, or a typesetting tool.",
+      "options": [
+        {
+          "id": "a",
+          "label": "react-pdf in api-worker, regenerated on publish",
+          "description": "A packages/cv template fed by the content data.",
+          "pros": [
+            "Node only, light",
+            "Regenerates automatically"
+          ],
+          "cons": [
+            "A separate template from the web page design"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Playwright printing a CV page",
+          "description": "Headless Chromium prints a print-styled route.",
+          "pros": [
+            "Pixel parity with the site"
+          ],
+          "cons": [
+            "Chromium adds hundreds of MB to an image"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Typst template",
+          "description": "Typesetting from JSON.",
+          "pros": [
+            "Beautiful typography"
+          ],
+          "cons": [
+            "Another toolchain"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "react-pdf runs in the existing worker process without a browser, which matters on an 8 GB server.",
+      "adr": "report section 9",
+      "status": "open"
+    },
+    {
+      "id": "D-25",
+      "area": "security",
+      "title": "Guard architecture",
+      "question": "How should the agent be protected against prompt injection, jailbreaks and prompt leaks?",
+      "context": "Prompt injection is text that tries to override the agent's instructions, directly from a visitor or hidden in content it reads. Defense in depth stacks independent layers: deterministic input rules, a classifier, safe handling of retrieved content, read-only tools, output checks and monitoring. The most mature guardrail libraries are Python; in TypeScript, LangChain's middleware is the most mature surface.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Own guard module + LangChain middleware",
+          "description": "Rules plus a swappable classifier (Haiku first, local Prompt Guard 2 as an eval-decided experiment), canary token and output checks.",
+          "pros": [
+            "Every layer tested and explainable",
+            "Provider-agnostic",
+            "Maps to OWASP ids"
+          ],
+          "cons": [
+            "We maintain the rules"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Adopt a young TS guard library",
+          "description": "Use an npm guard package as the main layer.",
+          "pros": [
+            "Faster start"
+          ],
+          "cons": [
+            "Young projects on a security-critical path"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Python sidecar (LLM Guard or NeMo)",
+          "description": "A Python service with rich scanners.",
+          "pros": [
+            "Richest scanners"
+          ],
+          "cons": [
+            "A second language and its models on the box"
+          ]
+        },
+        {
+          "id": "d",
+          "label": "Hosted guard API (Lakera)",
+          "description": "Send messages to a guard service.",
+          "pros": [
+            "Maintained detectors"
+          ],
+          "cons": [
+            "Another processor of visitor data"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Building the layers teaches each defense and keeps them testable; libraries and datasets still feed rules and test cases.",
+      "adr": "ADR-020",
+      "learn": "OWASP LLM Top 10 2025, defense in depth, canary tokens, untrusted-content policy.",
+      "status": "open"
+    },
+    {
+      "id": "D-26",
+      "area": "security",
+      "title": "Rate-limit storage",
+      "question": "Where should rate-limit counters be stored?",
+      "context": "Rate limiting counts requests per client in a time window and rejects the excess. In-memory counters reset on every deploy; a shared store survives restarts. Each service should keep its own counters so services stay independent.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Throttler with custom Postgres storage per service",
+          "description": "Counters in an unlogged table in each service's own database.",
+          "pros": [
+            "Survives restarts",
+            "No new service",
+            "Good learning exercise"
+          ],
+          "cons": [
+            "About 60 lines of own code"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "In-memory",
+          "description": "The throttler default.",
+          "pros": [
+            "Zero work"
+          ],
+          "cons": [
+            "Resets on deploy"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Valkey or Redis",
+          "description": "A key-value store for counters.",
+          "pros": [
+            "Standard"
+          ],
+          "cons": [
+            "A new stateful service"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Postgres is already there, survives deploys and keeps each service's limits in its own data.",
+      "adr": "ADR-021",
+      "learn": "Fixed window, sliding window, token bucket.",
+      "status": "open"
+    },
+    {
+      "id": "D-27",
+      "area": "security",
+      "title": "Limit values",
+      "question": "What starting limits should protect the agent and the budget?",
+      "context": "Limits bound abuse at every scale: per request (input and output size), per thread, per IP per minute and per day, per day in the app, and per month at the provider. The app-level daily cap must trip before the provider's monthly limit, which cuts traffic without warning.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Proposed values",
+          "description": "6 per minute and 40 per day per IP; 12 messages per thread; 500 characters in; 600 tokens out; USD 1.50 per day in the app; USD 20 per month at the provider.",
+          "pros": [
+            "Worst case is bounded and small",
+            "Normal visitors never notice"
+          ],
+          "cons": [
+            "May need tuning after launch"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Looser values",
+          "description": "Double every limit.",
+          "pros": [
+            "Fewer false blocks"
+          ],
+          "cons": [
+            "Twice the exposure"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Stricter values",
+          "description": "Halve every limit.",
+          "pros": [
+            "Smaller exposure"
+          ],
+          "cons": [
+            "Genuine visitors may hit limits"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "These numbers keep the worst month to a few tens of dollars while leaving room for real conversations; tune them from the usage dashboard.",
+      "adr": "ADR-021",
+      "learn": "Unbounded consumption (LLM10), circuit breaker.",
+      "status": "open"
+    },
+    {
+      "id": "D-28",
+      "area": "security",
+      "title": "Bot protection",
+      "question": "How should bots be kept away from the chat and the contact form?",
+      "context": "A challenge widget proves a visitor is probably human; the token is verified server-side. A honeypot is a hidden form field that humans leave empty and bots fill. The old site used Google reCAPTCHA.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Cloudflare Turnstile + honeypot on the form",
+          "description": "Turnstile once per chat session and on the contact form.",
+          "pros": [
+            "Free",
+            "Privacy-friendly",
+            "Usually invisible"
+          ],
+          "cons": [
+            "A third-party script"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Google reCAPTCHA v3",
+          "description": "Score-based, familiar from the old site.",
+          "pros": [
+            "Familiar"
+          ],
+          "cons": [
+            "Google tracking and cookie-consent implications"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Honeypot and timing only",
+          "description": "No third party.",
+          "pros": [
+            "No external dependency"
+          ],
+          "cons": [
+            "Weak against targeted bots"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Turnstile gives strong protection without tracking concerns, and the honeypot adds a free extra layer on the form.",
+      "adr": "ADR-021",
+      "learn": "Bot mitigation, server-side token verification.",
+      "status": "open"
+    },
+    {
+      "id": "D-29",
+      "area": "delivery",
+      "title": "Repository visibility",
+      "question": "Should the repository be public at launch?",
+      "context": "On GitHub Free, deployment environments, environment secrets and required reviewers only work on public repositories, and CodeQL code scanning is free for public repositories. A public repo also lets reviewers read the code the site talks about. The risk is leaking secrets in history, which a gitleaks scan of the full history checks before going public.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Public before launch, after a gitleaks history scan",
+          "description": "Develop private, scan, then flip.",
+          "pros": [
+            "The code is the evidence",
+            "Environments and approvals for free",
+            "Free code scanning"
+          ],
+          "cons": [
+            "Everything in history becomes visible"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Stay private",
+          "description": "Repo-level secrets and an owner-only manual production deploy.",
+          "pros": [
+            "Nothing visible"
+          ],
+          "cons": [
+            "No environment approvals or environment secrets on Free",
+            "Reviewers cannot read the code"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Private on a paid plan",
+          "description": "Pay for environment features.",
+          "pros": [
+            "Private with more features"
+          ],
+          "cons": [
+            "Cost",
+            "Required reviewers for private repos still need Enterprise"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "A portfolio repo gains far more from being readable than it risks, and going public unlocks the deployment safety features for free.",
+      "adr": "ADR-026",
+      "learn": "Supply chain hygiene, secret scanning.",
+      "status": "open"
+    },
+    {
+      "id": "D-30",
+      "area": "hosting",
+      "title": "Staging after cutover",
+      "question": "What happens to the staging environment once jadero.dev switches to v2?",
+      "context": "During the build, new.jadero.dev is where everything runs first. After cutover, a staging environment still lets releases be checked before production, but running it permanently costs about 1.6 GB of RAM on an 8 GB server.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Keep as staging.jadero.dev, stopped by default",
+          "description": "The deploy workflow starts it when a release goes to staging.",
+          "pros": [
+            "Safety net for releases",
+            "No idle memory cost"
+          ],
+          "cons": [
+            "A few seconds of start-up per staging deploy"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Always-on staging",
+          "description": "Runs permanently.",
+          "pros": [
+            "Always ready"
+          ],
+          "cons": [
+            "About 1.6 GB of RAM all the time"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "No staging after cutover",
+          "description": "Deploy straight to production.",
+          "pros": [
+            "Simplest"
+          ],
+          "cons": [
+            "No place to catch a bad release"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Keeping staging but stopped keeps the safety net without paying for it in memory.",
+      "adr": "ADR-027",
+      "status": "open"
+    },
+    {
+      "id": "D-31",
+      "area": "hosting",
+      "title": "External uptime check",
+      "question": "Should something outside the server check that the site is up?",
+      "context": "Uptime Kuma runs on the same server it monitors, so if the server itself goes down it cannot send the alert. A free hosted check from outside covers that blind spot.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Yes, one free external check",
+          "description": "A hosted ping on the home page and the API health.",
+          "pros": [
+            "Alerts even when the box is down"
+          ],
+          "cons": [
+            "One more account"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "No, Uptime Kuma only",
+          "description": "Self-monitoring only.",
+          "pros": [
+            "No extra account"
+          ],
+          "cons": [
+            "Silent when the server dies"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "A monitor that dies with the thing it monitors cannot report that failure; one free external check fixes it.",
+      "adr": "ADR-027",
+      "status": "open"
+    },
+    {
+      "id": "D-32",
+      "area": "delivery",
+      "title": "Deploy access to the server",
+      "question": "How should GitHub Actions reach the server to deploy?",
+      "context": "Deploying needs some way in. GitHub's runners have changing IP addresses, so a public SSH port must be open to the whole internet. Tailscale puts the runner and the server on a private network, so the public SSH port can close. A forced command restricts a key to running one script instead of a shell.",
+      "options": [
+        {
+          "id": "a",
+          "label": "SSH over Tailscale with a forced-command key",
+          "description": "Port 22 closed publicly; the key can only run the deploy script.",
+          "pros": [
+            "No public SSH",
+            "A stolen key cannot open a shell"
+          ],
+          "cons": [
+            "One more account and auth key to rotate"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "SSH to a public port 22",
+          "description": "Key-only SSH open to the internet.",
+          "pros": [
+            "Simplest"
+          ],
+          "cons": [
+            "Port 22 exposed to every scanner"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Pull-based deploy",
+          "description": "A process on the server polls for new images.",
+          "pros": [
+            "No inbound access"
+          ],
+          "cons": [
+            "Weaker control of migrations and rollbacks"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It removes the public SSH surface entirely and limits what the deploy key can do, at the cost of one Tailscale setup.",
+      "adr": "ADR-026",
+      "learn": "Least privilege, forced commands, zero-trust networking.",
+      "status": "open"
+    },
+    {
+      "id": "D-33",
+      "area": "content",
+      "title": "Portfolio content inventory",
+      "question": "Which projects appear, and how are the brainstorm and the code triage reconciled?",
+      "context": "The brainstorm listed projects from memory; the later triage read the code and marked several as course copies. Presenting course work as original work hurts credibility with technical reviewers. confluence-agent was work for the current employer, so it is not a personal project.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Follow the triage",
+          "description": "Drop Nest-Microservices from selected projects; Teslo-shop and the-wild-oasis only in the early archive labeled as course work; confluence-agent at most as an owner-approved public-level bullet under the current role.",
+          "pros": [
+            "Every claim survives a code read"
+          ],
+          "cons": [
+            "A shorter selected list"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Keep the brainstorm list",
+          "description": "Show every project named in the brainstorm.",
+          "pros": [
+            "More items"
+          ],
+          "cons": [
+            "Course copies presented as selected work"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "A shorter list of honest, code-backed projects reads better to any technical reviewer than a longer list that includes course copies.",
+      "adr": "report section 2",
+      "status": "open"
+    },
+    {
+      "id": "D-34",
+      "area": "foundation",
+      "title": "Agent tooling for the repo",
+      "question": "Should the repo use the owner's Claude Code framework or its own agent setup?",
+      "context": "The owner's framework brings a governed flow (plan, approve, per-work-package implementation, review gate) and guard hooks, but it is one bundle today with company-specific skills, and its ADRs are untracked. This project needs tracked ADRs, GitHub delivery and a learning gate the framework does not have. A core-plugin and company-pack split is planned but not done.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Repo-local setup now, framework core plugin later",
+          "description": "AGENTS.md, CLAUDE.md, a few skills and a learning-gate hook, named to map onto the framework's concepts.",
+          "pros": [
+            "Self-contained and public-safe",
+            "Exactly fitted"
+          ],
+          "cons": [
+            "Re-creates a few guards the framework has"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Install the framework as it is",
+          "description": "Use the whole bundle.",
+          "pros": [
+            "Battle-tested governance"
+          ],
+          "cons": [
+            "Company content in a personal repo",
+            "Flow too heavy for a learning project"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Wait for the core plugin",
+          "description": "Use core plugin + jadero-dev pack when it exists.",
+          "pros": [
+            "Reuses the governance engine"
+          ],
+          "cons": [
+            "Blocked on the split"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It unblocks the build today, keeps the personal repo free of company material, and can adopt the core plugin later if it adds mechanical value.",
+      "adr": "ADR-028",
+      "learn": "Agent instructions, hooks as mechanism, learning gate.",
+      "status": "open"
+    },
+    {
+      "id": "D-35",
+      "area": "foundation",
+      "title": "Lint, format and architecture checks",
+      "question": "Which tools should format code and enforce architecture rules?",
+      "context": "A formatter and linter keep style consistent and catch common mistakes. Architecture fitness functions are automated checks that the intended structure holds, for example that domain code never imports infrastructure, or that one app never imports another. commitlint enforces conventional commit messages, which the release tooling reads.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Biome + dependency-cruiser + commitlint",
+          "description": "Biome for format and lint, dependency-cruiser for architecture rules, commitlint on commits and PR titles.",
+          "pros": [
+            "Fast single tool for style",
+            "Architecture checked on every PR"
+          ],
+          "cons": [
+            "Fewer lint plugins than ESLint"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "ESLint + Prettier + dependency-cruiser",
+          "description": "The classic stack.",
+          "pros": [
+            "Richest plugin ecosystem"
+          ],
+          "cons": [
+            "Two tools, slower"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Biome is simpler and faster, and the rules that matter most (architecture) come from dependency-cruiser either way.",
+      "adr": "ADR-024",
+      "learn": "Architecture fitness functions, conventional commits.",
+      "status": "open"
+    },
+    {
+      "id": "D-36",
+      "area": "delivery",
+      "title": "Versioning and releases",
+      "question": "How should versions and changelogs be produced?",
+      "context": "Conventional commits (feat, fix, feat!) can drive version numbers automatically: a fix bumps the patch, a feature the minor, a breaking change the major. With services, each one should be able to release and deploy on its own, which means its own version line. release-please keeps a Release PR open; merging it is the deliberate ship moment.",
+      "options": [
+        {
+          "id": "a",
+          "label": "release-please, one component per service",
+          "description": "Own version, changelog and tag per service; shared package releases bump their consumers.",
+          "pros": [
+            "True independent releases",
+            "A human checkpoint"
+          ],
+          "cons": [
+            "More tags and changelogs to read"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "release-please, one product version",
+          "description": "One version for everything.",
+          "pros": [
+            "Simplest"
+          ],
+          "cons": [
+            "Every release redeploys every service"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "semantic-release",
+          "description": "Releases automatically on every qualifying push.",
+          "pros": [
+            "Fully automatic"
+          ],
+          "cons": [
+            "No checkpoint",
+            "Monorepo support via plugins"
+          ]
+        },
+        {
+          "id": "d",
+          "label": "Changesets",
+          "description": "Hand-written change files per package.",
+          "pros": [
+            "Great for published npm packages"
+          ],
+          "cons": [
+            "Not driven by conventional commits",
+            "Overhead for apps"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Per-service versions are what makes the services genuinely independent, and the Release PR keeps the owner in control of when things ship.",
+      "adr": "ADR-025",
+      "learn": "Semantic versioning, conventional commits, release trains vs independent releases.",
+      "status": "open"
+    },
+    {
+      "id": "D-37",
+      "area": "contact",
+      "title": "Contact form",
+      "question": "Should v1 include a contact form, and how?",
+      "context": "The old site had a contact form with reCAPTCHA. Store-and-forward means the form first saves the message, answers the visitor right away, and sends the notification email later from a queue, so a mail outage never loses a message. Auto-replies to the address a visitor types turn a form into a spam relay.",
+      "options": [
+        {
+          "id": "a",
+          "label": "A contact service in v1",
+          "description": "Form, bot check, store-and-forward with an outbox, notification to the owner only, retries and dead letters.",
+          "pros": [
+            "The best first microservice to learn on",
+            "Nothing lost on mail outages"
+          ],
+          "cons": [
+            "About 2 to 3 days of work"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "No form; email and LinkedIn links",
+          "description": "The previous recommendation.",
+          "pros": [
+            "Zero work"
+          ],
+          "cons": [
+            "Misses the owner's request and a learning vehicle"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "A form endpoint inside api",
+          "description": "Same flow, no separate service.",
+          "pros": [
+            "Less infrastructure"
+          ],
+          "cons": [
+            "A mail or spam problem shares a process with content"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It is small enough to finish quickly and exercises every messaging pattern before the agent depends on them.",
+      "adr": "ADR-030",
+      "learn": "Store-and-forward, asynchronous request-reply (202 Accepted), spam relay.",
+      "status": "open"
+    },
+    {
+      "id": "D-38",
+      "area": "foundation",
+      "title": "How learning work packages run",
+      "question": "How should a learning work package be executed so the owner learns each step?",
+      "context": "The owner wants to understand every backend and agent step, not just approve results. A learning gate means no code lands in a learning area until an explainer exists and the owner has made the decision it asks for. Explaining back in your own words is the quickest test of real understanding.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Explainer, decision gate, small visible steps, explain-back",
+          "description": "Concepts and a concrete trace first, owner decides, then implementation in small steps in the main session, then a recap.",
+          "pros": [
+            "The owner sees and understands every step"
+          ],
+          "cons": [
+            "Slower than delegating"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Delegated implementation with a summary",
+          "description": "Agents build; the owner reads a summary.",
+          "pros": [
+            "Faster"
+          ],
+          "cons": [
+            "Learning stays shallow"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Learning is a hard requirement, and the gate turns it into a mechanism instead of a good intention.",
+      "adr": "report section 12.3",
+      "learn": "Learning gate, explain-back, concrete traces.",
+      "status": "open"
+    },
+    {
+      "id": "D-39",
+      "area": "architecture",
+      "title": "Service boundaries",
+      "question": "How far should the system be split into services?",
+      "context": "Services buy independent failure, deploys and resource limits; they cost network failures, eventual consistency, contracts and more operations. A boundary pays when a part fails differently, changes on its own rhythm, has a different security exposure, or does slow work that must not block others. The distributed monolith is the trap: services that share data or call each other synchronously all the time, so you pay for distribution without getting independence.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Modular monolith + extracted services where isolation pays",
+          "description": "api (content, auth), agent (+ agent-ingest), contact; background work as process types; web and a static admin.",
+          "pros": [
+            "Isolation where failures actually come from",
+            "Every boundary justified",
+            "Teaches messaging"
+          ],
+          "cons": [
+            "About 10 more build days",
+            "About 1 GB more RAM"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Pure modular monolith",
+          "description": "One NestJS app (the previous recommendation).",
+          "pros": [
+            "Simplest",
+            "Strong consistency",
+            "Least RAM"
+          ],
+          "cons": [
+            "An agent crash takes content down",
+            "Teaches no messaging"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Full microservices",
+          "description": "One service per module plus a gateway.",
+          "pros": [
+            "Maximum isolation on paper"
+          ],
+          "cons": [
+            "Distributed monolith",
+            "About 4 GB more RAM",
+            "Ten deployables for one person"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It gives the owner the isolation he asked for exactly where it matters (agent and contact), keeps strongly related modules together, and avoids the distributed-monolith trap.",
+      "adr": "ADR-029",
+      "learn": "Bounded context, database per service, process types, distributed monolith.",
+      "status": "open"
+    },
+    {
+      "id": "D-40",
+      "area": "messaging",
+      "title": "Message broker",
+      "question": "Which broker should carry messages between services?",
+      "context": "A broker accepts messages from producers and delivers them to consumers, keeping them safe if a consumer is down. RabbitMQ routes messages through exchanges to queues by binding rules, which suits fanning one event out to several services. Log-based systems such as Kafka keep an ordered history and suit high-volume streaming.",
+      "options": [
+        {
+          "id": "a",
+          "label": "RabbitMQ 4",
+          "description": "Topic exchange, durable quorum queues, dead-letter exchanges, TTL retry tiers, vhosts per environment.",
+          "pros": [
+            "Fits domain-event fan-out",
+            "Mature reliability features",
+            "The owner meets it at work"
+          ],
+          "cons": [
+            "About 150 to 200 MB",
+            "More concepts to learn"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "NATS + JetStream",
+          "description": "Lightweight messaging with a persistence layer.",
+          "pros": [
+            "Tiny and fast"
+          ],
+          "cons": [
+            "Nest's built-in transport is fire and forget",
+            "Less transferable"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Redis Streams (Valkey)",
+          "description": "Append-only log with consumer groups.",
+          "pros": [
+            "Small",
+            "Doubles as a cache"
+          ],
+          "cons": [
+            "Retries and dead letters are do-it-yourself"
+          ]
+        },
+        {
+          "id": "d",
+          "label": "pg-boss",
+          "description": "A queue inside Postgres.",
+          "pros": [
+            "No new service"
+          ],
+          "cons": [
+            "Services would share a database",
+            "Not a broker"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "RabbitMQ's routing and dead-letter features fit this event flow, the memory cost is affordable, and the knowledge transfers to the owner's work.",
+      "adr": "ADR-029",
+      "learn": "Exchanges, bindings, quorum queues, acknowledgments, prefetch, dead-letter exchange.",
+      "status": "open"
+    },
+    {
+      "id": "D-41",
+      "area": "messaging",
+      "title": "RabbitMQ client in NestJS",
+      "question": "Which library should services use to talk to RabbitMQ?",
+      "context": "Nest's built-in RabbitMQ transport only uses RabbitMQ's default exchange and wraps every message in a fixed pattern and data format, which hides the topology the owner wants to learn and makes topic routing awkward. Community modules expose exchanges and routing keys directly. Either way, the library sits behind our own MessageBus port so it can be swapped.",
+      "options": [
+        {
+          "id": "a",
+          "label": "@golevelup/nestjs-rabbitmq behind our port",
+          "description": "Decorators for subscribing with exchange, routing key and queue.",
+          "pros": [
+            "Topic exchanges",
+            "Less code"
+          ],
+          "cons": [
+            "Nest 12 support to verify"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Own adapter over amqplib",
+          "description": "A thin adapter written in the messaging package.",
+          "pros": [
+            "Full control",
+            "Teaches the AMQP API"
+          ],
+          "cons": [
+            "More code"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Nest's built-in RMQ transport",
+          "description": "The official microservices transport.",
+          "pros": [
+            "Official"
+          ],
+          "cons": [
+            "Default exchange only",
+            "Fixed message format"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It exposes the real RabbitMQ model with little code; the own amqplib adapter is the fallback if Nest 12 support lags.",
+      "adr": "ADR-029",
+      "status": "open"
+    },
+    {
+      "id": "D-42",
+      "area": "architecture",
+      "title": "How the agent gets content",
+      "question": "Should the agent call the content API, or keep its own copy of the content?",
+      "context": "If the agent calls api synchronously for every lookup, an api outage breaks the chat: a hidden coupling. Event-carried state transfer means each content.published event carries the full published item, and the agent stores it in its own read model. The agent then answers from its own data, a few seconds behind the latest publish.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Own read model fed by events",
+          "description": "agent-ingest stores published content and indexes it; tools read locally.",
+          "pros": [
+            "Chat works while api is down",
+            "No synchronous coupling"
+          ],
+          "cons": [
+            "Seconds of lag after a publish",
+            "Data stored twice"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Synchronous calls to api with a circuit breaker",
+          "description": "Tools call api; the breaker fails fast when it is down.",
+          "pros": [
+            "Always fresh",
+            "No duplicate data"
+          ],
+          "cons": [
+            "Chat degrades whenever api is down"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It is what makes the agent genuinely independent, which is the point of making it a service.",
+      "adr": "ADR-029",
+      "learn": "Event-carried state transfer, read model, CQRS-style separation.",
+      "status": "open"
+    },
+    {
+      "id": "D-43",
+      "area": "messaging",
+      "title": "Message contracts",
+      "question": "How should message formats be defined and checked?",
+      "context": "Every message needs an id (for deduplication), a type with a version, and trace context. CloudEvents is a standard envelope for exactly that. AsyncAPI documents message channels the way OpenAPI documents HTTP, and contract tests make each consumer parse the producer's example messages in CI.",
+      "options": [
+        {
+          "id": "a",
+          "label": "CloudEvents + Zod + AsyncAPI + fixture contract tests",
+          "description": "Envelope standard, Zod schemas in packages/contracts, an AsyncAPI catalog, consumer tests against producer fixtures.",
+          "pros": [
+            "Breaking changes caught in CI",
+            "A browsable event catalog"
+          ],
+          "cons": [
+            "Some ceremony per event"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Ad hoc JSON",
+          "description": "Each service shapes its own messages.",
+          "pros": [
+            "Fast"
+          ],
+          "cons": [
+            "Silent breakage between services"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Protobuf or Avro with a schema registry",
+          "description": "Binary schemas and a registry service.",
+          "pros": [
+            "Strong schema evolution rules"
+          ],
+          "cons": [
+            "Another service and toolchain"
+          ]
+        },
+        {
+          "id": "d",
+          "label": "Pact consumer-driven contracts",
+          "description": "A contract broker and verification flow.",
+          "pros": [
+            "Industry tool"
+          ],
+          "cons": [
+            "Heavier than needed inside one monorepo"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Zod is already the project's schema language, and fixture tests in one monorepo give the same safety as heavier tools with far less setup.",
+      "adr": "ADR-029",
+      "learn": "CloudEvents, AsyncAPI, schema evolution, consumer-driven contracts.",
+      "status": "open"
+    },
+    {
+      "id": "D-44",
+      "area": "architecture",
+      "title": "Admin delivery",
+      "question": "Where and how should the admin interface run?",
+      "context": "The admin is used by one person a few times a week, behind a login. A static single-page app is just files: nothing runs on the server, so nothing can crash or leak memory. Keeping it on its own subdomain gives it its own security policy and keeps admin code out of the public site.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Static SPA on admin.jadero.dev",
+          "description": "Vite + React + shadcn/ui, built to files that nginx serves.",
+          "pros": [
+            "No runtime process",
+            "Own origin and security policy"
+          ],
+          "cons": [
+            "No server rendering (not needed behind a login)"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Separate Next.js app",
+          "description": "A second Next app on the admin subdomain.",
+          "pros": [
+            "Same framework as web"
+          ],
+          "cons": [
+            "About 250 MB RAM for a rarely used tool"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "/admin inside web",
+          "description": "The original plan.",
+          "pros": [
+            "Least code"
+          ],
+          "cons": [
+            "Shares the public app's failures and attack surface"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "A static SPA costs nothing to run and isolates the privileged UI completely from the public site.",
+      "adr": "ADR-002",
+      "learn": "Static hosting, Content Security Policy, attack surface.",
+      "status": "open"
+    },
+    {
+      "id": "D-45",
+      "area": "architecture",
+      "title": "Edge gateway",
+      "question": "Should a gateway component sit in front of the services?",
+      "context": "A gateway is the single entry point that routes requests and applies cross-cutting rules. The host nginx can route by path, cache pages, rate-limit and check admin sessions through auth_request, and with proxy_cache_use_stale it keeps serving the last good page if the web app is down.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Host nginx as the gateway",
+          "description": "Routing, TLS, rate limits, auth_request and a stale-serving page cache.",
+          "pros": [
+            "Already there",
+            "Keeps the site up when web is down"
+          ],
+          "cons": [
+            "Config instead of code"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Traefik",
+          "description": "Docker-label-driven routing.",
+          "pros": [
+            "Dynamic"
+          ],
+          "cons": [
+            "Another container in the path"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "NestJS gateway service",
+          "description": "A Nest app proxying all traffic.",
+          "pros": [
+            "TypeScript"
+          ],
+          "cons": [
+            "A new shared point of failure"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "nginx already covers every gateway job, and the stale cache adds real resilience for free.",
+      "adr": "ADR-002",
+      "learn": "Gateway offloading, reverse proxy caching.",
+      "status": "open"
+    },
+    {
+      "id": "D-46",
+      "area": "contact",
+      "title": "Mail provider",
+      "question": "Which provider should send the contact notifications?",
+      "context": "Hetzner blocks outbound ports 25 and 465 on new cloud servers, so mail must go through a provider's HTTPS API or SMTP submission on port 587. Volume is tiny: a few notifications a week, only to the owner.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Resend behind MailPort",
+          "description": "Free tier of 3,000 emails per month, 100 per day; simple API; a fake adapter for tests.",
+          "pros": [
+            "Generous free tier",
+            "Simple API"
+          ],
+          "cons": [
+            "Domain DNS records to set up"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Postmark",
+          "description": "Free developer plan of 100 emails per month.",
+          "pros": [
+            "Strong deliverability reputation"
+          ],
+          "cons": [
+            "Small free volume"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "SMTP on port 587 via an existing mailbox",
+          "description": "Use the owner's mail account.",
+          "pros": [
+            "No new account"
+          ],
+          "cons": [
+            "Mailbox credentials on the server",
+            "Weaker deliverability controls"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Resend's free tier and API are more than enough, and the MailPort keeps Postmark one adapter away.",
+      "adr": "ADR-030",
+      "status": "open"
+    },
+    {
+      "id": "D-47",
+      "area": "security",
+      "title": "Admin authorization across services",
+      "question": "How do agent and contact know an admin request comes from the owner?",
+      "context": "Sessions live in api. With nginx auth_request, nginx asks api whether the session is valid before forwarding any admin request, and passes a signed identity header to the target service. That keeps all authentication code in one place.",
+      "options": [
+        {
+          "id": "a",
+          "label": "nginx auth_request + signed internal header",
+          "description": "One decision point at the edge; services only verify the header signature.",
+          "pros": [
+            "No auth code in other services",
+            "No synchronous auth calls between services"
+          ],
+          "cons": [
+            "One internal hop per admin request"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Each service calls api to validate the session",
+          "description": "A synchronous check per admin request.",
+          "pros": [
+            "Simple to reason about"
+          ],
+          "cons": [
+            "A synchronous dependency on api"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Short-lived JWTs verified locally",
+          "description": "api issues tokens; services verify signatures.",
+          "pros": [
+            "Stateless"
+          ],
+          "cons": [
+            "Revocation needs care",
+            "Token handling in the SPA"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It centralizes the security decision at the edge and keeps the services free of auth logic and of runtime dependencies on api.",
+      "adr": "ADR-008",
+      "learn": "Gateway authentication, trust boundaries.",
+      "status": "open"
+    },
+    {
+      "id": "D-48",
+      "area": "architecture",
+      "title": "Database isolation",
+      "question": "How should each service's data be separated?",
+      "context": "Database per service means no service can read another's tables, so they can only couple through published contracts. Isolation can be a separate schema, a separate database, or a separate server; on one 8 GB box, a separate Postgres instance per service would waste memory.",
+      "options": [
+        {
+          "id": "a",
+          "label": "One instance, one database and role per service",
+          "description": "Each role can connect only to its own database.",
+          "pros": [
+            "Enforced isolation",
+            "One instance to run and back up"
+          ],
+          "cons": [
+            "Postgres remains a shared point of failure"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "One database, one schema per service",
+          "description": "Separate schemas and roles in one database.",
+          "pros": [
+            "Simplest"
+          ],
+          "cons": [
+            "Easier to cross the line by accident"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "One Postgres instance per service",
+          "description": "Separate containers.",
+          "pros": [
+            "Strongest isolation"
+          ],
+          "cons": [
+            "Memory multiplied on a small server"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Separate databases make the boundary enforced by Postgres itself, while one instance keeps memory and backups simple.",
+      "adr": "ADR-027",
+      "learn": "Database per service, least privilege.",
+      "status": "open"
+    },
+    {
+      "id": "D-49",
+      "area": "messaging",
+      "title": "Resilience policies",
+      "question": "How should calls to external providers (AI, mail) handle failures?",
+      "context": "A circuit breaker stops calling a failing dependency for a while, so requests fail fast instead of piling up. Retries with exponential backoff handle short blips, timeouts stop slow calls from hanging, and a bulkhead limits how many calls run at once so one slow provider cannot exhaust the process. These policies can be composed.",
+      "options": [
+        {
+          "id": "a",
+          "label": "cockatiel",
+          "description": "A TypeScript library of composable policies: retry, circuit breaker, timeout, bulkhead.",
+          "pros": [
+            "TypeScript-native",
+            "Composable"
+          ],
+          "cons": [
+            "API to verify at build time"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "opossum",
+          "description": "A popular Node circuit-breaker library.",
+          "pros": [
+            "Widely used"
+          ],
+          "cons": [
+            "Circuit breaker only; other policies separate"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Hand-rolled",
+          "description": "Write the policies ourselves.",
+          "pros": [
+            "Teaches internals"
+          ],
+          "cons": [
+            "Easy to get wrong",
+            "More code"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Composable, typed policies cover every failure mode around providers with little code, and the concepts stay visible in the configuration.",
+      "adr": "ADR-029",
+      "learn": "Circuit breaker, retry with backoff, timeout, bulkhead.",
+      "status": "open"
+    },
+    {
+      "id": "D-50",
+      "area": "content",
+      "title": "Content layers and the approval gate",
+      "question": "How should the CV and the detailed knowledge behind it be modeled, and how is unapproved content kept out of the agent?",
+      "context": "Layer A is the CV: short, curated bullets ordered by importance. Layer B is a knowledge base of detailed entries (problem, context, what was built, patterns, trade-offs, testing and rollout, outcome), each linked from the CV bullets it supports by a stable id. An approval state bound to a specific revision decides what the agent may read. Defense in depth means the gate is checked three times: the producer only emits events for approved revisions, the consumer rejects anything else, and a daily reconciliation removes anything that slipped through.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Two layers, structured entries, per-locale approval, gated indexing",
+          "description": "CvBullet and KnowledgeEntry aggregates; approval per locale bound to a revision; approved and withdrawn events; consumer validation; daily reconciliation.",
+          "pros": [
+            "Every CV claim can be drilled into with evidence",
+            "Structure feeds better answers about patterns and trade-offs",
+            "Drafts can never reach the index"
+          ],
+          "cons": [
+            "Many entries for the owner to write",
+            "A structured editor to build"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Single layer",
+          "description": "Projects, posts and experience items only.",
+          "pros": [
+            "Far less writing"
+          ],
+          "cons": [
+            "CV claims cannot be drilled into",
+            "Thin, generic agent answers"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Free-form posts with a private flag",
+          "description": "Entries as Markdown posts; a boolean hides drafts.",
+          "pros": [
+            "Easiest authoring"
+          ],
+          "cons": [
+            "No structure for retrieval",
+            "A flag is easier to flip by mistake than an approval bound to a revision"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It turns the CV into a set of claims backed by evidence the visitor can explore, and the three-check gate makes leaking a draft a multi-bug event instead of a one-line mistake.",
+      "adr": "ADR-031",
+      "learn": "Summary and evidence layers, approval state machine, tombstone events, anti-entropy reconciliation, defense in depth.",
+      "status": "open"
+    },
+    {
+      "id": "D-51",
+      "area": "agent",
+      "title": "Knowledge-base chunking and retrieval",
+      "question": "How should knowledge entries be chunked and retrieved so answers are both precise and complete?",
+      "context": "Small chunks match questions precisely but lose surrounding context; big chunks keep context but blur the match. Parent-document (small-to-big) retrieval searches small chunks and then hands the model the whole parent document they came from. When a visitor clicks a specific CV bullet, the linked entries are already known, so they can be fetched by id with no search at all.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Section chunks + parent expansion + drill-down by id",
+          "description": "One chunk per entry section with a contextual header; the top 1 to 3 parent entries go to the model whole; CV bullet clicks fetch linked entries directly.",
+          "pros": [
+            "Precise matching",
+            "Complete answers",
+            "Deterministic drill-down"
+          ],
+          "cons": [
+            "More retrieval logic to build and test"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "One chunk per entry",
+          "description": "Embed each entry as a whole.",
+          "pros": [
+            "Simplest"
+          ],
+          "cons": [
+            "A long entry's vector blurs its sections, weaker matching"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Fixed-size token chunks",
+          "description": "Split every entry every N tokens.",
+          "pros": [
+            "Generic"
+          ],
+          "cons": [
+            "Cuts sections mid-thought",
+            "Loses the entry structure"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "The entries are already structured into sections, so section chunks match well, parent expansion restores the full story, and drill-down by id makes the most common question path deterministic.",
+      "adr": "ADR-031",
+      "learn": "Parent-document retrieval, contextual chunk headers, deterministic retrieval paths.",
+      "status": "open"
+    },
+    {
+      "id": "D-52",
+      "area": "content",
+      "title": "Visibility of approved knowledge entries",
+      "question": "Should approved knowledge entries also be public pages on the site?",
+      "context": "Anything the agent can read, a determined visitor can extract through conversation, so an approved entry is effectively public either way. Public pages give every citation a real link target and let reviewers browse the evidence directly. Search engines can be allowed or asked not to index those pages.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Public work-log pages, indexed",
+          "description": "Each approved entry gets a page that citations link to.",
+          "pros": [
+            "Real citation targets",
+            "Browsable evidence",
+            "Search visibility"
+          ],
+          "cons": [
+            "Detailed work stories are easy to find"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Public pages, noindex",
+          "description": "Same pages, hidden from search engines.",
+          "pros": [
+            "Citation targets without search exposure"
+          ],
+          "cons": [
+            "Less discoverable"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Agent-only",
+          "description": "No pages; citations expand an inline snippet in the chat.",
+          "pros": [
+            "Smallest surface"
+          ],
+          "cons": [
+            "Citations have nowhere to link",
+            "Evidence only reachable through chat"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Approval already means public, so pages add transparency and citation targets at no extra risk; noindex is a fine variant if the owner prefers lower search visibility.",
+      "adr": "ADR-031",
+      "learn": "Citations to stable ids, approved equals public.",
+      "status": "open"
+    },
+    {
+      "id": "D-53",
+      "area": "security",
+      "title": "Pre-approval sensitivity check",
+      "question": "How should entries be checked for non-public employer details before approval?",
+      "context": "Many entries describe work for the current employer, which must stay at a public level. A checklist makes the owner confirm each rule explicitly; a denylist scan catches internal names automatically, but the denylist must never be committed to the public repo because it would itself leak those names. An LLM review can flag risky sentences the denylist does not know.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Checklist + private denylist scan + optional LLM review",
+          "description": "The denylist lives in the admin database; automated checks warn, the owner decides.",
+          "pros": [
+            "Catches known internal names automatically",
+            "The owner keeps the final call"
+          ],
+          "cons": [
+            "The denylist needs maintaining"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Checklist only",
+          "description": "Manual confirmation per entry.",
+          "pros": [
+            "Simplest"
+          ],
+          "cons": [
+            "Relies entirely on attention"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "LLM review decides",
+          "description": "An LLM approves or rejects.",
+          "pros": [
+            "Automatic"
+          ],
+          "cons": [
+            "A model cannot know what is internal",
+            "The owner loses the decision"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Layered checks catch the obvious leaks automatically while keeping the judgment, and the accountability, with the owner.",
+      "adr": "ADR-031",
+      "learn": "Data classification, defense in depth, human in the loop.",
+      "status": "open"
+    },
+    {
+      "id": "D-54",
+      "area": "features",
+      "title": "Recruiter agent design",
+      "question": "How should the agent analyze a pasted job description against the owner's experience?",
+      "context": "A job description is long, untrusted text that may even contain instructions aimed at the agent. Structured extraction turns it into a list of requirements first; then the agent looks for evidence per requirement (map), and only then writes a fit summary (reduce). Honest gaps (\"no evidence found\") build more trust with a recruiter than a model that claims a perfect match.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Evidence per requirement with a cited fit matrix",
+          "description": "Extract requirements, retrieve evidence for each from approved entries, write a matrix of evidence, partial and no evidence, with citations; own limits.",
+          "pros": [
+            "Every claim traceable",
+            "Honest gaps",
+            "Reuses guards, retrieval and citations"
+          ],
+          "cons": [
+            "About USD 0.02 to 0.04 per analysis"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "One prompt over everything retrieved",
+          "description": "Paste the JD and the top chunks and ask for an assessment.",
+          "pros": [
+            "Cheap and simple"
+          ],
+          "cons": [
+            "Loose summaries",
+            "Overclaiming",
+            "Weak citations"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "A separate service",
+          "description": "Its own deployable.",
+          "pros": [
+            "Isolation"
+          ],
+          "cons": [
+            "Duplicates the read model, guards and graph for one feature"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Evidence per requirement is what makes the analysis credible to a technical recruiter, and it costs little more than a normal chat turn.",
+      "adr": "ADR-032",
+      "learn": "Structured extraction, map-reduce, evidence-grounded generation, prompt injection through documents.",
+      "status": "open"
+    },
+    {
+      "id": "D-55",
+      "area": "features",
+      "title": "Job description retention",
+      "question": "How long may a pasted job description be kept?",
+      "context": "A job description can contain a hiring company's private details, and it was pasted for one purpose. Data minimization means keeping only what the feature needs for as long as it needs it. The chat already keeps threads for 24 hours, and traces can mask raw text.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Session only",
+          "description": "Lives in the 24-hour thread checkpoint; LangSmith masks the raw text and keeps the extracted requirements; usage rows store counts only.",
+          "pros": [
+            "Nothing private kept",
+            "Simple privacy notice"
+          ],
+          "cons": [
+            "No library of job descriptions to learn from"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Opt-in storage with the visitor's consent",
+          "description": "A checkbox to keep the JD for the owner to review.",
+          "pros": [
+            "The owner can read real JDs"
+          ],
+          "cons": [
+            "Consent flow and retention policy to run"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Store extracted requirements only, anonymized",
+          "description": "Keep the requirement list without the text.",
+          "pros": [
+            "Trend data on what roles ask for"
+          ],
+          "cons": [
+            "Still derived personal or company data to manage"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "The owner asked for session-only by default; anything more is a later, deliberate change to the privacy notice.",
+      "adr": "ADR-032",
+      "learn": "Data minimization, privacy by design.",
+      "status": "open"
+    },
+    {
+      "id": "D-56",
+      "area": "features",
+      "title": "Under the hood page",
+      "question": "How should the page that shows the site's architecture and health be built?",
+      "context": "The page shows a diagram of the services with a live health status for each, plus the list of architecture decisions. Uptime Kuma already checks every service, so the page can read its status data instead of probing services itself. A public page must not reveal anything an attacker could use, such as versions, ports or queue names.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Server-rendered diagram with cached health and the ADR log",
+          "description": "The web server reads Uptime Kuma's status data on localhost, caches it 30 seconds, and shows a status per named service; ADRs rendered from docs/adr at build time.",
+          "pros": [
+            "Live and honest",
+            "No new dependency for any service",
+            "Nothing sensitive exposed"
+          ],
+          "cons": [
+            "A small integration to build"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Embed the Uptime Kuma status page",
+          "description": "An iframe of the existing status page.",
+          "pros": [
+            "No code"
+          ],
+          "cons": [
+            "No diagram",
+            "Different look"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Static diagram only",
+          "description": "No live data.",
+          "pros": [
+            "Zero moving parts"
+          ],
+          "cons": [
+            "Loses the point of showing it running"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Showing the running system, with live health and the decisions behind it, is the most direct proof of the architecture claims.",
+      "adr": "ADR-033",
+      "learn": "Observability as product, caching with stale fallback, information disclosure.",
+      "status": "open"
+    },
+    {
+      "id": "D-57",
+      "area": "features",
+      "title": "Build journal and the /now page",
+      "question": "How should the build journal and the /now page be produced?",
+      "context": "A short post per learning work package documents what was built and learned, in public. The /now page says what the owner is focused on at the moment. The learning gate already produces an explainer and a recap per work package, which is the raw material for a post.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Journal as a post kind, drafted from the learning recap, owner-edited",
+          "description": "Post kind journal linked to a WP id; /now from a Now entry plus the current WP and the latest posts.",
+          "pros": [
+            "One content system",
+            "Posts feed the agent once published",
+            "Little extra effort"
+          ],
+          "cons": [
+            "The owner still edits every post"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Markdown files in the repo",
+          "description": "Write posts next to the code.",
+          "pros": [
+            "Familiar editor"
+          ],
+          "cons": [
+            "A second content path",
+            "Every post is a deploy"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Auto-published from commits",
+          "description": "Generated from changelogs.",
+          "pros": [
+            "Zero effort"
+          ],
+          "cons": [
+            "Reads like a changelog",
+            "Publishes without review"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It reuses the learning material that already exists and keeps every published word under the owner's review.",
+      "adr": "ADR-034",
+      "learn": "Learning in public, human in the loop for generated drafts.",
+      "status": "open"
+    },
+    {
+      "id": "D-58",
+      "area": "mcp",
+      "title": "MCP scope and rollout order",
+      "question": "Which of the five MCP pieces ship when?",
+      "context": "The five pieces are a public profile server (5a), job matching (5b), intro requests (5c), a private admin server with OAuth (5d) and a framework catalog (5e). Shipping a public server and intro requests at launch gives visitors a working MCP experience; the admin server is a deep learning project on OAuth 2.1. This changes the earlier plan (D-18), which put any MCP after launch.",
+      "options": [
+        {
+          "id": "a",
+          "label": "5a and 5c at launch, 5d next, 5b and 5e after",
+          "description": "The owner's suggested order.",
+          "pros": [
+            "A real MCP showcase at launch",
+            "OAuth learning gets its own focused work package"
+          ],
+          "cons": [
+            "Two more public surfaces at launch"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Everything after launch",
+          "description": "Launch the site first.",
+          "pros": [
+            "Smaller launch"
+          ],
+          "cons": [
+            "The MCP showcase arrives later"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "5a only at launch",
+          "description": "Read-only profile server first.",
+          "pros": [
+            "Smallest public surface"
+          ],
+          "cons": [
+            "No way to request an intro from an AI client at launch"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "The read-only server and intro requests are small once the read model and the contact service exist, and they make the site an MCP-native profile on day one.",
+      "adr": "ADR-035",
+      "learn": "MCP tools, resources and prompts; incremental delivery.",
+      "status": "open"
+    },
+    {
+      "id": "D-59",
+      "area": "mcp",
+      "title": "Where the MCP servers run",
+      "question": "Which service hosts the public MCP server and which hosts the admin MCP server?",
+      "context": "An MCP server is just another way in (a driving adapter) to a service's existing logic. Placing it in the service that owns the data avoids synchronous calls between services. The admin actions are mostly content actions, while spend and blocked attacks belong to the agent.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Public MCP in agent, admin MCP in api, agent metrics via events",
+          "description": "mcp process type of agent; admin-mcp process type of api; agent publishes hourly usage summaries that api keeps.",
+          "pros": [
+            "No synchronous calls between services",
+            "Each server next to its data"
+          ],
+          "cons": [
+            "Usage figures in the admin MCP are up to an hour old"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "A separate MCP service",
+          "description": "One service for all MCP endpoints.",
+          "pros": [
+            "One place for MCP"
+          ],
+          "cons": [
+            "Needs its own copy of the data or synchronous calls"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "MCP endpoints in every service",
+          "description": "Each service exposes its own MCP server.",
+          "pros": [
+            "Maximum locality"
+          ],
+          "cons": [
+            "Clients juggle several servers",
+            "Auth duplicated"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It follows the same service rules as everything else: each server talks only to its own data, and cross-service facts arrive as events.",
+      "adr": "ADR-035",
+      "learn": "Driving adapters, event-carried state transfer.",
+      "status": "open"
+    },
+    {
+      "id": "D-60",
+      "area": "mcp",
+      "title": "Public MCP access and abuse controls",
+      "question": "Should the public MCP server require sign-in, and how is it protected?",
+      "context": "The public server only exposes content that is already public, so sign-in adds friction without protecting anything secret. What needs protecting is capacity and cost: limits per IP and per MCP session, response size caps and careful logging. MCP tools can be annotated as read-only so clients know they are safe to call.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Open, read-only, rate-limited",
+          "description": "Streamable HTTP without sign-in; read-only annotations; limits; response caps; no bodies in logs.",
+          "pros": [
+            "Zero friction for visitors",
+            "Bounded cost"
+          ],
+          "cons": [
+            "Anyone can call it"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "API keys on request",
+          "description": "Visitors ask for a key.",
+          "pros": [
+            "Know who calls"
+          ],
+          "cons": [
+            "Friction kills casual use"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "OAuth for the public server too",
+          "description": "Sign in to use it.",
+          "pros": [
+            "Strong identity"
+          ],
+          "cons": [
+            "Heavy for public data"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Public data does not need authentication, only limits; authentication is saved for the admin server where it protects real power.",
+      "adr": "ADR-035",
+      "learn": "Rate limiting, least privilege, tool annotations.",
+      "status": "open"
+    },
+    {
+      "id": "D-61",
+      "area": "mcp",
+      "title": "Human proof for request_intro",
+      "question": "How does an intro request from an AI client prove a real person is behind it?",
+      "context": "An AI client cannot show a Turnstile widget, and a model calling a tool is not proof of a human. An out-of-band confirmation moves the proof to a browser: the tool returns a one-time link, and the person confirms there. The contact service only notifies the owner after that confirmation.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Pending intro through RabbitMQ + confirmation link with Turnstile",
+          "description": "The tool publishes a pending intro with a one-time token; the person confirms in a browser; 48-hour expiry; 3 per IP per day.",
+          "pros": [
+            "Real human proof",
+            "Reuses the contact service and Turnstile"
+          ],
+          "cons": [
+            "One extra click for the requester"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Owner moderation queue only",
+          "description": "Every request waits for manual review.",
+          "pros": [
+            "No extra step for the requester"
+          ],
+          "cons": [
+            "Spam lands in the owner's queue"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Sign-in with an identity provider",
+          "description": "Require GitHub or LinkedIn sign-in.",
+          "pros": [
+            "Strong identity"
+          ],
+          "cons": [
+            "Heavy friction for a first contact"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It gives the same protection as the web form without asking AI clients to do something they cannot, and spam never reaches the owner.",
+      "adr": "ADR-035",
+      "learn": "Out-of-band verification, store-and-forward.",
+      "status": "open"
+    },
+    {
+      "id": "D-62",
+      "area": "mcp",
+      "title": "Admin MCP authorization",
+      "question": "How should the private admin MCP server authenticate and authorize the owner?",
+      "context": "The MCP authorization spec makes a remote MCP server an OAuth 2.1 protected resource: it publishes protected resource metadata (RFC 9728), clients log in with authorization code + PKCE, and in the 2026-07-28 profile clients identify with Client ID Metadata Documents instead of dynamic registration. Tokens should be short-lived, bound to this server, and carry scopes per capability, with step-up for sensitive actions like approvals. Better Auth, already chosen for the admin login, has an MCP package that implements this profile.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Better Auth MCP package on the existing GitHub allow-list",
+          "description": "Protected resource metadata, PKCE, client ID metadata documents, resource-bound tokens, scopes with step-up, two-step approvals; optional Tailscale-only exposure.",
+          "pros": [
+            "Reuses the admin identity",
+            "Follows the current spec",
+            "Deep OAuth learning"
+          ],
+          "cons": [
+            "Young package; verify at build time"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Self-hosted identity server (Keycloak, Authentik)",
+          "description": "A full identity provider.",
+          "pros": [
+            "Feature-complete"
+          ],
+          "cons": [
+            "Hundreds of MB of RAM",
+            "Heavy for one user"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Hosted identity with MCP support",
+          "description": "A SaaS authorization server.",
+          "pros": [
+            "Maintained for you"
+          ],
+          "cons": [
+            "Another vendor for one user",
+            "Less learning"
+          ]
+        },
+        {
+          "id": "d",
+          "label": "Hand-rolled OAuth 2.1 server",
+          "description": "Implement the authorization server yourself.",
+          "pros": [
+            "Teaches every detail"
+          ],
+          "cons": [
+            "Very easy to get wrong on a privileged surface"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It implements the current MCP authorization profile on top of the identity already in place, and makes the admin MCP the project's main OAuth learning vehicle.",
+      "adr": "ADR-035",
+      "learn": "OAuth 2.1, protected resource metadata, PKCE, resource indicators, step-up authorization.",
+      "status": "open"
+    },
+    {
+      "id": "D-63",
+      "area": "mcp",
+      "title": "Framework catalog source",
+      "question": "Where does the catalog of the owner's Claude Code framework come from?",
+      "context": "The framework repository contains company-specific material, so no jadero.dev code may read it. A curated catalog lists agents, skills and hooks with generic descriptions the owner writes and approves. The same approval gate and denylist check used for knowledge entries can protect it.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Owner-curated, approved content type",
+          "description": "framework_component entries with approval and denylist check; optionally seeded by a script the owner runs locally that lists names only.",
+          "pros": [
+            "No company material can slip in",
+            "Same gate as other content"
+          ],
+          "cons": [
+            "Manual curation"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Generated from the framework repo in CI",
+          "description": "A job reads the repo and builds the catalog.",
+          "pros": [
+            "Always current"
+          ],
+          "cons": [
+            "Reads a repository with company material",
+            "CI has no access anyway"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "A static Markdown page",
+          "description": "Hand-written page, no data.",
+          "pros": [
+            "Simplest"
+          ],
+          "cons": [
+            "Not queryable through MCP"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Curation behind the approval gate is the only way to guarantee the catalog stays free of company material.",
+      "adr": "ADR-035",
+      "learn": "Data classification, approval workflow.",
+      "status": "open"
+    },
+    {
+      "id": "D-64",
+      "area": "agent",
+      "title": "Eval battery v1",
+      "question": "How should the roughly 30-item eval battery be built?",
+      "context": "An eval battery is a fixed set of questions with expected answers that every prompt or model change is measured against. Reference-based evaluators compare an answer with the expected one; deterministic checks verify citations, language and refusals without any model. The entries' \"Questions this answers\" are ready-made, realistic seeds.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Owner-approved battery seeded from the entries",
+          "description": "An LLM drafts items from approved entries; the owner edits and approves; adversarial and out-of-scope items hand-written; 8 direct, 6 drill-down, 5 out-of-scope, 6 adversarial, 5 multilingual.",
+          "pros": [
+            "Fast and grounded",
+            "Every item vetted"
+          ],
+          "cons": [
+            "Drafts may mirror entry wording"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Fully hand-written",
+          "description": "The owner writes every item.",
+          "pros": [
+            "Most independent"
+          ],
+          "cons": [
+            "Slow"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Fully generated",
+          "description": "No human review.",
+          "pros": [
+            "Zero effort"
+          ],
+          "cons": [
+            "The agent and the eval share blind spots"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It is quick to build from material that already exists, while the owner's review keeps it honest.",
+      "adr": "ADR-036",
+      "learn": "Golden dataset, reference-based evaluation, LLM-as-judge, data leakage.",
+      "status": "open"
+    },
+    {
+      "id": "D-65",
+      "area": "content",
+      "title": "Entry import and approval source",
+      "question": "How do knowledge entries in the agreed file format get into the system, and what records their approval?",
+      "context": "Entries arrive as Markdown files with front matter, and the owner approves one by setting approved: true in the file. An importer can validate the format and run automated checks before anything is recorded. Approval must bind to the exact revision that was checked, and files should never land in the public repo.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Files are the source; importer records approval when checks pass",
+          "description": "Admin upload or CLI; format validation; approved: true plus passing checks records approval bound to the imported revision; otherwise a draft.",
+          "pros": [
+            "Matches the owner's workflow",
+            "Approval tied to checked text",
+            "Nothing in the repo"
+          ],
+          "cons": [
+            "Importer to build and maintain"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Import as drafts; approve only in the admin",
+          "description": "The flag is ignored; approval happens with the checklist in the UI.",
+          "pros": [
+            "One approval path"
+          ],
+          "cons": [
+            "Duplicates the owner's file-based approval"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Write entries directly in the admin",
+          "description": "No files.",
+          "pros": [
+            "No importer"
+          ],
+          "cons": [
+            "Breaks the agreed file pipeline"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It respects the agreed format and the owner's approval act, while the checks and the revision binding keep a mistake from reaching the index.",
+      "adr": "ADR-031",
+      "learn": "Import pipelines, validation, approval bound to a revision.",
+      "status": "open"
+    },
+    {
+      "id": "D-66",
+      "area": "agent",
+      "title": "Spanish and German questions over English entries",
+      "question": "How should Spanish and German questions find answers in English-only entries?",
+      "context": "Multilingual embedding models place a question and a passage with the same meaning close together even across languages. Full-text search, however, only matches words in the same language. Question anchors are short indexed questions that point to an entry; translating them into Spanish and German at ingestion gives lexical search something to match too.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Multilingual embeddings and reranker + translated question anchors",
+          "description": "Generate es and de versions of each entry's questions at ingestion.",
+          "pros": [
+            "Cheap",
+            "Helps both semantic and lexical search"
+          ],
+          "cons": [
+            "Machine-translated anchors may be imperfect"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Multilingual embeddings and reranker only",
+          "description": "No translation.",
+          "pros": [
+            "Simplest"
+          ],
+          "cons": [
+            "Weaker lexical matching for es and de"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Translate whole entries",
+          "description": "Full es and de versions.",
+          "pros": [
+            "Best matching and reading"
+          ],
+          "cons": [
+            "Large translation and review effort"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Translating only the short questions gets most of the benefit for a tiny cost, and full translations stay possible later.",
+      "adr": "ADR-031",
+      "learn": "Cross-lingual retrieval, doc2query, multilingual embeddings.",
+      "status": "open"
+    },
+    {
+      "id": "D-67",
+      "area": "content",
+      "title": "Entry metadata policy",
+      "question": "Which front-matter fields of an entry may be indexed and shown?",
+      "context": "Some fields describe the work (title, type, domain, period, role, stack, patterns) and help retrieval. Others are provenance for the owner (sources, conflicts, public names, confidence) and may hint at internal details. A confidence of medium means only documents, not code, support a detail.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Index descriptive fields, keep provenance private",
+          "description": "Index title, type, domain, period, role, stack, patterns; keep sources, conflicts, public_names and confidence private; hedge on medium confidence.",
+          "pros": [
+            "Better retrieval",
+            "No provenance leaks"
+          ],
+          "cons": [
+            "Visitors cannot see the provenance"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Index everything",
+          "description": "All front matter goes into chunks.",
+          "pros": [
+            "Maximum context"
+          ],
+          "cons": [
+            "Conflict notes and sources may leak internal details"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Index body text only",
+          "description": "No front matter.",
+          "pros": [
+            "Smallest surface"
+          ],
+          "cons": [
+            "Weaker headers and retrieval"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Descriptive fields improve answers, while provenance is for the owner's review, not for visitors.",
+      "adr": "ADR-031",
+      "learn": "Data classification, contextual headers.",
+      "status": "open"
+    },
+    {
+      "id": "D-68",
+      "area": "agent",
+      "title": "Answer feedback loop",
+      "question": "How should visitor thumbs up and down be collected and used?",
+      "context": "Feedback attached to the trace of the answer it rates shows exactly what went wrong. An annotation queue is a review list in LangSmith where the owner triages runs. Promoting confirmed failures into the eval battery means the same failure cannot silently come back: the human-feedback-to-evals loop.",
+      "options": [
+        {
+          "id": "a",
+          "label": "LangSmith feedback + annotation queue + promotion into the battery",
+          "description": "Signed run tokens, one rating per run per session, thumbs-down and a 10% sample of thumbs-up queued for weekly review.",
+          "pros": [
+            "Ratings next to full traces",
+            "Closes the loop into evals"
+          ],
+          "cons": [
+            "Optional comments are personal data in a third-party tool"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Own feedback table and admin page",
+          "description": "Store and review locally.",
+          "pros": [
+            "Data stays on the server"
+          ],
+          "cons": [
+            "No trace next to the rating"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "No feedback",
+          "description": "Skip it.",
+          "pros": [
+            "Nothing to build"
+          ],
+          "cons": [
+            "Evals only reflect the owner's guesses"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It turns real visitors' judgments into regression tests with very little code, and it never changes behavior automatically, so it cannot be gamed.",
+      "adr": "ADR-037",
+      "learn": "Human in the loop, annotation queues, data flywheel.",
+      "status": "open"
+    },
+    {
+      "id": "D-69",
+      "area": "agent",
+      "title": "Semantic cache",
+      "question": "Should repeated questions be answered from a cache, and how is that kept safe and fresh?",
+      "context": "A semantic cache serves a stored answer when a new question means the same as one already answered, saving cost and latency. It differs from prompt caching, which only makes the prompt cheaper while the model still generates. The risks are serving stale answers after content changes and cache poisoning, where an attacker gets a bad answer stored for everyone.",
+      "options": [
+        {
+          "id": "a",
+          "label": "pgvector cache with source-id invalidation and a popularity threshold",
+          "description": "First-turn CV answers only; key includes locale, index and prompt version; content events delete answers citing changed sources; served only after two sessions asked; 7-day TTL.",
+          "pros": [
+            "Catches paraphrases",
+            "Precise invalidation",
+            "Poisoning resistant"
+          ],
+          "cons": [
+            "A similarity threshold to tune"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Exact-match cache",
+          "description": "Normalized question text only.",
+          "pros": [
+            "No false hits"
+          ],
+          "cons": [
+            "Few hits"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "A cache service with off-the-shelf libraries",
+          "description": "Redis semantic cache.",
+          "pros": [
+            "Ready-made"
+          ],
+          "cons": [
+            "A new stateful service"
+          ]
+        },
+        {
+          "id": "d",
+          "label": "No semantic cache",
+          "description": "Prompt caching only.",
+          "pros": [
+            "Nothing to get wrong"
+          ],
+          "cons": [
+            "No savings on repeated questions"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Precise invalidation and the popularity threshold handle the two real risks, and pgvector is already there; the eval battery measures hit and false-hit rates before it goes live.",
+      "adr": "ADR-038",
+      "learn": "Cache-aside, invalidation, TTL, cache poisoning.",
+      "status": "open"
+    },
+    {
+      "id": "D-70",
+      "area": "agent",
+      "title": "Multi-agent supervisor",
+      "question": "How should requests be routed between the CV agent and the recruiter agent?",
+      "context": "A supervisor is a node that decides which specialist agent handles a turn and hands control to it, then gets it back. Specialists can each have their own prompt, tools, limits and evaluations. Anthropic's guidance is to add agents only when the jobs genuinely differ; here they do.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Hand-built supervisor reusing the guard classification",
+          "description": "Routing from the guard's structured output (no extra model call), handoffs to two subgraphs, confirmation before analyzing a pasted JD.",
+          "pros": [
+            "Clear separation",
+            "No extra cost",
+            "Each agent evaluated alone"
+          ],
+          "cons": [
+            "More graph structure"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "One graph with branches",
+          "description": "The earlier design.",
+          "pros": [
+            "Simplest"
+          ],
+          "cons": [
+            "One prompt grows to serve two jobs"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Swarm of agents handing off to each other",
+          "description": "Peer-to-peer handoffs.",
+          "pros": [
+            "Flexible"
+          ],
+          "cons": [
+            "Harder to bound and reason about"
+          ]
+        },
+        {
+          "id": "d",
+          "label": "A prebuilt supervisor helper",
+          "description": "Library-provided supervisor.",
+          "pros": [
+            "Less code"
+          ],
+          "cons": [
+            "Hides the routing the owner wants to learn"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Building the supervisor by hand on top of an existing classification teaches the pattern at zero extra runtime cost.",
+      "adr": "ADR-039",
+      "learn": "Supervisor, handoff, router, subgraph.",
+      "status": "open"
+    },
+    {
+      "id": "D-71",
+      "area": "hosting",
+      "title": "Chaos testing",
+      "question": "How should the claim \"the site stays up and loses no messages when a service or the broker stops\" be proven?",
+      "context": "Chaos engineering deliberately breaks parts of a system to check that it behaves as designed. It starts from a steady-state hypothesis: a measurable definition of \"fine\", such as every page answering 200 and every contact message delivered exactly once after recovery. A scripted test makes the check repeatable instead of a one-off exercise.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Scripted chaos test in staging",
+          "description": "Synthetic traffic, stop agent then RabbitMQ for two minutes each, restart, check the steady-state hypothesis, publish the report.",
+          "pros": [
+            "Repeatable before releases",
+            "Documented proof"
+          ],
+          "cons": [
+            "A script and fixtures to maintain"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Manual game day only",
+          "description": "Do it by hand once (WP-27).",
+          "pros": [
+            "Cheap"
+          ],
+          "cons": [
+            "Not repeatable"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Continuous chaos in production",
+          "description": "Random failures in production.",
+          "pros": [
+            "Strongest signal"
+          ],
+          "cons": [
+            "Real visitors pay for it"
+          ]
+        },
+        {
+          "id": "d",
+          "label": "Network faults with Toxiproxy",
+          "description": "Latency and dropped connections.",
+          "pros": [
+            "Tests timeouts and breakers"
+          ],
+          "cons": [
+            "More setup; better as a later extension"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "A scripted test turns resilience from a claim into a check that runs before every risky release, and its results become content for the site.",
+      "adr": "ADR-040",
+      "learn": "Chaos engineering, steady-state hypothesis, blast radius, game day.",
+      "status": "open"
+    },
+    {
+      "id": "D-72",
+      "area": "foundation",
+      "title": "Work tracking from roadmap to tickets",
+      "question": "Where should the roadmap live as an epic and tickets?",
+      "context": "An epic groups the whole roadmap; each work package becomes a ticket with acceptance criteria (definition of ready) and a checklist for done. Linking tickets to pull requests and releases gives traceability: from a changelog line back to the decision and the ticket. Once the repo is public, the ticket history also shows reviewers how the work was run.",
+      "options": [
+        {
+          "id": "a",
+          "label": "GitHub Issues with sub-issues, a Project board and milestones",
+          "description": "One epic with a sub-issue per WP, templates, labels, phase milestones, a Project with WP id, tag, size and phase fields; PRs close issues; release-please links them.",
+          "pros": [
+            "Next to the code",
+            "Free for private repos",
+            "Visible lifecycle once public"
+          ],
+          "cons": [
+            "Less polished than Linear"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Linear",
+          "description": "A dedicated issue tracker with GitHub integration.",
+          "pros": [
+            "Best planning UX"
+          ],
+          "cons": [
+            "Another tool",
+            "History outside the repo"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Local backlog",
+          "description": "Markdown or the firstmate task tool.",
+          "pros": [
+            "Offline and agent-friendly"
+          ],
+          "cons": [
+            "No board, no automatic PR linking"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Decided by the owner on 2026-10-02: GitHub Issues with sub-issues, a Project board and milestones, which also shows the owner working with those tools. Linear was discarded because it adds a tool and keeps the history outside the repo, where reviewers of the public repo will not see it; a local backlog was discarded because it has no board, no automatic PR linking and no recognizable lifecycle to show.",
+      "adr": "ADR-041",
+      "learn": "Epics and sub-issues, definition of ready and done, traceability.",
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
+    },
+    {
+      "id": "D-73",
+      "area": "narrative",
+      "title": "Site positioning",
+      "question": "What should the site say the owner is, in one sentence?",
+      "context": "Positioning is the one sentence a visitor remembers after ten seconds. The site serves several audiences: the internal agentic team, hiring managers at product companies looking for backend, platform or full-stack engineers, recruiters who skim, and peers who read the code. A positioning tied to one team narrows every other door, while the evidence can still show depth in each area.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Broad engineer with applied AI as one strong pillar",
+          "description": "A backend-focused full-stack engineer who designs, tests, ships and operates whole systems, with applied AI as one of them.",
+          "pros": [
+            "Serves every audience",
+            "Honest about level",
+            "The AI work still stands out as a pillar"
+          ],
+          "cons": [
+            "Less of a niche headline"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Agentic AI engineer",
+          "description": "The site leads with AI agents as the identity.",
+          "pros": [
+            "Sharp for the agentic team"
+          ],
+          "cons": [
+            "Narrows every other door",
+            "Undersells the backend, infra and testing work"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Full-stack generalist",
+          "description": "No specialty named.",
+          "pros": [
+            "Widest net"
+          ],
+          "cons": [
+            "Forgettable",
+            "Hides the backend depth and the AI work"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It matches the owner's stated intent: the move to the agentic team stays well supported by the AI pillar, while the same page works for any backend, platform or full-stack role.",
+      "adr": "report section 2A",
+      "learn": "Positioning, audience analysis.",
+      "status": "open"
+    },
+    {
+      "id": "D-74",
+      "area": "narrative",
+      "title": "Home page and hero structure",
+      "question": "What should the home page show first?",
+      "context": "Most visitors never type into a chat box, so the first screen must show the breadth on its own. A proof-pillar strip is a row of short cards, one per skill area, each linking to the evidence that proves it. The agent stays visible as one inviting entry point, and the page must read as complete when the agent is resting.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Positioning + proof pillars + case studies, agent as one entry point",
+          "description": "Headline and one line of proof, the pillar strip, featured case studies, the experience timeline with Ask about this, an Ask me prompt among them.",
+          "pros": [
+            "Breadth visible in ten seconds",
+            "Works with the agent down",
+            "The agent is still prominent"
+          ],
+          "cons": [
+            "The agent is no longer the first thing you see"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Agent-first hero",
+          "description": "The chat prompt is the hero.",
+          "pros": [
+            "Memorable",
+            "Interactive from the first second"
+          ],
+          "cons": [
+            "Only visitors who type see the breadth",
+            "Couples the story to the agent"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Classic CV-first home",
+          "description": "Agent only on its own page.",
+          "pros": [
+            "Familiar"
+          ],
+          "cons": [
+            "Hides the strongest interactive showcase"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It lets a skimming reviewer see every pillar immediately and keeps the agent as a strong, optional way to go deeper.",
+      "adr": "report section 2A",
+      "learn": "Information hierarchy, progressive disclosure, graceful degradation.",
+      "status": "open"
+    },
+    {
+      "id": "D-75",
+      "area": "narrative",
+      "title": "Launch scope balance",
+      "question": "With the agent as one pillar among several, what should be in the launch scope?",
+      "context": "The launch scope is about 102 focused days, and much of the added work deepens the AI pillar. The recruiter agent and the supervisor deepen applied AI only, while the Under the hood page proves architecture, reliability, CI/CD and infrastructure at once. Work moved to right after launch still ships; it just stops delaying the launch.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Launch scope as planned",
+          "description": "Everything currently marked launch scope, about 102 days.",
+          "pros": [
+            "Most complete launch"
+          ],
+          "cons": [
+            "Longest wait",
+            "Launch weighted toward AI"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Move the recruiter agent and supervisor after launch, keep Under the hood",
+          "description": "WP-37 and WP-47 move to right after launch; about 97 days.",
+          "pros": [
+            "Balanced pillars at launch",
+            "About 5 days sooner"
+          ],
+          "cons": [
+            "Recruiter mode arrives a little later"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Full cut line",
+          "description": "Also move the Under the hood page after launch; about 94.5 days.",
+          "pros": [
+            "Fastest launch"
+          ],
+          "cons": [
+            "Loses the page that proves several pillars at once"
+          ]
+        }
+      ],
+      "recommendation": "b",
+      "why": "It removes the work that deepens only one pillar from the critical path and keeps the page that proves many pillars, in line with the broad positioning.",
+      "adr": "report section 2A",
+      "learn": "Scope management, critical path.",
+      "status": "open"
+    },
+    {
+      "id": "D-76",
+      "area": "narrative",
+      "title": "Case-study lineup",
+      "question": "Which case studies appear, and in what order?",
+      "context": "Case studies are the deepest evidence on the site, so they should together cover every proof pillar. Order signals priority: the first one is the story most visitors read. Leading with AI would repeat the coupling the owner wants to avoid.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Four case studies covering every pillar",
+          "description": "jadero.dev itself (architecture, messaging, testing, CI/CD, infrastructure, applied AI), El Refugio (product delivery and frontend craft, years in production), the Claude Code framework (developer tooling and engineering process, public-level), LangChainAssistant (applied AI on a NestJS backend).",
+          "pros": [
+            "Every pillar has a case study",
+            "AI appears in two but leads none"
+          ],
+          "cons": [
+            "Four case studies to write"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "AI-led order",
+          "description": "LangChainAssistant and the framework first.",
+          "pros": [
+            "Strongest signal for the agentic team"
+          ],
+          "cons": [
+            "Couples the site to one move"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Three case studies",
+          "description": "LangChainAssistant moves to selected projects.",
+          "pros": [
+            "Less writing"
+          ],
+          "cons": [
+            "Less AI depth on the site"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "It puts the broadest, most current proof first and still gives the AI work two strong appearances.",
+      "adr": "report section 2A",
+      "learn": "Evidence mapping, narrative order.",
+      "status": "open"
+    }
+  ],
+  "workPackages": [
+    {
+      "id": "WP-0",
+      "title": "Plan review, ADR decisions",
+      "tag": "owner",
+      "size": "S",
+      "dependsOn": [],
+      "deliverable": "ADRs accepted or rejected in docs/adr/; D-1 to D-72 answered.",
+      "learns": "",
+      "milestone": "M0"
+    },
+    {
+      "id": "WP-1",
+      "title": "Repo foundation",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-0"
+      ],
+      "deliverable": "Turborepo + pnpm, packages/config, Biome, dependency-cruiser skeleton, commitlint + lefthook, compose.dev.yml with Postgres and RabbitMQ, pnpm verify, AGENTS.md + CLAUDE.md, ADR files + index.",
+      "learns": "Task graphs and caching, compiled vs just-in-time internal packages, ESM exports maps.",
+      "milestone": "M0"
+    },
+    {
+      "id": "WP-2",
+      "title": "Agent tooling",
+      "tag": "agent-tooling",
+      "size": "S",
+      "dependsOn": [
+        "WP-1"
+      ],
+      "deliverable": "Skills (adr, learn-step, wp, explain), learning-gate and format hooks, settings, reviewer agent.",
+      "learns": "How hooks turn process into mechanism.",
+      "milestone": "M0"
+    },
+    {
+      "id": "WP-3",
+      "title": "Service platform and API skeleton",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-1"
+      ],
+      "deliverable": "packages/platform-nest (Zod config, pino, problem+json, health, OTel bootstrap); apps/api skeleton; Vitest + Testcontainers harness; Nest 12 compatibility spike.",
+      "learns": "Nest modules, providers, DI scopes and lifecycle; the request pipeline; fail-fast configuration.",
+      "milestone": "M1"
+    },
+    {
+      "id": "WP-4",
+      "title": "Web skeleton",
+      "tag": "frontend",
+      "size": "S",
+      "dependsOn": [
+        "WP-1"
+      ],
+      "deliverable": "Next 16 + next-intl (three locales), Tailwind v4 + shadcn base, theme toggle, standalone build.",
+      "learns": "",
+      "milestone": "M1"
+    },
+    {
+      "id": "WP-5",
+      "title": "Messaging foundation and agent skeleton",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-3"
+      ],
+      "deliverable": "packages/messaging (port, RabbitMQ and in-memory adapters, CloudEvents envelope, outbox relay, inbox, retry and dead-letter topology), definitions.json, AsyncAPI stub, apps/agent skeleton; a ping event crosses the broker with one trace.",
+      "learns": "Exchanges, bindings, queues, acks and prefetch; at-least-once delivery; outbox and inbox.",
+      "milestone": "M1"
+    },
+    {
+      "id": "WP-6",
+      "title": "CI pipeline",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-3",
+        "WP-4",
+        "WP-5"
+      ],
+      "deliverable": "ci.yml with caching, affected runs per service, Postgres and RabbitMQ service containers, event contract tests, coverage gates, gitleaks, PR title lint.",
+      "learns": "GitHub Actions model; why affected runs are safe.",
+      "milestone": "M1"
+    },
+    {
+      "id": "WP-7",
+      "title": "Images and per-service release",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-6"
+      ],
+      "deliverable": "One multi-stage non-root image per service, release-please with one component per service, GHCR push, SBOM, Trivy.",
+      "learns": "Image layers, least-privilege containers, semver per service.",
+      "milestone": "M1"
+    },
+    {
+      "id": "WP-8",
+      "title": "Server preparation",
+      "tag": "ops",
+      "size": "M",
+      "dependsOn": [
+        "WP-0"
+      ],
+      "deliverable": "Cloud Firewall, Tailscale, deploy user + forced command, ops compose (Postgres with a database per service, RabbitMQ with vhosts, Umami, Uptime Kuma), nginx vhosts + certificates, backups with a passed restore drill.",
+      "learns": "Docker networking vs host firewall, least-privilege SSH, backup vs restore.",
+      "milestone": "M1"
+    },
+    {
+      "id": "WP-9",
+      "title": "Deploy pipeline to new.jadero.dev",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-7",
+        "WP-8"
+      ],
+      "deliverable": "deploy(env, service, version) over Tailscale, per-service migrations, health-gated rollout and rollback, topology deploy, smoke tests. Milestone: walking skeleton live with an event crossing the broker.",
+      "learns": "Deployment as a state machine, expand/contract for schemas and messages.",
+      "milestone": "M1"
+    },
+    {
+      "id": "WP-10",
+      "title": "Data layer",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-3"
+      ],
+      "deliverable": "Drizzle provider, schema conventions, per-service migration workflow, repositories, transactions, integration tests.",
+      "learns": "Schema design, migrations as code, transactions, repository and unit of work.",
+      "milestone": "M2"
+    },
+    {
+      "id": "WP-11",
+      "title": "Contact service",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-5",
+        "WP-10"
+      ],
+      "deliverable": "apps/contact: form endpoint with Zod, Turnstile and honeypot, per-IP limit, store-and-forward with outbox, mailer consumer behind MailPort, circuit breaker, retry tiers, dead-letter queue and replay; the form on web.",
+      "learns": "A complete small microservice end to end; circuit breaker; anti-spam rules.",
+      "milestone": "M2"
+    },
+    {
+      "id": "WP-12",
+      "title": "Content domain and public API",
+      "tag": "learning",
+      "size": "L",
+      "dependsOn": [
+        "WP-10"
+      ],
+      "deliverable": "Aggregates, translations, revisions, publish state machine, CV bullets and knowledge entries with per-locale approval, public endpoints with cache headers, contracts package.",
+      "learns": "Domain modeling, aggregate boundaries, state machines, HTTP caching.",
+      "milestone": "M2"
+    },
+    {
+      "id": "WP-13",
+      "title": "Admin authentication",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-12"
+      ],
+      "deliverable": "Better Auth with GitHub allow-list, sessions, CSRF, audit log, auth rate limits, nginx auth_request and the signed internal header.",
+      "learns": "OAuth code + PKCE, sessions vs JWT, cookie flags, CSRF, gateway auth.",
+      "milestone": "M2"
+    },
+    {
+      "id": "WP-14",
+      "title": "Content events",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-5",
+        "WP-12"
+      ],
+      "deliverable": "Outbox writes on publish and approval, relay in api-worker, content.published, knowledge.entry.approved and withdrawn, daily knowledge.snapshot, revalidation consumer, scheduled jobs.",
+      "learns": "Dual-write problem, event-carried state transfer, idempotent consumers.",
+      "milestone": "M2"
+    },
+    {
+      "id": "WP-15",
+      "title": "Design directions",
+      "tag": "frontend",
+      "size": "S",
+      "dependsOn": [
+        "WP-4"
+      ],
+      "deliverable": "Three hero mockups as screenshots; owner picks the visual direction.",
+      "learns": "",
+      "milestone": "M3"
+    },
+    {
+      "id": "WP-16",
+      "title": "Site pages",
+      "tag": "frontend",
+      "size": "L",
+      "dependsOn": [
+        "WP-12",
+        "WP-15"
+      ],
+      "deliverable": "Home built around the positioning and the proof-pillar strip with its evidence map (D-73, D-74), home, experience timeline with CV bullets and Ask about this, work-log pages for approved entries, case studies, projects, early archive, stack and skills, blog; safe Markdown; SEO; nginx stale cache; accessibility and performance budgets met.",
+      "learns": "",
+      "milestone": "M3"
+    },
+    {
+      "id": "WP-17",
+      "title": "Admin app",
+      "tag": "frontend",
+      "size": "L",
+      "dependsOn": [
+        "WP-13",
+        "WP-14"
+      ],
+      "deliverable": "Static SPA on admin.jadero.dev: forms on shared contracts, translation tabs, structured knowledge-entry editor with approval checklist and private denylist, CV-to-entry linking with coverage view, preview, publish, media, contact inbox, dashboard stub.",
+      "learns": "",
+      "milestone": "M3"
+    },
+    {
+      "id": "WP-18",
+      "title": "PDF CV",
+      "tag": "frontend",
+      "size": "S",
+      "dependsOn": [
+        "WP-14"
+      ],
+      "deliverable": "react-pdf per locale in api-worker, regenerated on publish.",
+      "learns": "",
+      "milestone": "M3"
+    },
+    {
+      "id": "WP-19",
+      "title": "AI ports and adapters",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-3"
+      ],
+      "deliverable": "packages/ai: ports, fakes, Anthropic, OpenAI and Voyage adapters, factory, AiModule, contract suites.",
+      "learns": "Ports and adapters, anti-corruption layer, contract tests, config-driven DI.",
+      "milestone": "M4"
+    },
+    {
+      "id": "WP-20",
+      "title": "Agent read model and ingestion",
+      "tag": "learning",
+      "size": "L",
+      "dependsOn": [
+        "WP-14",
+        "WP-19"
+      ],
+      "deliverable": "agent-ingest: read model, two-layer chunking with contextual headers, approval validation, withdrawal tombstones, daily reconciliation, embeddings, vector + full-text schema, index versions, re-index, blue-green switch; HNSW vs exact scan measured.",
+      "learns": "Embeddings, chunking trade-offs, approximate nearest neighbor indexes, read models.",
+      "milestone": "M4"
+    },
+    {
+      "id": "WP-21",
+      "title": "Retrieval and retrieval eval",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-20"
+      ],
+      "deliverable": "Hybrid search, RRF, reranker with a none A/B, threshold, parent-document expansion, drill-down by CV bullet id, recall@5 and MRR in CI.",
+      "learns": "Lexical vs semantic search, rank fusion, reranking, measuring retrieval.",
+      "milestone": "M4"
+    },
+    {
+      "id": "WP-22",
+      "title": "Agent graph v1",
+      "tag": "learning",
+      "size": "L",
+      "dependsOn": [
+        "WP-21"
+      ],
+      "deliverable": "StateGraph, nodes, bounded subgraph, tools on the read model, prompts as files, PostgresSaver, SSE endpoint, citations; model A/B experiment; prompt-cache measurement.",
+      "learns": "LangGraph state, reducers, edges, checkpoints; tool calling; streaming; prompt design.",
+      "milestone": "M4"
+    },
+    {
+      "id": "WP-23",
+      "title": "Security layer",
+      "tag": "learning",
+      "size": "L",
+      "dependsOn": [
+        "WP-22"
+      ],
+      "deliverable": "Guard module and adapters, canary and output checks, PII middleware, throttler storage, nginx limits, Turnstile, usage accounting, daily budget breaker, circuit breakers on providers, provider spend limits configured.",
+      "learns": "OWASP LLM Top 10 in practice, rate-limit algorithms, circuit breaker and bulkhead.",
+      "milestone": "M4"
+    },
+    {
+      "id": "WP-24",
+      "title": "Tracing and evals",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-22"
+      ],
+      "deliverable": "LangSmith per environment, datasets (golden, adversarial, retrieval, one drill-down item per CV bullet), approval-gate canary eval, evaluators, evals.yml with budget and gates.",
+      "learns": "Evals vs tests, LLM-as-judge pitfalls, experiment comparison.",
+      "milestone": "M4"
+    },
+    {
+      "id": "WP-25",
+      "title": "Chat UI",
+      "tag": "frontend",
+      "size": "M",
+      "dependsOn": [
+        "WP-22"
+      ],
+      "deliverable": "Terminal-style prompt, streaming render, source chips, limit and resting states including agent down, i18n, accessibility.",
+      "learns": "",
+      "milestone": "M4"
+    },
+    {
+      "id": "WP-26",
+      "title": "Observability across services",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-23"
+      ],
+      "deliverable": "OTel export with trace propagation through RabbitMQ, logging conventions, monitors per service, dead-letter and queue-depth alerts, external backstop, admin usage page.",
+      "learns": "Logs, metrics, traces; context propagation across a broker.",
+      "milestone": "M5"
+    },
+    {
+      "id": "WP-27",
+      "title": "Resilience game day",
+      "tag": "learning",
+      "size": "S",
+      "dependsOn": [
+        "WP-26"
+      ],
+      "deliverable": "Stop each component in staging and verify the failure-mode table; fix what does not behave as designed.",
+      "learns": "Failure-mode thinking, blast radius, verifying resilience.",
+      "milestone": "M5"
+    },
+    {
+      "id": "WP-28",
+      "title": "Content load and launch QA",
+      "tag": "owner",
+      "size": "M",
+      "dependsOn": [
+        "WP-16",
+        "WP-17",
+        "WP-25",
+        "WP-35",
+        "WP-36",
+        "WP-37",
+        "WP-38",
+        "WP-39",
+        "WP-41",
+        "WP-45",
+        "WP-47",
+        "WP-48"
+      ],
+      "deliverable": "Owner writes the CV and knowledge entries and approves them per locale, translations reviewed, red-team audit, accessibility and performance checks, privacy notice, gitleaks history scan, repo public.",
+      "learns": "",
+      "milestone": "M5"
+    },
+    {
+      "id": "WP-29",
+      "title": "Cutover",
+      "tag": "ops",
+      "size": "S",
+      "dependsOn": [
+        "WP-28"
+      ],
+      "deliverable": "jadero.dev switched, redirects, pm2 services and reCAPTCHA retired, old site archived.",
+      "learns": "",
+      "milestone": "M5"
+    },
+    {
+      "id": "WP-30",
+      "title": "Public MCP server (after launch)",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-21"
+      ],
+      "deliverable": "mcp process type of agent on mcp.jadero.dev: read-only tools + CV resource, limits, a connect-from-Claude page. Superseded by WP-36 (the public MCP moved to launch); id kept for stability.",
+      "learns": "MCP tools, resources and transports; another driving adapter.",
+      "milestone": "M6"
+    },
+    {
+      "id": "WP-31",
+      "title": "lab.jadero.dev playground (after launch)",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-24"
+      ],
+      "deliverable": "Graph visualization, node timings, trace links.",
+      "learns": "",
+      "milestone": "M6"
+    },
+    {
+      "id": "WP-32",
+      "title": "Translation assistant (after launch)",
+      "tag": "learning",
+      "size": "S",
+      "dependsOn": [
+        "WP-17",
+        "WP-19"
+      ],
+      "deliverable": "LLM-drafted translations through the chat port with a glossary; owner reviews.",
+      "learns": "Structured output, translation prompting.",
+      "milestone": "M6"
+    },
+    {
+      "id": "WP-33",
+      "title": "Blue-green deploys (optional)",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-9"
+      ],
+      "deliverable": "Two upstreams per service, switch and drain.",
+      "learns": "Zero-downtime deployment.",
+      "milestone": "M6"
+    },
+    {
+      "id": "WP-34",
+      "title": "SOPS-encrypted secrets (optional)",
+      "tag": "learning",
+      "size": "S",
+      "dependsOn": [
+        "WP-9"
+      ],
+      "deliverable": "Encrypted env files, age key on the server.",
+      "learns": "Secret management as code.",
+      "milestone": "M6"
+    },
+    {
+      "id": "WP-35",
+      "title": "Knowledge entry importer",
+      "tag": "learning",
+      "size": "S",
+      "dependsOn": [
+        "WP-12"
+      ],
+      "deliverable": "Admin upload and CLI that parse the agreed entry format, validate it, run the automated checks and record approval from the approved flag. Launch scope.",
+      "learns": "Parsing and validating structured documents; approval bound to a revision.",
+      "milestone": "M2"
+    },
+    {
+      "id": "WP-36",
+      "title": "Public profile MCP and request_intro",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-11",
+        "WP-21"
+      ],
+      "deliverable": "mcp process type of agent: search_experience, get_entry, list_projects, list_skills, get_cv, CV and ADR resources, request_intro with a confirmation link, limits, a connect-from-Claude page. Launch scope; supersedes WP-30.",
+      "learns": "MCP tools, resources and transports; out-of-band human confirmation.",
+      "milestone": "M5"
+    },
+    {
+      "id": "WP-37",
+      "title": "Recruiter agent",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-22",
+        "WP-23"
+      ],
+      "deliverable": "Requirement extraction, evidence per requirement, fit matrix with citations and gaps, own limits, session-only retention. Launch scope.",
+      "learns": "Structured extraction, map-reduce, evidence-grounded generation.",
+      "milestone": "M4"
+    },
+    {
+      "id": "WP-38",
+      "title": "Under the hood page",
+      "tag": "frontend",
+      "size": "M",
+      "dependsOn": [
+        "WP-16",
+        "WP-26"
+      ],
+      "deliverable": "Diagram with live per-service health from Uptime Kuma (cached), ADR log, last chaos-test result. Launch scope.",
+      "learns": "",
+      "milestone": "M5"
+    },
+    {
+      "id": "WP-39",
+      "title": "Build journal and /now",
+      "tag": "frontend",
+      "size": "S",
+      "dependsOn": [
+        "WP-12",
+        "WP-16"
+      ],
+      "deliverable": "journal post kind linked to WP ids, draft assistant from the learning recap, /now page. Launch scope.",
+      "learns": "",
+      "milestone": "M3"
+    },
+    {
+      "id": "WP-40",
+      "title": "LangSmith datasets, evaluators and experiments",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-22"
+      ],
+      "deliverable": "Toy dataset, heuristic and LLM-judge evaluators, pairwise comparison, experiments, annotation queues. Launch scope.",
+      "learns": "Datasets, evaluator types, experiments, judge bias, data leakage.",
+      "milestone": "M4"
+    },
+    {
+      "id": "WP-41",
+      "title": "Eval battery v1",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-24",
+        "WP-35",
+        "WP-40"
+      ],
+      "deliverable": "About 30 owner-approved items (direct, drill-down, out-of-scope, adversarial, es/en/de), built once the first approved entries are imported, wired into the CI gates. Launch scope.",
+      "learns": "Golden datasets, reference-based evaluation.",
+      "milestone": "M4"
+    },
+    {
+      "id": "WP-42",
+      "title": "Admin MCP with OAuth 2.1",
+      "tag": "learning",
+      "size": "L",
+      "dependsOn": [
+        "WP-13",
+        "WP-36"
+      ],
+      "deliverable": "admin-mcp process type of api: draft posts, review translations, approve entries in two steps, spend and blocked attacks; protected resource metadata, PKCE, client ID metadata documents, scopes and step-up. After launch, the next learning WP.",
+      "learns": "OAuth 2.1 in depth, protected resources, resource indicators, step-up authorization.",
+      "milestone": "M6"
+    },
+    {
+      "id": "WP-43",
+      "title": "match_job_description tool and MCP prompt",
+      "tag": "learning",
+      "size": "S",
+      "dependsOn": [
+        "WP-36",
+        "WP-37"
+      ],
+      "deliverable": "MCP tool and prompt backed by the recruiter agent. After launch.",
+      "learns": "MCP prompts.",
+      "milestone": "M6"
+    },
+    {
+      "id": "WP-44",
+      "title": "Framework catalog",
+      "tag": "learning",
+      "size": "S",
+      "dependsOn": [
+        "WP-17",
+        "WP-36"
+      ],
+      "deliverable": "Curated framework_component content with approval, an MCP tool and resource. After launch.",
+      "learns": "",
+      "milestone": "M6"
+    },
+    {
+      "id": "WP-45",
+      "title": "Answer feedback loop",
+      "tag": "learning",
+      "size": "S",
+      "dependsOn": [
+        "WP-24",
+        "WP-25"
+      ],
+      "deliverable": "Thumbs up and down with signed run tokens, LangSmith feedback, annotation queue, promotion into the battery. Launch scope.",
+      "learns": "Human-in-the-loop evaluation, data flywheel.",
+      "milestone": "M4"
+    },
+    {
+      "id": "WP-46",
+      "title": "Semantic cache",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-23",
+        "WP-41"
+      ],
+      "deliverable": "pgvector cache, lookup, source-id invalidation, popularity threshold, hit and false-hit rates measured on the battery. After launch.",
+      "learns": "Caching strategies, invalidation, cache poisoning.",
+      "milestone": "M6"
+    },
+    {
+      "id": "WP-47",
+      "title": "Multi-agent supervisor",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-22",
+        "WP-37"
+      ],
+      "deliverable": "Supervisor reusing the guard classification, handoffs to CV and recruiter agent subgraphs, per-agent limits and eval slices. Launch scope.",
+      "learns": "Supervisor and handoff patterns, subgraphs.",
+      "milestone": "M4"
+    },
+    {
+      "id": "WP-48",
+      "title": "Scripted chaos test",
+      "tag": "learning",
+      "size": "S",
+      "dependsOn": [
+        "WP-27"
+      ],
+      "deliverable": "Synthetic traffic, agent and broker outages, steady-state checks, report published to the journal and the Under the hood page. Launch scope.",
+      "learns": "Chaos engineering, steady-state hypothesis.",
+      "milestone": "M5"
+    },
+    {
+      "id": "WP-49",
+      "title": "Roadmap to epic and tickets",
+      "tag": "owner",
+      "size": "S",
+      "dependsOn": [
+        "WP-0"
+      ],
+      "deliverable": "The decided tracking structure, generated from this file's workPackages with the gh CLI: an epic issue with one sub-issue per WP (WP-30 created and closed as not planned, linking WP-36), milestones M0 to M6, labels, issue templates, a Project with fields, views and workflows. Right after WP-0.",
+      "learns": "Ticket lifecycle, definition of ready and done, traceability.",
+      "milestone": "M0"
+    }
+  ],
+  "manualActions": [
+    {
+      "id": "M-1",
+      "what": "Decide D-1 to D-53 in the plan review, and check which GitHub plan the account is on (it affects D-29).",
+      "when": "WP-0",
+      "why": "Nothing is built before the architecture decisions are made, and repo visibility depends on the plan."
+    },
+    {
+      "id": "M-2",
+      "what": "Create Anthropic Console workspaces (production, CI evals, development), one API key per workspace, and set a monthly spend limit on each (production about USD 20).",
+      "when": "Before WP-19 (keys) and WP-23 (limits)",
+      "why": "Separate keys and limits bound the cost of a leak or an attack per environment."
+    },
+    {
+      "id": "M-3",
+      "what": "Create a Voyage AI account and API keys (production, CI).",
+      "when": "Before WP-20",
+      "why": "Embeddings and reranking provider; the free 200M tokens cover this corpus."
+    },
+    {
+      "id": "M-4",
+      "what": "Optionally create an OpenAI project with a key and a budget to prove the alternative adapters.",
+      "when": "WP-19, only if testing the alternative",
+      "why": "The provider-agnostic design is only proven once a second provider passes the contract suite."
+    },
+    {
+      "id": "M-5",
+      "what": "Create a LangSmith account in the EU region, one project per environment, and API keys.",
+      "when": "Before WP-22 (tracing) and WP-24 (evals)",
+      "why": "Agent tracing and evals."
+    },
+    {
+      "id": "M-6",
+      "what": "Create a Cloudflare account and a Turnstile widget for jadero.dev, new.jadero.dev and localhost; store the site key and secret.",
+      "when": "Before WP-11",
+      "why": "Bot protection for the contact form and the chat."
+    },
+    {
+      "id": "M-7",
+      "what": "Create a Resend account, verify the sending domain with the DNS records it asks for (SPF, DKIM), create an API key, and choose the address that receives notifications.",
+      "when": "Before WP-11",
+      "why": "Contact notifications; Hetzner blocks outbound ports 25 and 465."
+    },
+    {
+      "id": "M-8",
+      "what": "Create GitHub OAuth apps for the admin login (development, staging, production callback URLs) and note your numeric GitHub user id for the allow-list.",
+      "when": "Before WP-13",
+      "why": "Admin authentication allows exactly one immutable user id."
+    },
+    {
+      "id": "M-9",
+      "what": "Create a Tailscale account, install it on the server and your machine, and create an auth key or OAuth client for GitHub Actions.",
+      "when": "WP-8 and WP-9",
+      "why": "Deploys and SSH without a public port 22."
+    },
+    {
+      "id": "M-10",
+      "what": "In the Hetzner Cloud Console, create the Cloud Firewall (80 and 443 only) and attach it to the server; optionally enable server backups and order a Storage Box for offsite backups.",
+      "when": "WP-8",
+      "why": "Docker can bypass ufw; the Cloud Firewall filters before traffic reaches the server."
+    },
+    {
+      "id": "M-11",
+      "what": "Add DNS records: new., admin., stats., status. (later staging., mcp., lab.) pointing to the server, plus Resend's records.",
+      "when": "WP-8 (later ones at their WPs)",
+      "why": "Every subdomain needs a record before certbot can issue its certificate."
+    },
+    {
+      "id": "M-12",
+      "what": "On the server, run the setup steps the agent prepares (users, Docker, compose projects, nginx vhosts, certbot), because agents never touch the server.",
+      "when": "WP-8 and WP-9",
+      "why": "Server administration stays with the owner."
+    },
+    {
+      "id": "M-13",
+      "what": "Configure the GitHub repo: protect main, squash merges with the PR title as the commit, Actions permission to write packages, CI secrets (Tailscale key, CI provider keys, LangSmith key), and after going public, environments with required reviewers.",
+      "when": "WP-6, WP-7, WP-9, WP-28",
+      "why": "CI, releases and deploys depend on these settings."
+    },
+    {
+      "id": "M-14",
+      "what": "Create a read-only GHCR token for the server to pull images.",
+      "when": "WP-9",
+      "why": "The server must pull private images without broader GitHub access."
+    },
+    {
+      "id": "M-15",
+      "what": "Create a free OpenTelemetry backend account (for example Grafana Cloud) and an OTLP token.",
+      "when": "WP-26",
+      "why": "Cross-service traces and metrics without heavy software on the server."
+    },
+    {
+      "id": "M-16",
+      "what": "Create a free external uptime check on the home page and the API health.",
+      "when": "WP-26",
+      "why": "Uptime Kuma cannot report its own server going down."
+    },
+    {
+      "id": "M-17",
+      "what": "Pick the visual direction from the three mockups.",
+      "when": "WP-15",
+      "why": "Frontend is result-only; the owner chooses."
+    },
+    {
+      "id": "M-18",
+      "what": "Provide a professional photo and project screenshots or short GIFs (old demos are dead).",
+      "when": "WP-16 or WP-28",
+      "why": "Project cards and the hero need real media."
+    },
+    {
+      "id": "M-19",
+      "what": "Write the CV (Layer A) and the knowledge entries (Layer B) in at least en and es, link each CV bullet to its entries, and fill the private denylist of internal terms.",
+      "when": "WP-28 (can start after WP-17)",
+      "why": "The agent can only answer from approved content; the denylist protects employer details."
+    },
+    {
+      "id": "M-20",
+      "what": "Approve each knowledge entry per locale with the checklist, confirming it is public-level, and approve the public-level text about the current role and the framework case study.",
+      "when": "WP-28",
+      "why": "Only owner-approved entries are ever indexed or published."
+    },
+    {
+      "id": "M-21",
+      "what": "Review the privacy notice (Umami, LangSmith, AI providers, contact form retention).",
+      "when": "WP-28",
+      "why": "Visitor messages are personal data."
+    },
+    {
+      "id": "M-22",
+      "what": "Make the repository public after the gitleaks history scan comes back clean.",
+      "when": "WP-28",
+      "why": "Unlocks environments and code scanning on GitHub Free; the code is the evidence."
+    },
+    {
+      "id": "M-23",
+      "what": "Approve the cutover, then stop the old pm2 services and revoke the old reCAPTCHA keys in the Google admin console.",
+      "when": "WP-29",
+      "why": "The old site and its backend retire with v2."
+    },
+    {
+      "id": "M-24",
+      "what": "Optionally clean up the old GitHub repos the site links to (READMEs, dead demo links, homepage fields, the Docker repo's committed .env files) and refresh the profile README.",
+      "when": "Before WP-28",
+      "why": "The site sends reviewers to these repos."
+    },
+    {
+      "id": "M-25",
+      "what": "Work through each learning gate: read the explainer, ask until it is clear, decide, and explain the design back at the end of each learning work package.",
+      "when": "Every learning WP",
+      "why": "Learning is a hard requirement; the gate only works with the owner's decision."
+    },
+    {
+      "id": "M-26",
+      "what": "Decide D-54 to D-72 together with the rest in the plan review, including whether to apply the suggested cut line (recruiter agent, supervisor and Under the hood right after launch).",
+      "when": "WP-0",
+      "why": "The additions add about 20 days before launch."
+    },
+    {
+      "id": "M-27",
+      "what": "Deliver the knowledge entries in the agreed file format, keep public_names accurate, and set approved: true only on entries you have checked.",
+      "when": "WP-35 and WP-28",
+      "why": "Only approved entries are ever imported as approved and indexed."
+    },
+    {
+      "id": "M-28",
+      "what": "Review and approve the roughly 30 eval battery items, and write the adversarial and out-of-scope items by hand.",
+      "when": "WP-41",
+      "why": "The battery gates every prompt and model change."
+    },
+    {
+      "id": "M-29",
+      "what": "Review the annotation queue weekly and promote confirmed failures into the battery.",
+      "when": "After WP-45, ongoing",
+      "why": "This is what turns visitor feedback into regression tests."
+    },
+    {
+      "id": "M-30",
+      "what": "Write the first /now text and edit a journal post at the end of each learning work package.",
+      "when": "WP-39, ongoing",
+      "why": "The journal is published in the owner's voice."
+    },
+    {
+      "id": "M-31",
+      "what": "Create an Uptime Kuma status page for the Under the hood data (service names only).",
+      "when": "WP-38",
+      "why": "The page reads public status data, not internal monitors."
+    },
+    {
+      "id": "M-32",
+      "what": "Try the public MCP from your own MCP client and, if wanted, list it in a public MCP directory.",
+      "when": "WP-36",
+      "why": "Proves the AI-client experience end to end."
+    },
+    {
+      "id": "M-33",
+      "what": "Consent to the admin MCP client on first use and decide whether the admin MCP is reachable only over Tailscale.",
+      "when": "WP-42",
+      "why": "OAuth consent is a human act; network exposure is the owner's call."
+    },
+    {
+      "id": "M-34",
+      "what": "Curate the framework catalog: names and generic descriptions only, no company material, then approve each item.",
+      "when": "WP-44",
+      "why": "Nothing from the framework repository may be read by jadero.dev code."
+    },
+    {
+      "id": "M-35",
+      "what": "Create the GitHub Project, milestones and labels (or approve the agent doing it with gh), and keep issue text public-level.",
+      "when": "WP-49",
+      "why": "Issues become public with the repo."
+    },
+    {
+      "id": "M-36",
+      "what": "Confirm the job-description retention choice and that the privacy notice covers recruiter mode, feedback comments and the semantic cache.",
+      "when": "WP-28",
+      "why": "These features process visitor-provided text."
+    }
+  ],
+  "tracking": {
+    "decision": "D-72",
+    "tool": "GitHub Issues with sub-issues, a GitHub Project board and milestones",
+    "hierarchy": "One epic issue (jadero.dev v2) with one sub-issue per work package titled WP-NN: <title>; a learning WP's explainer steps become its own sub-issues when it starts; dependencies become blocked-by links where available.",
+    "milestones": [
+      {
+        "id": "M0",
+        "name": "Decide and set up",
+        "exitCriterion": "ADRs decided, repo and agent tooling ready",
+        "workPackages": [
+          "WP-0",
+          "WP-49",
+          "WP-1",
+          "WP-2"
+        ]
+      },
+      {
+        "id": "M1",
+        "name": "Walking skeleton",
+        "exitCriterion": "An event crosses the broker on new.jadero.dev",
+        "workPackages": [
+          "WP-3",
+          "WP-4",
+          "WP-5",
+          "WP-6",
+          "WP-7",
+          "WP-8",
+          "WP-9"
+        ]
+      },
+      {
+        "id": "M2",
+        "name": "Backend core",
+        "exitCriterion": "Content, contact, auth and events working in staging",
+        "workPackages": [
+          "WP-10",
+          "WP-11",
+          "WP-12",
+          "WP-13",
+          "WP-14",
+          "WP-35"
+        ]
+      },
+      {
+        "id": "M3",
+        "name": "Site and admin",
+        "exitCriterion": "Public site and admin usable in staging",
+        "workPackages": [
+          "WP-15",
+          "WP-16",
+          "WP-17",
+          "WP-18",
+          "WP-39"
+        ]
+      },
+      {
+        "id": "M4",
+        "name": "Agent",
+        "exitCriterion": "Agent answers with citations, guarded and evaluated",
+        "workPackages": [
+          "WP-19",
+          "WP-20",
+          "WP-21",
+          "WP-22",
+          "WP-23",
+          "WP-24",
+          "WP-25",
+          "WP-37",
+          "WP-40",
+          "WP-41",
+          "WP-45",
+          "WP-47"
+        ]
+      },
+      {
+        "id": "M5",
+        "name": "Launch",
+        "exitCriterion": "jadero.dev switched, old site retired",
+        "workPackages": [
+          "WP-26",
+          "WP-27",
+          "WP-28",
+          "WP-29",
+          "WP-36",
+          "WP-38",
+          "WP-48"
+        ]
+      },
+      {
+        "id": "M6",
+        "name": "After launch",
+        "exitCriterion": "Each item ships independently",
+        "workPackages": [
+          "WP-30",
+          "WP-31",
+          "WP-32",
+          "WP-33",
+          "WP-34",
+          "WP-42",
+          "WP-43",
+          "WP-44",
+          "WP-46"
+        ]
+      }
+    ],
+    "labels": {
+      "type": [
+        "type:epic",
+        "type:wp",
+        "type:task",
+        "type:bug",
+        "type:chore",
+        "type:adr"
+      ],
+      "tag": [
+        "tag:learning",
+        "tag:frontend",
+        "tag:ops",
+        "tag:owner",
+        "tag:agent-tooling"
+      ],
+      "size": [
+        "size:S",
+        "size:M",
+        "size:L"
+      ],
+      "area": [
+        "area:web",
+        "area:admin",
+        "area:api",
+        "area:agent",
+        "area:contact",
+        "area:messaging",
+        "area:mcp",
+        "area:evals",
+        "area:infra"
+      ],
+      "flags": [
+        "blocked",
+        "needs-decision",
+        "optional",
+        "superseded",
+        "security"
+      ]
+    },
+    "projectFields": [
+      "Status (Backlog, Ready, In progress, In review, Done)",
+      "WP id",
+      "Tag",
+      "Size",
+      "Area",
+      "Learning gate (n/a, explainer written, decision recorded, explained back)",
+      "Start date",
+      "Target date"
+    ],
+    "projectViews": [
+      "Board by status",
+      "Roadmap by milestone",
+      "Table grouped by tag",
+      "Learning (tag:learning)"
+    ],
+    "conventions": [
+      "Definition of ready: acceptance criteria written, ADRs decided, dependencies done, learning explainer scheduled.",
+      "Branch wp/NN-slug; PR title is a conventional commit scoped to the service; PR body says Closes #<issue>; squash merge.",
+      "release-please changelogs link each PR and, through it, the closed issue.",
+      "Issues and PRs follow the content rules (public-level only), because they become public with the repo."
+    ]
+  }
+}
