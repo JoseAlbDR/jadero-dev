@@ -304,4 +304,7 @@ Fast path: none marked `known`; every step gets its two-line note and the explai
 
 ## Step log
 
+- Step 2 (workspace and task graph): root `package.json` (pnpm 11.28.2 pinned, Node >= 24), `pnpm-workspace.yaml` with the catalog, `turbo.json`, `.nvmrc`, `packages/config` (three tsconfig bases, the Vitest base with `workersFromLoad`, a contract test). Trace 1 reproduced: `turbo run test --affected` was a cache miss (1.4 s), then `FULL TURBO` in 25 ms.
+  Why: the single-version policy lives in the catalog; `@jadero/config` is a no-build package so its `exports` map points at JSON and plain JS; `turbo.json` declares `^build` so compiled packages (WP-5) will build before their consumers typecheck. Seen live: turbo 2.11.7 was 19 hours old, so pnpm 11's one-day `minimumReleaseAge` would refuse it; the catalog pins 2.11.6.
+
 ## Recap

@@ -1,0 +1,15 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# One version per tool for the whole repo (single-version policy). Packages write "catalog:".
+catalog:
+  "@biomejs/biome": 2.5.15
+  "@commitlint/cli": 21.2.3
+  "@commitlint/config-conventional": 21.2.3
+  "@types/node": 24.19.1
+  dependency-cruiser: 18.5.0
+  lefthook: 2.1.16
+  turbo: 2.11.6
+  typescript: 6.0.3
+  vitest: 5.0.3

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "stream",
+  "tasks": {
+    "build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "dist/**"
+      ]
+    },
+    "typecheck": {
+      "dependsOn": [
+        "^build"
+      ]
+    },
+    "test": {
+      "dependsOn": [
+        "^build"
+      ],
+      "env": [
+        "AI_*_PROVIDER",
+        "MAIL_PROVIDER"
+      ],
+      "passThroughEnv": [
+        "VITEST_MAX_WORKERS"
+      ]
+    },
+    "//#lint": {
+      "inputs": [
+        "**/*.{ts,tsx,js,mjs,cjs,json,jsonc}",
+        "biome.json",
+        "!**/node_modules/**",
+        "!**/dist/**"
+      ]
+    },
+    "//#depcruise": {
+      "inputs": [
+        "apps/**",
+        "packages/**",
+        ".dependency-cruiser.cjs",
+        "!**/node_modules/**",
+        "!**/dist/**"
+      ]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

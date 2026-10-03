@@ -1,0 +1,21 @@
+{
+  "name": "@jadero/config",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared tsconfig bases and the Vitest base config. No build step: JSON and plain JavaScript only.",
+  "type": "module",
+  "exports": {
+    "./tsconfig/base.json": "./tsconfig/base.json",
+    "./tsconfig/node-library.json": "./tsconfig/node-library.json",
+    "./tsconfig/node-service.json": "./tsconfig/node-service.json",
+    "./vitest": "./vitest/base.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
