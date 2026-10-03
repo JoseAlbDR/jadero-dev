@@ -8,7 +8,7 @@ adr: [ADR-003, ADR-006, ADR-007, ADR-009, ADR-010, ADR-029, ADR-042]
 
 Issue #11, branch `wp/3-service-platform`, release R0, size M, tag learning. Depends on WP-1 (issue #9).
 
-**Branch base.** WP-1 is not merged yet: issue #9 is open and PR #66 is reviewed and green, waiting for the owner's explain-back and merge. The owner accepted starting this explainer on top of it, so `wp/3-service-platform` was created from `wp/1-repo-foundation` (commit `6f44a19`), not from `main`. After #66 merges, this branch must be rebased onto `main` (`git fetch origin && git rebase origin/main`) before any WP-3 code is pushed. `main` also gained PR #65 (updated `/wp` and `/learn-step` skills and the wider learning gate) after WP-1 branched; the rebase brings those in.
+**Branch base.** Rebuilt from `main` on 2026-10-03 after WP-1 merged (PR #66): the branch carries only this explainer on top of `main`.
 
 Deliverable (report section 14): `packages/platform-nest` (Zod config, pino, problem+json, `/health/live` and `/health/ready`, OTel bootstrap); `apps/api` skeleton; Vitest + Testcontainers harness; compatibility spike for auth, pino, RabbitMQ, MCP and LangChain packages on Nest 12; module template with the layer conventions of ADR-003 (D-3).
 
