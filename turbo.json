@@ -27,6 +27,7 @@
         "apps/**",
         "packages/**",
         ".dependency-cruiser.cjs",
+        "tsconfig.depcruise.json",
         "!**/node_modules/**",
         "!**/dist/**"
       ]

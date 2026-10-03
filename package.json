@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "dependency-cruiser": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:"
   }
