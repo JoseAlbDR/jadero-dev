@@ -14,6 +14,47 @@ Deliverable (report section 14): `packages/platform-nest` (Zod config, pino, pro
 
 What the owner learns (decisions.json): Nest modules, providers, DI scopes and lifecycle; the request pipeline; fail-fast configuration. The owner knows NestJS well, so this explainer skips DI basics and spends its words on what is new: Nest 12 on ESM, Standard Schema validation, fail-fast config, pino with request ids, RFC 9457, liveness vs readiness, the OTel bootstrap order, the module template, the Testcontainers harness and the spike.
 
+## How to read this file
+
+This file is the only thing you need to read. ADR and WP numbers appear as sources, and every one of them is summarized in one line in the "Named here" table below, so you never have to open them to answer. Nothing here is to memorize: each question asks you to choose, and each explain-back asks you to describe what you saw in the code.
+
+Before each question, read only these parts (about 5 to 10 minutes each):
+
+| Question | Read first | Then |
+|---|---|---|
+| 1. HTTP adapter | Options A | |
+| 2. Typed config | First principles: "Fail-fast configuration"; Trace 1, step 3 | Options B |
+| 3. Database driver | First principles: "Liveness vs readiness"; Trace 1, steps 8 to 9 and "Postgres stopped" | Options D |
+| 4. Health on failure | First principles: "RFC 9457 problem details" and "Liveness vs readiness"; Trace 1, "Postgres stopped"; Trace 2, step 4 | Options E |
+| 5. OpenTelemetry | First principles: "OpenTelemetry bootstrap order"; Trace 1, steps 1, 2, 10 and 11 | Options F |
+| 6. Module template | First principles: "The module template" and "Which tool checks what, and when" | Options G |
+| 7. Spike | First principles: "The compatibility spike as a go/no-go" | Options I and its table |
+
+The session presents one question at a time with this pointer. Ask about anything before answering; "I don't know" on an explain-back means the explainer missed something, and it gets fixed here.
+
+## Named here
+
+| Name | What it is, in one line | When |
+|---|---|---|
+| WP-1 | Repo foundation: workspace, Biome, dependency-cruiser, git hooks, dev containers (done) | R0 |
+| WP-5 | Messaging: the RabbitMQ adapter, the outbox (events saved in the same transaction as the data, then relayed to the broker) and the first `agent` skeleton | R0, next after WP-3 |
+| WP-6 | CI pipeline: GitHub Actions runs `pnpm verify:all`, the integration tests and the coverage gates on every pull request | R0 |
+| WP-8 | Server preparation: firewall, nginx, the production Compose stack, backups | R0 |
+| WP-10 | Data layer: Drizzle ORM, migrations per service, repositories | R1 |
+| WP-11 | Contact service: the form, its outbox and the mailer | R1 |
+| WP-12 | Content domain: posts, translations, publish states; the first hexagonal module | R1 |
+| WP-13 | Admin login with Better Auth | R1 |
+| WP-19 to WP-22 | The AI ports, the knowledge index, retrieval and the LangGraph agent | R2 |
+| WP-36 | The public MCP server (lets Claude and other clients query the profile) | R4 |
+| WP-51 | OpenAPI documents generated from the Zod contracts | R1 |
+| ADR-003 | Inside a service: hexagonal modules where there are rules, layered where trivial; ports are abstract classes | |
+| ADR-006 | Zod for every boundary, contracts in `packages/contracts`, errors as RFC 9457 | |
+| ADR-007 | Config from the environment, validated at boot; secrets never printed | |
+| ADR-009 | Test pyramid, Testcontainers, coverage gates | |
+| ADR-010 | Logs with pino, traces with OpenTelemetry, `/health/live` and `/health/ready` | |
+| ADR-029 | Each service owns its database; services talk only through RabbitMQ | |
+| ADR-042 | NestJS 12 on Node 24 LTS; an integration that breaks gets a wrapper, Nest is never downgraded | |
+
 Already decided by ADRs and not reopened here: Nest 12, ESM, Vitest on Node 24 (ADR-042, which restates ADR-004); Zod through Standard Schema, contracts in `packages/contracts`, one exception filter returning RFC 9457 (ADR-006); `@nestjs/config` with a Zod schema per module, validated at boot, no `process.env` outside the config module, the boot log lists variable names, never values (ADR-007); pino with request ids plus OpenTelemetry over OTLP to a free hosted tier, console exporter in dev, `/health/live` and `/health/ready` through `@nestjs/terminus` (ADR-010); the test pyramid, Testcontainers on `pgvector/pgvector`, supertest end-to-end, coverage gates (ADR-009); hexagonal where there are rules, layered where trivial, ports as abstract classes, no `utils/` (ADR-003); one database per service (ADR-029). Drizzle itself arrives in WP-10 and messaging in WP-5.
 
 Facts checked on 2026-10-03 against the npm registry (`npm view <pkg> version time --json`, peer ranges with `npm view <pkg> peerDependencies`). Nothing Nest-related is installed in the repo yet, and documentation sites were not used, so behavior I could not read in a package README is marked **verify**. pnpm 11 refuses versions younger than 24 hours (`minimumReleaseAge`, 1440 minutes); those are flagged and will be old enough by the time step 3 installs anything, but re-check then.
@@ -55,6 +96,19 @@ Facts checked on 2026-10-03 against the npm registry (`npm view <pkg> version ti
 ## First principles
 
 **Nest 12 on ESM, what actually changes.** Every `@nestjs/*` package is now an ES module (`"type": "module"`, ESM-only `exports`). Our code follows: `apps/api/package.json` has `"type": "module"`, the shared `node-service` tsconfig already uses `module: NodeNext`, so relative imports carry `.js` (`import { AppModule } from "./app.module.js"`), and `__dirname` becomes `import.meta.dirname`. Four consequences matter in practice. (1) *Load order is static.* In ESM every `import` is resolved and evaluated before the importing module's body runs, so "do X on the first line of `main.ts` before anything else loads" is impossible; anything that must run first (OpenTelemetry) goes in a separate file loaded with `node --import`. (2) *Circular imports fail louder.* A class used before its module finished evaluating throws `ReferenceError: Cannot access 'X' before initialization` instead of quietly being `undefined`; `forwardRef()` still exists, and the WP-1 `no-circular` rule keeps cycles out. (3) *CommonJS dependencies still work.* `pino`, `nestjs-pino` and `@golevelup/nestjs-rabbitmq` are CommonJS; ESM can import them, and when they `require("@nestjs/common")` (now ESM-only) Node loads it through `require(esm)`, stable since 20.19 and 22.12, which is my reading of why Nest 12 has exactly that Node floor (**verify** in the spike: `require(esm)` fails if the ESM graph uses top-level await). (4) *Decorator metadata needs care.* Nest still resolves constructor parameters from `design:paramtypes`, which TypeScript emits with `experimentalDecorators` and `emitDecoratorMetadata` (both already in `packages/config/tsconfig/node-service.json`). Our base tsconfig also sets `verbatimModuleSyntax`, which means an `import type { PgPool }` is erased, so the metadata for that parameter becomes `Object` and Nest fails at boot with `Nest can't resolve dependencies of PostgresHealthIndicator (?)`. Rule: classes you inject are imported as values. Vitest compiles with Oxc, not tsc; the Rolldown 1.2 bundled in this repo exposes `decorator.legacy` and `emitDecoratorMetadata` options and reads them from tsconfig (`rolldown/dist/shared/binding-*.d.mts`), so Vitest should not need the SWC plugin Nest 11 projects used (**verify** in step 3 with a DI test). Biome needs `javascript.parser.unsafeParameterDecoratorsEnabled: true` to parse `@Body()` and `@Inject()` on parameters (option present in the bundled Biome 2.5.15 schema).
+
+**Workspace packages: compiled code, not path aliases.** `apps/api` will import `@jadero/platform-nest`. Two mechanisms can make that name resolve, and only one survives production. A *path alias* (`"paths": { "@jadero/platform-nest": ["../../packages/platform-nest/src"] }` in tsconfig) only tells the TypeScript compiler where to look. The compiled `dist/main.js` still says `import ... from "@jadero/platform-nest"`, and Node never reads tsconfig: it looks for that name in `node_modules`, finds nothing, and the container exits at boot with `ERR_MODULE_NOT_FOUND`. A *workspace package* is a real package. `pnpm install` creates the symlink `apps/api/node_modules/@jadero/platform-nest -> packages/platform-nest`, and Node reads that package's `package.json`, whose `exports` map (`".": "./dist/index.js"`) names the file to load. That file must be JavaScript: Node 24 strips types from your own `.ts` files but refuses inside `node_modules` (`ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`), and type stripping cannot handle decorators at all. So `packages/platform-nest` has a `build` script (tsc to `dist/`), and `"dependsOn": ["^build"]` in `turbo.json` builds it before `api` typechecks, tests or builds. `@jadero/config` (WP-1) needed no build because it holds only JSON and plain JavaScript. Step 3 creates the first compiled package; you will see the symlink and the `exports` map there.
+
+**Which tool checks what, and when.** Four tools, each with one job and a fixed place where it runs.
+
+| Tool | Checks | Runs |
+|---|---|---|
+| Biome | formatting and smells inside one file (an unused variable, `==`) | on every agent edit, on staged files at `git commit`, in `pnpm verify` |
+| TypeScript (`tsc --noEmit`) | types across files | in `pnpm verify` |
+| dependency-cruiser | which file may import which: the architecture rules of ADR-003 and AGENTS.md section 4; it reads the import graph, not the code | in `pnpm verify` (`pnpm depcruise`) |
+| commitlint | the commit message shape `type(scope): subject` | at `git commit` |
+
+Example: a file in `apps/agent` that imports `../../api/src/modules/content/post.js` breaks the rule `no-cross-service-imports`; `pnpm verify` fails and prints the rule name and both paths. Today all four run only on your machine, so they can be skipped (`LEFTHOOK=0`, or not running `pnpm verify`). From WP-6 the same `pnpm verify:all` runs on GitHub for every pull request, so a skipped local check still blocks the merge. In this WP: step 3's DI test is caught by TypeScript and Vitest, and step 8 widens the dependency-cruiser rules to `templates/`.
 
 **Standard Schema validation.** Standard Schema is a tiny shared interface: any validator exposes `schema["~standard"].validate(value)` returning `{ value }` or `{ issues: [{ message, path }] }` (possibly as a promise). Zod 4, Valibot and ArkType implement it, so Nest can validate without knowing which library made the schema. Nest 12 adds a `schema` option to `@Body()`, `@Query()` and `@Param()`, a `StandardSchemaValidationPipe` that runs it, and a `StandardSchemaSerializerInterceptor` that can validate and strip responses (report section 1, Nest 12 release notes). The input type comes from the schema (`z.infer<typeof ContactBody>`), so there is no DTO class and the same schema can live in `packages/contracts` for the admin form, the API and an agent tool. Exact option names and the exception the pipe throws (its body shape) are **verify**; our problem-details filter maps whatever it throws.
 
@@ -337,6 +391,10 @@ C (health module in `platform-nest`, checks per service), H (one container per r
 Say which steps you already know (D-38 fast path): step 4 and step 8 are the candidates.
 
 ## Decision
+
+Answers as the owner gives them, one question at a time. `decision: recorded` is set after question 7.
+
+1. HTTP adapter: **A1, Express 5** (2026-10-03). The owner also has more experience with Express.
 
 ## Step log
 
