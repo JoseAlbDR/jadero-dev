@@ -74,7 +74,7 @@ Compact after the decision is recorded and after the reviewer has reported. Keep
 
 ## How the owner learns
 
-The file is the textbook for this WP; the session is the teacher. Read the question first, then the options, then the first principles you need. Ask about any paragraph or file. A step you already know: say "known" (`fast_path: known`). A fact marked **verify** was not confirmed from a primary source; verify it at implementation time. Learning survives the PR: the Recap can land after the merge in a docs commit. A learning WP run without the owner (as WP-1 was) gets its explain-back on the next session before moving on.
+The file is the textbook for this WP; the session is the teacher. You never read ADRs or other WPs to answer: the file has a "How to read this file" table (what to read before each question) and a "Named here" table (one line per WP or ADR it names). The session asks one question at a time with that pointer. Nothing is to memorize; an explain-back you cannot answer means the explainer missed something, and it gets taught and added, not re-tested. Ask about any paragraph or file. A step you already know: say "known" (`fast_path: known`). A fact marked **verify** was not confirmed from a primary source; verify it at implementation time. Learning survives the PR: the Recap can land after the merge in a docs commit. A learning WP run without the owner (as WP-1 was) gets its explain-back on the next session before moving on.
 
 ## When something blocks
 
