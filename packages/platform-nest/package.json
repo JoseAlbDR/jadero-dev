@@ -36,6 +36,7 @@
     "@nestjs/core": "catalog:",
     "@nestjs/platform-express": "catalog:",
     "@nestjs/testing": "catalog:",
+    "@types/express": "catalog:",
     "@types/node": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",

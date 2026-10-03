@@ -11,6 +11,7 @@ catalog:
   "@nestjs/core": 12.1.2
   "@nestjs/platform-express": 12.1.2
   "@nestjs/testing": 12.1.2
+  "@types/express": 5.0.6
   "@types/node": 24.19.1
   dependency-cruiser: 18.5.0
   lefthook: 2.1.16
