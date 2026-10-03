@@ -1,0 +1,16 @@
+name: Chore
+description: Maintenance that changes no behavior (dependency bump, tooling, docs).
+title: "chore(<scope>): <what>"
+labels: ["type:chore"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What and why
+    validations:
+      required: true
+  - type: input
+    id: wp
+    attributes:
+      label: Related WP (optional)
+      placeholder: WP-NN
