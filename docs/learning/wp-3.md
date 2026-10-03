@@ -30,7 +30,7 @@ Before each question, read only these parts (about 5 to 10 minutes each):
 | 6. Module template | First principles: "The module template" and "Which tool checks what, and when" | Options G |
 | 7. Spike | First principles: "The compatibility spike as a go/no-go" | Options I and its table |
 
-The session presents one question at a time with this pointer. Ask about anything before answering; "I don't know" on an explain-back means the explainer missed something, and it gets fixed here.
+The session presents all questions in one message with this pointer; a question that depends on another gets a recommendation per possible answer of the first. Ask about anything before answering; "I don't know" on an explain-back means the explainer missed something, and it gets fixed here.
 
 ## Named here
 
@@ -392,9 +392,10 @@ Say which steps you already know (D-38 fast path): step 4 and step 8 are the can
 
 ## Decision
 
-Answers as the owner gives them, one question at a time. `decision: recorded` is set after question 7.
+Answers as the owner gives them. `decision: recorded` is set after question 7.
 
 1. HTTP adapter: **A1, Express 5** (2026-10-03). The owner also has more experience with Express.
+2. Typed config: **B2, an `ApiConfig` abstract class provided with the parsed object** (2026-10-03).
 
 ## Step log
 
