@@ -1,6 +1,6 @@
 {
   "title": "jadero.dev v2: plan review",
-  "summary": "The build plan for jadero.dev v2, a multilingual (es, en, de) portfolio that proves broad engineering skills: backend architecture, reliability and messaging, testing, CI/CD and infrastructure, security, frontend craft, engineering process and applied AI. It supports an internal move to the agentic team and stands equally for any future role. The backend is a modular monolith plus a few services where isolation pays, with RabbitMQ between them, deployed by CI/CD to the owner's Hetzner CX33; the ask-me agent, RAG and MCP work is one strong showcase among those pillars. Each card is one decision with options, trade-offs and a recommendation; full reasoning lives in the ADRs of report.md, and nothing gets built until these are decided (WP-0).",
+  "summary": "The build plan for jadero.dev v2, a multilingual (es, en, de) portfolio that proves broad engineering skills: backend architecture, reliability and messaging, testing, CI/CD and infrastructure, security, frontend craft, engineering process and applied AI. It supports an internal move to the agentic team and stands equally for any future role. The backend is a modular monolith plus a few services where isolation pays, with RabbitMQ between them, deployed by CI/CD to the owner's Hetzner CX33; the ask-me agent, RAG and MCP work is one strong showcase among those pillars. Each card is one decision with options, trade-offs and a recommendation; full reasoning lives in the ADRs of report.md, and nothing gets built until these are decided (WP-0). Owner review (2026-10-03): 53 decided, 9 decided with a change from the owner's notes, 14 open with concrete follow-ups in owner-review-followups.md.",
   "areas": [
     {
       "id": "foundation",
@@ -142,14 +142,17 @@
       "why": "Turborepo gives caching and affected runs with very little configuration, and pnpm is the fastest, strictest package manager for workspaces. Nx is more than this project needs, plain workspaces waste CI time, and separate repos break shared contracts.",
       "adr": "ADR-001",
       "learn": "Task graph, build cache, affected runs, internal packages (compiled vs just-in-time).",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-2",
       "area": "architecture",
       "title": "Runtime topology and edge",
       "question": "How should traffic reach the services, and where does the admin live?",
-      "context": "The edge is the first thing a request hits: it terminates TLS, decides which service gets the request and can apply cross-cutting rules like rate limits and authentication. The server already runs nginx, which can do all of that. Same origin means the browser sees the API on the same domain as the page, so cookies work simply and there is no CORS configuration.",
+      "context": "The edge is the first thing a request hits: it terminates TLS, decides which service gets the request and can apply cross-cutting rules like rate limits and authentication. The server already runs nginx, which can do all of that. Same origin means the browser sees the API on the same domain as the page, so cookies work simply and there is no CORS configuration. The edge component itself is now decided once, in D-45, because the owner noted the overlap; this card keeps the deployables and same origin per audience.",
       "options": [
         {
           "id": "a",
@@ -192,10 +195,14 @@
         }
       ],
       "recommendation": "a",
-      "why": "nginx already does routing, TLS, rate limits and auth checks well and costs nothing extra. A gateway service would put a new shared dependency in front of everything, which defeats the purpose of splitting services.",
+      "why": "Same origin per audience keeps cookies first-party and removes CORS entirely. Which component runs the edge (nginx alone, or nginx plus a thin NestJS gateway) is now D-45's question.",
       "adr": "ADR-002",
       "learn": "API gateway, gateway offloading, same-origin policy, CORS.",
-      "status": "open"
+      "status": "open",
+      "ownerNote": "Repeats D-45. nginx looks simplest, but for learning the owner would like a NestJS gateway service, ideally the best of both; wants to discuss it.",
+      "ownerPick": "a",
+      "openQuestion": "Confirm that D-2 now covers only the deployables and same origin per audience, with the edge component decided once in D-45.",
+      "followup": "F-2"
     },
     {
       "id": "D-3",
@@ -248,7 +255,12 @@
       "why": "Using hexagonal only where there are real rules or external systems shows judgment and keeps the core testable, without adding layers to code that does not need them.",
       "adr": "ADR-003",
       "learn": "Ports and adapters, dependency inversion, use case, repository, anti-corruption layer.",
-      "status": "open"
+      "status": "decided-with-change",
+      "ownerNote": "Asks whether more layers make sense: a service as orchestrator, a DAO service for data access, utils, shared modules, and hexagonal ports as abstract classes so adapters follow one shape where it applies.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02",
+      "change": "Layer conventions added to ADR-003: controller, application service as orchestrator, repository for data access; ports as abstract classes used as DI tokens; no generic utils folder; sharing across services only through named infrastructure packages."
     },
     {
       "id": "D-4",
@@ -289,7 +301,11 @@
       "why": "A greenfield project should start on the current major; the WP-3 spike catches any incompatible module early, and the fallback is a thin own wrapper rather than a downgrade.",
       "adr": "ADR-004",
       "learn": "ESM vs CommonJS, require(esm), Standard Schema.",
-      "status": "open"
+      "status": "decided",
+      "ownerNote": "Fine to use NestJS 12 although work uses older versions; learning it here gives data to propose the version bump at work.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-5",
@@ -355,7 +371,11 @@
       "why": "Drizzle supports pgvector natively and keeps SQL visible, which matches both the agent's needs and the learning goal. Prisma is mid-transition, and TypeORM teaches nothing new.",
       "adr": "ADR-005",
       "learn": "Schema migrations, query builders, repository pattern, transactions.",
-      "status": "open"
+      "status": "decided",
+      "ownerNote": "Has used Prisma and TypeORM; Drizzle is now in use at work, so the owner wants to learn it.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-6",
@@ -394,7 +414,12 @@
       "why": "A single Zod schema per contract removes drift between the admin forms, the services, the events and the agent tools.",
       "adr": "ADR-006",
       "learn": "Validation at boundaries, contracts, RFC 9457 problem details.",
-      "status": "open"
+      "status": "decided-with-change",
+      "ownerNote": "Generating OpenAPI documentation automatically for every DTO and endpoint contract matters; the owner works on this at work too and wants to learn it well.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02",
+      "change": "OpenAPI generated from the Zod contracts (@nestjs/swagger 12 standardSchemaConverter with zod-openapi), a docs UI outside production and a breaking-change check in CI; new learning WP-51."
     },
     {
       "id": "D-7",
@@ -437,13 +462,35 @@
           "cons": [
             "Key management to learn on day one"
           ]
+        },
+        {
+          "id": "d",
+          "label": "Server only, sourced from 1Password",
+          "description": "A personal 1Password vault and a read-only service account; templates with op:// references in the repo; the deploy script renders each service's .env with op inject.",
+          "pros": [
+            "Rotation is change it and redeploy",
+            "A lost server does not lose the secrets",
+            "Templates document each service's secrets",
+            "A tool the owner already uses"
+          ],
+          "cons": [
+            "A paid 1Password plan if not already owned",
+            "Service-account rate limits below Business plans",
+            "Deploys fail while 1Password is unreachable"
+          ]
         }
       ],
-      "recommendation": "a",
-      "why": "Server-only secrets are the simplest safe default; SOPS stays available as an optional later work package (WP-34).",
+      "recommendation": "d",
+      "why": "Recommendation changed from a to d after the owner's note (F-5): 1Password keeps runtime secrets off GitHub as a does, and adds easy rotation and recovery after a server loss; a stays right if the owner has no personal 1Password account.",
       "adr": "ADR-007",
       "learn": "Blast radius, least privilege, fail-fast configuration.",
-      "status": "open"
+      "status": "open",
+      "ownerNote": "Asks whether 1Password, whose CLI the owner uses lately for secrets, could be an option.",
+      "ownerPick": "a",
+      "openQuestion": "Use a personal 1Password vault as the source of the server's secrets (d), or keep plain server-only files (a)?",
+      "followup": "F-5",
+      "previousRecommendation": "a",
+      "previousWhy": "Server-only secrets are the simplest safe default; SOPS stays available as an optional later work package (WP-34)."
     },
     {
       "id": "D-8",
@@ -507,7 +554,10 @@
       "why": "OAuth with an allow-listed immutable user id and server-side sessions is the safe modern default for one user; hand-rolling is the classic place for subtle bugs, and JWT does not fit this shape.",
       "adr": "ADR-008",
       "learn": "Sessions vs tokens, OAuth authorization code + PKCE, cookie flags, CSRF.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-9",
@@ -559,7 +609,11 @@
       "why": "Fakes keep most tests fast and meaningful, Testcontainers proves the SQL and messaging really work, and contract tests stop services from breaking each other.",
       "adr": "ADR-009",
       "learn": "Test pyramid, test doubles, contract testing, Testcontainers, coverage vs correctness.",
-      "status": "open"
+      "status": "decided",
+      "ownerNote": "As much testing as possible; the server has the resources; asks how all of it fits into GitHub Actions, or whether it needs to.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-10",
@@ -607,7 +661,10 @@
       "why": "Distributed tracing becomes essential once there are services and a broker, and a free hosted backend gives it without eating the server's memory.",
       "adr": "ADR-010",
       "learn": "Three signals, W3C traceparent, context propagation, health checks.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-11",
@@ -662,7 +719,11 @@
       "why": "The own module is the part of the backend a reviewer will read, and it produces exactly the structured content the agent needs; Markdown keeps rich formatting without executing content.",
       "adr": "ADR-011",
       "learn": "Aggregates, translation tables, revisions, publish state machine.",
-      "status": "open"
+      "status": "decided",
+      "ownerNote": "Asks whether Astro would make sense for the admin; frontend matters little to the owner.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-12",
@@ -713,7 +774,12 @@
       "why": "The outbox plus idempotent consumers is the standard way to get reliable messaging between services that each own their database.",
       "adr": "ADR-012",
       "learn": "Dual-write problem, transactional outbox, at-least-once delivery, idempotent consumer, dead-letter queue.",
-      "status": "open"
+      "status": "decided-with-change",
+      "ownerNote": "Asks whether a transaction with try/catch and rollback gives atomicity, whether a small database for dead letters makes sense for audit and manual recovery, and suggests tracking events, successes and failures in the admin.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02",
+      "change": "Adds a dead_letters archive table in each service's own database, an admin Events page (outbox, inbox, retries, dead letters) and a replay action; new WP-50. A shared database for dead letters was not used, to keep database per service."
     },
     {
       "id": "D-13",
@@ -766,7 +832,12 @@
       "why": "Own the port where the domain has rules (embedding identity, index versions, reranking); reuse LangChain where it already does the hard, non-transferable work (tool calling and streaming across providers).",
       "adr": "ADR-013",
       "learn": "Ports and adapters, abstract factory, strategy, blue-green re-index, expand/contract, contract tests.",
-      "status": "open"
+      "status": "decided-with-change",
+      "ownerNote": "Embeddings should be one fixed provider choice, since changing them changes ingestion and vectors cannot be mixed; the movable part is the chat model per graph node, maybe one per node or one for all; asks for research on the embedding model and whether data size matters.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02",
+      "change": "Embeddings are fixed per index version and changed only by a planned re-index; the chat model is movable per graph role by config, with one model everywhere by default."
     },
     {
       "id": "D-14",
@@ -818,7 +889,12 @@
       "why": "It fits the Haiku-class budget, handles es, en and de well, and costs almost nothing for retrieval; the provider-agnostic layer means an eval can overturn it with a config change.",
       "adr": "ADR-014",
       "learn": "Embeddings, reranking, prompt caching, cost per turn, model evaluation.",
-      "status": "open"
+      "status": "decided-with-change",
+      "ownerNote": "Haiku as the base, but switching to Sonnet 5.5 or an OpenAI model must be possible; asks which parts should be movable and which fixed, for simplicity.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02",
+      "change": "Haiku 4.5 is the default for every role; per-role overrides (Sonnet 5.5, an OpenAI model) are adopted only after an eval experiment; the fixed and movable parts are listed in ADR-014."
     },
     {
       "id": "D-15",
@@ -869,7 +945,11 @@
       "why": "Deterministic guard and retrieval nodes make the agent safe and cheap by construction, while the bounded loop still handles questions that need a second lookup.",
       "adr": "ADR-015",
       "learn": "Workflow vs agent, router, guard node, ReAct loop, corrective RAG, circuit breaker.",
-      "status": "open"
+      "status": "decided",
+      "ownerNote": "Prefers to build the StateGraph personally with AI assistance, to understand each part and how they connect.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-16",
@@ -912,13 +992,32 @@
           "cons": [
             "Another service and RAM for a corpus of a few hundred chunks"
           ]
+        },
+        {
+          "id": "d",
+          "label": "pgvector now, a Qdrant adapter later, decided by evals",
+          "description": "Launch on option a; after launch implement KnowledgeIndexPort on Qdrant (hybrid Query API with RRF, collection aliases for re-index) and adopt it only if it beats pgvector on recall, MRR and latency.",
+          "pros": [
+            "Learns a dedicated vector engine without risking launch",
+            "Uses the port for what it is for",
+            "A measured decision"
+          ],
+          "cons": [
+            "About 3 more days after launch",
+            "A second store while both run"
+          ]
         }
       ],
-      "recommendation": "a",
-      "why": "Hybrid search with fusion is the reliable default for a small, name-heavy corpus, and pgvector keeps everything in one database the agent already owns.",
+      "recommendation": "d",
+      "why": "Recommendation changed from a to d after the owner's note (F-6): pgvector stays the launch store, and a Qdrant adapter behind the same port lets the evals decide, which teaches the vector engine without risking launch.",
       "adr": "ADR-016",
       "learn": "Embeddings, chunking, HNSW, full-text search, Reciprocal Rank Fusion, reranking.",
-      "status": "open"
+      "status": "open",
+      "ownerNote": "a seems fine, but Qdrant is interesting to learn, though maybe overkill; worth exploring if the server supports it, to broaden the stack.",
+      "openQuestion": "pgvector only (a), or pgvector now plus a Qdrant adapter after launch, decided by evals (d)?",
+      "followup": "F-6",
+      "previousRecommendation": "a",
+      "previousWhy": "Hybrid search with fusion is the reliable default for a small, name-heavy corpus, and pgvector keeps everything in one database the agent already owns."
     },
     {
       "id": "D-17",
@@ -967,7 +1066,12 @@
       "why": "Streaming feels fast and is safe here because nothing secret is ever in the model's context; the checks still abort a stream on a hit.",
       "adr": "ADR-017",
       "learn": "Checkpointing, Server-Sent Events, streaming vs post-hoc checks.",
-      "status": "open"
+      "status": "decided-with-change",
+      "ownerNote": "Has always used b and wants to learn a if it is better; asks whether stored conversations should be encrypted for privacy.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02",
+      "change": "Checkpoint payloads encrypted at rest with AES-256-GCM through a custom serializer and a rotatable key; 24-hour purge; checkpoints left out of off-site backups."
     },
     {
       "id": "D-18",
@@ -1015,7 +1119,11 @@
       "why": "MCP adds value where it crosses a boundary to other people's clients; inside the agent it would only add latency and failure modes. Timing superseded by D-58: the owner approved the public MCP at launch (WP-36).",
       "adr": "ADR-018",
       "learn": "MCP tools, resources, transports; driving adapters.",
-      "status": "open"
+      "status": "decided",
+      "ownerNote": "Yes: an MCP that anyone, colleagues included, can use from Claude to ask about the owner's experience without the site's agent.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-19",
@@ -1050,7 +1158,10 @@
       "recommendation": "a",
       "why": "English serves the widest professional audience; detection still gives Spanish and German speakers their language.",
       "adr": "ADR-022",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-20",
@@ -1097,7 +1208,10 @@
       "recommendation": "a",
       "why": "Requiring the two languages the owner writes best keeps quality high without blocking on German, which can also get machine drafts later (WP-32).",
       "adr": "ADR-022",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-21",
@@ -1147,7 +1261,11 @@
       "why": "Production traces are where attacks and failures show up; the EU region and masking keep the privacy cost low.",
       "adr": "ADR-019",
       "learn": "Tracing, spans, privacy by design.",
-      "status": "open"
+      "status": "decided",
+      "ownerNote": "Privacy is a concern; self-hosted Langfuse is interesting for learning but adds time and complexity, and the server may not cope.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-22",
@@ -1195,7 +1313,11 @@
       "why": "Security regressions in a public agent must never merge, and path filters keep the cost to the PRs that can cause them.",
       "adr": "ADR-019",
       "learn": "Evals vs tests, LLM-as-judge, experiment baselines.",
-      "status": "open"
+      "status": "decided",
+      "ownerNote": "Start with a and try others if spend jumps; asks whether moving from a to b later is hard or just configuration.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-23",
@@ -1244,7 +1366,10 @@
       "recommendation": "a",
       "why": "The editorial base reads as senior and credible to any engineering audience, and the terminal-style prompt adds one memorable interaction without making the agent the whole story; the final call comes from the mockups.",
       "adr": "ADR-023",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-24",
@@ -1291,7 +1416,10 @@
       "recommendation": "a",
       "why": "react-pdf runs in the existing worker process without a browser, which matters on an 8 GB server.",
       "adr": "report section 9",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-25",
@@ -1327,12 +1455,13 @@
         {
           "id": "c",
           "label": "Python sidecar (LLM Guard or NeMo)",
-          "description": "A Python service with rich scanners.",
+          "description": "A Python service with scanners; LLM Guard was archived in July 2026, NeMo Guardrails and Prompt Guard 2 remain.",
           "pros": [
             "Richest scanners"
           ],
           "cons": [
-            "A second language and its models on the box"
+            "A second language and its models on the box",
+            "LLM Guard is no longer maintained"
           ]
         },
         {
@@ -1345,13 +1474,34 @@
           "cons": [
             "Another processor of visitor data"
           ]
+        },
+        {
+          "id": "e",
+          "label": "TypeScript guard now, Python classifier service later",
+          "description": "Launch with option a; after launch add a FastAPI service running Prompt Guard 2 as a second GuardClassifierPort adapter, behind a timeout and a circuit breaker that falls back to the Haiku classifier; evals pick the winner.",
+          "pros": [
+            "Real Python in a contained piece",
+            "The chat never depends on it",
+            "Evals decide, not opinion"
+          ],
+          "cons": [
+            "A second toolchain and image",
+            "About 500 MB of RAM",
+            "One HTTP hop when used"
+          ]
         }
       ],
-      "recommendation": "a",
-      "why": "Building the layers teaches each defense and keeps them testable; libraries and datasets still feed rules and test cases.",
+      "recommendation": "e",
+      "why": "Recommendation changed from a to e after the owner's note (F-7): LLM Guard was archived in July 2026, so the Python piece is a Prompt Guard 2 classifier service behind the existing port, added after launch with a fallback, so the chat never depends on it.",
       "adr": "ADR-020",
       "learn": "OWASP LLM Top 10 2025, defense in depth, canary tokens, untrusted-content policy.",
-      "status": "open"
+      "status": "open",
+      "ownerNote": "Open to Python to try another language, since the agentic team uses it a lot; wants the pros and cons of building everything vs using a Python library.",
+      "ownerPick": "a",
+      "openQuestion": "Keep the TypeScript guard only (a), or add a Python Prompt Guard 2 classifier service after launch behind the same port (e)?",
+      "followup": "F-7",
+      "previousRecommendation": "a",
+      "previousWhy": "Building the layers teaches each defense and keeps them testable; libraries and datasets still feed rules and test cases."
     },
     {
       "id": "D-26",
@@ -1400,7 +1550,10 @@
       "why": "Postgres is already there, survives deploys and keeps each service's limits in its own data.",
       "adr": "ADR-021",
       "learn": "Fixed window, sliding window, token bucket.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-27",
@@ -1448,7 +1601,10 @@
       "why": "These numbers keep the worst month to a few tens of dollars while leaving room for real conversations; tune them from the usage dashboard.",
       "adr": "ADR-021",
       "learn": "Unbounded consumption (LLM10), circuit breaker.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-28",
@@ -1497,7 +1653,10 @@
       "why": "Turnstile gives strong protection without tracking concerns, and the honeypot adds a free extra layer on the form.",
       "adr": "ADR-021",
       "learn": "Bot mitigation, server-side token verification.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-29",
@@ -1548,7 +1707,10 @@
       "why": "A portfolio repo gains far more from being readable than it risks, and going public unlocks the deployment safety features for free.",
       "adr": "ADR-026",
       "learn": "Supply chain hygiene, secret scanning.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-30",
@@ -1595,7 +1757,10 @@
       "recommendation": "a",
       "why": "Keeping staging but stopped keeps the safety net without paying for it in memory.",
       "adr": "ADR-027",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-31",
@@ -1630,7 +1795,10 @@
       "recommendation": "a",
       "why": "A monitor that dies with the thing it monitors cannot report that failure; one free external check fixes it.",
       "adr": "ADR-027",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-32",
@@ -1678,7 +1846,10 @@
       "why": "It removes the public SSH surface entirely and limits what the deploy key can do, at the cost of one Tailscale setup.",
       "adr": "ADR-026",
       "learn": "Least privilege, forced commands, zero-trust networking.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-33",
@@ -1713,7 +1884,10 @@
       "recommendation": "a",
       "why": "A shorter list of honest, code-backed projects reads better to any technical reviewer than a longer list that includes course copies.",
       "adr": "report section 2",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-34",
@@ -1762,7 +1936,10 @@
       "why": "It unblocks the build today, keeps the personal repo free of company material, and can adopt the core plugin later if it adds mechanical value.",
       "adr": "ADR-028",
       "learn": "Agent instructions, hooks as mechanism, learning gate.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-35",
@@ -1799,7 +1976,10 @@
       "why": "Biome is simpler and faster, and the rules that matter most (architecture) come from dependency-cruiser either way.",
       "adr": "ADR-024",
       "learn": "Architecture fitness functions, conventional commits.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-36",
@@ -1860,7 +2040,10 @@
       "why": "Per-service versions are what makes the services genuinely independent, and the Release PR keeps the owner in control of when things ship.",
       "adr": "ADR-025",
       "learn": "Semantic versioning, conventional commits, release trains vs independent releases.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-37",
@@ -1908,7 +2091,10 @@
       "why": "It is small enough to finish quickly and exercises every messaging pattern before the agent depends on them.",
       "adr": "ADR-030",
       "learn": "Store-and-forward, asynchronous request-reply (202 Accepted), spam relay.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-38",
@@ -1944,7 +2130,12 @@
       "why": "Learning is a hard requirement, and the gate turns it into a mechanism instead of a good intention.",
       "adr": "report section 12.3",
       "learn": "Learning gate, explain-back, concrete traces.",
-      "status": "open"
+      "status": "decided-with-change",
+      "ownerNote": "Find the balance between learning and speed; topics the owner already knows can go straight to implementation.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02",
+      "change": "Adds a fast path: a WP or step marked known needs only the decision record; the full explainer and explain-back stay for new material."
     },
     {
       "id": "D-39",
@@ -1996,10 +2187,13 @@
         }
       ],
       "recommendation": "a",
-      "why": "It gives the owner the isolation he asked for exactly where it matters (agent and contact), keeps strongly related modules together, and avoids the distributed-monolith trap.",
+      "why": "It gives the owner the isolation they asked for exactly where it matters (agent and contact), keeps strongly related modules together, and avoids the distributed-monolith trap.",
       "adr": "ADR-029",
       "learn": "Bounded context, database per service, process types, distributed monolith.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-40",
@@ -2063,7 +2257,11 @@
       "why": "RabbitMQ's routing and dead-letter features fit this event flow, the memory cost is affordable, and the knowledge transfers to the owner's work.",
       "adr": "ADR-029",
       "learn": "Exchanges, bindings, quorum queues, acknowledgments, prefetch, dead-letter exchange.",
-      "status": "open"
+      "status": "decided",
+      "ownerNote": "Wants to learn RabbitMQ.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-41",
@@ -2112,14 +2310,18 @@
       "recommendation": "a",
       "why": "It exposes the real RabbitMQ model with little code; the own amqplib adapter is the fallback if Nest 12 support lags.",
       "adr": "ADR-029",
-      "status": "open"
+      "status": "decided",
+      "ownerNote": "An adapter would allow swapping RabbitMQ for another broker; unsure it is worth it beyond learning.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-42",
       "area": "architecture",
       "title": "How the agent gets content",
       "question": "Should the agent call the content API, or keep its own copy of the content?",
-      "context": "If the agent calls api synchronously for every lookup, an api outage breaks the chat: a hidden coupling. Event-carried state transfer means each content.published event carries the full published item, and the agent stores it in its own read model. The agent then answers from its own data, a few seconds behind the latest publish.",
+      "context": "If the agent calls api synchronously for every lookup, an api outage breaks the chat: a hidden coupling. Event-carried state transfer means each content.published event carries the full published item, and the agent stores it in its own read model. The agent then answers from its own data, a few seconds behind the latest publish. The copy is a derived search index (chunks and vectors), not a second source of truth: api keeps the entries, revisions and approval state that the site and the admin need.",
       "options": [
         {
           "id": "a",
@@ -2131,7 +2333,7 @@
           ],
           "cons": [
             "Seconds of lag after a publish",
-            "Data stored twice"
+            "A derived index next to the source (rebuildable from events)"
           ]
         },
         {
@@ -2145,13 +2347,31 @@
           "cons": [
             "Chat degrades whenever api is down"
           ]
+        },
+        {
+          "id": "c",
+          "label": "The agent owns knowledge entries end to end",
+          "description": "Entries, revisions and approval live in agent; api keeps the CV, projects and posts.",
+          "pros": [
+            "No copy of the entries",
+            "One owner for everything the agent reads"
+          ],
+          "cons": [
+            "The agent becomes a content service too",
+            "Content split across two services",
+            "An agent outage stops entry editing and work-log pages"
+          ]
         }
       ],
       "recommendation": "a",
-      "why": "It is what makes the agent genuinely independent, which is the point of making it a service.",
+      "why": "It is what makes the agent genuinely independent, which is the point of making it a service. Clarified after the owner's note (F-8): the agent keeps a search index derived from api's content, not a second copy to maintain.",
       "adr": "ADR-029",
       "learn": "Event-carried state transfer, read model, CQRS-style separation.",
-      "status": "open"
+      "status": "open",
+      "ownerNote": "Asks why data is stored twice: the agent's data is what lives in the vector database for RAG and api should not know about it; does not see the duplication or the api and agent split.",
+      "ownerPick": "a",
+      "openQuestion": "With the copy explained as a derived search index, confirm a, or choose c (the agent owns knowledge entries)?",
+      "followup": "F-8"
     },
     {
       "id": "D-43",
@@ -2210,7 +2430,11 @@
       "why": "Zod is already the project's schema language, and fixture tests in one monorepo give the same safety as heavier tools with far less setup.",
       "adr": "ADR-029",
       "learn": "CloudEvents, AsyncAPI, schema evolution, consumer-driven contracts.",
-      "status": "open"
+      "status": "decided",
+      "ownerNote": "Asks whether a separate toolbox repository publishing versioned packages (types, contracts, schemas) would avoid duplication across services.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-44",
@@ -2258,7 +2482,10 @@
       "why": "A static SPA costs nothing to run and isolates the privileged UI completely from the public site.",
       "adr": "ADR-002",
       "learn": "Static hosting, Content Security Policy, attack surface.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-45",
@@ -2300,13 +2527,34 @@
           "cons": [
             "A new shared point of failure"
           ]
+        },
+        {
+          "id": "d",
+          "label": "nginx at the edge plus a thin NestJS gateway",
+          "description": "nginx keeps TLS, static files, the stale page cache and coarse limits; a NestJS gateway behind it handles /api/* only: routing, admin session check, correlation ids, per-route limits, merged OpenAPI docs, SSE pass-through. No business logic, no database.",
+          "pros": [
+            "Learns the gateway pattern in tested TypeScript",
+            "Keeps nginx's resilience (stale cache)",
+            "One place for API cross-cutting rules"
+          ],
+          "cons": [
+            "One more hop and about 150 MB",
+            "A new single point of failure for /api/*",
+            "About 3 to 4 more build days"
+          ]
         }
       ],
-      "recommendation": "a",
-      "why": "nginx already covers every gateway job, and the stale cache adds real resilience for free.",
+      "recommendation": "d",
+      "why": "Recommendation changed from a to d after the owner's note (F-1): nginx keeps the edge jobs it does best, while a thin NestJS gateway behind it teaches the gateway pattern in tested code; it stays thin (no business logic, no database, outside traffic only), so it does not become the coupling point the service split avoids.",
       "adr": "ADR-002",
-      "learn": "Gateway offloading, reverse proxy caching.",
-      "status": "open"
+      "learn": "Gateway offloading, gateway routing, backends for frontends, reverse proxy caching, streaming through a proxy.",
+      "status": "open",
+      "ownerNote": "A NestJS gateway service appeals for learning even as another point of failure; unsure despite picking a; the question repeats D-2; wants the best of both; suggests firstmate study the employer's gateway for patterns only.",
+      "ownerPick": "a",
+      "openQuestion": "nginx only (a), or nginx at the edge plus a thin NestJS gateway for the API routes (d)?",
+      "followup": "F-1",
+      "previousRecommendation": "a",
+      "previousWhy": "nginx already covers every gateway job, and the stale cache adds real resilience for free."
     },
     {
       "id": "D-46",
@@ -2354,7 +2602,10 @@
       "recommendation": "a",
       "why": "Resend's free tier and API are more than enough, and the MailPort keeps Postmark one adapter away.",
       "adr": "ADR-030",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-47",
@@ -2397,13 +2648,32 @@
             "Revocation needs care",
             "Token handling in the SPA"
           ]
+        },
+        {
+          "id": "d",
+          "label": "The gateway verifies the session and forwards a signed identity",
+          "description": "With the D-45 hybrid, the NestJS gateway checks the session against api (cached about 30 s), strips identity headers that came from outside and forwards a signed, timestamped header the services verify.",
+          "pros": [
+            "Auth logic in tested TypeScript",
+            "Still one decision point and no auth code in other services"
+          ],
+          "cons": [
+            "Only applies if D-45 is d",
+            "The gateway calls api to validate (cached)"
+          ]
         }
       ],
-      "recommendation": "a",
-      "why": "It centralizes the security decision at the edge and keeps the services free of auth logic and of runtime dependencies on api.",
+      "recommendation": "d",
+      "why": "Recommendation follows D-45 (F-3): with the gateway, the single decision point moves from nginx config into gateway code; if D-45 stays a, option a remains the choice.",
       "adr": "ADR-008",
       "learn": "Gateway authentication, trust boundaries.",
-      "status": "open"
+      "status": "open",
+      "ownerNote": "Asks what would change with the NestJS gateway, or with both nginx and the gateway.",
+      "ownerPick": "a",
+      "openQuestion": "Follows D-45: a gateway session check (d) if D-45 is d, otherwise nginx auth_request (a).",
+      "followup": "F-3",
+      "previousRecommendation": "a",
+      "previousWhy": "It centralizes the security decision at the edge and keeps the services free of auth logic and of runtime dependencies on api."
     },
     {
       "id": "D-48",
@@ -2451,7 +2721,10 @@
       "why": "Separate databases make the boundary enforced by Postgres itself, while one instance keeps memory and backups simple.",
       "adr": "ADR-027",
       "learn": "Database per service, least privilege.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-49",
@@ -2500,7 +2773,10 @@
       "why": "Composable, typed policies cover every failure mode around providers with little code, and the concepts stay visible in the configuration.",
       "adr": "ADR-029",
       "learn": "Circuit breaker, retry with backoff, timeout, bulkhead.",
-      "status": "open"
+      "status": "open",
+      "ownerNote": "Unsure because composable policies are new to the owner; interesting to learn and to propose at work if they work well.",
+      "openQuestion": "Confirm cockatiel (a).",
+      "followup": "F-9"
     },
     {
       "id": "D-50",
@@ -2552,7 +2828,10 @@
       "why": "It turns the CV into a set of claims backed by evidence the visitor can explore, and the three-check gate makes leaking a draft a multi-bug event instead of a one-line mistake.",
       "adr": "ADR-031",
       "learn": "Summary and evidence layers, approval state machine, tombstone events, anti-entropy reconciliation, defense in depth.",
-      "status": "open"
+      "status": "open",
+      "ownerNote": "Not fully clear; the agent will hold far more detail than the CV in the vector database; documents could be one or several per topic (bugs, tech debt, performance) or one per big feature, to be decided.",
+      "openQuestion": "Confirm two layers with the approval gate (a), with entries per piece of work and topics as tags.",
+      "followup": "F-10"
     },
     {
       "id": "D-51",
@@ -2602,7 +2881,11 @@
       "why": "The entries are already structured into sections, so section chunks match well, parent expansion restores the full story, and drill-down by id makes the most common question path deterministic.",
       "adr": "ADR-031",
       "learn": "Parent-document retrieval, contextual chunk headers, deterministic retrieval paths.",
-      "status": "open"
+      "status": "decided",
+      "ownerNote": "Not fully clear, but the owner likes the idea.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-52",
@@ -2652,7 +2935,10 @@
       "why": "Approval already means public, so pages add transparency and citation targets at no extra risk; noindex is a fine variant if the owner prefers lower search visibility.",
       "adr": "ADR-031",
       "learn": "Citations to stable ids, approved equals public.",
-      "status": "open"
+      "status": "open",
+      "ownerNote": "Fine as long as no proprietary employer information is included.",
+      "openQuestion": "Confirm public work-log pages for approved entries (a), with no proprietary employer information.",
+      "followup": "F-11"
     },
     {
       "id": "D-53",
@@ -2701,7 +2987,10 @@
       "why": "Layered checks catch the obvious leaks automatically while keeping the judgment, and the accountability, with the owner.",
       "adr": "ADR-031",
       "learn": "Data classification, defense in depth, human in the loop.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-54",
@@ -2752,7 +3041,10 @@
       "why": "Evidence per requirement is what makes the analysis credible to a technical recruiter, and it costs little more than a normal chat turn.",
       "adr": "ADR-032",
       "learn": "Structured extraction, map-reduce, evidence-grounded generation, prompt injection through documents.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-55",
@@ -2800,7 +3092,10 @@
       "why": "The owner asked for session-only by default; anything more is a later, deliberate change to the privacy notice.",
       "adr": "ADR-032",
       "learn": "Data minimization, privacy by design.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-56",
@@ -2850,7 +3145,10 @@
       "why": "Showing the running system, with live health and the decisions behind it, is the most direct proof of the architecture claims.",
       "adr": "ADR-033",
       "learn": "Observability as product, caching with stale fallback, information disclosure.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-57",
@@ -2901,7 +3199,10 @@
       "why": "It reuses the learning material that already exists and keeps every published word under the owner's review.",
       "adr": "ADR-034",
       "learn": "Learning in public, human in the loop for generated drafts.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-58",
@@ -2949,14 +3250,17 @@
       "why": "The read-only server and intro requests are small once the read model and the contact service exist, and they make the site an MCP-native profile on day one.",
       "adr": "ADR-035",
       "learn": "MCP tools, resources and prompts; incremental delivery.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-59",
       "area": "mcp",
       "title": "Where the MCP servers run",
       "question": "Which service hosts the public MCP server and which hosts the admin MCP server?",
-      "context": "An MCP server is just another way in (a driving adapter) to a service's existing logic. Placing it in the service that owns the data avoids synchronous calls between services. The admin actions are mostly content actions, while spend and blocked attacks belong to the agent.",
+      "context": "An MCP server is just another way in (a driving adapter) to a service's existing logic. Placing it in the service that owns the data avoids synchronous calls between services. The admin actions are mostly content actions, while spend and blocked attacks belong to the agent. An MCP server can also live in its own stateless edge service that calls the owners, the way a gateway does for browsers.",
       "options": [
         {
           "id": "a",
@@ -2973,12 +3277,16 @@
         {
           "id": "b",
           "label": "A separate MCP service",
-          "description": "One service for all MCP endpoints.",
+          "description": "A stateless MCP edge service (apps/mcp) hosting both servers; it owns no data and calls the owning services' internal endpoints, like a gateway does for HTTP.",
           "pros": [
-            "One place for MCP"
+            "One home for MCP and its OAuth",
+            "No data copy and no event sync",
+            "An MCP outage never touches the site"
           ],
           "cons": [
-            "Needs its own copy of the data or synchronous calls"
+            "About 150 MB and one more deployable",
+            "Internal endpoints on agent, api and contact",
+            "Search fails cleanly while agent is down"
           ]
         },
         {
@@ -2994,11 +3302,17 @@
           ]
         }
       ],
-      "recommendation": "a",
-      "why": "It follows the same service rules as everything else: each server talks only to its own data, and cross-service facts arrive as events.",
+      "recommendation": "b",
+      "why": "Recommendation changed from a to b after the owner's note (F-4): as a stateless edge adapter that calls the owning services, the MCP service needs neither a copy of the data nor events, and the rule against synchronous calls still holds between api, agent and contact.",
       "adr": "ADR-035",
       "learn": "Driving adapters, event-carried state transfer.",
-      "status": "open"
+      "status": "open",
+      "ownerNote": "Option b would need events to keep data in sync: more work but a new pattern; the owner thinks MCPs belong in their own service, not mixed into others.",
+      "ownerPick": "a",
+      "openQuestion": "Process types of the owning services (a), or a stateless MCP edge service (b)?",
+      "followup": "F-4",
+      "previousRecommendation": "a",
+      "previousWhy": "It follows the same service rules as everything else: each server talks only to its own data, and cross-service facts arrive as events."
     },
     {
       "id": "D-60",
@@ -3046,7 +3360,10 @@
       "why": "Public data does not need authentication, only limits; authentication is saved for the admin server where it protects real power.",
       "adr": "ADR-035",
       "learn": "Rate limiting, least privilege, tool annotations.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-61",
@@ -3094,7 +3411,11 @@
       "why": "It gives the same protection as the web form without asking AI clients to do something they cannot, and spam never reaches the owner.",
       "adr": "ADR-035",
       "learn": "Out-of-band verification, store-and-forward.",
-      "status": "open"
+      "status": "decided",
+      "ownerNote": "Not fully clear, but fine; a chance to learn new concepts.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-62",
@@ -3156,7 +3477,10 @@
       "why": "It implements the current MCP authorization profile on top of the identity already in place, and makes the admin MCP the project's main OAuth learning vehicle.",
       "adr": "ADR-035",
       "learn": "OAuth 2.1, protected resource metadata, PKCE, resource indicators, step-up authorization.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-63",
@@ -3205,7 +3529,10 @@
       "why": "Curation behind the approval gate is the only way to guarantee the catalog stays free of company material.",
       "adr": "ADR-035",
       "learn": "Data classification, approval workflow.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-64",
@@ -3253,7 +3580,10 @@
       "why": "It is quick to build from material that already exists, while the owner's review keeps it honest.",
       "adr": "ADR-036",
       "learn": "Golden dataset, reference-based evaluation, LLM-as-judge, data leakage.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-65",
@@ -3302,7 +3632,12 @@
       "why": "It respects the agreed format and the owner's approval act, while the checks and the revision binding keep a mistake from reaching the index.",
       "adr": "ADR-031",
       "learn": "Import pipelines, validation, approval bound to a revision.",
-      "status": "open"
+      "status": "decided-with-change",
+      "ownerNote": "Admin is fine; the goal is a dynamic, full CRUD of the experience and knowledge base: upload new detailed files that get ingested, update the CV, add, remove or extend entries.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02",
+      "change": "Full lifecycle in the admin (list, upload, edit as a new draft revision, re-import to extend, withdraw, delete, export); after import the api database is the source of truth and files are the interchange format."
     },
     {
       "id": "D-66",
@@ -3350,7 +3685,10 @@
       "why": "Translating only the short questions gets most of the benefit for a tiny cost, and full translations stay possible later.",
       "adr": "ADR-031",
       "learn": "Cross-lingual retrieval, doc2query, multilingual embeddings.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-67",
@@ -3398,7 +3736,10 @@
       "why": "Descriptive fields improve answers, while provenance is for the owner's review, not for visitors.",
       "adr": "ADR-031",
       "learn": "Data classification, contextual headers.",
-      "status": "open"
+      "status": "open",
+      "ownerNote": "Fine; firstmate should prepare documentation in this format where possible; some information or metadata will be missing, so the design must follow the data available.",
+      "openQuestion": "Confirm the metadata policy (a) with a tolerant importer: a required minimum, optional fields with defaults.",
+      "followup": "F-12"
     },
     {
       "id": "D-68",
@@ -3443,10 +3784,14 @@
         }
       ],
       "recommendation": "a",
-      "why": "It turns real visitors' judgments into regression tests with very little code, and it never changes behavior automatically, so it cannot be gamed.",
+      "why": "It turns real visitors' judgments into regression tests with very little code, and it never changes behavior automatically, so it cannot be gamed. Decided by the owner: c, no feedback in v1, because visitor thumbs are easy to troll; kept as a possible follow-up after launch (WP-45).",
       "adr": "ADR-037",
       "learn": "Human in the loop, annotation queues, data flywheel.",
-      "status": "open"
+      "status": "decided",
+      "ownerNote": "Leave it as a possible follow-up; people troll and thumbs are not trustworthy.",
+      "decidedOption": "c",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-69",
@@ -3506,7 +3851,11 @@
       "why": "Precise invalidation and the popularity threshold handle the two real risks, and pgvector is already there; the eval battery measures hit and false-hit rates before it goes live.",
       "adr": "ADR-038",
       "learn": "Cache-aside, invalidation, TTL, cache poisoning.",
-      "status": "open"
+      "status": "decided",
+      "ownerNote": "Asks whether this could be done with Qdrant, how complex it would be, what it would gain, and whether it helps learning.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-70",
@@ -3566,7 +3915,11 @@
       "why": "Building the supervisor by hand on top of an existing classification teaches the pattern at zero extra runtime cost.",
       "adr": "ADR-039",
       "learn": "Supervisor, handoff, router, subgraph.",
-      "status": "open"
+      "status": "decided",
+      "ownerNote": "Approved enthusiastically.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-71",
@@ -3625,7 +3978,10 @@
       "why": "A scripted test turns resilience from a claim into a check that runs before every risky release, and its results become content for the site.",
       "adr": "ADR-040",
       "learn": "Chaos engineering, steady-state hypothesis, blast radius, game day.",
-      "status": "open"
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-72",
@@ -3678,19 +4034,20 @@
       "status": "decided",
       "decidedOption": "a",
       "decidedBy": "owner",
-      "decidedAt": "2026-10-02"
+      "decidedAt": "2026-10-02",
+      "ownerNote": "Decided in chat on 2026-10-02."
     },
     {
       "id": "D-73",
       "area": "narrative",
       "title": "Site positioning",
       "question": "What should the site say the owner is, in one sentence?",
-      "context": "Positioning is the one sentence a visitor remembers after ten seconds. The site serves several audiences: the internal agentic team, hiring managers at product companies looking for backend, platform or full-stack engineers, recruiters who skim, and peers who read the code. A positioning tied to one team narrows every other door, while the evidence can still show depth in each area.",
+      "context": "Positioning is the one sentence a visitor remembers after ten seconds. The site serves several audiences: the internal agentic team, hiring managers at product companies looking for backend or platform engineers, recruiters who skim, and peers who read the code. A positioning tied to one team narrows every other door, while the evidence can still show depth in each area.",
       "options": [
         {
           "id": "a",
           "label": "Broad engineer with applied AI as one strong pillar",
-          "description": "A backend-focused full-stack engineer who designs, tests, ships and operates whole systems, with applied AI as one of them.",
+          "description": "A backend engineer who designs, tests, ships and operates whole systems, with applied AI as one of them.",
           "pros": [
             "Serves every audience",
             "Honest about level",
@@ -3721,15 +4078,19 @@
           ],
           "cons": [
             "Forgettable",
-            "Hides the backend depth and the AI work"
+            "Hides the backend depth and the AI work",
+            "The owner does not identify as full-stack"
           ]
         }
       ],
       "recommendation": "a",
-      "why": "It matches the owner's stated intent: the move to the agentic team stays well supported by the AI pillar, while the same page works for any backend, platform or full-stack role.",
+      "why": "It matches the owner's stated intent: the move to the agentic team stays well supported by the AI pillar, while the same page works for any backend or platform role. Draft wording updated after the owner's note (F-13): backend engineer, not full-stack.",
       "adr": "report section 2A",
       "learn": "Positioning, audience analysis.",
-      "status": "open"
+      "status": "open",
+      "ownerNote": "Decide later; the owner is not full-stack (some frontend knowledge and several frameworks used, but little experience); the focus is backend.",
+      "openQuestion": "Decide the positioning later; the draft now says backend engineer, not full-stack.",
+      "followup": "F-13"
     },
     {
       "id": "D-74",
@@ -3780,19 +4141,23 @@
       "why": "It lets a skimming reviewer see every pillar immediately and keeps the agent as a strong, optional way to go deeper.",
       "adr": "report section 2A",
       "learn": "Information hierarchy, progressive disclosure, graceful degradation.",
-      "status": "open"
+      "status": "decided",
+      "ownerNote": "Not much opinion; adjust along the way.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02"
     },
     {
       "id": "D-75",
       "area": "narrative",
       "title": "Launch scope balance",
       "question": "With the agent as one pillar among several, what should be in the launch scope?",
-      "context": "The launch scope is about 102 focused days, and much of the added work deepens the AI pillar. The recruiter agent and the supervisor deepen applied AI only, while the Under the hood page proves architecture, reliability, CI/CD and infrastructure at once. Work moved to right after launch still ships; it just stops delaying the launch.",
+      "context": "The launch scope is about 104 focused days after the owner review, and much of the added work deepens the AI pillar. The recruiter agent and the supervisor deepen applied AI only, while the Under the hood page proves architecture, reliability, CI/CD and infrastructure at once. Work moved to right after launch still ships; it just stops delaying the launch.",
       "options": [
         {
           "id": "a",
           "label": "Launch scope as planned",
-          "description": "Everything currently marked launch scope, about 102 days.",
+          "description": "Everything currently marked launch scope, about 104 days.",
           "pros": [
             "Most complete launch"
           ],
@@ -3804,7 +4169,7 @@
         {
           "id": "b",
           "label": "Move the recruiter agent and supervisor after launch, keep Under the hood",
-          "description": "WP-37 and WP-47 move to right after launch; about 97 days.",
+          "description": "WP-37 and WP-47 move to right after launch; about 99 days.",
           "pros": [
             "Balanced pillars at launch",
             "About 5 days sooner"
@@ -3816,20 +4181,40 @@
         {
           "id": "c",
           "label": "Full cut line",
-          "description": "Also move the Under the hood page after launch; about 94.5 days.",
+          "description": "Also move the Under the hood page after launch; about 97 days.",
           "pros": [
             "Fastest launch"
           ],
           "cons": [
             "Loses the page that proves several pillars at once"
           ]
+        },
+        {
+          "id": "d",
+          "label": "Incremental releases without dates",
+          "description": "v1.0 replaces the old site with the foundations, site, admin, contact form and the agent core (about 88 days); each later milestone ships as its own release, in order, with no target dates.",
+          "pros": [
+            "Fits a learning project with no deadline",
+            "The new site goes live sooner",
+            "Every release visible through release-please"
+          ],
+          "cons": [
+            "The first public version has fewer showcase features",
+            "Milestones need re-cutting"
+          ]
         }
       ],
-      "recommendation": "b",
-      "why": "It removes the work that deepens only one pillar from the critical path and keeps the page that proves many pillars, in line with the broad positioning.",
+      "recommendation": "d",
+      "why": "Recommendation changed from b to d after the owner's note (F-14): with no deadline, a smaller v1.0 replaces the old site sooner and every later milestone ships as its own release, in order.",
       "adr": "report section 2A",
       "learn": "Scope management, critical path.",
-      "status": "open"
+      "status": "open",
+      "ownerNote": "Talk about the launch later; build in order, part by part, each version adding features, foundations first; no hard deadline for a personal learning project.",
+      "ownerPick": "a",
+      "openQuestion": "Launch scope as planned (a), or incremental releases without dates, starting with a v1.0 of about 88 days (d)?",
+      "followup": "F-14",
+      "previousRecommendation": "b",
+      "previousWhy": "It removes the work that deepens only one pillar from the critical path and keeps the page that proves many pillars, in line with the broad positioning."
     },
     {
       "id": "D-76",
@@ -3877,7 +4262,12 @@
       "why": "It puts the broadest, most current proof first and still gives the AI work two strong appearances.",
       "adr": "report section 2A",
       "learn": "Evidence mapping, narrative order.",
-      "status": "open"
+      "status": "decided-with-change",
+      "ownerNote": "Decide progressively; the owner's two years of work at the current employer count too, not only personal projects.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-02",
+      "change": "Starts with the four personal case studies; work for the current employer appears through the timeline and approved knowledge entries; a public-level case study from the current role is decided once entries exist."
     }
   ],
   "workPackages": [
@@ -3887,7 +4277,7 @@
       "tag": "owner",
       "size": "S",
       "dependsOn": [],
-      "deliverable": "ADRs accepted or rejected in docs/adr/; D-1 to D-72 answered.",
+      "deliverable": "ADRs accepted or rejected in docs/adr/; D-1 to D-76 answered (owner review 2026-10-03: 62 recorded, 14 open in owner-review-followups.md).",
       "learns": "",
       "milestone": "M0"
     },
@@ -3923,7 +4313,7 @@
       "dependsOn": [
         "WP-1"
       ],
-      "deliverable": "packages/platform-nest (Zod config, pino, problem+json, health, OTel bootstrap); apps/api skeleton; Vitest + Testcontainers harness; Nest 12 compatibility spike.",
+      "deliverable": "packages/platform-nest (Zod config, pino, problem+json, health, OTel bootstrap); apps/api skeleton; Vitest + Testcontainers harness; Nest 12 compatibility spike. Module template with the layer conventions of ADR-003 (D-3).",
       "learns": "Nest modules, providers, DI scopes and lifecycle; the request pipeline; fail-fast configuration.",
       "milestone": "M1"
     },
@@ -4098,7 +4488,7 @@
         "WP-13",
         "WP-14"
       ],
-      "deliverable": "Static SPA on admin.jadero.dev: forms on shared contracts, translation tabs, structured knowledge-entry editor with approval checklist and private denylist, CV-to-entry linking with coverage view, preview, publish, media, contact inbox, dashboard stub.",
+      "deliverable": "Static SPA on admin.jadero.dev: forms on shared contracts, translation tabs, structured knowledge-entry editor with approval checklist and private denylist, CV-to-entry linking with coverage view, preview, publish, media, contact inbox, dashboard stub. Full entry lifecycle (D-65): list with status, upload, edit as a new draft revision, re-import, withdraw, delete, export to the file format.",
       "learns": "",
       "milestone": "M3"
     },
@@ -4122,7 +4512,7 @@
       "dependsOn": [
         "WP-3"
       ],
-      "deliverable": "packages/ai: ports, fakes, Anthropic, OpenAI and Voyage adapters, factory, AiModule, contract suites.",
+      "deliverable": "packages/ai: ports, fakes, Anthropic, OpenAI and Voyage adapters, factory, AiModule, contract suites. Per-role chat model config with one default model and optional overrides (D-13, D-14).",
       "learns": "Ports and adapters, anti-corruption layer, contract tests, config-driven DI.",
       "milestone": "M4"
     },
@@ -4159,7 +4549,7 @@
       "dependsOn": [
         "WP-21"
       ],
-      "deliverable": "StateGraph, nodes, bounded subgraph, tools on the read model, prompts as files, PostgresSaver, SSE endpoint, citations; model A/B experiment; prompt-cache measurement.",
+      "deliverable": "StateGraph, nodes, bounded subgraph, tools on the read model, prompts as files, PostgresSaver, SSE endpoint, citations; model A/B experiment; prompt-cache measurement. Checkpoints encrypted at rest with an AES-256-GCM serializer (D-17).",
       "learns": "LangGraph state, reducers, edges, checkpoints; tool calling; streaming; prompt design.",
       "milestone": "M4"
     },
@@ -4238,9 +4628,10 @@
         "WP-38",
         "WP-39",
         "WP-41",
-        "WP-45",
         "WP-47",
-        "WP-48"
+        "WP-48",
+        "WP-50",
+        "WP-51"
       ],
       "deliverable": "Owner writes the CV and knowledge entries and approves them per locale, translations reviewed, red-team audit, accessibility and performance checks, privacy notice, gitleaks history scan, repo public.",
       "learns": "",
@@ -4327,7 +4718,7 @@
       "dependsOn": [
         "WP-12"
       ],
-      "deliverable": "Admin upload and CLI that parse the agreed entry format, validate it, run the automated checks and record approval from the approved flag. Launch scope.",
+      "deliverable": "Admin upload and CLI that parse the agreed entry format, validate it, run the automated checks and record approval from the approved flag. Also exports an entry back to the file format (D-65). Launch scope.",
       "learns": "Parsing and validating structured documents; approval bound to a revision.",
       "milestone": "M2"
     },
@@ -4457,9 +4848,9 @@
         "WP-24",
         "WP-25"
       ],
-      "deliverable": "Thumbs up and down with signed run tokens, LangSmith feedback, annotation queue, promotion into the battery. Launch scope.",
+      "deliverable": "Thumbs up and down with signed run tokens, LangSmith feedback, annotation queue, promotion into the battery. Not in v1: the owner chose no feedback (D-68, option c); kept as a possible follow-up after launch.",
       "learns": "Human-in-the-loop evaluation, data flywheel.",
-      "milestone": "M4"
+      "milestone": "M6"
     },
     {
       "id": "WP-46",
@@ -4510,6 +4901,33 @@
       "deliverable": "The decided tracking structure, generated from this file's workPackages with the gh CLI: an epic issue with one sub-issue per WP (WP-30 created and closed as not planned, linking WP-36), milestones M0 to M6, labels, issue templates, a Project with fields, views and workflows. Right after WP-0.",
       "learns": "Ticket lifecycle, definition of ready and done, traceability.",
       "milestone": "M0"
+    },
+    {
+      "id": "WP-50",
+      "title": "Event operations: dead-letter archive, replay and events page",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-11",
+        "WP-14",
+        "WP-17"
+      ],
+      "deliverable": "A dead_letters table in each service's database, written from its dead-letter queues (generic code in packages/messaging); admin endpoints per service; an Events page in the admin with outbox, inbox, retry and dead-letter counts per event type and a replay action that republishes with a replayed-by header (D-12). Launch scope.",
+      "learns": "Operating a message system: dead-letter handling, safe replay with idempotent consumers, operational visibility.",
+      "milestone": "M3"
+    },
+    {
+      "id": "WP-51",
+      "title": "API documentation pipeline",
+      "tag": "learning",
+      "size": "S",
+      "dependsOn": [
+        "WP-6",
+        "WP-12"
+      ],
+      "deliverable": "OpenAPI generated from the Zod contracts through @nestjs/swagger 12's standardSchemaConverter (zod-openapi), one document per service, a docs UI outside production, and a breaking-change check against main in CI (D-6). Launch scope.",
+      "learns": "OpenAPI from schemas, API documentation as code, breaking-change detection.",
+      "milestone": "M2"
     }
   ],
   "manualActions": [
@@ -4684,7 +5102,7 @@
     {
       "id": "M-29",
       "what": "Review the annotation queue weekly and promote confirmed failures into the battery.",
-      "when": "After WP-45, ongoing",
+      "when": "Only if WP-45 is built later (D-68: not in v1)",
       "why": "This is what turns visitor feedback into regression tests."
     },
     {
@@ -4728,6 +5146,12 @@
       "what": "Confirm the job-description retention choice and that the privacy notice covers recruiter mode, feedback comments and the semantic cache.",
       "when": "WP-28",
       "why": "These features process visitor-provided text."
+    },
+    {
+      "id": "M-37",
+      "what": "Settle the 14 open decisions in owner-review-followups.md (D-2, D-7, D-16, D-25, D-42, D-45, D-47, D-49, D-50, D-52, D-59, D-67, D-73, D-75) and check the 9 changes applied to decided items.",
+      "when": "WP-0",
+      "why": "They gate the ADRs and work packages they touch; the other 62 decisions are recorded."
     }
   ],
   "tracking": {
@@ -4770,7 +5194,8 @@
           "WP-12",
           "WP-13",
           "WP-14",
-          "WP-35"
+          "WP-35",
+          "WP-51"
         ]
       },
       {
@@ -4782,7 +5207,8 @@
           "WP-16",
           "WP-17",
           "WP-18",
-          "WP-39"
+          "WP-39",
+          "WP-50"
         ]
       },
       {
@@ -4800,7 +5226,6 @@
           "WP-37",
           "WP-40",
           "WP-41",
-          "WP-45",
           "WP-47"
         ]
       },
@@ -4831,7 +5256,8 @@
           "WP-42",
           "WP-43",
           "WP-44",
-          "WP-46"
+          "WP-46",
+          "WP-45"
         ]
       }
     ],
@@ -4897,5 +5323,20 @@
       "release-please changelogs link each PR and, through it, the closed issue.",
       "Issues and PRs follow the content rules (public-level only), because they become public with the repo."
     ]
+  },
+  "review": {
+    "date": "2026-10-03",
+    "marks": "owner-marks-2026-10-03.json",
+    "followups": "owner-review-followups.md",
+    "counts": {
+      "decided": 53,
+      "open": 14,
+      "decided-with-change": 9
+    },
+    "statuses": {
+      "decided": "The owner's pick stands as is; any question in the note is answered in the follow-ups file.",
+      "decided-with-change": "The owner's pick stands and the note added a compatible change, recorded in the change field.",
+      "open": "No pick, or the note contradicts or materially changes the pick; ownerPick, openQuestion and followup say what is pending."
+    }
   }
 }
