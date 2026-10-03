@@ -39,6 +39,37 @@ Concepts map one to one by design (ADR-028 D): plan = `/wp` step list; approve =
 
 If the framework runs the implementers, point them at `AGENTS.md`; it is tool-neutral and the rules files are plain Markdown. If the framework prefers its own skills, the four here can be dropped and only `learning-gate.sh` and `docs/learning/` need to stay.
 
+## The delivery flow, end to end
+
+One work package moves through nine stages. The owner moves cards to Ready and In progress; the Project workflows move them to In review (PR with `Closes #`) and Done (merge).
+
+| # | Stage | Who | Output |
+|---|---|---|---|
+| 1 | Ready on the board: dependencies closed, acceptance written, ADRs accepted | Owner | Card in Ready |
+| 2 | `/wp NN` | Agent | Branch `wp/NN-slug`, step list, definition of done; stops for the go |
+| 3 | `/learn-step NN` (learning WPs) | Agent writes, owner reads | `docs/learning/wp-NN.md`, `decision: pending`; the gate is closed |
+| 4 | Decision | Owner | `decision: recorded` with the ADR link; `/adr` first if an ADR changes |
+| 5 | Implement one step at a time | Agent in the main session | Green `pnpm verify`, one scoped commit, two lines in the step log, per step |
+| 6 | PR | Agent | Title = conventional commit; body `Closes #N`; CI; card moves to In review |
+| 7 | Review | `@agent-reviewer`, then the owner | Findings fixed and pushed; the owner explains the design back (Recap) |
+| 8 | Merge | Owner | Squash; issue closes; card to Done; release-please PR per service |
+| 9 | Ship and write up | Owner present | Staging, production, journal post |
+
+Model and effort: Opus 5.5 at high effort for learning WPs and the reviewer, medium for frontend and chores. When the main session runs on a heavier model than the task needs, `/wp` and `/learn-step` can be delegated to a subagent on Opus; implementation stays in the main session so the owner sees each step.
+
+Compact after the decision is recorded (the reasoning is in the explainer) and after the reviewer has reported (keep the PR number, open findings and the step log).
+
+## What the WP-1 trial changed (2026-10-03)
+
+The first run of the flow (`/wp 1` and `/learn-step 1`, delegated to a subagent on Opus 5.5 from a cloud session) worked end to end and surfaced these gaps, fixed in the same PR as this note:
+
+- `/wp` depended on a logged-in `gh` for the dependency check and the definition of done. It now accepts the GitHub MCP tools, says which source it used, and asks instead of guessing when neither is available.
+- `/learn-step` could not reach turborepo.com or pnpm.io through the cloud proxy. It may now query the npm registry, Docker Hub and nodejs.org through Bash, and must mark unverified behavior as **verify**.
+- The learning gate did not cover WP-1's own content (`turbo.json`, `pnpm-workspace.yaml`, `packages/config`, the dependency-cruiser, lefthook and commitlint configs). Those paths are now gated too.
+- Explainer file names take the WP number as is (`wp-1.md`); the README said `wp-NN.md`, which invited zero padding.
+- A "trace" for a tooling WP is a command run with real output; the skill says so now.
+- Issues created by the seed carry "Deployed to staging" and "Changelog entry" in every definition of done; for WPs before WP-6 to WP-9 they are n/a, and `/wp` marks them so.
+
 ## Model and effort
 
 The project does not pin a model in `.claude/settings.json`; the owner's own settings decide (Opus-class for the main session is the owner's choice). Learning WPs and the reviewer run at high effort; frontend WPs can run lower.

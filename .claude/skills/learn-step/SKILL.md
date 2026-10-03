@@ -3,7 +3,7 @@ name: learn-step
 description: The learning gate for a learning work package. Writes docs/learning/wp-NN.md (first principles, one concrete trace, patterns, options, the exact question for the owner) and stops for the owner's decision. Required before code lands under a learning path (hook learning-gate.sh enforces it).
 user-invocable: true
 arguments: [wp, step]
-allowed-tools: Read, Write, Edit, Glob, Grep, WebFetch, WebSearch, Bash(git status*), Bash(git branch*), Bash(git diff*)
+allowed-tools: Read, Write, Edit, Glob, Grep, WebFetch, WebSearch, Bash(git status*), Bash(git branch*), Bash(git diff*), Bash(npm view *), Bash(pnpm view *), Bash(curl -s *), Bash(docker manifest inspect *)
 ---
 Learning gate for WP-$wp (step: $step, or the whole WP if empty).
 
@@ -17,5 +17,7 @@ Read first: the WP row in `docs/plan/report.md` section 14, its GitHub issue, an
 6. **Decision**: empty until the owner answers.
 7. **Step log**: empty; each implementation step appends two lines (what changed, why).
 8. **Recap**: empty; filled with the owner's explain-back and the gaps found.
+
+Facts: version numbers and dates come from the npm registry (`npm view <pkg> version time --json`), Docker Hub or nodejs.org, never from memory; when a documentation site is unreachable, mark the behavior **verify** instead of guessing. The file is `docs/learning/wp-$wp.md` with the number as given, no zero padding (`wp-1.md`, not `wp-01.md`): the gate hook and the session hook look for that exact name. For a tooling WP the "trace" is a command run with its real output; for a service WP it is a request, event or job.
 
 Then STOP. Do not write code. Tell the owner the explainer is ready and what question they must answer. When they answer, record it under Decision, set `decision: recorded` and the ADR link, and only then start implementing in small visible steps. Style: plain English, no hype words, no em dashes.
