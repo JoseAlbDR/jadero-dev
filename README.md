@@ -15,7 +15,8 @@ Prerequisites: Node 24 (the version in `.nvmrc`, for example `nvm use`), pnpm 11
 ```sh
 pnpm install   # also installs the git hooks (lefthook)
 pnpm dev:up    # Postgres 18 and RabbitMQ 4 on 127.0.0.1, see infra/compose/README.md
-pnpm verify    # lint, architecture check, typecheck and tests: run before every commit
+pnpm verify    # lint, architecture check, typecheck and tests on changed packages: run before every commit
+pnpm verify:all  # the same on every package, for main and CI
 ```
 
 `AGENTS.md` lists every command. The first `pnpm dev:up` on a machine also proves the database-per-service setup: see `infra/compose/README.md`.
