@@ -74,7 +74,7 @@ Compact after the decision is recorded and after the reviewer has reported. Keep
 
 ## How the owner learns
 
-The file is the textbook for this WP; the session is the teacher. Read the question first, then the options, then the first principles you need. Ask about any paragraph or file. A step you already know: say "known" (`fast_path: known`). A fact marked **verify** was not confirmed from a primary source; verify it at implementation time. Learning survives the PR: the Recap can land after the merge in a docs commit. A learning WP run without the owner (as WP-1 was) gets its explain-back on the next session before moving on.
+The file is the textbook for this WP; the session is the teacher. You never read ADRs or other WPs to answer: the file has a "How to read this file" table (what to read before each question) and a "Named here" table (one line per WP or ADR it names). The session asks all the questions in one message, each with that pointer; a question that depends on another carries a recommendation per possible answer of the first. Nothing is to memorize; an explain-back you cannot answer means the explainer missed something, and it gets taught and added, not re-tested. Ask about any paragraph or file. A step you already know: say "known" (`fast_path: known`). A fact marked **verify** was not confirmed from a primary source; verify it at implementation time. Learning survives the PR: the Recap can land after the merge in a docs commit. A learning WP run without the owner (as WP-1 was) gets its explain-back on the next session before moving on.
 
 ## When something blocks
 
@@ -95,6 +95,7 @@ The file is the textbook for this WP; the session is the teacher. Read the quest
 | `pnpm verify` on `main`: "No tasks were executed" | `--affected` has no diff against `main` | `pnpm verify:all` |
 | RabbitMQ exits with `.erlang.cookie: eacces` | an old volume where a root process wrote the cookie | `user: rabbitmq` is in the compose file; run `pnpm dev:down && docker compose -f infra/compose/compose.dev.yml down -v` once |
 | Biome warns that `recommended` is deprecated | Biome 2.5 renamed it | `pnpm exec biome migrate --write` (it becomes `"preset": "recommended"`) |
+| Testcontainers: `Could not find a working container runtime strategy` (`pnpm dev:up` works) | the socket is not at `/var/run/docker.sock`; Compose reads the Docker context, Testcontainers does not | one line in `~/.testcontainers.properties`: `docker.host=unix:///Users/<you>/.orbstack/run/docker.sock` (OrbStack; the path is what `docker context inspect --format '{{.Endpoints.docker.Host}}'` prints), or prefix the command with `DOCKER_HOST=...` |
 | Claude cannot read `.env.example` | `settings.json` denies `Read(.env.*)` | expected; it reads it through Bash |
 
 ## With firstmate
