@@ -1,343 +1,343 @@
 {
- "D-1": {
-  "at": "2026-10-02T20:18:31.178Z",
-  "choice": "a"
- },
- "D-2": {
-  "at": "2026-10-02T22:04:01.314Z",
-  "choice": "a",
-  "note": "Esta está repetida...nginx se ve la opcion mas simple, pero en afan de aprender me gustaria un NestJS gateway service, no podemos quedarnos con lo mejor de los dos mundos? Tenemos que hablar sobre esto"
- },
- "D-3": {
-  "at": "2026-10-02T21:55:15.673Z",
-  "choice": "a",
-  "note": "Layered pero con mas capas tendria sentido? Service como orquestador, DAO service como capa de acceso de datos, utils para utilidades, shared modules para utilidades que usen varios servicios, Hexagonal con abstract classes para que todos los adapters sigan la misma implementacion cuando corresponda, etc"
- },
- "D-4": {
-  "at": "2026-10-02T22:07:55.199Z",
-  "choice": "a",
-  "note": "Está bien podemos experimentar con NestJS 12, aunque en mercanis usamos versiones mas antiguas, asi puedo aprender sobre NestJS 12 y proponer el bump de version en mi trabajo con datos"
- },
- "D-5": {
-  "at": "2026-10-02T22:08:59.898Z",
-  "choice": "a",
-  "note": "Ya he tocado Prisma y trabajo con TypeORM, ahora estamos usando Drizzle, asi q me gustaria aprender"
- },
- "D-6": {
-  "at": "2026-10-02T22:10:13.122Z",
-  "choice": "a",
-  "note": "Es importante que generemos la documentacion de OpenAPI y como automatizarla para los diferentes DTOS y contratos de los endpoints, estamos trabajando esto tambien en Mercanis y quiero aprender mejor"
- },
- "D-7": {
-  "at": "2026-10-02T22:11:17.745Z",
-  "choice": "a",
-  "note": "Tambien podriamos mirar 1password, ultimamente estamos usando su CLI para secrets, seria posible? Como opcion"
- },
- "D-8": {
-  "at": "2026-10-02T22:59:50.985Z",
-  "choice": "a"
- },
- "D-9": {
-  "at": "2026-10-02T22:12:20.467Z",
-  "choice": "a",
-  "note": "Todo lo que podamos si, tenemos el servidor para montar toda la infra y creo que los recursos necesarios, el tema es como meter todo esto en el CI/CD de Github actions, o no es necesario?"
- },
- "D-10": {
-  "at": "2026-10-02T23:12:54.428Z",
-  "choice": "a"
- },
- "D-11": {
-  "at": "2026-10-02T22:27:28.168Z",
-  "choice": "a",
-  "note": "Astro tendria sentido tambien para el admin? quizas sea mas flexible, aunque sinceramente me importa poco el FE"
- },
- "D-12": {
-  "at": "2026-10-02T22:21:37.891Z",
-  "choice": "a",
-  "note": "El tema aqui es la atomicidad no? Usar una transaccion cuando haga falta y tanto la lectura o escritura en base de datos dentro de un try/catch con un revert de la transaccion si algo falla, asi no nos aseguramos de que tanto la operacion de la base de datos se hace como que el evento se ha emitido? Una base de datos pequeña para la DLQ tendría sentido? Para poder auditar y recuperar errores manualmente? Tambien meter esto en el admin panel tendria sentido no? Trackear los eventos, los success, los failed, etc"
- },
- "D-13": {
-  "at": "2026-10-02T22:42:24.616Z",
-  "choice": "a",
-  "note": "Yo creo que los embeddings podriamos decidir acerca de un proveedor porque al final cambiar de embeddings cambiaria la forma en la que los datos son ingestados y mezclar vectors de varios proveedores, esa seria la parte NO mobil, luego la parte movil seria el proveedor usado para las diferentes partes del grafo, quizas un modelo para el que hace el retrieve, otro modelo para otro nodo, otro para otro nodo, o el mismo para todos, eso simplificaria las cosas? Mereceria una investigacion sobre un embedding model que sirviera para varios modelos o que tenga mejor relacion calidad precio y tambien dependeria del tamaño de los datos a ingestar no?"
- },
- "D-14": {
-  "at": "2026-10-02T22:44:14.190Z",
-  "choice": "a",
-  "note": "A ver de base podriamos usar Haiku, pero el tema es poder cambiar a otro modelo como Sonnet 5.5 o un modelo de OpenAI, tenemos que estudiar que partes mobiles tenemos y cuales deberian de ser fijas en afan de simplificar, como los embeddings hablados en la seccion anterior"
- },
- "D-15": {
-  "at": "2026-10-02T22:45:33.181Z",
-  "choice": "a",
-  "note": "Prefiero aprender a construir el StateGraph yo con la asistencia de la IA y entender las diferentes partes y como conectan entre si"
- },
- "D-16": {
-  "at": "2026-10-02T22:47:24.275Z",
-  "note": "Me parece bien, pero tambien me resulta interesante usar Qdrant, por aprender, aunque creo que es un overkill y añadiria complejidad sin necesidad no? Podriamos explorar la opcion de Qdrant siempre que el servidor lo soportara, al final ampliaria mi stack y conocimiento"
- },
- "D-17": {
-  "at": "2026-10-02T22:49:06.146Z",
-  "choice": "a",
-  "note": "Yo siempre he usado la b creo, estaria bien estudiar y aprender la a si es mejor, que hay acerca de como almacenamos esas conversaciones, deberian de estar encriptadas por privacidad no? podriamos añadirlo?"
- },
- "D-18": {
-  "at": "2026-10-02T22:50:34.633Z",
-  "choice": "a",
-  "note": "Si, un MCP que se pueda usar por Claude para que mis compañeros o cualquiera puedan usarlo sin necesidad de usar mi agente y hacer preguntas sobre mi experiencia estaria bien no?"
- },
- "D-19": {
-  "at": "2026-10-02T23:07:57.392Z",
-  "choice": "a"
- },
- "D-20": {
-  "at": "2026-10-02T23:08:32.966Z",
-  "choice": "a"
- },
- "D-21": {
-  "at": "2026-10-02T22:51:56.537Z",
-  "choice": "a",
-  "note": "A ver me preocupa la privacidad, un langfuse self-hosted es una idea interesante sobre todo por el aprendizaje, pero añadiria mas tiempo, complejidad y no se si el servidor lo aguantaria todo"
- },
- "D-22": {
-  "at": "2026-10-02T22:53:10.738Z",
-  "choice": "a",
-  "note": "Podemos empezar con la a y si el gasto se disparara probar otras opciones o una vez nos decidamos por la a seria dificil moverse a la b, se puede configurar?"
- },
- "D-23": {
-  "at": "2026-10-02T23:09:20.135Z",
-  "choice": "a"
- },
- "D-24": {
-  "at": "2026-10-02T23:09:46.001Z",
-  "choice": "a"
- },
- "D-25": {
-  "at": "2026-10-02T23:02:10.058Z",
-  "choice": "a",
-  "note": "Tampoco me desagrada la idea de usar Python, para ir experimentando otro lenguaje, en agentic usan Python para muchas cosas, asi que deberiamos de estudiar pros y cons de construirlo todo o usar una libreria de Python en su lugar"
- },
- "D-26": {
-  "at": "2026-10-02T23:02:29.147Z",
-  "choice": "a"
- },
- "D-27": {
-  "at": "2026-10-02T23:03:27.942Z",
-  "choice": "a"
- },
- "D-28": {
-  "at": "2026-10-02T23:03:48.312Z",
-  "choice": "a"
- },
- "D-29": {
-  "at": "2026-10-02T23:10:21.972Z",
-  "choice": "a"
- },
- "D-30": {
-  "at": "2026-10-02T23:13:42.355Z",
-  "choice": "a"
- },
- "D-31": {
-  "at": "2026-10-02T23:14:26.806Z",
-  "choice": "a"
- },
- "D-32": {
-  "at": "2026-10-02T23:11:29.289Z",
-  "choice": "a"
- },
- "D-33": {
-  "at": "2026-10-02T22:28:27.915Z",
-  "choice": "a",
-  "note": ""
- },
- "D-34": {
-  "at": "2026-10-02T20:27:39.781Z",
-  "choice": "a"
- },
- "D-35": {
-  "at": "2026-10-02T22:02:26.775Z",
-  "choice": "a"
- },
- "D-36": {
-  "at": "2026-10-02T23:12:06.953Z",
-  "choice": "a"
- },
- "D-37": {
-  "at": "2026-10-02T23:06:37.862Z",
-  "choice": "a"
- },
- "D-38": {
-  "at": "2026-10-02T22:03:09.006Z",
-  "choice": "a",
-  "note": "Tenemos que encontrar en punto dulce intermedio entre aprender y la velocidad de implementacion, habrá cosas que quizas ya conozca en la que podremos saltar directos a la implementacion"
- },
- "D-39": {
-  "at": "2026-10-02T21:56:19.559Z",
-  "choice": "a"
- },
- "D-40": {
-  "at": "2026-10-02T22:22:03.254Z",
-  "choice": "a",
-  "note": "Me interesa aprender de RabbitMQ"
- },
- "D-41": {
-  "at": "2026-10-02T22:23:13.788Z",
-  "choice": "a",
-  "note": "Un adaptador no estaria mal si decidieramos cambiar RabbitMQ por otro Message Broker, no se si mereceria la pena, solo por el afan de aprender"
- },
- "D-42": {
-  "at": "2026-10-02T22:00:18.736Z",
-  "choice": "a",
-  "note": "Porque data stored twice? Los datos a los que tiene que acceder el agente son los que se almacenan en la vector database y usaremos el RAG, la api no deberia de conocer sobre esos datos, no entiendo la duplicidad aqui ni la distincion entre api y agent"
- },
- "D-43": {
-  "at": "2026-10-02T22:24:41.478Z",
-  "choice": "a",
-  "note": "El tema aqui es la duplicidad? Tendria sentido crear un repositorio aparte como un toolbox, ya que vamos a tener diferentes \"microservicios\" con tipados, contratos, schemas y demas que compartan? Podriamos publicas versiones de distintos packages que luego los servicios consuman y utilicen evitando la duplicidad y el mantenimiento entre servicios"
- },
- "D-44": {
-  "at": "2026-10-02T22:00:44.765Z",
-  "choice": "a"
- },
- "D-45": {
-  "at": "2026-10-02T22:06:01.000Z",
-  "choice": "a",
-  "note": "NestJS gateway service estaria bien solo por el afan de aprender, aunque sea otro punto de fallo, no estoy seguro acerca de este aunque haya elegido la opcion recomendada, esta pregunta esta repetida, deberiamos ver como quedarnos lo mejor de los dos mundos, nunca he implementado un gateway, en Mercanis estoy trabajando ahora en servicios dentro de uno y me gustaria aprender mas sobre ello, el gateway tiene 3000 portal, 3001 backoffice, podriamos preguntarle a firstmate que puede explorar codigo de mercanis como está implementado y sacar ideas de ahi sin hacer disclosing de codigo propietario de mercanis, solo temas de arquitectura diseño y patrones usados"
- },
- "D-46": {
-  "at": "2026-10-02T23:07:22.517Z",
-  "choice": "a"
- },
- "D-47": {
-  "at": "2026-10-02T23:05:18.645Z",
-  "choice": "a",
-  "note": "Y si usamos el Gateway de NestJS, que cambiaria? O ambos nginx y el Gateway"
- },
- "D-48": {
-  "at": "2026-10-02T22:07:14.881Z",
-  "choice": "a",
-  "note": ""
- },
- "D-49": {
-  "at": "2026-10-02T22:25:41.363Z",
-  "note": "NO estoy muy seguro de esto ya que no conozco Composable, pero me parece interesante de aprender y si funciona bien proponerlo en mi empresa"
- },
- "D-50": {
-  "at": "2026-10-02T22:33:27.314Z",
-  "note": "Esto no lo entiendo muy bien, al final el agente tendra información mucho mas detallada en la vector database que podra usar con el RAG para contestar preguntas sobre el curriculum, esta base de conocimiento puede ser mas extensa de lo que incluye el curriculum y mucho mas detallada, creariamos un documento o varios por tema (buts, tech debt, perfomance) y quizas un documento por feature grande, esta por decidir"
- },
- "D-51": {
-  "at": "2026-10-02T22:54:31.782Z",
-  "choice": "a",
-  "note": "Esto no lo entiendo muy bien, pero me gusta la idea"
- },
- "D-52": {
-  "at": "2026-10-02T22:34:36.290Z",
-  "note": "Mientras que no se incluya informacion propetaria de Mercanis, me parece bien"
- },
- "D-53": {
-  "at": "2026-10-02T23:05:54.084Z",
-  "choice": "a"
- },
- "D-54": {
-  "at": "2026-10-02T23:15:55.557Z",
-  "choice": "a"
- },
- "D-55": {
-  "at": "2026-10-02T23:17:01.611Z",
-  "choice": "a"
- },
- "D-56": {
-  "at": "2026-10-02T23:17:45.682Z",
-  "choice": "a"
- },
- "D-57": {
-  "at": "2026-10-02T23:18:30.294Z",
-  "choice": "a"
- },
- "D-58": {
-  "at": "2026-10-02T23:19:30.443Z",
-  "choice": "a"
- },
- "D-59": {
-  "at": "2026-10-02T23:21:47.929Z",
-  "choice": "a",
-  "note": "Para la opcion B neecesitariamos eventos para mantener los servicios desacoplados y la data en sync no? Seria mas trabajo, pero un patro nuevo para aprender, podemos estudiarlo, no me quiero complicar la vida mucho pero creo que los MCPs deberian de estar en su propio servicio y no mezclarse con otros servicios, lo vamos viendo"
- },
- "D-60": {
-  "at": "2026-10-02T23:22:15.045Z",
-  "choice": "a"
- },
- "D-61": {
-  "at": "2026-10-02T23:25:18.215Z",
-  "choice": "a",
-  "note": "No entiendo muy bien esto, pero eso esta bien, aprendere nuevos conceptos"
- },
- "D-62": {
-  "at": "2026-10-02T23:26:10.407Z",
-  "choice": "a"
- },
- "D-63": {
-  "at": "2026-10-02T23:26:49.961Z",
-  "choice": "a"
- },
- "D-64": {
-  "at": "2026-10-02T22:54:53.549Z",
-  "choice": "a"
- },
- "D-65": {
-  "at": "2026-10-02T22:37:44.045Z",
-  "choice": "a",
-  "note": "Desde admin está bien, al final lo que quiero al meter tanto BE es que sea dinamico, que yo pueda subir nuevos archivos detallados con experiencias o proyectos nuevos que sean ingestados y que el agente pueda leer con el RAG o los MCPs o como funcione eso, actualizar mi curriculum tambien dinamicamente, poder añadir o quitar documentos y experiencias ya existentes, o extenderlas, lo que viene a ser un CRUD de mi base de experiencia y conocimiento"
- },
- "D-66": {
-  "at": "2026-10-02T22:55:53.919Z",
-  "choice": "a"
- },
- "D-67": {
-  "at": "2026-10-02T22:39:34.163Z",
-  "note": "Me parece bien, pero hay que pedir a firstmate que prepare toda la documentacion siguiendo este patron cuando sea posible y habra veces que no se pueda proveer de toda la informacion o la metadata, asi que tendremos que ver como diseñamos esto al final segun los datos que tengamos"
- },
- "D-68": {
-  "at": "2026-10-02T22:57:00.077Z",
-  "choice": "c",
-  "note": "Lo dejamos como un posible follow-up, la gente es muy troll y no me fio de los thumbs"
- },
- "D-69": {
-  "at": "2026-10-02T22:58:09.200Z",
-  "choice": "a",
-  "note": "Esto se podria hacer tambien con Qdrant si nos decidieramos por el? Como de complejo seria hacerlo y que beneficios obtendriamos? Es bueno para mi aprendizaje o no aporta mucho?"
- },
- "D-70": {
-  "at": "2026-10-02T22:58:53.193Z",
-  "choice": "a",
-  "note": "Cojonudo"
- },
- "D-71": {
-  "at": "2026-10-02T23:15:00.313Z",
-  "choice": "a"
- },
- "D-72": {
-  "at": "2026-10-02T20:45:00Z",
-  "choice": "a",
-  "note": "Decided in chat on 2026-10-02: GitHub Issues with sub-issues, a Project and milestones."
- },
- "D-73": {
-  "at": "2026-10-02T23:28:24.193Z",
-  "note": "Lo decidimos mas adelante, fullstack no soy, tengo conocimientos de FE y he trabajado con varios frameworks pero no tengo experiencia casi, me enfoco mas en el BE"
- },
- "D-74": {
-  "at": "2026-10-02T23:29:09.747Z",
-  "choice": "a",
-  "note": "No tengo mucha idea de esto, pero lo podemos ir viendo y cambiando sobre la marcha"
- },
- "D-75": {
-  "at": "2026-10-02T23:30:43.665Z",
-  "choice": "a",
-  "note": "Ya hablaremos del launch, mientras que lo vayamos implementando todo por orden y pare por parte no deberiamos de tener problema, cada version puede tener caracteristicas nuevas, empezamos por lo basico y los pilares sobre lo que construiremos todo lo demas, de forma ordenada, tampoco hay que ponerse un hard deadline es un proyecto personal de aprendizaje"
- },
- "D-76": {
-  "at": "2026-10-02T23:31:58.244Z",
-  "choice": "a",
-  "note": "Otra cosa que podemos ir decidiendo, tambien está mi trabajo dentro de Mercanis,, no solo los proyectos personales, en Mercanis llevo 2 años y he hecho muchas cosas"
- }
+  "D-1": {
+    "at": "2026-10-02T20:18:31.178Z",
+    "choice": "a"
+  },
+  "D-2": {
+    "at": "2026-10-02T22:04:01.314Z",
+    "choice": "a",
+    "note": "Esta está repetida...nginx se ve la opcion mas simple, pero en afan de aprender me gustaria un NestJS gateway service, no podemos quedarnos con lo mejor de los dos mundos? Tenemos que hablar sobre esto"
+  },
+  "D-3": {
+    "at": "2026-10-02T21:55:15.673Z",
+    "choice": "a",
+    "note": "Layered pero con mas capas tendria sentido? Service como orquestador, DAO service como capa de acceso de datos, utils para utilidades, shared modules para utilidades que usen varios servicios, Hexagonal con abstract classes para que todos los adapters sigan la misma implementacion cuando corresponda, etc"
+  },
+  "D-4": {
+    "at": "2026-10-02T22:07:55.199Z",
+    "choice": "a",
+    "note": "Está bien podemos experimentar con NestJS 12, aunque en mercanis usamos versiones mas antiguas, asi puedo aprender sobre NestJS 12 y proponer el bump de version en mi trabajo con datos"
+  },
+  "D-5": {
+    "at": "2026-10-02T22:08:59.898Z",
+    "choice": "a",
+    "note": "Ya he tocado Prisma y trabajo con TypeORM, ahora estamos usando Drizzle, asi q me gustaria aprender"
+  },
+  "D-6": {
+    "at": "2026-10-02T22:10:13.122Z",
+    "choice": "a",
+    "note": "Es importante que generemos la documentacion de OpenAPI y como automatizarla para los diferentes DTOS y contratos de los endpoints, estamos trabajando esto tambien en Mercanis y quiero aprender mejor"
+  },
+  "D-7": {
+    "at": "2026-10-02T22:11:17.745Z",
+    "choice": "a",
+    "note": "Tambien podriamos mirar 1password, ultimamente estamos usando su CLI para secrets, seria posible? Como opcion"
+  },
+  "D-8": {
+    "at": "2026-10-02T22:59:50.985Z",
+    "choice": "a"
+  },
+  "D-9": {
+    "at": "2026-10-02T22:12:20.467Z",
+    "choice": "a",
+    "note": "Todo lo que podamos si, tenemos el servidor para montar toda la infra y creo que los recursos necesarios, el tema es como meter todo esto en el CI/CD de Github actions, o no es necesario?"
+  },
+  "D-10": {
+    "at": "2026-10-02T23:12:54.428Z",
+    "choice": "a"
+  },
+  "D-11": {
+    "at": "2026-10-02T22:27:28.168Z",
+    "choice": "a",
+    "note": "Astro tendria sentido tambien para el admin? quizas sea mas flexible, aunque sinceramente me importa poco el FE"
+  },
+  "D-12": {
+    "at": "2026-10-02T22:21:37.891Z",
+    "choice": "a",
+    "note": "El tema aqui es la atomicidad no? Usar una transaccion cuando haga falta y tanto la lectura o escritura en base de datos dentro de un try/catch con un revert de la transaccion si algo falla, asi no nos aseguramos de que tanto la operacion de la base de datos se hace como que el evento se ha emitido? Una base de datos pequeña para la DLQ tendría sentido? Para poder auditar y recuperar errores manualmente? Tambien meter esto en el admin panel tendria sentido no? Trackear los eventos, los success, los failed, etc"
+  },
+  "D-13": {
+    "at": "2026-10-02T22:42:24.616Z",
+    "choice": "a",
+    "note": "Yo creo que los embeddings podriamos decidir acerca de un proveedor porque al final cambiar de embeddings cambiaria la forma en la que los datos son ingestados y mezclar vectors de varios proveedores, esa seria la parte NO mobil, luego la parte movil seria el proveedor usado para las diferentes partes del grafo, quizas un modelo para el que hace el retrieve, otro modelo para otro nodo, otro para otro nodo, o el mismo para todos, eso simplificaria las cosas? Mereceria una investigacion sobre un embedding model que sirviera para varios modelos o que tenga mejor relacion calidad precio y tambien dependeria del tamaño de los datos a ingestar no?"
+  },
+  "D-14": {
+    "at": "2026-10-02T22:44:14.190Z",
+    "choice": "a",
+    "note": "A ver de base podriamos usar Haiku, pero el tema es poder cambiar a otro modelo como Sonnet 5.5 o un modelo de OpenAI, tenemos que estudiar que partes mobiles tenemos y cuales deberian de ser fijas en afan de simplificar, como los embeddings hablados en la seccion anterior"
+  },
+  "D-15": {
+    "at": "2026-10-02T22:45:33.181Z",
+    "choice": "a",
+    "note": "Prefiero aprender a construir el StateGraph yo con la asistencia de la IA y entender las diferentes partes y como conectan entre si"
+  },
+  "D-16": {
+    "at": "2026-10-02T22:47:24.275Z",
+    "note": "Me parece bien, pero tambien me resulta interesante usar Qdrant, por aprender, aunque creo que es un overkill y añadiria complejidad sin necesidad no? Podriamos explorar la opcion de Qdrant siempre que el servidor lo soportara, al final ampliaria mi stack y conocimiento"
+  },
+  "D-17": {
+    "at": "2026-10-02T22:49:06.146Z",
+    "choice": "a",
+    "note": "Yo siempre he usado la b creo, estaria bien estudiar y aprender la a si es mejor, que hay acerca de como almacenamos esas conversaciones, deberian de estar encriptadas por privacidad no? podriamos añadirlo?"
+  },
+  "D-18": {
+    "at": "2026-10-02T22:50:34.633Z",
+    "choice": "a",
+    "note": "Si, un MCP que se pueda usar por Claude para que mis compañeros o cualquiera puedan usarlo sin necesidad de usar mi agente y hacer preguntas sobre mi experiencia estaria bien no?"
+  },
+  "D-19": {
+    "at": "2026-10-02T23:07:57.392Z",
+    "choice": "a"
+  },
+  "D-20": {
+    "at": "2026-10-02T23:08:32.966Z",
+    "choice": "a"
+  },
+  "D-21": {
+    "at": "2026-10-02T22:51:56.537Z",
+    "choice": "a",
+    "note": "A ver me preocupa la privacidad, un langfuse self-hosted es una idea interesante sobre todo por el aprendizaje, pero añadiria mas tiempo, complejidad y no se si el servidor lo aguantaria todo"
+  },
+  "D-22": {
+    "at": "2026-10-02T22:53:10.738Z",
+    "choice": "a",
+    "note": "Podemos empezar con la a y si el gasto se disparara probar otras opciones o una vez nos decidamos por la a seria dificil moverse a la b, se puede configurar?"
+  },
+  "D-23": {
+    "at": "2026-10-02T23:09:20.135Z",
+    "choice": "a"
+  },
+  "D-24": {
+    "at": "2026-10-02T23:09:46.001Z",
+    "choice": "a"
+  },
+  "D-25": {
+    "at": "2026-10-02T23:02:10.058Z",
+    "choice": "a",
+    "note": "Tampoco me desagrada la idea de usar Python, para ir experimentando otro lenguaje, en agentic usan Python para muchas cosas, asi que deberiamos de estudiar pros y cons de construirlo todo o usar una libreria de Python en su lugar"
+  },
+  "D-26": {
+    "at": "2026-10-02T23:02:29.147Z",
+    "choice": "a"
+  },
+  "D-27": {
+    "at": "2026-10-02T23:03:27.942Z",
+    "choice": "a"
+  },
+  "D-28": {
+    "at": "2026-10-02T23:03:48.312Z",
+    "choice": "a"
+  },
+  "D-29": {
+    "at": "2026-10-02T23:10:21.972Z",
+    "choice": "a"
+  },
+  "D-30": {
+    "at": "2026-10-02T23:13:42.355Z",
+    "choice": "a"
+  },
+  "D-31": {
+    "at": "2026-10-02T23:14:26.806Z",
+    "choice": "a"
+  },
+  "D-32": {
+    "at": "2026-10-02T23:11:29.289Z",
+    "choice": "a"
+  },
+  "D-33": {
+    "at": "2026-10-02T22:28:27.915Z",
+    "choice": "a",
+    "note": ""
+  },
+  "D-34": {
+    "at": "2026-10-02T20:27:39.781Z",
+    "choice": "a"
+  },
+  "D-35": {
+    "at": "2026-10-02T22:02:26.775Z",
+    "choice": "a"
+  },
+  "D-36": {
+    "at": "2026-10-02T23:12:06.953Z",
+    "choice": "a"
+  },
+  "D-37": {
+    "at": "2026-10-02T23:06:37.862Z",
+    "choice": "a"
+  },
+  "D-38": {
+    "at": "2026-10-02T22:03:09.006Z",
+    "choice": "a",
+    "note": "Tenemos que encontrar en punto dulce intermedio entre aprender y la velocidad de implementacion, habrá cosas que quizas ya conozca en la que podremos saltar directos a la implementacion"
+  },
+  "D-39": {
+    "at": "2026-10-02T21:56:19.559Z",
+    "choice": "a"
+  },
+  "D-40": {
+    "at": "2026-10-02T22:22:03.254Z",
+    "choice": "a",
+    "note": "Me interesa aprender de RabbitMQ"
+  },
+  "D-41": {
+    "at": "2026-10-02T22:23:13.788Z",
+    "choice": "a",
+    "note": "Un adaptador no estaria mal si decidieramos cambiar RabbitMQ por otro Message Broker, no se si mereceria la pena, solo por el afan de aprender"
+  },
+  "D-42": {
+    "at": "2026-10-02T22:00:18.736Z",
+    "choice": "a",
+    "note": "Porque data stored twice? Los datos a los que tiene que acceder el agente son los que se almacenan en la vector database y usaremos el RAG, la api no deberia de conocer sobre esos datos, no entiendo la duplicidad aqui ni la distincion entre api y agent"
+  },
+  "D-43": {
+    "at": "2026-10-02T22:24:41.478Z",
+    "choice": "a",
+    "note": "El tema aqui es la duplicidad? Tendria sentido crear un repositorio aparte como un toolbox, ya que vamos a tener diferentes \"microservicios\" con tipados, contratos, schemas y demas que compartan? Podriamos publicas versiones de distintos packages que luego los servicios consuman y utilicen evitando la duplicidad y el mantenimiento entre servicios"
+  },
+  "D-44": {
+    "at": "2026-10-02T22:00:44.765Z",
+    "choice": "a"
+  },
+  "D-45": {
+    "at": "2026-10-02T22:06:01.000Z",
+    "choice": "a",
+    "note": "NestJS gateway service estaria bien solo por el afan de aprender, aunque sea otro punto de fallo, no estoy seguro acerca de este aunque haya elegido la opcion recomendada, esta pregunta esta repetida, deberiamos ver como quedarnos lo mejor de los dos mundos, nunca he implementado un gateway, en Mercanis estoy trabajando ahora en servicios dentro de uno y me gustaria aprender mas sobre ello, el gateway tiene 3000 portal, 3001 backoffice, podriamos preguntarle a firstmate que puede explorar codigo de mercanis como está implementado y sacar ideas de ahi sin hacer disclosing de codigo propietario de mercanis, solo temas de arquitectura diseño y patrones usados"
+  },
+  "D-46": {
+    "at": "2026-10-02T23:07:22.517Z",
+    "choice": "a"
+  },
+  "D-47": {
+    "at": "2026-10-02T23:05:18.645Z",
+    "choice": "a",
+    "note": "Y si usamos el Gateway de NestJS, que cambiaria? O ambos nginx y el Gateway"
+  },
+  "D-48": {
+    "at": "2026-10-02T22:07:14.881Z",
+    "choice": "a",
+    "note": ""
+  },
+  "D-49": {
+    "at": "2026-10-02T22:25:41.363Z",
+    "note": "NO estoy muy seguro de esto ya que no conozco Composable, pero me parece interesante de aprender y si funciona bien proponerlo en mi empresa"
+  },
+  "D-50": {
+    "at": "2026-10-02T22:33:27.314Z",
+    "note": "Esto no lo entiendo muy bien, al final el agente tendra información mucho mas detallada en la vector database que podra usar con el RAG para contestar preguntas sobre el curriculum, esta base de conocimiento puede ser mas extensa de lo que incluye el curriculum y mucho mas detallada, creariamos un documento o varios por tema (buts, tech debt, perfomance) y quizas un documento por feature grande, esta por decidir"
+  },
+  "D-51": {
+    "at": "2026-10-02T22:54:31.782Z",
+    "choice": "a",
+    "note": "Esto no lo entiendo muy bien, pero me gusta la idea"
+  },
+  "D-52": {
+    "at": "2026-10-02T22:34:36.290Z",
+    "note": "Mientras que no se incluya informacion propetaria de Mercanis, me parece bien"
+  },
+  "D-53": {
+    "at": "2026-10-02T23:05:54.084Z",
+    "choice": "a"
+  },
+  "D-54": {
+    "at": "2026-10-02T23:15:55.557Z",
+    "choice": "a"
+  },
+  "D-55": {
+    "at": "2026-10-02T23:17:01.611Z",
+    "choice": "a"
+  },
+  "D-56": {
+    "at": "2026-10-02T23:17:45.682Z",
+    "choice": "a"
+  },
+  "D-57": {
+    "at": "2026-10-02T23:18:30.294Z",
+    "choice": "a"
+  },
+  "D-58": {
+    "at": "2026-10-02T23:19:30.443Z",
+    "choice": "a"
+  },
+  "D-59": {
+    "at": "2026-10-02T23:21:47.929Z",
+    "choice": "a",
+    "note": "Para la opcion B neecesitariamos eventos para mantener los servicios desacoplados y la data en sync no? Seria mas trabajo, pero un patro nuevo para aprender, podemos estudiarlo, no me quiero complicar la vida mucho pero creo que los MCPs deberian de estar en su propio servicio y no mezclarse con otros servicios, lo vamos viendo"
+  },
+  "D-60": {
+    "at": "2026-10-02T23:22:15.045Z",
+    "choice": "a"
+  },
+  "D-61": {
+    "at": "2026-10-02T23:25:18.215Z",
+    "choice": "a",
+    "note": "No entiendo muy bien esto, pero eso esta bien, aprendere nuevos conceptos"
+  },
+  "D-62": {
+    "at": "2026-10-02T23:26:10.407Z",
+    "choice": "a"
+  },
+  "D-63": {
+    "at": "2026-10-02T23:26:49.961Z",
+    "choice": "a"
+  },
+  "D-64": {
+    "at": "2026-10-02T22:54:53.549Z",
+    "choice": "a"
+  },
+  "D-65": {
+    "at": "2026-10-02T22:37:44.045Z",
+    "choice": "a",
+    "note": "Desde admin está bien, al final lo que quiero al meter tanto BE es que sea dinamico, que yo pueda subir nuevos archivos detallados con experiencias o proyectos nuevos que sean ingestados y que el agente pueda leer con el RAG o los MCPs o como funcione eso, actualizar mi curriculum tambien dinamicamente, poder añadir o quitar documentos y experiencias ya existentes, o extenderlas, lo que viene a ser un CRUD de mi base de experiencia y conocimiento"
+  },
+  "D-66": {
+    "at": "2026-10-02T22:55:53.919Z",
+    "choice": "a"
+  },
+  "D-67": {
+    "at": "2026-10-02T22:39:34.163Z",
+    "note": "Me parece bien, pero hay que pedir a firstmate que prepare toda la documentacion siguiendo este patron cuando sea posible y habra veces que no se pueda proveer de toda la informacion o la metadata, asi que tendremos que ver como diseñamos esto al final segun los datos que tengamos"
+  },
+  "D-68": {
+    "at": "2026-10-02T22:57:00.077Z",
+    "choice": "c",
+    "note": "Lo dejamos como un posible follow-up, la gente es muy troll y no me fio de los thumbs"
+  },
+  "D-69": {
+    "at": "2026-10-02T22:58:09.200Z",
+    "choice": "a",
+    "note": "Esto se podria hacer tambien con Qdrant si nos decidieramos por el? Como de complejo seria hacerlo y que beneficios obtendriamos? Es bueno para mi aprendizaje o no aporta mucho?"
+  },
+  "D-70": {
+    "at": "2026-10-02T22:58:53.193Z",
+    "choice": "a",
+    "note": "Cojonudo"
+  },
+  "D-71": {
+    "at": "2026-10-02T23:15:00.313Z",
+    "choice": "a"
+  },
+  "D-72": {
+    "at": "2026-10-02T20:45:00Z",
+    "choice": "a",
+    "note": "Decided in chat on 2026-10-02: GitHub Issues with sub-issues, a Project and milestones."
+  },
+  "D-73": {
+    "at": "2026-10-02T23:28:24.193Z",
+    "note": "Lo decidimos mas adelante, fullstack no soy, tengo conocimientos de FE y he trabajado con varios frameworks pero no tengo experiencia casi, me enfoco mas en el BE"
+  },
+  "D-74": {
+    "at": "2026-10-02T23:29:09.747Z",
+    "choice": "a",
+    "note": "No tengo mucha idea de esto, pero lo podemos ir viendo y cambiando sobre la marcha"
+  },
+  "D-75": {
+    "at": "2026-10-02T23:30:43.665Z",
+    "choice": "a",
+    "note": "Ya hablaremos del launch, mientras que lo vayamos implementando todo por orden y pare por parte no deberiamos de tener problema, cada version puede tener caracteristicas nuevas, empezamos por lo basico y los pilares sobre lo que construiremos todo lo demas, de forma ordenada, tampoco hay que ponerse un hard deadline es un proyecto personal de aprendizaje"
+  },
+  "D-76": {
+    "at": "2026-10-02T23:31:58.244Z",
+    "choice": "a",
+    "note": "Otra cosa que podemos ir decidiendo, tambien está mi trabajo dentro de Mercanis,, no solo los proyectos personales, en Mercanis llevo 2 años y he hecho muchas cosas"
+  }
 }

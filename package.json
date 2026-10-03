@@ -22,6 +22,7 @@
     "adr:index": "node scripts/adr/index.mjs"
   },
   "devDependencies": {
+    "@biomejs/biome": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:"
   }

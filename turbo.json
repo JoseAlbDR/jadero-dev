@@ -3,29 +3,16 @@
   "ui": "stream",
   "tasks": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "outputs": [
-        "dist/**"
-      ]
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
     },
     "typecheck": {
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": [
-        "^build"
-      ],
-      "env": [
-        "AI_*_PROVIDER",
-        "MAIL_PROVIDER"
-      ],
-      "passThroughEnv": [
-        "VITEST_MAX_WORKERS"
-      ]
+      "dependsOn": ["^build"],
+      "env": ["AI_*_PROVIDER", "MAIL_PROVIDER"],
+      "passThroughEnv": ["VITEST_MAX_WORKERS"]
     },
     "//#lint": {
       "inputs": [

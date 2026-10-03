@@ -13,12 +13,7 @@
       "Bash(docker compose -f infra/compose/compose.dev.yml *)",
       "Bash(jq *)"
     ],
-    "deny": [
-      "Read(.env)",
-      "Read(.env.*)",
-      "Read(**/.env)",
-      "Read(**/.env.*)"
-    ]
+    "deny": ["Read(.env)", "Read(.env.*)", "Read(**/.env)", "Read(**/.env.*)"]
   },
   "env": {
     "AI_CHAT_PROVIDER": "fake",

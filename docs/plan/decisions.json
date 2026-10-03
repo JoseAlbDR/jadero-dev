@@ -101,11 +101,7 @@
           "id": "b",
           "label": "Nx",
           "description": "A full monorepo platform with generators, a project graph and boundary rules.",
-          "pros": [
-            "Generators",
-            "Built-in module-boundary lint",
-            "Nest plugin"
-          ],
+          "pros": ["Generators", "Built-in module-boundary lint", "Nest plugin"],
           "cons": [
             "Many more concepts and config",
             "Its Nest plugin lags new Nest majors",
@@ -116,21 +112,14 @@
           "id": "c",
           "label": "pnpm workspaces only",
           "description": "Just the package manager's workspace feature.",
-          "pros": [
-            "Zero extra tool"
-          ],
-          "cons": [
-            "No caching",
-            "No affected-only CI: everything rebuilds every time"
-          ]
+          "pros": ["Zero extra tool"],
+          "cons": ["No caching", "No affected-only CI: everything rebuilds every time"]
         },
         {
           "id": "d",
           "label": "Separate repos per app",
           "description": "One repository per deployable.",
-          "pros": [
-            "Fully independent lifecycles"
-          ],
+          "pros": ["Fully independent lifecycles"],
           "cons": [
             "Contracts drift between repos",
             "Several CIs and release flows",
@@ -164,31 +153,20 @@
             "One place for edge rules",
             "No CORS"
           ],
-          "cons": [
-            "Config is not TypeScript (checked with nginx -t in CI)"
-          ]
+          "cons": ["Config is not TypeScript (checked with nginx -t in CI)"]
         },
         {
           "id": "b",
           "label": "Dedicated gateway (Traefik or Kong)",
           "description": "A container that routes by Docker labels or plugins.",
-          "pros": [
-            "Dynamic routing",
-            "Plugin ecosystem"
-          ],
-          "cons": [
-            "Another process in every request's path",
-            "Duplicates what nginx already does"
-          ]
+          "pros": ["Dynamic routing", "Plugin ecosystem"],
+          "cons": ["Another process in every request's path", "Duplicates what nginx already does"]
         },
         {
           "id": "c",
           "label": "A NestJS gateway service",
           "description": "Every request goes through a Nest app that proxies to the others.",
-          "pros": [
-            "Routing in TypeScript",
-            "Can aggregate responses"
-          ],
+          "pros": ["Routing in TypeScript", "Can aggregate responses"],
           "cons": [
             "Becomes the single point of failure and coupling the service split tries to remove"
           ]
@@ -224,18 +202,13 @@
             "Core logic testable with fakes",
             "Provider switches never touch business code"
           ],
-          "cons": [
-            "Two styles to recognize (documented per module)"
-          ]
+          "cons": ["Two styles to recognize (documented per module)"]
         },
         {
           "id": "b",
           "label": "Layered everywhere",
           "description": "Classic Nest structure: controllers call services that call the ORM.",
-          "pros": [
-            "Least ceremony",
-            "What the Nest CLI scaffolds"
-          ],
+          "pros": ["Least ceremony", "What the Nest CLI scaffolds"],
           "cons": [
             "Business code coupled to Drizzle and SDKs",
             "Tests need a database or heavy mocks"
@@ -245,10 +218,7 @@
           "id": "c",
           "label": "Hexagonal everywhere",
           "description": "Every module gets domain, application, infrastructure and presentation layers.",
-          "pros": [
-            "Uniform",
-            "Very testable"
-          ],
+          "pros": ["Uniform", "Very testable"],
           "cons": [
             "Ceremony on modules that only pass data through",
             "Teaches that patterns are free"
@@ -283,22 +253,14 @@
             "Zod validation built in",
             "Faster tests"
           ],
-          "cons": [
-            "One month old",
-            "Some modules may not declare v12 support yet"
-          ]
+          "cons": ["One month old", "Some modules may not declare v12 support yet"]
         },
         {
           "id": "b",
           "label": "NestJS 11, CommonJS, Jest",
           "description": "The mature line.",
-          "pros": [
-            "Everything in the ecosystem works today"
-          ],
-          "cons": [
-            "A major upgrade later",
-            "ESM interop friction with AI packages"
-          ]
+          "pros": ["Everything in the ecosystem works today"],
+          "cons": ["A major upgrade later", "ESM interop friction with AI packages"]
         }
       ],
       "recommendation": "a",
@@ -328,18 +290,13 @@
             "Reviewable SQL migrations",
             "Teaches SQL"
           ],
-          "cons": [
-            "Fewer guard rails",
-            "No official Nest module (a small own provider)"
-          ]
+          "cons": ["Fewer guard rails", "No official Nest module (a small own provider)"]
         },
         {
           "id": "b",
           "label": "Prisma",
           "description": "Schema DSL with a generated client.",
-          "pros": [
-            "Polished developer experience"
-          ],
+          "pros": ["Polished developer experience"],
           "cons": [
             "Prisma 7 treats vector as Unsupported (raw SQL)",
             "Prisma 8 is a release candidate with breaking moves",
@@ -350,25 +307,15 @@
           "id": "c",
           "label": "TypeORM",
           "description": "Decorator-based entities.",
-          "pros": [
-            "The owner already knows it"
-          ],
-          "cons": [
-            "Weak type inference",
-            "No first-class pgvector",
-            "Teaches the least"
-          ]
+          "pros": ["The owner already knows it"],
+          "cons": ["Weak type inference", "No first-class pgvector", "Teaches the least"]
         },
         {
           "id": "d",
           "label": "Kysely or raw pg",
           "description": "A typed query builder or plain driver.",
-          "pros": [
-            "Maximal control"
-          ],
-          "cons": [
-            "Hand-rolled migrations and schema typing"
-          ]
+          "pros": ["Maximal control"],
+          "cons": ["Hand-rolled migrations and schema typing"]
         }
       ],
       "recommendation": "a",
@@ -397,17 +344,13 @@
             "Types inferred once",
             "Same schemas generate the OpenAPI document"
           ],
-          "cons": [
-            "OpenAPI generation from Zod may need a bridge (verify)"
-          ]
+          "cons": ["OpenAPI generation from Zod may need a bridge (verify)"]
         },
         {
           "id": "b",
           "label": "class-validator DTO classes",
           "description": "Nest's classic decorator-based validation.",
-          "pros": [
-            "Integrates with Swagger decorators"
-          ],
+          "pros": ["Integrates with Swagger decorators"],
           "cons": [
             "Classes cannot be shared with the browser cleanly",
             "Duplicate schemas for forms and tools"
@@ -436,21 +379,14 @@
           "id": "a",
           "label": "On the server only",
           "description": "A .env file per service and environment, mode 600, loaded by compose; CI never sees runtime secrets.",
-          "pros": [
-            "Smallest blast radius",
-            "Simple"
-          ],
-          "cons": [
-            "Rotating a key is a manual step on the server (runbook)"
-          ]
+          "pros": ["Smallest blast radius", "Simple"],
+          "cons": ["Rotating a key is a manual step on the server (runbook)"]
         },
         {
           "id": "b",
           "label": "GitHub secrets written at deploy",
           "description": "CI pushes secrets to the server on every deploy.",
-          "pros": [
-            "One place to manage"
-          ],
+          "pros": ["One place to manage"],
           "cons": [
             "CI can read every production secret",
             "Environment secrets need a public repo or paid plan"
@@ -460,12 +396,8 @@
           "id": "c",
           "label": "SOPS + age",
           "description": "Encrypted .env files in the repo, decrypted on the server.",
-          "pros": [
-            "Versioned, reviewable secret changes"
-          ],
-          "cons": [
-            "Key management to learn on day one"
-          ]
+          "pros": ["Versioned, reviewable secret changes"],
+          "cons": ["Key management to learn on day one"]
         },
         {
           "id": "d",
@@ -511,51 +443,29 @@
           "id": "a",
           "label": "Better Auth with GitHub OAuth allow-list",
           "description": "Database sessions, only one allow-listed GitHub user id, CSRF protection, audit log, passkey later.",
-          "pros": [
-            "No password to store",
-            "Maintained library",
-            "Passkeys and 2FA as plugins"
-          ],
-          "cons": [
-            "A library's model to learn",
-            "Login depends on GitHub availability"
-          ]
+          "pros": ["No password to store", "Maintained library", "Passkeys and 2FA as plugins"],
+          "cons": ["A library's model to learn", "Login depends on GitHub availability"]
         },
         {
           "id": "b",
           "label": "Hand-rolled password + TOTP sessions",
           "description": "argon2id hashes, TOTP second factor, own session table.",
-          "pros": [
-            "Teaches every mechanism"
-          ],
-          "cons": [
-            "Easy to get subtly wrong",
-            "More security surface to own"
-          ]
+          "pros": ["Teaches every mechanism"],
+          "cons": ["Easy to get subtly wrong", "More security surface to own"]
         },
         {
           "id": "c",
           "label": "Passport + JWT",
           "description": "Access and refresh tokens.",
-          "pros": [
-            "Common tutorial path"
-          ],
-          "cons": [
-            "Revocation needs a denylist",
-            "Wrong tool for a single-user, same-origin app"
-          ]
+          "pros": ["Common tutorial path"],
+          "cons": ["Revocation needs a denylist", "Wrong tool for a single-user, same-origin app"]
         },
         {
           "id": "d",
           "label": "Network-only (Tailscale) without app auth",
           "description": "Admin reachable only over the private network.",
-          "pros": [
-            "Strong exposure reduction"
-          ],
-          "cons": [
-            "Teaches nothing about auth",
-            "One proxy mistake exposes an open admin"
-          ]
+          "pros": ["Strong exposure reduction"],
+          "cons": ["Teaches nothing about auth", "One proxy mistake exposes an open admin"]
         }
       ],
       "recommendation": "a",
@@ -583,34 +493,21 @@
             "Real infrastructure where it matters",
             "Contract breaks caught in CI"
           ],
-          "cons": [
-            "Fakes and contract suites are code to maintain"
-          ]
+          "cons": ["Fakes and contract suites are code to maintain"]
         },
         {
           "id": "b",
           "label": "Mostly end-to-end tests",
           "description": "Boot everything and test through HTTP.",
-          "pros": [
-            "Tests real behavior"
-          ],
-          "cons": [
-            "Slow",
-            "Flaky",
-            "Hard to localize failures"
-          ]
+          "pros": ["Tests real behavior"],
+          "cons": ["Slow", "Flaky", "Hard to localize failures"]
         },
         {
           "id": "c",
           "label": "Unit tests with mocks only",
           "description": "Mock every dependency.",
-          "pros": [
-            "Fast"
-          ],
-          "cons": [
-            "Mocks drift from reality",
-            "SQL and broker behavior never tested"
-          ]
+          "pros": ["Fast"],
+          "cons": ["Mocks drift from reality", "SQL and broker behavior never tested"]
         }
       ],
       "recommendation": "a",
@@ -634,35 +531,22 @@
           "id": "a",
           "label": "pino logs + OpenTelemetry to a free hosted tier",
           "description": "Structured logs with trace ids, OTel traces and metrics exported over OTLP, trace context propagated through RabbitMQ, per-service health, dead-letter alerts.",
-          "pros": [
-            "Real cross-service traces",
-            "Nothing heavy on the server"
-          ],
-          "cons": [
-            "Telemetry leaves the server (no visitor data in spans)"
-          ]
+          "pros": ["Real cross-service traces", "Nothing heavy on the server"],
+          "cons": ["Telemetry leaves the server (no visitor data in spans)"]
         },
         {
           "id": "b",
           "label": "Logs + Uptime Kuma only",
           "description": "JSON logs and uptime checks.",
-          "pros": [
-            "Almost free"
-          ],
-          "cons": [
-            "No way to follow a request across services"
-          ]
+          "pros": ["Almost free"],
+          "cons": ["No way to follow a request across services"]
         },
         {
           "id": "c",
           "label": "Self-hosted Grafana stack",
           "description": "Loki, Tempo, Prometheus and Grafana on the box.",
-          "pros": [
-            "Full control"
-          ],
-          "cons": [
-            "Over 1 GB RAM and real operations work on an 8 GB server"
-          ]
+          "pros": ["Full control"],
+          "cons": ["Over 1 GB RAM and real operations work on an 8 GB server"]
         }
       ],
       "recommendation": "a",
@@ -690,37 +574,21 @@
             "Content shaped for the agent",
             "Publish events feed the index"
           ],
-          "cons": [
-            "Most work",
-            "Admin UI built by hand"
-          ]
+          "cons": ["Most work", "Admin UI built by hand"]
         },
         {
           "id": "b",
           "label": "Payload CMS",
           "description": "CMS inside the Next app with admin UI and localization.",
-          "pros": [
-            "Admin for free",
-            "Known territory"
-          ],
-          "cons": [
-            "Hides the backend",
-            "Low learning",
-            "A second data model"
-          ]
+          "pros": ["Admin for free", "Known territory"],
+          "cons": ["Hides the backend", "Low learning", "A second data model"]
         },
         {
           "id": "c",
           "label": "MDX in the repo",
           "description": "Content as files, git as CMS.",
-          "pros": [
-            "Zero backend",
-            "Versioned"
-          ],
-          "cons": [
-            "Every edit is a deploy",
-            "No backend showcase"
-          ]
+          "pros": ["Zero backend", "Versioned"],
+          "cons": ["Every edit is a deploy", "No backend showcase"]
         }
       ],
       "recommendation": "a",
@@ -744,38 +612,22 @@
           "id": "a",
           "label": "Outbox per service + relay to RabbitMQ + idempotent consumers",
           "description": "Outbox rows commit with the change; a relay publishes with confirms; consumers dedupe by event id; retry tiers and dead-letter queues.",
-          "pros": [
-            "No lost events",
-            "No broker in the request path",
-            "Duplicates are safe"
-          ],
-          "cons": [
-            "More moving parts",
-            "A second or two of latency"
-          ]
+          "pros": ["No lost events", "No broker in the request path", "Duplicates are safe"],
+          "cons": ["More moving parts", "A second or two of latency"]
         },
         {
           "id": "b",
           "label": "Publish right after commit",
           "description": "Send the message in the request after saving.",
-          "pros": [
-            "Trivial"
-          ],
-          "cons": [
-            "A crash loses the event",
-            "A broker outage breaks user requests"
-          ]
+          "pros": ["Trivial"],
+          "cons": ["A crash loses the event", "A broker outage breaks user requests"]
         },
         {
           "id": "c",
           "label": "Outbox + pg-boss",
           "description": "A Postgres-based queue shared by producer and consumers.",
-          "pros": [
-            "No broker"
-          ],
-          "cons": [
-            "Services would share a database, breaking their isolation"
-          ]
+          "pros": ["No broker"],
+          "cons": ["Services would share a database, breaking their isolation"]
         }
       ],
       "recommendation": "a",
@@ -805,18 +657,13 @@
             "All LangGraph features for chat",
             "Provider swap is config"
           ],
-          "cons": [
-            "Two styles of port to explain"
-          ]
+          "cons": ["Two styles of port to explain"]
         },
         {
           "id": "b",
           "label": "Own ports for everything",
           "description": "Own LlmPort too, with adapters over raw vendor SDKs.",
-          "pros": [
-            "Purest pattern",
-            "No framework leakage"
-          ],
+          "pros": ["Purest pattern", "No framework leakage"],
           "cons": [
             "Re-implements tool calling and streaming per provider",
             "Blocks LangGraph features"
@@ -826,9 +673,7 @@
           "id": "c",
           "label": "LangChain abstractions as the ports",
           "description": "BaseChatModel, Embeddings, VectorStore everywhere.",
-          "pros": [
-            "Least code"
-          ],
+          "pros": ["Least code"],
           "cons": [
             "Embedding identity and dimension unprotected",
             "Core coupled to LangChain everywhere",
@@ -864,33 +709,21 @@
             "Free embeddings at this corpus size",
             "One vendor for embeddings and reranking"
           ],
-          "cons": [
-            "Haiku's cache minimum needs a stable owner brief in the prompt to benefit"
-          ]
+          "cons": ["Haiku's cache minimum needs a stable owner brief in the prompt to benefit"]
         },
         {
           "id": "b",
           "label": "OpenAI for everything (GPT-5.4-mini, text-embedding-3-small)",
           "description": "One vendor for all roles.",
-          "pros": [
-            "One account",
-            "Slightly cheaper chat per token"
-          ],
-          "cons": [
-            "No reranker from the same vendor",
-            "Less familiar to the owner"
-          ]
+          "pros": ["One account", "Slightly cheaper chat per token"],
+          "cons": ["No reranker from the same vendor", "Less familiar to the owner"]
         },
         {
           "id": "c",
           "label": "Sonnet 5.5 for chat",
           "description": "A stronger model for answers.",
-          "pros": [
-            "Higher answer quality"
-          ],
-          "cons": [
-            "About twice the cost per turn"
-          ]
+          "pros": ["Higher answer quality"],
+          "cons": ["About twice the cost per turn"]
         }
       ],
       "recommendation": "a",
@@ -920,33 +753,21 @@
             "One fewer model round trip per turn",
             "Teaches both patterns"
           ],
-          "cons": [
-            "More code than the prebuilt agent"
-          ]
+          "cons": ["More code than the prebuilt agent"]
         },
         {
           "id": "b",
           "label": "Prebuilt createAgent (ReAct) with middleware",
           "description": "The model decides when to search or refuse.",
-          "pros": [
-            "A few lines"
-          ],
-          "cons": [
-            "Safety depends on prompt and middleware order",
-            "Teaches less LangGraph"
-          ]
+          "pros": ["A few lines"],
+          "cons": ["Safety depends on prompt and middleware order", "Teaches less LangGraph"]
         },
         {
           "id": "c",
           "label": "Fixed workflow only",
           "description": "Guard, retrieve, answer, check with no tool loop.",
-          "pros": [
-            "Predictable",
-            "Cheapest"
-          ],
-          "cons": [
-            "No follow-up lookups for multi-part questions"
-          ]
+          "pros": ["Predictable", "Cheapest"],
+          "cons": ["No follow-up lookups for multi-part questions"]
         }
       ],
       "recommendation": "a",
@@ -975,31 +796,21 @@
             "One database",
             "Measurable with recall@5"
           ],
-          "cons": [
-            "More moving parts than vector-only search"
-          ]
+          "cons": ["More moving parts than vector-only search"]
         },
         {
           "id": "b",
           "label": "Vector-only search",
           "description": "Embeddings and nearest neighbors only.",
-          "pros": [
-            "Simplest"
-          ],
-          "cons": [
-            "Misses exact names, versions and acronyms"
-          ]
+          "pros": ["Simplest"],
+          "cons": ["Misses exact names, versions and acronyms"]
         },
         {
           "id": "c",
           "label": "Dedicated vector database (Qdrant)",
           "description": "A separate service for vectors.",
-          "pros": [
-            "Built for huge scale"
-          ],
-          "cons": [
-            "Another service and RAM for a corpus of a few hundred chunks"
-          ]
+          "pros": ["Built for huge scale"],
+          "cons": ["Another service and RAM for a corpus of a few hundred chunks"]
         },
         {
           "id": "d",
@@ -1010,10 +821,7 @@
             "Uses the port for what it is for",
             "A measured decision"
           ],
-          "cons": [
-            "About 3 more days after launch",
-            "A second store while both run"
-          ]
+          "cons": ["About 3 more days after launch", "A second store while both run"]
         }
       ],
       "recommendation": "d",
@@ -1042,36 +850,22 @@
           "id": "a",
           "label": "PostgresSaver, anonymous 24 h threads, SSE with incremental output checks",
           "description": "Thread id in a signed cookie, purge after 24 hours, stream tokens and abort if a check trips.",
-          "pros": [
-            "Fast perceived answers",
-            "No visitor accounts",
-            "Privacy by short retention"
-          ],
-          "cons": [
-            "Incremental checks are more complex than a final check"
-          ]
+          "pros": ["Fast perceived answers", "No visitor accounts", "Privacy by short retention"],
+          "cons": ["Incremental checks are more complex than a final check"]
         },
         {
           "id": "b",
           "label": "Buffer the full answer, then send JSON",
           "description": "Generate, check, then send.",
-          "pros": [
-            "Simplest safety"
-          ],
-          "cons": [
-            "Slow perceived latency"
-          ]
+          "pros": ["Simplest safety"],
+          "cons": ["Slow perceived latency"]
         },
         {
           "id": "c",
           "label": "WebSockets",
           "description": "Two-way connection.",
-          "pros": [
-            "Bidirectional"
-          ],
-          "cons": [
-            "More moving parts than needed for request and response chat"
-          ]
+          "pros": ["Bidirectional"],
+          "cons": ["More moving parts than needed for request and response chat"]
         }
       ],
       "recommendation": "a",
@@ -1100,31 +894,21 @@
             "A real, demonstrable integration any AI client can use",
             "Reuses the same read model"
           ],
-          "cons": [
-            "One more public surface to rate-limit"
-          ]
+          "cons": ["One more public surface to rate-limit"]
         },
         {
           "id": "b",
           "label": "The site agent calls its own tools over MCP",
           "description": "Expose tools on an MCP server and load them with the MCP adapters.",
-          "pros": [
-            "Exercises the MCP client side"
-          ],
-          "cons": [
-            "Network hop and new failure modes for no user value"
-          ]
+          "pros": ["Exercises the MCP client side"],
+          "cons": ["Network hop and new failure modes for no user value"]
         },
         {
           "id": "c",
           "label": "No MCP",
           "description": "Skip it.",
-          "pros": [
-            "Less work"
-          ],
-          "cons": [
-            "Misses the clearest AI-integration showcase"
-          ]
+          "pros": ["Less work"],
+          "cons": ["Misses the clearest AI-integration showcase"]
         }
       ],
       "recommendation": "a",
@@ -1148,23 +932,15 @@
           "id": "a",
           "label": "English, with detection and a remembered choice",
           "description": "Default en; Accept-Language picks es or de when it matches.",
-          "pros": [
-            "Fits the main audience"
-          ],
-          "cons": [
-            "Spanish-first visitors land on English if their browser says so"
-          ]
+          "pros": ["Fits the main audience"],
+          "cons": ["Spanish-first visitors land on English if their browser says so"]
         },
         {
           "id": "b",
           "label": "Spanish",
           "description": "Default es.",
-          "pros": [
-            "The owner's first language"
-          ],
-          "cons": [
-            "Less natural for an international team"
-          ]
+          "pros": ["The owner's first language"],
+          "cons": ["Less natural for an international team"]
         }
       ],
       "recommendation": "a",
@@ -1186,35 +962,22 @@
           "id": "a",
           "label": "en and es required, de warned",
           "description": "Publishing needs English and Spanish; German shows a warning until complete.",
-          "pros": [
-            "Keeps the two strongest languages complete",
-            "German can follow"
-          ],
-          "cons": [
-            "German may lag"
-          ]
+          "pros": ["Keeps the two strongest languages complete", "German can follow"],
+          "cons": ["German may lag"]
         },
         {
           "id": "b",
           "label": "All three required",
           "description": "No publish without es, en and de.",
-          "pros": [
-            "Always complete"
-          ],
-          "cons": [
-            "Slows every publish"
-          ]
+          "pros": ["Always complete"],
+          "cons": ["Slows every publish"]
         },
         {
           "id": "c",
           "label": "Only en required",
           "description": "Other languages fall back to English.",
-          "pros": [
-            "Fastest publishing"
-          ],
-          "cons": [
-            "Spanish pages may show English"
-          ]
+          "pros": ["Fastest publishing"],
+          "cons": ["Spanish pages may show English"]
         }
       ],
       "recommendation": "a",
@@ -1236,37 +999,22 @@
           "id": "a",
           "label": "Tracing in staging and production, EU region, masking, free plan",
           "description": "One project per environment.",
-          "pros": [
-            "Full visibility",
-            "EU data residency",
-            "Free at this volume"
-          ],
-          "cons": [
-            "Visitor text leaves the server (masked where possible)"
-          ]
+          "pros": ["Full visibility", "EU data residency", "Free at this volume"],
+          "cons": ["Visitor text leaves the server (masked where possible)"]
         },
         {
           "id": "b",
           "label": "Tracing in staging only",
           "description": "Production untraced.",
-          "pros": [
-            "Less personal data shared"
-          ],
-          "cons": [
-            "Blind to real-world failures and attacks"
-          ]
+          "pros": ["Less personal data shared"],
+          "cons": ["Blind to real-world failures and attacks"]
         },
         {
           "id": "c",
           "label": "Self-hosted Langfuse instead",
           "description": "Open-source alternative on the box.",
-          "pros": [
-            "Data stays on the server"
-          ],
-          "cons": [
-            "Uses scarce RAM",
-            "The owner chose LangSmith"
-          ]
+          "pros": ["Data stays on the server"],
+          "cons": ["Uses scarce RAM", "The owner chose LangSmith"]
         }
       ],
       "recommendation": "a",
@@ -1290,35 +1038,22 @@
           "id": "a",
           "label": "Path-filtered PRs + nightly, budget per run, adversarial 100% gate",
           "description": "Run when agent, AI or prompt files change and every night; block on any adversarial regression or a drop in groundedness or recall.",
-          "pros": [
-            "Catches regressions before merge",
-            "Spend bounded"
-          ],
-          "cons": [
-            "Small cost per relevant PR"
-          ]
+          "pros": ["Catches regressions before merge", "Spend bounded"],
+          "cons": ["Small cost per relevant PR"]
         },
         {
           "id": "b",
           "label": "Nightly only",
           "description": "No PR gating.",
-          "pros": [
-            "Cheapest"
-          ],
-          "cons": [
-            "Regressions found after merge"
-          ]
+          "pros": ["Cheapest"],
+          "cons": ["Regressions found after merge"]
         },
         {
           "id": "c",
           "label": "Manual runs",
           "description": "Run when someone remembers.",
-          "pros": [
-            "No CI cost"
-          ],
-          "cons": [
-            "Regressions slip through"
-          ]
+          "pros": ["No CI cost"],
+          "cons": ["Regressions slip through"]
         }
       ],
       "recommendation": "a",
@@ -1342,37 +1077,22 @@
           "id": "a",
           "label": "Swiss editorial base + terminal-style agent prompt",
           "description": "An editorial base that reads as credible to any engineering audience, with the terminal-style ask-me prompt as one memorable interactive element.",
-          "pros": [
-            "Timeless and senior",
-            "Signature agent moment"
-          ],
-          "cons": [
-            "Less overtly AI-flavored overall"
-          ]
+          "pros": ["Timeless and senior", "Signature agent moment"],
+          "cons": ["Less overtly AI-flavored overall"]
         },
         {
           "id": "b",
           "label": "Terminal editorial",
           "description": "Developer-native throughout.",
-          "pros": [
-            "Strong developer-tooling feel"
-          ],
-          "cons": [
-            "Can feel cliche if overdone",
-            "Frames the whole site around the agent"
-          ]
+          "pros": ["Strong developer-tooling feel"],
+          "cons": ["Can feel cliche if overdone", "Frames the whole site around the agent"]
         },
         {
           "id": "c",
           "label": "Bento glass",
           "description": "Contemporary and showy.",
-          "pros": [
-            "Shows frontend polish"
-          ],
-          "cons": [
-            "Trend-dated soon",
-            "Glass contrast is hard in light mode"
-          ]
+          "pros": ["Shows frontend polish"],
+          "cons": ["Trend-dated soon", "Glass contrast is hard in light mode"]
         }
       ],
       "recommendation": "a",
@@ -1394,35 +1114,22 @@
           "id": "a",
           "label": "react-pdf in api-worker, regenerated on publish",
           "description": "A packages/cv template fed by the content data.",
-          "pros": [
-            "Node only, light",
-            "Regenerates automatically"
-          ],
-          "cons": [
-            "A separate template from the web page design"
-          ]
+          "pros": ["Node only, light", "Regenerates automatically"],
+          "cons": ["A separate template from the web page design"]
         },
         {
           "id": "b",
           "label": "Playwright printing a CV page",
           "description": "Headless Chromium prints a print-styled route.",
-          "pros": [
-            "Pixel parity with the site"
-          ],
-          "cons": [
-            "Chromium adds hundreds of MB to an image"
-          ]
+          "pros": ["Pixel parity with the site"],
+          "cons": ["Chromium adds hundreds of MB to an image"]
         },
         {
           "id": "c",
           "label": "Typst template",
           "description": "Typesetting from JSON.",
-          "pros": [
-            "Beautiful typography"
-          ],
-          "cons": [
-            "Another toolchain"
-          ]
+          "pros": ["Beautiful typography"],
+          "cons": ["Another toolchain"]
         }
       ],
       "recommendation": "a",
@@ -1444,33 +1151,21 @@
           "id": "a",
           "label": "Own guard module + LangChain middleware",
           "description": "Rules plus a swappable classifier (Haiku first, local Prompt Guard 2 as an eval-decided experiment), canary token and output checks.",
-          "pros": [
-            "Every layer tested and explainable",
-            "Provider-agnostic",
-            "Maps to OWASP ids"
-          ],
-          "cons": [
-            "We maintain the rules"
-          ]
+          "pros": ["Every layer tested and explainable", "Provider-agnostic", "Maps to OWASP ids"],
+          "cons": ["We maintain the rules"]
         },
         {
           "id": "b",
           "label": "Adopt a young TS guard library",
           "description": "Use an npm guard package as the main layer.",
-          "pros": [
-            "Faster start"
-          ],
-          "cons": [
-            "Young projects on a security-critical path"
-          ]
+          "pros": ["Faster start"],
+          "cons": ["Young projects on a security-critical path"]
         },
         {
           "id": "c",
           "label": "Python sidecar (LLM Guard or NeMo)",
           "description": "A Python service with scanners; LLM Guard was archived in July 2026, NeMo Guardrails and Prompt Guard 2 remain.",
-          "pros": [
-            "Richest scanners"
-          ],
+          "pros": ["Richest scanners"],
           "cons": [
             "A second language and its models on the box",
             "LLM Guard is no longer maintained"
@@ -1480,12 +1175,8 @@
           "id": "d",
           "label": "Hosted guard API (Lakera)",
           "description": "Send messages to a guard service.",
-          "pros": [
-            "Maintained detectors"
-          ],
-          "cons": [
-            "Another processor of visitor data"
-          ]
+          "pros": ["Maintained detectors"],
+          "cons": ["Another processor of visitor data"]
         },
         {
           "id": "e",
@@ -1496,11 +1187,7 @@
             "The chat never depends on it",
             "Evals decide, not opinion"
           ],
-          "cons": [
-            "A second toolchain and image",
-            "About 500 MB of RAM",
-            "One HTTP hop when used"
-          ]
+          "cons": ["A second toolchain and image", "About 500 MB of RAM", "One HTTP hop when used"]
         }
       ],
       "recommendation": "e",
@@ -1530,36 +1217,22 @@
           "id": "a",
           "label": "Throttler with custom Postgres storage per service",
           "description": "Counters in an unlogged table in each service's own database.",
-          "pros": [
-            "Survives restarts",
-            "No new service",
-            "Good learning exercise"
-          ],
-          "cons": [
-            "About 60 lines of own code"
-          ]
+          "pros": ["Survives restarts", "No new service", "Good learning exercise"],
+          "cons": ["About 60 lines of own code"]
         },
         {
           "id": "b",
           "label": "In-memory",
           "description": "The throttler default.",
-          "pros": [
-            "Zero work"
-          ],
-          "cons": [
-            "Resets on deploy"
-          ]
+          "pros": ["Zero work"],
+          "cons": ["Resets on deploy"]
         },
         {
           "id": "c",
           "label": "Valkey or Redis",
           "description": "A key-value store for counters.",
-          "pros": [
-            "Standard"
-          ],
-          "cons": [
-            "A new stateful service"
-          ]
+          "pros": ["Standard"],
+          "cons": ["A new stateful service"]
         }
       ],
       "recommendation": "a",
@@ -1582,35 +1255,22 @@
           "id": "a",
           "label": "Proposed values",
           "description": "6 per minute and 40 per day per IP; 12 messages per thread; 500 characters in; 600 tokens out; USD 1.50 per day in the app; USD 20 per month at the provider.",
-          "pros": [
-            "Worst case is bounded and small",
-            "Normal visitors never notice"
-          ],
-          "cons": [
-            "May need tuning after launch"
-          ]
+          "pros": ["Worst case is bounded and small", "Normal visitors never notice"],
+          "cons": ["May need tuning after launch"]
         },
         {
           "id": "b",
           "label": "Looser values",
           "description": "Double every limit.",
-          "pros": [
-            "Fewer false blocks"
-          ],
-          "cons": [
-            "Twice the exposure"
-          ]
+          "pros": ["Fewer false blocks"],
+          "cons": ["Twice the exposure"]
         },
         {
           "id": "c",
           "label": "Stricter values",
           "description": "Halve every limit.",
-          "pros": [
-            "Smaller exposure"
-          ],
-          "cons": [
-            "Genuine visitors may hit limits"
-          ]
+          "pros": ["Smaller exposure"],
+          "cons": ["Genuine visitors may hit limits"]
         }
       ],
       "recommendation": "a",
@@ -1633,36 +1293,22 @@
           "id": "a",
           "label": "Cloudflare Turnstile + honeypot on the form",
           "description": "Turnstile once per chat session and on the contact form.",
-          "pros": [
-            "Free",
-            "Privacy-friendly",
-            "Usually invisible"
-          ],
-          "cons": [
-            "A third-party script"
-          ]
+          "pros": ["Free", "Privacy-friendly", "Usually invisible"],
+          "cons": ["A third-party script"]
         },
         {
           "id": "b",
           "label": "Google reCAPTCHA v3",
           "description": "Score-based, familiar from the old site.",
-          "pros": [
-            "Familiar"
-          ],
-          "cons": [
-            "Google tracking and cookie-consent implications"
-          ]
+          "pros": ["Familiar"],
+          "cons": ["Google tracking and cookie-consent implications"]
         },
         {
           "id": "c",
           "label": "Honeypot and timing only",
           "description": "No third party.",
-          "pros": [
-            "No external dependency"
-          ],
-          "cons": [
-            "Weak against targeted bots"
-          ]
+          "pros": ["No external dependency"],
+          "cons": ["Weak against targeted bots"]
         }
       ],
       "recommendation": "a",
@@ -1690,17 +1336,13 @@
             "Environments and approvals for free",
             "Free code scanning"
           ],
-          "cons": [
-            "Everything in history becomes visible"
-          ]
+          "cons": ["Everything in history becomes visible"]
         },
         {
           "id": "b",
           "label": "Stay private",
           "description": "Repo-level secrets and an owner-only manual production deploy.",
-          "pros": [
-            "Nothing visible"
-          ],
+          "pros": ["Nothing visible"],
           "cons": [
             "No environment approvals or environment secrets on Free",
             "Reviewers cannot read the code"
@@ -1710,13 +1352,8 @@
           "id": "c",
           "label": "Private on a paid plan",
           "description": "Pay for environment features.",
-          "pros": [
-            "Private with more features"
-          ],
-          "cons": [
-            "Cost",
-            "Required reviewers for private repos still need Enterprise"
-          ]
+          "pros": ["Private with more features"],
+          "cons": ["Cost", "Required reviewers for private repos still need Enterprise"]
         }
       ],
       "recommendation": "a",
@@ -1739,35 +1376,22 @@
           "id": "a",
           "label": "Keep as staging.jadero.dev, stopped by default",
           "description": "The deploy workflow starts it when a release goes to staging.",
-          "pros": [
-            "Safety net for releases",
-            "No idle memory cost"
-          ],
-          "cons": [
-            "A few seconds of start-up per staging deploy"
-          ]
+          "pros": ["Safety net for releases", "No idle memory cost"],
+          "cons": ["A few seconds of start-up per staging deploy"]
         },
         {
           "id": "b",
           "label": "Always-on staging",
           "description": "Runs permanently.",
-          "pros": [
-            "Always ready"
-          ],
-          "cons": [
-            "About 1.6 GB of RAM all the time"
-          ]
+          "pros": ["Always ready"],
+          "cons": ["About 1.6 GB of RAM all the time"]
         },
         {
           "id": "c",
           "label": "No staging after cutover",
           "description": "Deploy straight to production.",
-          "pros": [
-            "Simplest"
-          ],
-          "cons": [
-            "No place to catch a bad release"
-          ]
+          "pros": ["Simplest"],
+          "cons": ["No place to catch a bad release"]
         }
       ],
       "recommendation": "a",
@@ -1789,23 +1413,15 @@
           "id": "a",
           "label": "Yes, one free external check",
           "description": "A hosted ping on the home page and the API health.",
-          "pros": [
-            "Alerts even when the box is down"
-          ],
-          "cons": [
-            "One more account"
-          ]
+          "pros": ["Alerts even when the box is down"],
+          "cons": ["One more account"]
         },
         {
           "id": "b",
           "label": "No, Uptime Kuma only",
           "description": "Self-monitoring only.",
-          "pros": [
-            "No extra account"
-          ],
-          "cons": [
-            "Silent when the server dies"
-          ]
+          "pros": ["No extra account"],
+          "cons": ["Silent when the server dies"]
         }
       ],
       "recommendation": "a",
@@ -1827,35 +1443,22 @@
           "id": "a",
           "label": "SSH over Tailscale with a forced-command key",
           "description": "Port 22 closed publicly; the key can only run the deploy script.",
-          "pros": [
-            "No public SSH",
-            "A stolen key cannot open a shell"
-          ],
-          "cons": [
-            "One more account and auth key to rotate"
-          ]
+          "pros": ["No public SSH", "A stolen key cannot open a shell"],
+          "cons": ["One more account and auth key to rotate"]
         },
         {
           "id": "b",
           "label": "SSH to a public port 22",
           "description": "Key-only SSH open to the internet.",
-          "pros": [
-            "Simplest"
-          ],
-          "cons": [
-            "Port 22 exposed to every scanner"
-          ]
+          "pros": ["Simplest"],
+          "cons": ["Port 22 exposed to every scanner"]
         },
         {
           "id": "c",
           "label": "Pull-based deploy",
           "description": "A process on the server polls for new images.",
-          "pros": [
-            "No inbound access"
-          ],
-          "cons": [
-            "Weaker control of migrations and rollbacks"
-          ]
+          "pros": ["No inbound access"],
+          "cons": ["Weaker control of migrations and rollbacks"]
         }
       ],
       "recommendation": "a",
@@ -1878,23 +1481,15 @@
           "id": "a",
           "label": "Follow the triage",
           "description": "Drop Nest-Microservices from selected projects; Teslo-shop and the-wild-oasis only in the early archive labeled as course work; confluence-agent at most as an owner-approved public-level bullet under the current role.",
-          "pros": [
-            "Every claim survives a code read"
-          ],
-          "cons": [
-            "A shorter selected list"
-          ]
+          "pros": ["Every claim survives a code read"],
+          "cons": ["A shorter selected list"]
         },
         {
           "id": "b",
           "label": "Keep the brainstorm list",
           "description": "Show every project named in the brainstorm.",
-          "pros": [
-            "More items"
-          ],
-          "cons": [
-            "Course copies presented as selected work"
-          ]
+          "pros": ["More items"],
+          "cons": ["Course copies presented as selected work"]
         }
       ],
       "recommendation": "a",
@@ -1916,36 +1511,22 @@
           "id": "a",
           "label": "Repo-local setup now, framework core plugin later",
           "description": "AGENTS.md, CLAUDE.md, a few skills and a learning-gate hook, named to map onto the framework's concepts.",
-          "pros": [
-            "Self-contained and public-safe",
-            "Exactly fitted"
-          ],
-          "cons": [
-            "Re-creates a few guards the framework has"
-          ]
+          "pros": ["Self-contained and public-safe", "Exactly fitted"],
+          "cons": ["Re-creates a few guards the framework has"]
         },
         {
           "id": "b",
           "label": "Install the framework as it is",
           "description": "Use the whole bundle.",
-          "pros": [
-            "Battle-tested governance"
-          ],
-          "cons": [
-            "Company content in a personal repo",
-            "Flow too heavy for a learning project"
-          ]
+          "pros": ["Battle-tested governance"],
+          "cons": ["Company content in a personal repo", "Flow too heavy for a learning project"]
         },
         {
           "id": "c",
           "label": "Wait for the core plugin",
           "description": "Use core plugin + jadero-dev pack when it exists.",
-          "pros": [
-            "Reuses the governance engine"
-          ],
-          "cons": [
-            "Blocked on the split"
-          ]
+          "pros": ["Reuses the governance engine"],
+          "cons": ["Blocked on the split"]
         }
       ],
       "recommendation": "a",
@@ -1968,24 +1549,15 @@
           "id": "a",
           "label": "Biome + dependency-cruiser + commitlint",
           "description": "Biome for format and lint, dependency-cruiser for architecture rules, commitlint on commits and PR titles.",
-          "pros": [
-            "Fast single tool for style",
-            "Architecture checked on every PR"
-          ],
-          "cons": [
-            "Fewer lint plugins than ESLint"
-          ]
+          "pros": ["Fast single tool for style", "Architecture checked on every PR"],
+          "cons": ["Fewer lint plugins than ESLint"]
         },
         {
           "id": "b",
           "label": "ESLint + Prettier + dependency-cruiser",
           "description": "The classic stack.",
-          "pros": [
-            "Richest plugin ecosystem"
-          ],
-          "cons": [
-            "Two tools, slower"
-          ]
+          "pros": ["Richest plugin ecosystem"],
+          "cons": ["Two tools, slower"]
         }
       ],
       "recommendation": "a",
@@ -2008,48 +1580,29 @@
           "id": "a",
           "label": "release-please, one component per service",
           "description": "Own version, changelog and tag per service; shared package releases bump their consumers.",
-          "pros": [
-            "True independent releases",
-            "A human checkpoint"
-          ],
-          "cons": [
-            "More tags and changelogs to read"
-          ]
+          "pros": ["True independent releases", "A human checkpoint"],
+          "cons": ["More tags and changelogs to read"]
         },
         {
           "id": "b",
           "label": "release-please, one product version",
           "description": "One version for everything.",
-          "pros": [
-            "Simplest"
-          ],
-          "cons": [
-            "Every release redeploys every service"
-          ]
+          "pros": ["Simplest"],
+          "cons": ["Every release redeploys every service"]
         },
         {
           "id": "c",
           "label": "semantic-release",
           "description": "Releases automatically on every qualifying push.",
-          "pros": [
-            "Fully automatic"
-          ],
-          "cons": [
-            "No checkpoint",
-            "Monorepo support via plugins"
-          ]
+          "pros": ["Fully automatic"],
+          "cons": ["No checkpoint", "Monorepo support via plugins"]
         },
         {
           "id": "d",
           "label": "Changesets",
           "description": "Hand-written change files per package.",
-          "pros": [
-            "Great for published npm packages"
-          ],
-          "cons": [
-            "Not driven by conventional commits",
-            "Overhead for apps"
-          ]
+          "pros": ["Great for published npm packages"],
+          "cons": ["Not driven by conventional commits", "Overhead for apps"]
         }
       ],
       "recommendation": "a",
@@ -2072,35 +1625,22 @@
           "id": "a",
           "label": "A contact service in v1",
           "description": "Form, bot check, store-and-forward with an outbox, notification to the owner only, retries and dead letters.",
-          "pros": [
-            "The best first microservice to learn on",
-            "Nothing lost on mail outages"
-          ],
-          "cons": [
-            "About 2 to 3 days of work"
-          ]
+          "pros": ["The best first microservice to learn on", "Nothing lost on mail outages"],
+          "cons": ["About 2 to 3 days of work"]
         },
         {
           "id": "b",
           "label": "No form; email and LinkedIn links",
           "description": "The previous recommendation.",
-          "pros": [
-            "Zero work"
-          ],
-          "cons": [
-            "Misses the owner's request and a learning vehicle"
-          ]
+          "pros": ["Zero work"],
+          "cons": ["Misses the owner's request and a learning vehicle"]
         },
         {
           "id": "c",
           "label": "A form endpoint inside api",
           "description": "Same flow, no separate service.",
-          "pros": [
-            "Less infrastructure"
-          ],
-          "cons": [
-            "A mail or spam problem shares a process with content"
-          ]
+          "pros": ["Less infrastructure"],
+          "cons": ["A mail or spam problem shares a process with content"]
         }
       ],
       "recommendation": "a",
@@ -2123,23 +1663,15 @@
           "id": "a",
           "label": "Explainer, decision gate, small visible steps, explain-back",
           "description": "Concepts and a concrete trace first, owner decides, then implementation in small steps in the main session, then a recap.",
-          "pros": [
-            "The owner sees and understands every step"
-          ],
-          "cons": [
-            "Slower than delegating"
-          ]
+          "pros": ["The owner sees and understands every step"],
+          "cons": ["Slower than delegating"]
         },
         {
           "id": "b",
           "label": "Delegated implementation with a summary",
           "description": "Agents build; the owner reads a summary.",
-          "pros": [
-            "Faster"
-          ],
-          "cons": [
-            "Learning stays shallow"
-          ]
+          "pros": ["Faster"],
+          "cons": ["Learning stays shallow"]
         }
       ],
       "recommendation": "a",
@@ -2169,37 +1701,21 @@
             "Every boundary justified",
             "Teaches messaging"
           ],
-          "cons": [
-            "About 10 more build days",
-            "About 1 GB more RAM"
-          ]
+          "cons": ["About 10 more build days", "About 1 GB more RAM"]
         },
         {
           "id": "b",
           "label": "Pure modular monolith",
           "description": "One NestJS app (the previous recommendation).",
-          "pros": [
-            "Simplest",
-            "Strong consistency",
-            "Least RAM"
-          ],
-          "cons": [
-            "An agent crash takes content down",
-            "Teaches no messaging"
-          ]
+          "pros": ["Simplest", "Strong consistency", "Least RAM"],
+          "cons": ["An agent crash takes content down", "Teaches no messaging"]
         },
         {
           "id": "c",
           "label": "Full microservices",
           "description": "One service per module plus a gateway.",
-          "pros": [
-            "Maximum isolation on paper"
-          ],
-          "cons": [
-            "Distributed monolith",
-            "About 4 GB more RAM",
-            "Ten deployables for one person"
-          ]
+          "pros": ["Maximum isolation on paper"],
+          "cons": ["Distributed monolith", "About 4 GB more RAM", "Ten deployables for one person"]
         }
       ],
       "recommendation": "a",
@@ -2227,46 +1743,28 @@
             "Mature reliability features",
             "The owner meets it at work"
           ],
-          "cons": [
-            "About 150 to 200 MB",
-            "More concepts to learn"
-          ]
+          "cons": ["About 150 to 200 MB", "More concepts to learn"]
         },
         {
           "id": "b",
           "label": "NATS + JetStream",
           "description": "Lightweight messaging with a persistence layer.",
-          "pros": [
-            "Tiny and fast"
-          ],
-          "cons": [
-            "Nest's built-in transport is fire and forget",
-            "Less transferable"
-          ]
+          "pros": ["Tiny and fast"],
+          "cons": ["Nest's built-in transport is fire and forget", "Less transferable"]
         },
         {
           "id": "c",
           "label": "Redis Streams (Valkey)",
           "description": "Append-only log with consumer groups.",
-          "pros": [
-            "Small",
-            "Doubles as a cache"
-          ],
-          "cons": [
-            "Retries and dead letters are do-it-yourself"
-          ]
+          "pros": ["Small", "Doubles as a cache"],
+          "cons": ["Retries and dead letters are do-it-yourself"]
         },
         {
           "id": "d",
           "label": "pg-boss",
           "description": "A queue inside Postgres.",
-          "pros": [
-            "No new service"
-          ],
-          "cons": [
-            "Services would share a database",
-            "Not a broker"
-          ]
+          "pros": ["No new service"],
+          "cons": ["Services would share a database", "Not a broker"]
         }
       ],
       "recommendation": "a",
@@ -2290,37 +1788,22 @@
           "id": "a",
           "label": "@golevelup/nestjs-rabbitmq behind our port",
           "description": "Decorators for subscribing with exchange, routing key and queue.",
-          "pros": [
-            "Topic exchanges",
-            "Less code"
-          ],
-          "cons": [
-            "Nest 12 support to verify"
-          ]
+          "pros": ["Topic exchanges", "Less code"],
+          "cons": ["Nest 12 support to verify"]
         },
         {
           "id": "b",
           "label": "Own adapter over amqplib",
           "description": "A thin adapter written in the messaging package.",
-          "pros": [
-            "Full control",
-            "Teaches the AMQP API"
-          ],
-          "cons": [
-            "More code"
-          ]
+          "pros": ["Full control", "Teaches the AMQP API"],
+          "cons": ["More code"]
         },
         {
           "id": "c",
           "label": "Nest's built-in RMQ transport",
           "description": "The official microservices transport.",
-          "pros": [
-            "Official"
-          ],
-          "cons": [
-            "Default exchange only",
-            "Fixed message format"
-          ]
+          "pros": ["Official"],
+          "cons": ["Default exchange only", "Fixed message format"]
         }
       ],
       "recommendation": "a",
@@ -2343,10 +1826,7 @@
           "id": "a",
           "label": "Own read model fed by events",
           "description": "agent-ingest stores published content and indexes it; tools read locally.",
-          "pros": [
-            "Chat works while api is down",
-            "No synchronous coupling"
-          ],
+          "pros": ["Chat works while api is down", "No synchronous coupling"],
           "cons": [
             "Seconds of lag after a publish",
             "A derived index next to the source (rebuildable from events)"
@@ -2356,22 +1836,14 @@
           "id": "b",
           "label": "Synchronous calls to api with a circuit breaker",
           "description": "Tools call api; the breaker fails fast when it is down.",
-          "pros": [
-            "Always fresh",
-            "No duplicate data"
-          ],
-          "cons": [
-            "Chat degrades whenever api is down"
-          ]
+          "pros": ["Always fresh", "No duplicate data"],
+          "cons": ["Chat degrades whenever api is down"]
         },
         {
           "id": "c",
           "label": "The agent owns knowledge entries end to end",
           "description": "Entries, revisions and approval live in agent; api keeps the CV, projects and posts.",
-          "pros": [
-            "No copy of the entries",
-            "One owner for everything the agent reads"
-          ],
+          "pros": ["No copy of the entries", "One owner for everything the agent reads"],
           "cons": [
             "The agent becomes a content service too",
             "Content split across two services",
@@ -2403,46 +1875,29 @@
           "id": "a",
           "label": "CloudEvents + Zod + AsyncAPI + fixture contract tests",
           "description": "Envelope standard, Zod schemas in packages/contracts, an AsyncAPI catalog, consumer tests against producer fixtures.",
-          "pros": [
-            "Breaking changes caught in CI",
-            "A browsable event catalog"
-          ],
-          "cons": [
-            "Some ceremony per event"
-          ]
+          "pros": ["Breaking changes caught in CI", "A browsable event catalog"],
+          "cons": ["Some ceremony per event"]
         },
         {
           "id": "b",
           "label": "Ad hoc JSON",
           "description": "Each service shapes its own messages.",
-          "pros": [
-            "Fast"
-          ],
-          "cons": [
-            "Silent breakage between services"
-          ]
+          "pros": ["Fast"],
+          "cons": ["Silent breakage between services"]
         },
         {
           "id": "c",
           "label": "Protobuf or Avro with a schema registry",
           "description": "Binary schemas and a registry service.",
-          "pros": [
-            "Strong schema evolution rules"
-          ],
-          "cons": [
-            "Another service and toolchain"
-          ]
+          "pros": ["Strong schema evolution rules"],
+          "cons": ["Another service and toolchain"]
         },
         {
           "id": "d",
           "label": "Pact consumer-driven contracts",
           "description": "A contract broker and verification flow.",
-          "pros": [
-            "Industry tool"
-          ],
-          "cons": [
-            "Heavier than needed inside one monorepo"
-          ]
+          "pros": ["Industry tool"],
+          "cons": ["Heavier than needed inside one monorepo"]
         }
       ],
       "recommendation": "a",
@@ -2466,35 +1921,22 @@
           "id": "a",
           "label": "Static SPA on admin.jadero.dev",
           "description": "Vite + React + shadcn/ui, built to files that nginx serves.",
-          "pros": [
-            "No runtime process",
-            "Own origin and security policy"
-          ],
-          "cons": [
-            "No server rendering (not needed behind a login)"
-          ]
+          "pros": ["No runtime process", "Own origin and security policy"],
+          "cons": ["No server rendering (not needed behind a login)"]
         },
         {
           "id": "b",
           "label": "Separate Next.js app",
           "description": "A second Next app on the admin subdomain.",
-          "pros": [
-            "Same framework as web"
-          ],
-          "cons": [
-            "About 250 MB RAM for a rarely used tool"
-          ]
+          "pros": ["Same framework as web"],
+          "cons": ["About 250 MB RAM for a rarely used tool"]
         },
         {
           "id": "c",
           "label": "/admin inside web",
           "description": "The original plan.",
-          "pros": [
-            "Least code"
-          ],
-          "cons": [
-            "Shares the public app's failures and attack surface"
-          ]
+          "pros": ["Least code"],
+          "cons": ["Shares the public app's failures and attack surface"]
         }
       ],
       "recommendation": "a",
@@ -2517,35 +1959,22 @@
           "id": "a",
           "label": "Host nginx as the gateway",
           "description": "Routing, TLS, rate limits, auth_request and a stale-serving page cache.",
-          "pros": [
-            "Already there",
-            "Keeps the site up when web is down"
-          ],
-          "cons": [
-            "Config instead of code"
-          ]
+          "pros": ["Already there", "Keeps the site up when web is down"],
+          "cons": ["Config instead of code"]
         },
         {
           "id": "b",
           "label": "Traefik",
           "description": "Docker-label-driven routing.",
-          "pros": [
-            "Dynamic"
-          ],
-          "cons": [
-            "Another container in the path"
-          ]
+          "pros": ["Dynamic"],
+          "cons": ["Another container in the path"]
         },
         {
           "id": "c",
           "label": "NestJS gateway service",
           "description": "A Nest app proxying all traffic.",
-          "pros": [
-            "TypeScript"
-          ],
-          "cons": [
-            "A new shared point of failure"
-          ]
+          "pros": ["TypeScript"],
+          "cons": ["A new shared point of failure"]
         },
         {
           "id": "d",
@@ -2590,36 +2019,22 @@
           "id": "a",
           "label": "Resend behind MailPort",
           "description": "Free tier of 3,000 emails per month, 100 per day; simple API; a fake adapter for tests.",
-          "pros": [
-            "Generous free tier",
-            "Simple API"
-          ],
-          "cons": [
-            "Domain DNS records to set up"
-          ]
+          "pros": ["Generous free tier", "Simple API"],
+          "cons": ["Domain DNS records to set up"]
         },
         {
           "id": "b",
           "label": "Postmark",
           "description": "Free developer plan of 100 emails per month.",
-          "pros": [
-            "Strong deliverability reputation"
-          ],
-          "cons": [
-            "Small free volume"
-          ]
+          "pros": ["Strong deliverability reputation"],
+          "cons": ["Small free volume"]
         },
         {
           "id": "c",
           "label": "SMTP on port 587 via an existing mailbox",
           "description": "Use the owner's mail account.",
-          "pros": [
-            "No new account"
-          ],
-          "cons": [
-            "Mailbox credentials on the server",
-            "Weaker deliverability controls"
-          ]
+          "pros": ["No new account"],
+          "cons": ["Mailbox credentials on the server", "Weaker deliverability controls"]
         }
       ],
       "recommendation": "a",
@@ -2641,36 +2056,22 @@
           "id": "a",
           "label": "nginx auth_request + signed internal header",
           "description": "One decision point at the edge; services only verify the header signature.",
-          "pros": [
-            "No auth code in other services",
-            "No synchronous auth calls between services"
-          ],
-          "cons": [
-            "One internal hop per admin request"
-          ]
+          "pros": ["No auth code in other services", "No synchronous auth calls between services"],
+          "cons": ["One internal hop per admin request"]
         },
         {
           "id": "b",
           "label": "Each service calls api to validate the session",
           "description": "A synchronous check per admin request.",
-          "pros": [
-            "Simple to reason about"
-          ],
-          "cons": [
-            "A synchronous dependency on api"
-          ]
+          "pros": ["Simple to reason about"],
+          "cons": ["A synchronous dependency on api"]
         },
         {
           "id": "c",
           "label": "Short-lived JWTs verified locally",
           "description": "api issues tokens; services verify signatures.",
-          "pros": [
-            "Stateless"
-          ],
-          "cons": [
-            "Revocation needs care",
-            "Token handling in the SPA"
-          ]
+          "pros": ["Stateless"],
+          "cons": ["Revocation needs care", "Token handling in the SPA"]
         },
         {
           "id": "d",
@@ -2680,10 +2081,7 @@
             "Auth logic in tested TypeScript",
             "Still one decision point and no auth code in other services"
           ],
-          "cons": [
-            "Only applies if D-45 is d",
-            "The gateway calls api to validate (cached)"
-          ]
+          "cons": ["Only applies if D-45 is d", "The gateway calls api to validate (cached)"]
         }
       ],
       "recommendation": "a",
@@ -2713,35 +2111,22 @@
           "id": "a",
           "label": "One instance, one database and role per service",
           "description": "Each role can connect only to its own database.",
-          "pros": [
-            "Enforced isolation",
-            "One instance to run and back up"
-          ],
-          "cons": [
-            "Postgres remains a shared point of failure"
-          ]
+          "pros": ["Enforced isolation", "One instance to run and back up"],
+          "cons": ["Postgres remains a shared point of failure"]
         },
         {
           "id": "b",
           "label": "One database, one schema per service",
           "description": "Separate schemas and roles in one database.",
-          "pros": [
-            "Simplest"
-          ],
-          "cons": [
-            "Easier to cross the line by accident"
-          ]
+          "pros": ["Simplest"],
+          "cons": ["Easier to cross the line by accident"]
         },
         {
           "id": "c",
           "label": "One Postgres instance per service",
           "description": "Separate containers.",
-          "pros": [
-            "Strongest isolation"
-          ],
-          "cons": [
-            "Memory multiplied on a small server"
-          ]
+          "pros": ["Strongest isolation"],
+          "cons": ["Memory multiplied on a small server"]
         }
       ],
       "recommendation": "a",
@@ -2764,36 +2149,22 @@
           "id": "a",
           "label": "cockatiel",
           "description": "A TypeScript library of composable policies: retry, circuit breaker, timeout, bulkhead.",
-          "pros": [
-            "TypeScript-native",
-            "Composable"
-          ],
-          "cons": [
-            "API to verify at build time"
-          ]
+          "pros": ["TypeScript-native", "Composable"],
+          "cons": ["API to verify at build time"]
         },
         {
           "id": "b",
           "label": "opossum",
           "description": "A popular Node circuit-breaker library.",
-          "pros": [
-            "Widely used"
-          ],
-          "cons": [
-            "Circuit breaker only; other policies separate"
-          ]
+          "pros": ["Widely used"],
+          "cons": ["Circuit breaker only; other policies separate"]
         },
         {
           "id": "c",
           "label": "Hand-rolled",
           "description": "Write the policies ourselves.",
-          "pros": [
-            "Teaches internals"
-          ],
-          "cons": [
-            "Easy to get wrong",
-            "More code"
-          ]
+          "pros": ["Teaches internals"],
+          "cons": ["Easy to get wrong", "More code"]
         }
       ],
       "recommendation": "a",
@@ -2824,30 +2195,20 @@
             "Structure feeds better answers about patterns and trade-offs",
             "Drafts can never reach the index"
           ],
-          "cons": [
-            "Many entries for the owner to write",
-            "A structured editor to build"
-          ]
+          "cons": ["Many entries for the owner to write", "A structured editor to build"]
         },
         {
           "id": "b",
           "label": "Single layer",
           "description": "Projects, posts and experience items only.",
-          "pros": [
-            "Far less writing"
-          ],
-          "cons": [
-            "CV claims cannot be drilled into",
-            "Thin, generic agent answers"
-          ]
+          "pros": ["Far less writing"],
+          "cons": ["CV claims cannot be drilled into", "Thin, generic agent answers"]
         },
         {
           "id": "c",
           "label": "Free-form posts with a private flag",
           "description": "Entries as Markdown posts; a boolean hides drafts.",
-          "pros": [
-            "Easiest authoring"
-          ],
+          "pros": ["Easiest authoring"],
           "cons": [
             "No structure for retrieval",
             "A flag is easier to flip by mistake than an approval bound to a revision"
@@ -2878,37 +2239,22 @@
           "id": "a",
           "label": "Section chunks + parent expansion + drill-down by id",
           "description": "One chunk per entry section with a contextual header; the top 1 to 3 parent entries go to the model whole; CV bullet clicks fetch linked entries directly.",
-          "pros": [
-            "Precise matching",
-            "Complete answers",
-            "Deterministic drill-down"
-          ],
-          "cons": [
-            "More retrieval logic to build and test"
-          ]
+          "pros": ["Precise matching", "Complete answers", "Deterministic drill-down"],
+          "cons": ["More retrieval logic to build and test"]
         },
         {
           "id": "b",
           "label": "One chunk per entry",
           "description": "Embed each entry as a whole.",
-          "pros": [
-            "Simplest"
-          ],
-          "cons": [
-            "A long entry's vector blurs its sections, weaker matching"
-          ]
+          "pros": ["Simplest"],
+          "cons": ["A long entry's vector blurs its sections, weaker matching"]
         },
         {
           "id": "c",
           "label": "Fixed-size token chunks",
           "description": "Split every entry every N tokens.",
-          "pros": [
-            "Generic"
-          ],
-          "cons": [
-            "Cuts sections mid-thought",
-            "Loses the entry structure"
-          ]
+          "pros": ["Generic"],
+          "cons": ["Cuts sections mid-thought", "Loses the entry structure"]
         }
       ],
       "recommendation": "a",
@@ -2932,37 +2278,22 @@
           "id": "a",
           "label": "Public work-log pages, indexed",
           "description": "Each approved entry gets a page that citations link to.",
-          "pros": [
-            "Real citation targets",
-            "Browsable evidence",
-            "Search visibility"
-          ],
-          "cons": [
-            "Detailed work stories are easy to find"
-          ]
+          "pros": ["Real citation targets", "Browsable evidence", "Search visibility"],
+          "cons": ["Detailed work stories are easy to find"]
         },
         {
           "id": "b",
           "label": "Public pages, noindex",
           "description": "Same pages, hidden from search engines.",
-          "pros": [
-            "Citation targets without search exposure"
-          ],
-          "cons": [
-            "Less discoverable"
-          ]
+          "pros": ["Citation targets without search exposure"],
+          "cons": ["Less discoverable"]
         },
         {
           "id": "c",
           "label": "Agent-only",
           "description": "No pages; citations expand an inline snippet in the chat.",
-          "pros": [
-            "Smallest surface"
-          ],
-          "cons": [
-            "Citations have nowhere to link",
-            "Evidence only reachable through chat"
-          ]
+          "pros": ["Smallest surface"],
+          "cons": ["Citations have nowhere to link", "Evidence only reachable through chat"]
         }
       ],
       "recommendation": "a",
@@ -2989,36 +2320,22 @@
           "id": "a",
           "label": "Checklist + private denylist scan + optional LLM review",
           "description": "The denylist lives in the admin database; automated checks warn, the owner decides.",
-          "pros": [
-            "Catches known internal names automatically",
-            "The owner keeps the final call"
-          ],
-          "cons": [
-            "The denylist needs maintaining"
-          ]
+          "pros": ["Catches known internal names automatically", "The owner keeps the final call"],
+          "cons": ["The denylist needs maintaining"]
         },
         {
           "id": "b",
           "label": "Checklist only",
           "description": "Manual confirmation per entry.",
-          "pros": [
-            "Simplest"
-          ],
-          "cons": [
-            "Relies entirely on attention"
-          ]
+          "pros": ["Simplest"],
+          "cons": ["Relies entirely on attention"]
         },
         {
           "id": "c",
           "label": "LLM review decides",
           "description": "An LLM approves or rejects.",
-          "pros": [
-            "Automatic"
-          ],
-          "cons": [
-            "A model cannot know what is internal",
-            "The owner loses the decision"
-          ]
+          "pros": ["Automatic"],
+          "cons": ["A model cannot know what is internal", "The owner loses the decision"]
         }
       ],
       "recommendation": "a",
@@ -3046,33 +2363,21 @@
             "Honest gaps",
             "Reuses guards, retrieval and citations"
           ],
-          "cons": [
-            "About USD 0.02 to 0.04 per analysis"
-          ]
+          "cons": ["About USD 0.02 to 0.04 per analysis"]
         },
         {
           "id": "b",
           "label": "One prompt over everything retrieved",
           "description": "Paste the JD and the top chunks and ask for an assessment.",
-          "pros": [
-            "Cheap and simple"
-          ],
-          "cons": [
-            "Loose summaries",
-            "Overclaiming",
-            "Weak citations"
-          ]
+          "pros": ["Cheap and simple"],
+          "cons": ["Loose summaries", "Overclaiming", "Weak citations"]
         },
         {
           "id": "c",
           "label": "A separate service",
           "description": "Its own deployable.",
-          "pros": [
-            "Isolation"
-          ],
-          "cons": [
-            "Duplicates the read model, guards and graph for one feature"
-          ]
+          "pros": ["Isolation"],
+          "cons": ["Duplicates the read model, guards and graph for one feature"]
         }
       ],
       "recommendation": "a",
@@ -3095,35 +2400,22 @@
           "id": "a",
           "label": "Session only",
           "description": "Lives in the 24-hour thread checkpoint; LangSmith masks the raw text and keeps the extracted requirements; usage rows store counts only.",
-          "pros": [
-            "Nothing private kept",
-            "Simple privacy notice"
-          ],
-          "cons": [
-            "No library of job descriptions to learn from"
-          ]
+          "pros": ["Nothing private kept", "Simple privacy notice"],
+          "cons": ["No library of job descriptions to learn from"]
         },
         {
           "id": "b",
           "label": "Opt-in storage with the visitor's consent",
           "description": "A checkbox to keep the JD for the owner to review.",
-          "pros": [
-            "The owner can read real JDs"
-          ],
-          "cons": [
-            "Consent flow and retention policy to run"
-          ]
+          "pros": ["The owner can read real JDs"],
+          "cons": ["Consent flow and retention policy to run"]
         },
         {
           "id": "c",
           "label": "Store extracted requirements only, anonymized",
           "description": "Keep the requirement list without the text.",
-          "pros": [
-            "Trend data on what roles ask for"
-          ],
-          "cons": [
-            "Still derived personal or company data to manage"
-          ]
+          "pros": ["Trend data on what roles ask for"],
+          "cons": ["Still derived personal or company data to manage"]
         }
       ],
       "recommendation": "a",
@@ -3151,32 +2443,21 @@
             "No new dependency for any service",
             "Nothing sensitive exposed"
           ],
-          "cons": [
-            "A small integration to build"
-          ]
+          "cons": ["A small integration to build"]
         },
         {
           "id": "b",
           "label": "Embed the Uptime Kuma status page",
           "description": "An iframe of the existing status page.",
-          "pros": [
-            "No code"
-          ],
-          "cons": [
-            "No diagram",
-            "Different look"
-          ]
+          "pros": ["No code"],
+          "cons": ["No diagram", "Different look"]
         },
         {
           "id": "c",
           "label": "Static diagram only",
           "description": "No live data.",
-          "pros": [
-            "Zero moving parts"
-          ],
-          "cons": [
-            "Loses the point of showing it running"
-          ]
+          "pros": ["Zero moving parts"],
+          "cons": ["Loses the point of showing it running"]
         }
       ],
       "recommendation": "a",
@@ -3204,33 +2485,21 @@
             "Posts feed the agent once published",
             "Little extra effort"
           ],
-          "cons": [
-            "The owner still edits every post"
-          ]
+          "cons": ["The owner still edits every post"]
         },
         {
           "id": "b",
           "label": "Markdown files in the repo",
           "description": "Write posts next to the code.",
-          "pros": [
-            "Familiar editor"
-          ],
-          "cons": [
-            "A second content path",
-            "Every post is a deploy"
-          ]
+          "pros": ["Familiar editor"],
+          "cons": ["A second content path", "Every post is a deploy"]
         },
         {
           "id": "c",
           "label": "Auto-published from commits",
           "description": "Generated from changelogs.",
-          "pros": [
-            "Zero effort"
-          ],
-          "cons": [
-            "Reads like a changelog",
-            "Publishes without review"
-          ]
+          "pros": ["Zero effort"],
+          "cons": ["Reads like a changelog", "Publishes without review"]
         }
       ],
       "recommendation": "a",
@@ -3257,31 +2526,21 @@
             "A real MCP showcase at launch",
             "OAuth learning gets its own focused work package"
           ],
-          "cons": [
-            "Two more public surfaces at launch"
-          ]
+          "cons": ["Two more public surfaces at launch"]
         },
         {
           "id": "b",
           "label": "Everything after launch",
           "description": "Launch the site first.",
-          "pros": [
-            "Smaller launch"
-          ],
-          "cons": [
-            "The MCP showcase arrives later"
-          ]
+          "pros": ["Smaller launch"],
+          "cons": ["The MCP showcase arrives later"]
         },
         {
           "id": "c",
           "label": "5a only at launch",
           "description": "Read-only profile server first.",
-          "pros": [
-            "Smallest public surface"
-          ],
-          "cons": [
-            "No way to request an intro from an AI client at launch"
-          ]
+          "pros": ["Smallest public surface"],
+          "cons": ["No way to request an intro from an AI client at launch"]
         }
       ],
       "recommendation": "a",
@@ -3304,13 +2563,8 @@
           "id": "a",
           "label": "Public MCP in agent, admin MCP in api, agent metrics via events",
           "description": "mcp process type of agent; admin-mcp process type of api; agent publishes hourly usage summaries that api keeps.",
-          "pros": [
-            "No synchronous calls between services",
-            "Each server next to its data"
-          ],
-          "cons": [
-            "Usage figures in the admin MCP are up to an hour old"
-          ]
+          "pros": ["No synchronous calls between services", "Each server next to its data"],
+          "cons": ["Usage figures in the admin MCP are up to an hour old"]
         },
         {
           "id": "b",
@@ -3331,13 +2585,8 @@
           "id": "c",
           "label": "MCP endpoints in every service",
           "description": "Each service exposes its own MCP server.",
-          "pros": [
-            "Maximum locality"
-          ],
-          "cons": [
-            "Clients juggle several servers",
-            "Auth duplicated"
-          ]
+          "pros": ["Maximum locality"],
+          "cons": ["Clients juggle several servers", "Auth duplicated"]
         }
       ],
       "recommendation": "b",
@@ -3367,35 +2616,22 @@
           "id": "a",
           "label": "Open, read-only, rate-limited",
           "description": "Streamable HTTP without sign-in; read-only annotations; limits; response caps; no bodies in logs.",
-          "pros": [
-            "Zero friction for visitors",
-            "Bounded cost"
-          ],
-          "cons": [
-            "Anyone can call it"
-          ]
+          "pros": ["Zero friction for visitors", "Bounded cost"],
+          "cons": ["Anyone can call it"]
         },
         {
           "id": "b",
           "label": "API keys on request",
           "description": "Visitors ask for a key.",
-          "pros": [
-            "Know who calls"
-          ],
-          "cons": [
-            "Friction kills casual use"
-          ]
+          "pros": ["Know who calls"],
+          "cons": ["Friction kills casual use"]
         },
         {
           "id": "c",
           "label": "OAuth for the public server too",
           "description": "Sign in to use it.",
-          "pros": [
-            "Strong identity"
-          ],
-          "cons": [
-            "Heavy for public data"
-          ]
+          "pros": ["Strong identity"],
+          "cons": ["Heavy for public data"]
         }
       ],
       "recommendation": "a",
@@ -3418,35 +2654,22 @@
           "id": "a",
           "label": "Pending intro through RabbitMQ + confirmation link with Turnstile",
           "description": "The tool publishes a pending intro with a one-time token; the person confirms in a browser; 48-hour expiry; 3 per IP per day.",
-          "pros": [
-            "Real human proof",
-            "Reuses the contact service and Turnstile"
-          ],
-          "cons": [
-            "One extra click for the requester"
-          ]
+          "pros": ["Real human proof", "Reuses the contact service and Turnstile"],
+          "cons": ["One extra click for the requester"]
         },
         {
           "id": "b",
           "label": "Owner moderation queue only",
           "description": "Every request waits for manual review.",
-          "pros": [
-            "No extra step for the requester"
-          ],
-          "cons": [
-            "Spam lands in the owner's queue"
-          ]
+          "pros": ["No extra step for the requester"],
+          "cons": ["Spam lands in the owner's queue"]
         },
         {
           "id": "c",
           "label": "Sign-in with an identity provider",
           "description": "Require GitHub or LinkedIn sign-in.",
-          "pros": [
-            "Strong identity"
-          ],
-          "cons": [
-            "Heavy friction for a first contact"
-          ]
+          "pros": ["Strong identity"],
+          "cons": ["Heavy friction for a first contact"]
         }
       ],
       "recommendation": "a",
@@ -3471,49 +2694,29 @@
           "id": "a",
           "label": "Better Auth MCP package on the existing GitHub allow-list",
           "description": "Protected resource metadata, PKCE, client ID metadata documents, resource-bound tokens, scopes with step-up, two-step approvals; optional Tailscale-only exposure.",
-          "pros": [
-            "Reuses the admin identity",
-            "Follows the current spec",
-            "Deep OAuth learning"
-          ],
-          "cons": [
-            "Young package; verify at build time"
-          ]
+          "pros": ["Reuses the admin identity", "Follows the current spec", "Deep OAuth learning"],
+          "cons": ["Young package; verify at build time"]
         },
         {
           "id": "b",
           "label": "Self-hosted identity server (Keycloak, Authentik)",
           "description": "A full identity provider.",
-          "pros": [
-            "Feature-complete"
-          ],
-          "cons": [
-            "Hundreds of MB of RAM",
-            "Heavy for one user"
-          ]
+          "pros": ["Feature-complete"],
+          "cons": ["Hundreds of MB of RAM", "Heavy for one user"]
         },
         {
           "id": "c",
           "label": "Hosted identity with MCP support",
           "description": "A SaaS authorization server.",
-          "pros": [
-            "Maintained for you"
-          ],
-          "cons": [
-            "Another vendor for one user",
-            "Less learning"
-          ]
+          "pros": ["Maintained for you"],
+          "cons": ["Another vendor for one user", "Less learning"]
         },
         {
           "id": "d",
           "label": "Hand-rolled OAuth 2.1 server",
           "description": "Implement the authorization server yourself.",
-          "pros": [
-            "Teaches every detail"
-          ],
-          "cons": [
-            "Very easy to get wrong on a privileged surface"
-          ]
+          "pros": ["Teaches every detail"],
+          "cons": ["Very easy to get wrong on a privileged surface"]
         }
       ],
       "recommendation": "a",
@@ -3536,36 +2739,22 @@
           "id": "a",
           "label": "Owner-curated, approved content type",
           "description": "framework_component entries with approval and denylist check; optionally seeded by a script the owner runs locally that lists names only.",
-          "pros": [
-            "No company material can slip in",
-            "Same gate as other content"
-          ],
-          "cons": [
-            "Manual curation"
-          ]
+          "pros": ["No company material can slip in", "Same gate as other content"],
+          "cons": ["Manual curation"]
         },
         {
           "id": "b",
           "label": "Generated from the framework repo in CI",
           "description": "A job reads the repo and builds the catalog.",
-          "pros": [
-            "Always current"
-          ],
-          "cons": [
-            "Reads a repository with company material",
-            "CI has no access anyway"
-          ]
+          "pros": ["Always current"],
+          "cons": ["Reads a repository with company material", "CI has no access anyway"]
         },
         {
           "id": "c",
           "label": "A static Markdown page",
           "description": "Hand-written page, no data.",
-          "pros": [
-            "Simplest"
-          ],
-          "cons": [
-            "Not queryable through MCP"
-          ]
+          "pros": ["Simplest"],
+          "cons": ["Not queryable through MCP"]
         }
       ],
       "recommendation": "a",
@@ -3588,35 +2777,22 @@
           "id": "a",
           "label": "Owner-approved battery seeded from the entries",
           "description": "An LLM drafts items from approved entries; the owner edits and approves; adversarial and out-of-scope items hand-written; 8 direct, 6 drill-down, 5 out-of-scope, 6 adversarial, 5 multilingual.",
-          "pros": [
-            "Fast and grounded",
-            "Every item vetted"
-          ],
-          "cons": [
-            "Drafts may mirror entry wording"
-          ]
+          "pros": ["Fast and grounded", "Every item vetted"],
+          "cons": ["Drafts may mirror entry wording"]
         },
         {
           "id": "b",
           "label": "Fully hand-written",
           "description": "The owner writes every item.",
-          "pros": [
-            "Most independent"
-          ],
-          "cons": [
-            "Slow"
-          ]
+          "pros": ["Most independent"],
+          "cons": ["Slow"]
         },
         {
           "id": "c",
           "label": "Fully generated",
           "description": "No human review.",
-          "pros": [
-            "Zero effort"
-          ],
-          "cons": [
-            "The agent and the eval share blind spots"
-          ]
+          "pros": ["Zero effort"],
+          "cons": ["The agent and the eval share blind spots"]
         }
       ],
       "recommendation": "a",
@@ -3644,31 +2820,21 @@
             "Approval tied to checked text",
             "Nothing in the repo"
           ],
-          "cons": [
-            "Importer to build and maintain"
-          ]
+          "cons": ["Importer to build and maintain"]
         },
         {
           "id": "b",
           "label": "Import as drafts; approve only in the admin",
           "description": "The flag is ignored; approval happens with the checklist in the UI.",
-          "pros": [
-            "One approval path"
-          ],
-          "cons": [
-            "Duplicates the owner's file-based approval"
-          ]
+          "pros": ["One approval path"],
+          "cons": ["Duplicates the owner's file-based approval"]
         },
         {
           "id": "c",
           "label": "Write entries directly in the admin",
           "description": "No files.",
-          "pros": [
-            "No importer"
-          ],
-          "cons": [
-            "Breaks the agreed file pipeline"
-          ]
+          "pros": ["No importer"],
+          "cons": ["Breaks the agreed file pipeline"]
         }
       ],
       "recommendation": "a",
@@ -3693,35 +2859,22 @@
           "id": "a",
           "label": "Multilingual embeddings and reranker + translated question anchors",
           "description": "Generate es and de versions of each entry's questions at ingestion.",
-          "pros": [
-            "Cheap",
-            "Helps both semantic and lexical search"
-          ],
-          "cons": [
-            "Machine-translated anchors may be imperfect"
-          ]
+          "pros": ["Cheap", "Helps both semantic and lexical search"],
+          "cons": ["Machine-translated anchors may be imperfect"]
         },
         {
           "id": "b",
           "label": "Multilingual embeddings and reranker only",
           "description": "No translation.",
-          "pros": [
-            "Simplest"
-          ],
-          "cons": [
-            "Weaker lexical matching for es and de"
-          ]
+          "pros": ["Simplest"],
+          "cons": ["Weaker lexical matching for es and de"]
         },
         {
           "id": "c",
           "label": "Translate whole entries",
           "description": "Full es and de versions.",
-          "pros": [
-            "Best matching and reading"
-          ],
-          "cons": [
-            "Large translation and review effort"
-          ]
+          "pros": ["Best matching and reading"],
+          "cons": ["Large translation and review effort"]
         }
       ],
       "recommendation": "a",
@@ -3744,35 +2897,22 @@
           "id": "a",
           "label": "Index descriptive fields, keep provenance private",
           "description": "Index title, type, domain, period, role, stack, patterns; keep sources, conflicts, public_names and confidence private; hedge on medium confidence.",
-          "pros": [
-            "Better retrieval",
-            "No provenance leaks"
-          ],
-          "cons": [
-            "Visitors cannot see the provenance"
-          ]
+          "pros": ["Better retrieval", "No provenance leaks"],
+          "cons": ["Visitors cannot see the provenance"]
         },
         {
           "id": "b",
           "label": "Index everything",
           "description": "All front matter goes into chunks.",
-          "pros": [
-            "Maximum context"
-          ],
-          "cons": [
-            "Conflict notes and sources may leak internal details"
-          ]
+          "pros": ["Maximum context"],
+          "cons": ["Conflict notes and sources may leak internal details"]
         },
         {
           "id": "c",
           "label": "Index body text only",
           "description": "No front matter.",
-          "pros": [
-            "Smallest surface"
-          ],
-          "cons": [
-            "Weaker headers and retrieval"
-          ]
+          "pros": ["Smallest surface"],
+          "cons": ["Weaker headers and retrieval"]
         }
       ],
       "recommendation": "a",
@@ -3799,35 +2939,22 @@
           "id": "a",
           "label": "LangSmith feedback + annotation queue + promotion into the battery",
           "description": "Signed run tokens, one rating per run per session, thumbs-down and a 10% sample of thumbs-up queued for weekly review.",
-          "pros": [
-            "Ratings next to full traces",
-            "Closes the loop into evals"
-          ],
-          "cons": [
-            "Optional comments are personal data in a third-party tool"
-          ]
+          "pros": ["Ratings next to full traces", "Closes the loop into evals"],
+          "cons": ["Optional comments are personal data in a third-party tool"]
         },
         {
           "id": "b",
           "label": "Own feedback table and admin page",
           "description": "Store and review locally.",
-          "pros": [
-            "Data stays on the server"
-          ],
-          "cons": [
-            "No trace next to the rating"
-          ]
+          "pros": ["Data stays on the server"],
+          "cons": ["No trace next to the rating"]
         },
         {
           "id": "c",
           "label": "No feedback",
           "description": "Skip it.",
-          "pros": [
-            "Nothing to build"
-          ],
-          "cons": [
-            "Evals only reflect the owner's guesses"
-          ]
+          "pros": ["Nothing to build"],
+          "cons": ["Evals only reflect the owner's guesses"]
         }
       ],
       "recommendation": "a",
@@ -3851,47 +2978,29 @@
           "id": "a",
           "label": "pgvector cache with source-id invalidation and a popularity threshold",
           "description": "First-turn CV answers only; key includes locale, index and prompt version; content events delete answers citing changed sources; served only after two sessions asked; 7-day TTL.",
-          "pros": [
-            "Catches paraphrases",
-            "Precise invalidation",
-            "Poisoning resistant"
-          ],
-          "cons": [
-            "A similarity threshold to tune"
-          ]
+          "pros": ["Catches paraphrases", "Precise invalidation", "Poisoning resistant"],
+          "cons": ["A similarity threshold to tune"]
         },
         {
           "id": "b",
           "label": "Exact-match cache",
           "description": "Normalized question text only.",
-          "pros": [
-            "No false hits"
-          ],
-          "cons": [
-            "Few hits"
-          ]
+          "pros": ["No false hits"],
+          "cons": ["Few hits"]
         },
         {
           "id": "c",
           "label": "A cache service with off-the-shelf libraries",
           "description": "Redis semantic cache.",
-          "pros": [
-            "Ready-made"
-          ],
-          "cons": [
-            "A new stateful service"
-          ]
+          "pros": ["Ready-made"],
+          "cons": ["A new stateful service"]
         },
         {
           "id": "d",
           "label": "No semantic cache",
           "description": "Prompt caching only.",
-          "pros": [
-            "Nothing to get wrong"
-          ],
-          "cons": [
-            "No savings on repeated questions"
-          ]
+          "pros": ["Nothing to get wrong"],
+          "cons": ["No savings on repeated questions"]
         }
       ],
       "recommendation": "a",
@@ -3915,47 +3024,29 @@
           "id": "a",
           "label": "Hand-built supervisor reusing the guard classification",
           "description": "Routing from the guard's structured output (no extra model call), handoffs to two subgraphs, confirmation before analyzing a pasted JD.",
-          "pros": [
-            "Clear separation",
-            "No extra cost",
-            "Each agent evaluated alone"
-          ],
-          "cons": [
-            "More graph structure"
-          ]
+          "pros": ["Clear separation", "No extra cost", "Each agent evaluated alone"],
+          "cons": ["More graph structure"]
         },
         {
           "id": "b",
           "label": "One graph with branches",
           "description": "The earlier design.",
-          "pros": [
-            "Simplest"
-          ],
-          "cons": [
-            "One prompt grows to serve two jobs"
-          ]
+          "pros": ["Simplest"],
+          "cons": ["One prompt grows to serve two jobs"]
         },
         {
           "id": "c",
           "label": "Swarm of agents handing off to each other",
           "description": "Peer-to-peer handoffs.",
-          "pros": [
-            "Flexible"
-          ],
-          "cons": [
-            "Harder to bound and reason about"
-          ]
+          "pros": ["Flexible"],
+          "cons": ["Harder to bound and reason about"]
         },
         {
           "id": "d",
           "label": "A prebuilt supervisor helper",
           "description": "Library-provided supervisor.",
-          "pros": [
-            "Less code"
-          ],
-          "cons": [
-            "Hides the routing the owner wants to learn"
-          ]
+          "pros": ["Less code"],
+          "cons": ["Hides the routing the owner wants to learn"]
         }
       ],
       "recommendation": "a",
@@ -3979,46 +3070,29 @@
           "id": "a",
           "label": "Scripted chaos test in staging",
           "description": "Synthetic traffic, stop agent then RabbitMQ for two minutes each, restart, check the steady-state hypothesis, publish the report.",
-          "pros": [
-            "Repeatable before releases",
-            "Documented proof"
-          ],
-          "cons": [
-            "A script and fixtures to maintain"
-          ]
+          "pros": ["Repeatable before releases", "Documented proof"],
+          "cons": ["A script and fixtures to maintain"]
         },
         {
           "id": "b",
           "label": "Manual game day only",
           "description": "Do it by hand once (WP-27).",
-          "pros": [
-            "Cheap"
-          ],
-          "cons": [
-            "Not repeatable"
-          ]
+          "pros": ["Cheap"],
+          "cons": ["Not repeatable"]
         },
         {
           "id": "c",
           "label": "Continuous chaos in production",
           "description": "Random failures in production.",
-          "pros": [
-            "Strongest signal"
-          ],
-          "cons": [
-            "Real visitors pay for it"
-          ]
+          "pros": ["Strongest signal"],
+          "cons": ["Real visitors pay for it"]
         },
         {
           "id": "d",
           "label": "Network faults with Toxiproxy",
           "description": "Latency and dropped connections.",
-          "pros": [
-            "Tests timeouts and breakers"
-          ],
-          "cons": [
-            "More setup; better as a later extension"
-          ]
+          "pros": ["Tests timeouts and breakers"],
+          "cons": ["More setup; better as a later extension"]
         }
       ],
       "recommendation": "a",
@@ -4041,37 +3115,22 @@
           "id": "a",
           "label": "GitHub Issues with sub-issues, a Project board and milestones",
           "description": "One epic with a sub-issue per WP, templates, labels, phase milestones, a Project with WP id, tag, size and phase fields; PRs close issues; release-please links them.",
-          "pros": [
-            "Next to the code",
-            "Free for private repos",
-            "Visible lifecycle once public"
-          ],
-          "cons": [
-            "Less polished than Linear"
-          ]
+          "pros": ["Next to the code", "Free for private repos", "Visible lifecycle once public"],
+          "cons": ["Less polished than Linear"]
         },
         {
           "id": "b",
           "label": "Linear",
           "description": "A dedicated issue tracker with GitHub integration.",
-          "pros": [
-            "Best planning UX"
-          ],
-          "cons": [
-            "Another tool",
-            "History outside the repo"
-          ]
+          "pros": ["Best planning UX"],
+          "cons": ["Another tool", "History outside the repo"]
         },
         {
           "id": "c",
           "label": "Local backlog",
           "description": "Markdown or the firstmate task tool.",
-          "pros": [
-            "Offline and agent-friendly"
-          ],
-          "cons": [
-            "No board, no automatic PR linking"
-          ]
+          "pros": ["Offline and agent-friendly"],
+          "cons": ["No board, no automatic PR linking"]
         }
       ],
       "recommendation": "a",
@@ -4100,29 +3159,20 @@
             "Honest about level",
             "The AI work still stands out as a pillar"
           ],
-          "cons": [
-            "Less of a niche headline"
-          ]
+          "cons": ["Less of a niche headline"]
         },
         {
           "id": "b",
           "label": "Agentic AI engineer",
           "description": "The site leads with AI agents as the identity.",
-          "pros": [
-            "Sharp for the agentic team"
-          ],
-          "cons": [
-            "Narrows every other door",
-            "Undersells the backend, infra and testing work"
-          ]
+          "pros": ["Sharp for the agentic team"],
+          "cons": ["Narrows every other door", "Undersells the backend, infra and testing work"]
         },
         {
           "id": "c",
           "label": "Full-stack generalist",
           "description": "No specialty named.",
-          "pros": [
-            "Widest net"
-          ],
+          "pros": ["Widest net"],
           "cons": [
             "Forgettable",
             "Hides the backend depth and the AI work",
@@ -4159,33 +3209,21 @@
             "Works with the agent down",
             "The agent is still prominent"
           ],
-          "cons": [
-            "The agent is no longer the first thing you see"
-          ]
+          "cons": ["The agent is no longer the first thing you see"]
         },
         {
           "id": "b",
           "label": "Agent-first hero",
           "description": "The chat prompt is the hero.",
-          "pros": [
-            "Memorable",
-            "Interactive from the first second"
-          ],
-          "cons": [
-            "Only visitors who type see the breadth",
-            "Couples the story to the agent"
-          ]
+          "pros": ["Memorable", "Interactive from the first second"],
+          "cons": ["Only visitors who type see the breadth", "Couples the story to the agent"]
         },
         {
           "id": "c",
           "label": "Classic CV-first home",
           "description": "Agent only on its own page.",
-          "pros": [
-            "Familiar"
-          ],
-          "cons": [
-            "Hides the strongest interactive showcase"
-          ]
+          "pros": ["Familiar"],
+          "cons": ["Hides the strongest interactive showcase"]
         }
       ],
       "recommendation": "a",
@@ -4209,36 +3247,22 @@
           "id": "a",
           "label": "Launch scope as planned",
           "description": "Everything currently marked launch scope, about 104 days.",
-          "pros": [
-            "Most complete launch"
-          ],
-          "cons": [
-            "Longest wait",
-            "Launch weighted toward AI"
-          ]
+          "pros": ["Most complete launch"],
+          "cons": ["Longest wait", "Launch weighted toward AI"]
         },
         {
           "id": "b",
           "label": "Move the recruiter agent and supervisor after launch, keep Under the hood",
           "description": "WP-37 and WP-47 move to right after launch; about 99 days.",
-          "pros": [
-            "Balanced pillars at launch",
-            "About 5 days sooner"
-          ],
-          "cons": [
-            "Recruiter mode arrives a little later"
-          ]
+          "pros": ["Balanced pillars at launch", "About 5 days sooner"],
+          "cons": ["Recruiter mode arrives a little later"]
         },
         {
           "id": "c",
           "label": "Full cut line",
           "description": "Also move the Under the hood page after launch; about 97 days.",
-          "pros": [
-            "Fastest launch"
-          ],
-          "cons": [
-            "Loses the page that proves several pillars at once"
-          ]
+          "pros": ["Fastest launch"],
+          "cons": ["Loses the page that proves several pillars at once"]
         },
         {
           "id": "d",
@@ -4296,35 +3320,22 @@
           "id": "a",
           "label": "Four case studies covering every pillar",
           "description": "jadero.dev itself (architecture, messaging, testing, CI/CD, infrastructure, applied AI), El Refugio (product delivery and frontend craft, years in production), the Claude Code framework (developer tooling and engineering process, public-level), LangChainAssistant (applied AI on a NestJS backend).",
-          "pros": [
-            "Every pillar has a case study",
-            "AI appears in two but leads none"
-          ],
-          "cons": [
-            "Four case studies to write"
-          ]
+          "pros": ["Every pillar has a case study", "AI appears in two but leads none"],
+          "cons": ["Four case studies to write"]
         },
         {
           "id": "b",
           "label": "AI-led order",
           "description": "LangChainAssistant and the framework first.",
-          "pros": [
-            "Strongest signal for the agentic team"
-          ],
-          "cons": [
-            "Couples the site to one move"
-          ]
+          "pros": ["Strongest signal for the agentic team"],
+          "cons": ["Couples the site to one move"]
         },
         {
           "id": "c",
           "label": "Three case studies",
           "description": "LangChainAssistant moves to selected projects.",
-          "pros": [
-            "Less writing"
-          ],
-          "cons": [
-            "Less AI depth on the site"
-          ]
+          "pros": ["Less writing"],
+          "cons": ["Less AI depth on the site"]
         }
       ],
       "recommendation": "a",
@@ -4355,9 +3366,7 @@
       "title": "Repo foundation",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-0"
-      ],
+      "dependsOn": ["WP-0"],
       "deliverable": "Turborepo + pnpm, packages/config, Biome, dependency-cruiser skeleton, commitlint + lefthook, compose.dev.yml with Postgres and RabbitMQ, pnpm verify, AGENTS.md + CLAUDE.md, ADR files + index.",
       "learns": "Task graphs and caching, compiled vs just-in-time internal packages, ESM exports maps.",
       "milestone": "R0"
@@ -4367,9 +3376,7 @@
       "title": "Agent tooling",
       "tag": "agent-tooling",
       "size": "S",
-      "dependsOn": [
-        "WP-1"
-      ],
+      "dependsOn": ["WP-1"],
       "deliverable": "Skills (adr, learn-step, wp, explain), learning-gate and format hooks, settings, reviewer agent.",
       "learns": "How hooks turn process into mechanism.",
       "milestone": "R0"
@@ -4379,9 +3386,7 @@
       "title": "Service platform and API skeleton",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-1"
-      ],
+      "dependsOn": ["WP-1"],
       "deliverable": "packages/platform-nest (Zod config, pino, problem+json, health, OTel bootstrap); apps/api skeleton; Vitest + Testcontainers harness; Nest 12 compatibility spike. Module template with the layer conventions of ADR-003 (D-3).",
       "learns": "Nest modules, providers, DI scopes and lifecycle; the request pipeline; fail-fast configuration.",
       "milestone": "R0"
@@ -4391,9 +3396,7 @@
       "title": "Web skeleton",
       "tag": "frontend",
       "size": "S",
-      "dependsOn": [
-        "WP-1"
-      ],
+      "dependsOn": ["WP-1"],
       "deliverable": "Next 16 + next-intl (three locales), Tailwind v4 + shadcn base, theme toggle, standalone build.",
       "learns": "",
       "milestone": "R0"
@@ -4403,9 +3406,7 @@
       "title": "Messaging foundation and agent skeleton",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-3"
-      ],
+      "dependsOn": ["WP-3"],
       "deliverable": "packages/messaging (port, RabbitMQ and in-memory adapters, CloudEvents envelope, outbox relay, inbox, retry and dead-letter topology), definitions.json, AsyncAPI stub, apps/agent skeleton; a ping event crosses the broker with one trace.",
       "learns": "Exchanges, bindings, queues, acks and prefetch; at-least-once delivery; outbox and inbox.",
       "milestone": "R0"
@@ -4415,11 +3416,7 @@
       "title": "CI pipeline",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-3",
-        "WP-4",
-        "WP-5"
-      ],
+      "dependsOn": ["WP-3", "WP-4", "WP-5"],
       "deliverable": "ci.yml with caching, affected runs per service, Postgres and RabbitMQ service containers, event contract tests, coverage gates, gitleaks, PR title lint.",
       "learns": "GitHub Actions model; why affected runs are safe.",
       "milestone": "R0"
@@ -4429,9 +3426,7 @@
       "title": "Images and per-service release",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-6"
-      ],
+      "dependsOn": ["WP-6"],
       "deliverable": "One multi-stage non-root image per service, release-please with one component per service, GHCR push, SBOM, Trivy.",
       "learns": "Image layers, least-privilege containers, semver per service.",
       "milestone": "R0"
@@ -4441,9 +3436,7 @@
       "title": "Server preparation",
       "tag": "ops",
       "size": "M",
-      "dependsOn": [
-        "WP-0"
-      ],
+      "dependsOn": ["WP-0"],
       "deliverable": "Cloud Firewall, Tailscale, deploy user + forced command, ops compose (Postgres with a database per service, RabbitMQ with vhosts, Umami, Uptime Kuma), nginx vhosts + certificates, backups with a passed restore drill. Second pass (D-7 d): install the op CLI and store the read-only 1Password service-account token on the server (mode 600).",
       "learns": "Docker networking vs host firewall, least-privilege SSH, backup vs restore.",
       "milestone": "R0"
@@ -4453,10 +3446,7 @@
       "title": "Deploy pipeline to new.jadero.dev",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-7",
-        "WP-8"
-      ],
+      "dependsOn": ["WP-7", "WP-8"],
       "deliverable": "deploy(env, service, version) over Tailscale, per-service migrations, health-gated rollout and rollback, topology deploy, smoke tests. Milestone: walking skeleton live with an event crossing the broker. Second pass (D-7 d): the deploy script renders each service's .env with op inject from infra/env/<service>.env.tpl (op:// references, never values) right before docker compose up; a deploy fails cleanly while 1Password is unreachable, running services are unaffected.",
       "learns": "Deployment as a state machine, expand/contract for schemas and messages.",
       "milestone": "R0"
@@ -4466,9 +3456,7 @@
       "title": "Data layer",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-3"
-      ],
+      "dependsOn": ["WP-3"],
       "deliverable": "Drizzle provider, schema conventions, per-service migration workflow, repositories, transactions, integration tests.",
       "learns": "Schema design, migrations as code, transactions, repository and unit of work.",
       "milestone": "R1"
@@ -4478,10 +3466,7 @@
       "title": "Contact service",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-5",
-        "WP-10"
-      ],
+      "dependsOn": ["WP-5", "WP-10"],
       "deliverable": "apps/contact: form endpoint with Zod, Turnstile and honeypot, per-IP limit, store-and-forward with outbox, mailer consumer behind MailPort, circuit breaker, retry tiers, dead-letter queue and replay; the form on web.",
       "learns": "A complete small microservice end to end; circuit breaker; anti-spam rules.",
       "milestone": "R1"
@@ -4491,9 +3476,7 @@
       "title": "Content domain and public API",
       "tag": "learning",
       "size": "L",
-      "dependsOn": [
-        "WP-10"
-      ],
+      "dependsOn": ["WP-10"],
       "deliverable": "Aggregates, translations, revisions, publish state machine, CV bullets and knowledge entries with per-locale approval, public endpoints with cache headers, contracts package.",
       "learns": "Domain modeling, aggregate boundaries, state machines, HTTP caching.",
       "milestone": "R1"
@@ -4503,9 +3486,7 @@
       "title": "Admin authentication",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-12"
-      ],
+      "dependsOn": ["WP-12"],
       "deliverable": "Better Auth with GitHub allow-list, sessions, CSRF, audit log, auth rate limits, nginx auth_request and the signed internal header.",
       "learns": "OAuth code + PKCE, sessions vs JWT, cookie flags, CSRF, gateway auth.",
       "milestone": "R1"
@@ -4515,10 +3496,7 @@
       "title": "Content events",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-5",
-        "WP-12"
-      ],
+      "dependsOn": ["WP-5", "WP-12"],
       "deliverable": "Outbox writes on publish and approval, relay in api-worker, content.published, knowledge.entry.approved and withdrawn, daily knowledge.snapshot, revalidation consumer, scheduled jobs.",
       "learns": "Dual-write problem, event-carried state transfer, idempotent consumers.",
       "milestone": "R1"
@@ -4528,9 +3506,7 @@
       "title": "Design directions",
       "tag": "frontend",
       "size": "S",
-      "dependsOn": [
-        "WP-4"
-      ],
+      "dependsOn": ["WP-4"],
       "deliverable": "Three hero mockups as screenshots; owner picks the visual direction.",
       "learns": "",
       "milestone": "R1"
@@ -4540,10 +3516,7 @@
       "title": "Site pages",
       "tag": "frontend",
       "size": "L",
-      "dependsOn": [
-        "WP-12",
-        "WP-15"
-      ],
+      "dependsOn": ["WP-12", "WP-15"],
       "deliverable": "Home built around the positioning and the proof-pillar strip with its evidence map (D-73, D-74), home, experience timeline with CV bullets and Ask about this, work-log pages for approved entries, case studies, projects, early archive, stack and skills, blog; safe Markdown; SEO; nginx stale cache; accessibility and performance budgets met. Second pass (D-52): work-log pages carry a per-entry indexable flag (default true) mapped to a noindex meta tag when false.",
       "learns": "",
       "milestone": "R1"
@@ -4553,10 +3526,7 @@
       "title": "Admin app",
       "tag": "frontend",
       "size": "L",
-      "dependsOn": [
-        "WP-13",
-        "WP-14"
-      ],
+      "dependsOn": ["WP-13", "WP-14"],
       "deliverable": "Static SPA on admin.jadero.dev: forms on shared contracts, translation tabs, structured knowledge-entry editor with approval checklist and private denylist, CV-to-entry linking with coverage view, preview, publish, media, contact inbox, dashboard stub. Full entry lifecycle (D-65): list with status, upload, edit as a new draft revision, re-import, withdraw, delete, export to the file format.",
       "learns": "",
       "milestone": "R1"
@@ -4566,9 +3536,7 @@
       "title": "PDF CV",
       "tag": "frontend",
       "size": "S",
-      "dependsOn": [
-        "WP-14"
-      ],
+      "dependsOn": ["WP-14"],
       "deliverable": "react-pdf per locale in api-worker, regenerated on publish.",
       "learns": "",
       "milestone": "R1"
@@ -4578,9 +3546,7 @@
       "title": "AI ports and adapters",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-3"
-      ],
+      "dependsOn": ["WP-3"],
       "deliverable": "packages/ai: ports, fakes, Anthropic, OpenAI and Voyage adapters, factory, AiModule, contract suites. Per-role chat model config with one default model and optional overrides (D-13, D-14).",
       "learns": "Ports and adapters, anti-corruption layer, contract tests, config-driven DI.",
       "milestone": "R2"
@@ -4590,10 +3556,7 @@
       "title": "Agent read model and ingestion",
       "tag": "learning",
       "size": "L",
-      "dependsOn": [
-        "WP-14",
-        "WP-19"
-      ],
+      "dependsOn": ["WP-14", "WP-19"],
       "deliverable": "agent-ingest: read model, two-layer chunking with contextual headers, approval validation, withdrawal tombstones, daily reconciliation, embeddings, vector + full-text schema, index versions, re-index, blue-green switch; HNSW vs exact scan measured.",
       "learns": "Embeddings, chunking trade-offs, approximate nearest neighbor indexes, read models.",
       "milestone": "R2"
@@ -4603,9 +3566,7 @@
       "title": "Retrieval and retrieval eval",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-20"
-      ],
+      "dependsOn": ["WP-20"],
       "deliverable": "Hybrid search, RRF, reranker with a none A/B, threshold, parent-document expansion, drill-down by CV bullet id, recall@5 and MRR in CI.",
       "learns": "Lexical vs semantic search, rank fusion, reranking, measuring retrieval.",
       "milestone": "R2"
@@ -4615,9 +3576,7 @@
       "title": "Agent graph v1",
       "tag": "learning",
       "size": "L",
-      "dependsOn": [
-        "WP-21"
-      ],
+      "dependsOn": ["WP-21"],
       "deliverable": "StateGraph, nodes, bounded subgraph, tools on the read model, prompts as files, PostgresSaver, SSE endpoint, citations; model A/B experiment; prompt-cache measurement. Checkpoints encrypted at rest with an AES-256-GCM serializer (D-17). Second pass (D-17): checkpoint encryption moved to optional WP-56; WP-22 ships PostgresSaver with the 24-hour purge only.",
       "learns": "LangGraph state, reducers, edges, checkpoints; tool calling; streaming; prompt design.",
       "milestone": "R2"
@@ -4627,9 +3586,7 @@
       "title": "Security layer",
       "tag": "learning",
       "size": "L",
-      "dependsOn": [
-        "WP-22"
-      ],
+      "dependsOn": ["WP-22"],
       "deliverable": "Guard module and adapters, canary and output checks, PII middleware, throttler storage, nginx limits, Turnstile, usage accounting, daily budget breaker, circuit breakers on providers, provider spend limits configured.",
       "learns": "OWASP LLM Top 10 in practice, rate-limit algorithms, circuit breaker and bulkhead.",
       "milestone": "R2"
@@ -4639,9 +3596,7 @@
       "title": "Tracing and evals",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-22"
-      ],
+      "dependsOn": ["WP-22"],
       "deliverable": "LangSmith per environment, datasets (golden, adversarial, retrieval, one drill-down item per CV bullet), approval-gate canary eval, evaluators, evals.yml with budget and gates.",
       "learns": "Evals vs tests, LLM-as-judge pitfalls, experiment comparison.",
       "milestone": "R2"
@@ -4651,9 +3606,7 @@
       "title": "Chat UI",
       "tag": "frontend",
       "size": "M",
-      "dependsOn": [
-        "WP-22"
-      ],
+      "dependsOn": ["WP-22"],
       "deliverable": "Terminal-style prompt, streaming render, source chips, limit and resting states including agent down, i18n, accessibility.",
       "learns": "",
       "milestone": "R2"
@@ -4663,9 +3616,7 @@
       "title": "Observability across services",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-23"
-      ],
+      "dependsOn": ["WP-23"],
       "deliverable": "OTel export with trace propagation through RabbitMQ, logging conventions, monitors per service, dead-letter and queue-depth alerts, external backstop, admin usage page. Release R1 covers web, api, api-worker, contact and the broker; the agent monitors, usage page and dead-letter alerts for agent queues are added in R2 with WP-23.",
       "learns": "Logs, metrics, traces; context propagation across a broker.",
       "milestone": "R1"
@@ -4675,9 +3626,7 @@
       "title": "Resilience game day",
       "tag": "learning",
       "size": "S",
-      "dependsOn": [
-        "WP-26"
-      ],
+      "dependsOn": ["WP-26"],
       "deliverable": "Stop each component in staging and verify the failure-mode table; fix what does not behave as designed.",
       "learns": "Failure-mode thinking, blast radius, verifying resilience.",
       "milestone": "R1"
@@ -4711,9 +3660,7 @@
       "title": "Cutover",
       "tag": "ops",
       "size": "S",
-      "dependsOn": [
-        "WP-28"
-      ],
+      "dependsOn": ["WP-28"],
       "deliverable": "jadero.dev switched, redirects, pm2 services and reCAPTCHA retired, old site archived. Second pass (D-75 e): cutover happens in R1 without the agent; the home shows positioning, pillars, case studies and timeline, and the Ask-me entry point ships with R2.",
       "learns": "",
       "milestone": "R1"
@@ -4723,9 +3670,7 @@
       "title": "Public MCP server (after launch)",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-21"
-      ],
+      "dependsOn": ["WP-21"],
       "deliverable": "mcp process type of agent on mcp.jadero.dev: read-only tools + CV resource, limits, a connect-from-Claude page. Superseded by WP-36 (the public MCP moved to launch); id kept for stability.",
       "learns": "MCP tools, resources and transports; another driving adapter.",
       "milestone": "R7"
@@ -4735,9 +3680,7 @@
       "title": "lab.jadero.dev playground (after launch)",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-24"
-      ],
+      "dependsOn": ["WP-24"],
       "deliverable": "Graph visualization, node timings, trace links.",
       "learns": "",
       "milestone": "R7"
@@ -4747,10 +3690,7 @@
       "title": "Translation assistant (after launch)",
       "tag": "learning",
       "size": "S",
-      "dependsOn": [
-        "WP-17",
-        "WP-19"
-      ],
+      "dependsOn": ["WP-17", "WP-19"],
       "deliverable": "LLM-drafted translations through the chat port with a glossary; owner reviews.",
       "learns": "Structured output, translation prompting.",
       "milestone": "R7"
@@ -4760,9 +3700,7 @@
       "title": "Blue-green deploys (optional)",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-9"
-      ],
+      "dependsOn": ["WP-9"],
       "deliverable": "Two upstreams per service, switch and drain.",
       "learns": "Zero-downtime deployment.",
       "milestone": "R7"
@@ -4772,9 +3710,7 @@
       "title": "SOPS-encrypted secrets (optional)",
       "tag": "learning",
       "size": "S",
-      "dependsOn": [
-        "WP-9"
-      ],
+      "dependsOn": ["WP-9"],
       "deliverable": "Encrypted env files, age key on the server. Superseded by D-7 d (1Password with op inject, WP-8 and WP-9); created and closed as not planned, id kept.",
       "learns": "Secret management as code.",
       "milestone": "R7"
@@ -4784,9 +3720,7 @@
       "title": "Knowledge entry importer",
       "tag": "learning",
       "size": "S",
-      "dependsOn": [
-        "WP-12"
-      ],
+      "dependsOn": ["WP-12"],
       "deliverable": "Admin upload and CLI that parse the agreed entry format, validate it, run the automated checks and record approval from the approved flag. Also exports an entry back to the file format (D-65). Launch scope.",
       "learns": "Parsing and validating structured documents; approval bound to a revision.",
       "milestone": "R1"
@@ -4796,10 +3730,7 @@
       "title": "Public profile MCP and request_intro",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-11",
-        "WP-21"
-      ],
+      "dependsOn": ["WP-11", "WP-21"],
       "deliverable": "mcp process type of agent: search_experience, get_entry, list_projects, list_skills, get_cv, CV and ADR resources, request_intro with a confirmation link, limits, a connect-from-Claude page. Launch scope; supersedes WP-30. Second pass (D-59 b): built as apps/mcp, a stateless MCP edge service on mcp.jadero.dev that calls internal endpoints of agent (search), api (CV, entries) and contact (request_intro, D-61 adjusted); no process type inside agent. Release R4.",
       "learns": "MCP tools, resources and transports; out-of-band human confirmation.",
       "milestone": "R4"
@@ -4809,10 +3740,7 @@
       "title": "Recruiter agent",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-22",
-        "WP-23"
-      ],
+      "dependsOn": ["WP-22", "WP-23"],
       "deliverable": "Requirement extraction, evidence per requirement, fit matrix with citations and gaps, own limits, session-only retention. Launch scope.",
       "learns": "Structured extraction, map-reduce, evidence-grounded generation.",
       "milestone": "R5"
@@ -4822,10 +3750,7 @@
       "title": "Under the hood page",
       "tag": "frontend",
       "size": "M",
-      "dependsOn": [
-        "WP-16",
-        "WP-26"
-      ],
+      "dependsOn": ["WP-16", "WP-26"],
       "deliverable": "Diagram with live per-service health from Uptime Kuma (cached), ADR log, last chaos-test result. Launch scope.",
       "learns": "",
       "milestone": "R3"
@@ -4835,10 +3760,7 @@
       "title": "Build journal and /now",
       "tag": "frontend",
       "size": "S",
-      "dependsOn": [
-        "WP-12",
-        "WP-16"
-      ],
+      "dependsOn": ["WP-12", "WP-16"],
       "deliverable": "journal post kind linked to WP ids, draft assistant from the learning recap, /now page. Launch scope.",
       "learns": "",
       "milestone": "R1"
@@ -4848,9 +3770,7 @@
       "title": "LangSmith datasets, evaluators and experiments",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-22"
-      ],
+      "dependsOn": ["WP-22"],
       "deliverable": "Toy dataset, heuristic and LLM-judge evaluators, pairwise comparison, experiments, annotation queues. Launch scope.",
       "learns": "Datasets, evaluator types, experiments, judge bias, data leakage.",
       "milestone": "R2"
@@ -4860,11 +3780,7 @@
       "title": "Eval battery v1",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-24",
-        "WP-35",
-        "WP-40"
-      ],
+      "dependsOn": ["WP-24", "WP-35", "WP-40"],
       "deliverable": "About 30 owner-approved items (direct, drill-down, out-of-scope, adversarial, es/en/de), built once the first approved entries are imported, wired into the CI gates. Launch scope.",
       "learns": "Golden datasets, reference-based evaluation.",
       "milestone": "R3"
@@ -4874,10 +3790,7 @@
       "title": "Admin MCP with OAuth 2.1",
       "tag": "learning",
       "size": "L",
-      "dependsOn": [
-        "WP-13",
-        "WP-36"
-      ],
+      "dependsOn": ["WP-13", "WP-36"],
       "deliverable": "admin-mcp process type of api: draft posts, review translations, approve entries in two steps, spend and blocked attacks; protected resource metadata, PKCE, client ID metadata documents, scopes and step-up. After launch, the next learning WP. Second pass (D-59 b): the admin MCP is hosted by apps/mcp as the protected resource server; api stays the OAuth 2.1 authorization server (Better Auth). Release R6.",
       "learns": "OAuth 2.1 in depth, protected resources, resource indicators, step-up authorization.",
       "milestone": "R6"
@@ -4887,10 +3800,7 @@
       "title": "match_job_description tool and MCP prompt",
       "tag": "learning",
       "size": "S",
-      "dependsOn": [
-        "WP-36",
-        "WP-37"
-      ],
+      "dependsOn": ["WP-36", "WP-37"],
       "deliverable": "MCP tool and prompt backed by the recruiter agent. After launch.",
       "learns": "MCP prompts.",
       "milestone": "R5"
@@ -4900,10 +3810,7 @@
       "title": "Framework catalog",
       "tag": "learning",
       "size": "S",
-      "dependsOn": [
-        "WP-17",
-        "WP-36"
-      ],
+      "dependsOn": ["WP-17", "WP-36"],
       "deliverable": "Curated framework_component content with approval, an MCP tool and resource. After launch.",
       "learns": "",
       "milestone": "R4"
@@ -4913,10 +3820,7 @@
       "title": "Answer feedback loop",
       "tag": "learning",
       "size": "S",
-      "dependsOn": [
-        "WP-24",
-        "WP-25"
-      ],
+      "dependsOn": ["WP-24", "WP-25"],
       "deliverable": "Thumbs up and down with signed run tokens, LangSmith feedback, annotation queue, promotion into the battery. Not in v1: the owner chose no feedback (D-68, option c); kept as a possible follow-up after launch. Second pass (D-75 e): release R7, still a possible follow-up only (D-68 c).",
       "learns": "Human-in-the-loop evaluation, data flywheel.",
       "milestone": "R7"
@@ -4926,10 +3830,7 @@
       "title": "Semantic cache",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-23",
-        "WP-41"
-      ],
+      "dependsOn": ["WP-23", "WP-41"],
       "deliverable": "pgvector cache, lookup, source-id invalidation, popularity threshold, hit and false-hit rates measured on the battery. After launch.",
       "learns": "Caching strategies, invalidation, cache poisoning.",
       "milestone": "R7"
@@ -4939,10 +3840,7 @@
       "title": "Multi-agent supervisor",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-22",
-        "WP-37"
-      ],
+      "dependsOn": ["WP-22", "WP-37"],
       "deliverable": "Supervisor reusing the guard classification, handoffs to CV and recruiter agent subgraphs, per-agent limits and eval slices. Launch scope.",
       "learns": "Supervisor and handoff patterns, subgraphs.",
       "milestone": "R5"
@@ -4952,9 +3850,7 @@
       "title": "Scripted chaos test",
       "tag": "learning",
       "size": "S",
-      "dependsOn": [
-        "WP-27"
-      ],
+      "dependsOn": ["WP-27"],
       "deliverable": "Synthetic traffic, agent and broker outages, steady-state checks, report published to the journal and the Under the hood page. Launch scope.",
       "learns": "Chaos engineering, steady-state hypothesis.",
       "milestone": "R3"
@@ -4964,9 +3860,7 @@
       "title": "Roadmap to epic and tickets",
       "tag": "owner",
       "size": "S",
-      "dependsOn": [
-        "WP-0"
-      ],
+      "dependsOn": ["WP-0"],
       "deliverable": "The decided tracking structure, generated from this file's workPackages with the gh CLI: an epic issue with one sub-issue per WP (WP-30 created and closed as not planned, linking WP-36), milestones M0 to M6, labels, issue templates, a Project with fields, views and workflows. Right after WP-0.",
       "learns": "Ticket lifecycle, definition of ready and done, traceability.",
       "milestone": "R0"
@@ -4976,11 +3870,7 @@
       "title": "Event operations: dead-letter archive, replay and events page",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-11",
-        "WP-14",
-        "WP-17"
-      ],
+      "dependsOn": ["WP-11", "WP-14", "WP-17"],
       "deliverable": "A dead_letters table in each service's database, written from its dead-letter queues (generic code in packages/messaging); admin endpoints per service; an Events page in the admin with outbox, inbox, retry and dead-letter counts per event type and a replay action that republishes with a replayed-by header (D-12). Launch scope.",
       "learns": "Operating a message system: dead-letter handling, safe replay with idempotent consumers, operational visibility.",
       "milestone": "R1"
@@ -4990,10 +3880,7 @@
       "title": "API documentation pipeline",
       "tag": "learning",
       "size": "S",
-      "dependsOn": [
-        "WP-6",
-        "WP-12"
-      ],
+      "dependsOn": ["WP-6", "WP-12"],
       "deliverable": "OpenAPI generated from the Zod contracts through @nestjs/swagger 12's standardSchemaConverter (zod-openapi), one document per service, a docs UI outside production, and a breaking-change check against main in CI (D-6). Launch scope.",
       "learns": "OpenAPI from schemas, API documentation as code, breaking-change detection.",
       "milestone": "R1"
@@ -5013,11 +3900,7 @@
       "title": "NestJS API gateway",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-29",
-        "WP-13",
-        "WP-51"
-      ],
+      "dependsOn": ["WP-29", "WP-13", "WP-51"],
       "deliverable": "apps/gateway behind nginx for /api/* on both origins (D-45 d, phased): routing to api, agent, contact and mcp; admin session check against api with a 30-second cache and the signed identity header (D-47 moves from a to d); strips inbound internal headers, adds correlation ids; per-route limits moved from nginx; merged OpenAPI document and docs UI; SSE pass-through with no buffering. Rules: no business logic, no database, outside traffic only; a restart loses nothing. Entry rule: built only after R1 is in production, and only for what nginx cannot do. Amends ADR-002, ADR-008 and ADR-029; nginx keeps TLS, static files, the stale page cache and coarse limits.",
       "learns": "API gateway, gateway routing and offloading, backends for frontends, reverse proxying with streaming, session verification in tested TypeScript.",
       "milestone": "R7"
@@ -5027,10 +3910,7 @@
       "title": "Qdrant adapter behind the knowledge index port",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-21",
-        "WP-41"
-      ],
+      "dependsOn": ["WP-21", "WP-41"],
       "deliverable": "Qdrant container in the ops compose capped at 512 MB (verify at WP time), a QdrantKnowledgeIndex adapter behind KnowledgeIndexPort (collections, payload filters for locale and index version, dense plus sparse hybrid query with RRF, collection aliases for the blue-green re-index), the same contract suite as the pgvector adapter, and a comparison on the retrieval eval (recall@5, MRR, latency) plus a journal post. Adopted as default only if it wins (D-16 d).",
       "learns": "A dedicated vector engine: collections, payload filters, HNSW tuning, quantization, aliases; swapping a store behind a port and letting evals decide.",
       "milestone": "R7"
@@ -5040,10 +3920,7 @@
       "title": "Python guard classifier service",
       "tag": "learning",
       "size": "M",
-      "dependsOn": [
-        "WP-23",
-        "WP-41"
-      ],
+      "dependsOn": ["WP-23", "WP-41"],
       "deliverable": "apps/guard-classifier: FastAPI service with Prompt Guard 2 86M (multilingual, CPU), uv, ruff and pytest, its own image and release line, capped at about 500 MB; a PromptGuardClassifier adapter behind GuardClassifierPort in agent, called with a timeout and a cockatiel circuit breaker that falls back to the Haiku classifier; adversarial and false-positive evals in es, en and de decide which adapter stays (D-25 e). Replaces the ONNX-in-Node experiment.",
       "learns": "A polyglot service behind a port, running a classifier model in production, fallback and circuit breaking in the chat path, Python tooling used by the agentic team.",
       "milestone": "R7"
@@ -5053,9 +3930,7 @@
       "title": "Checkpoint encryption at rest (optional)",
       "tag": "learning",
       "size": "S",
-      "dependsOn": [
-        "WP-22"
-      ],
+      "dependsOn": ["WP-22"],
       "deliverable": "A custom serde for PostgresSaver that encrypts checkpoint payloads with AES-256-GCM, a key id stored per row so the key can rotate, the key sourced from runtime secrets (D-7), a rotation runbook. Optional (D-17 second pass): the 24-hour purge, backup exclusion and LangSmith masking already cover the privacy goal.",
       "learns": "Envelope encryption at rest, key rotation, where encryption does and does not help.",
       "milestone": "R7"
@@ -5363,57 +4238,35 @@
         "id": "R2",
         "name": "Agent core",
         "exitCriterion": "The agent answers with citations in three languages, guarded, traced and evaluated, on real approved entries",
-        "workPackages": [
-          "WP-19",
-          "WP-20",
-          "WP-21",
-          "WP-40",
-          "WP-22",
-          "WP-23",
-          "WP-24",
-          "WP-25"
-        ],
+        "workPackages": ["WP-19", "WP-20", "WP-21", "WP-40", "WP-22", "WP-23", "WP-24", "WP-25"],
         "targetDate": null
       },
       {
         "id": "R3",
         "name": "Visible quality",
         "exitCriterion": "Eval battery in CI, Under the hood page live, chaos test passed and published",
-        "workPackages": [
-          "WP-41",
-          "WP-38",
-          "WP-48"
-        ],
+        "workPackages": ["WP-41", "WP-38", "WP-48"],
         "targetDate": null
       },
       {
         "id": "R4",
         "name": "Public MCP",
         "exitCriterion": "mcp.jadero.dev usable from any MCP client; request_intro confirmed out of band",
-        "workPackages": [
-          "WP-36",
-          "WP-44"
-        ],
+        "workPackages": ["WP-36", "WP-44"],
         "targetDate": null
       },
       {
         "id": "R5",
         "name": "Recruiter mode",
         "exitCriterion": "Supervisor routes to the CV and recruiter agents; match_job_description over MCP",
-        "workPackages": [
-          "WP-37",
-          "WP-47",
-          "WP-43"
-        ],
+        "workPackages": ["WP-37", "WP-47", "WP-43"],
         "targetDate": null
       },
       {
         "id": "R6",
         "name": "Admin MCP",
         "exitCriterion": "OAuth 2.1 protected admin MCP with step-up approvals",
-        "workPackages": [
-          "WP-42"
-        ],
+        "workPackages": ["WP-42"],
         "targetDate": null
       },
       {
@@ -5437,26 +4290,9 @@
       }
     ],
     "labels": {
-      "type": [
-        "type:epic",
-        "type:wp",
-        "type:task",
-        "type:bug",
-        "type:chore",
-        "type:adr"
-      ],
-      "tag": [
-        "tag:learning",
-        "tag:frontend",
-        "tag:ops",
-        "tag:owner",
-        "tag:agent-tooling"
-      ],
-      "size": [
-        "size:S",
-        "size:M",
-        "size:L"
-      ],
+      "type": ["type:epic", "type:wp", "type:task", "type:bug", "type:chore", "type:adr"],
+      "tag": ["tag:learning", "tag:frontend", "tag:ops", "tag:owner", "tag:agent-tooling"],
+      "size": ["size:S", "size:M", "size:L"],
       "area": [
         "area:web",
         "area:admin",
@@ -5468,13 +4304,7 @@
         "area:evals",
         "area:infra"
       ],
-      "flags": [
-        "blocked",
-        "needs-decision",
-        "optional",
-        "superseded",
-        "security"
-      ]
+      "flags": ["blocked", "needs-decision", "optional", "superseded", "security"]
     },
     "projectFields": [
       "Status (Backlog, Ready, In progress, In review, Done)",
@@ -5503,53 +4333,25 @@
         "id": "M0",
         "name": "Decide and set up",
         "exitCriterion": "ADRs decided, repo and agent tooling ready",
-        "workPackages": [
-          "WP-0",
-          "WP-49",
-          "WP-1",
-          "WP-2"
-        ]
+        "workPackages": ["WP-0", "WP-49", "WP-1", "WP-2"]
       },
       {
         "id": "M1",
         "name": "Walking skeleton",
         "exitCriterion": "An event crosses the broker on new.jadero.dev",
-        "workPackages": [
-          "WP-3",
-          "WP-4",
-          "WP-5",
-          "WP-6",
-          "WP-7",
-          "WP-8",
-          "WP-9"
-        ]
+        "workPackages": ["WP-3", "WP-4", "WP-5", "WP-6", "WP-7", "WP-8", "WP-9"]
       },
       {
         "id": "M2",
         "name": "Backend core",
         "exitCriterion": "Content, contact, auth and events working in staging",
-        "workPackages": [
-          "WP-10",
-          "WP-11",
-          "WP-12",
-          "WP-13",
-          "WP-14",
-          "WP-35",
-          "WP-51"
-        ]
+        "workPackages": ["WP-10", "WP-11", "WP-12", "WP-13", "WP-14", "WP-35", "WP-51"]
       },
       {
         "id": "M3",
         "name": "Site and admin",
         "exitCriterion": "Public site and admin usable in staging",
-        "workPackages": [
-          "WP-15",
-          "WP-16",
-          "WP-17",
-          "WP-18",
-          "WP-39",
-          "WP-50"
-        ]
+        "workPackages": ["WP-15", "WP-16", "WP-17", "WP-18", "WP-39", "WP-50"]
       },
       {
         "id": "M4",
@@ -5573,15 +4375,7 @@
         "id": "M5",
         "name": "Launch",
         "exitCriterion": "jadero.dev switched, old site retired",
-        "workPackages": [
-          "WP-26",
-          "WP-27",
-          "WP-28",
-          "WP-29",
-          "WP-36",
-          "WP-38",
-          "WP-48"
-        ]
+        "workPackages": ["WP-26", "WP-27", "WP-28", "WP-29", "WP-36", "WP-38", "WP-48"]
       },
       {
         "id": "M6",
