@@ -2,7 +2,7 @@
   "name": "@jadero/platform-nest",
   "version": "0.0.0",
   "private": true,
-  "description": "Bootstrap shared by the NestJS services: fail-fast config, app wiring. Infrastructure only, no domain code. Compiled to dist/.",
+  "description": "Bootstrap shared by the NestJS services: fail-fast config, structured logging, app wiring. Infrastructure only, no domain code. Compiled to dist/.",
   "type": "module",
   "exports": {
     ".": {
@@ -18,9 +18,16 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
+  "dependencies": {
+    "nestjs-pino": "catalog:",
+    "pino": "catalog:",
+    "pino-http": "catalog:",
+    "pino-pretty": "catalog:"
+  },
   "peerDependencies": {
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
+    "rxjs": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
