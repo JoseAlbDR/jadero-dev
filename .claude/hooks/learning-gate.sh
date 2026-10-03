@@ -8,7 +8,7 @@ root="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 rel="${file#"$root"/}"
 # Only learning paths are gated.
 case "$rel" in
-  apps/api/*|apps/agent/*|apps/contact/*|apps/mcp/*|apps/gateway/*|apps/guard-classifier/*|packages/messaging/*|packages/ai/*|packages/agent/*|packages/contracts/*|infra/*|.github/workflows/*) ;;
+  apps/api/*|apps/agent/*|apps/contact/*|apps/mcp/*|apps/gateway/*|apps/guard-classifier/*|packages/messaging/*|packages/ai/*|packages/agent/*|packages/contracts/*|packages/platform-nest/*|templates/*|infra/*|.github/workflows/*) ;;
   turbo.json|pnpm-workspace.yaml|packages/config/*|.dependency-cruiser.*|lefthook.yml|commitlint.config.*) ;;   # repo tooling: the learning content of WP-1
   *) exit 0 ;;
 esac
