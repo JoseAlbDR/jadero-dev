@@ -33,6 +33,6 @@ Nest 12, ESM and Vitest, as in ADR-004, on Node 24 LTS. The line is pinned in th
 - WP-3's compatibility spike includes native modules on Node 24.
 - ADR-027's memory budget was measured with Node 22 assumptions; re-check RSS per service once the first services run (no change expected).
 
-## Patterns
+## Pattern names
 
 Runtime pinning; a decision record that supersedes rather than edits.

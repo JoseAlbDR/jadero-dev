@@ -33,9 +33,13 @@ export default {
         "github",
         "repo",
         "deps",
+        // release-please titles its release pull requests `chore(main): release ...`.
+        "main",
       ],
     ],
     "scope-empty": [2, "never"],
+    // A pull request title must stay at or under 94 characters: GitHub appends ` (#NN)` to it on
+    // squash, and the squash commit still has to pass this limit.
     "header-max-length": [2, "always", 100],
   },
 };

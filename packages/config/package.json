@@ -11,7 +11,8 @@
     "./vitest": "./vitest/base.js"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
     "@types/node": "catalog:",

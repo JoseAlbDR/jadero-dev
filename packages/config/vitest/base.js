@@ -2,14 +2,15 @@ import { loadavg } from "node:os";
 
 /**
  * Worker count from machine load (AGENTS.md section 3): 12 minus the 1-minute load average minus 3,
- * at least 1, at most 6. VITEST_MAX_WORKERS overrides it.
- * @returns {number}
+ * at least 1, at most 6. A positive integer in VITEST_MAX_WORKERS overrides the formula and is
+ * clamped to the same 1 to 6 range.
+ * @param {number} [load1] the 1-minute load average; defaults to the current one, tests pass it in.
+ * @returns {number} the number of Vitest workers to use, between 1 and 6.
  */
-export function workersFromLoad() {
+export function workersFromLoad(load1 = loadavg()[0] ?? 0) {
   const fromEnv = Number(process.env.VITEST_MAX_WORKERS);
-  if (Number.isInteger(fromEnv) && fromEnv > 0) return fromEnv;
-  const [load1] = loadavg();
-  return Math.min(6, Math.max(1, Math.floor(12 - (load1 ?? 0) - 3)));
+  const wanted = Number.isInteger(fromEnv) && fromEnv > 0 ? fromEnv : Math.floor(12 - load1 - 3);
+  return Math.min(6, Math.max(1, wanted));
 }
 
 /**

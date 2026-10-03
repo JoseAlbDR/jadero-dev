@@ -39,6 +39,7 @@ module.exports = {
       severity: "error",
       from: { path: "^(apps|packages)/([^/]+)/src/modules/([^/]+)/domain/" },
       to: {
+        path: "^apps/",
         pathNot: "^$1/$2/src/modules/$3/domain/",
         dependencyTypesNot: ["core"],
       },
@@ -74,10 +75,29 @@ module.exports = {
       from: { path: "^packages/(agent|ai)/" },
       to: {
         path: [
-          "(^|/)node_modules/(@nestjs/[^/]+|drizzle-orm|pg|postgres|@types/pg)/",
-          "^(@nestjs/[^/]+|drizzle-orm|pg|postgres)(/|$)",
+          "(^|/)node_modules/(@nestjs/[^/]+|@langchain/langgraph-checkpoint-postgres|drizzle-orm|pg|pg-[^/]+|postgres|kysely|mysql2|better-sqlite3|@electric-sql/pglite|@types/pg)/",
+          "^(@nestjs/[^/]+|@langchain/langgraph-checkpoint-postgres|drizzle-orm|pg|pg-[^/]+|postgres|kysely|mysql2|better-sqlite3|@electric-sql/pglite)(/|$)",
         ],
       },
+    },
+    {
+      name: "no-cross-service-imports",
+      comment:
+        "ADR-029 rules 1 to 3 and AGENTS.md rule 2: services talk through events, never through " +
+        "each other's code. A file in apps/X/ may not import anything from another app.",
+      severity: "error",
+      from: { path: "^apps/([^/]+)/" },
+      to: { path: "^apps/", pathNot: "^apps/$1/" },
+    },
+    {
+      name: "no-domain-in-shared-packages",
+      comment:
+        "AGENTS.md rule 5: shared packages hold infrastructure only. A domain/ folder inside a " +
+        "package is domain code in shared code; move it into the service that owns it. Two patterns " +
+        "instead of `src/(.+/)?domain/`, which dependency-cruiser rejects as an unsafe regex.",
+      severity: "error",
+      from: { path: ["^packages/[^/]+/src/domain/", "^packages/[^/]+/src/.+/domain/"] },
+      to: {},
     },
     {
       name: "shared-packages-hold-no-domain",
