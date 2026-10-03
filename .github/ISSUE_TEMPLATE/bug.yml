@@ -1,0 +1,31 @@
+name: Bug
+description: Something behaves differently from an ADR, a WP acceptance criterion or the documented behavior.
+title: "bug(<service>): <what is wrong>"
+labels: ["type:bug"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [web, admin, api, agent, contact, messaging, mcp, evals, infra]
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected (quote the ADR or acceptance criterion)
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual, with the smallest reproduction (request, payload, trace id)
+    validations:
+      required: true
+  - type: checkboxes
+    id: content
+    attributes:
+      label: Content rules
+      options:
+        - label: This issue contains no employer details, secrets, visitor data or internal hostnames (it becomes public with the repo)
+          required: true

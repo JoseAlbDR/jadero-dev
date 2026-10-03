@@ -1,0 +1,28 @@
+name: ADR proposal
+description: A new architecture decision, or one that supersedes an accepted ADR. The PR adds docs/adr/NNNN-title.md from 0000-template.md.
+title: "adr: <short noun phrase>"
+labels: ["type:adr", "needs-decision"]
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and problem
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options with pros and cons (at least two)
+    validations:
+      required: true
+  - type: textarea
+    id: recommendation
+    attributes:
+      label: Recommendation and what it would supersede
+      placeholder: Supersedes ADR-NNN because ...
+    validations:
+      required: true
+  - type: textarea
+    id: learn
+    attributes:
+      label: What the owner learns from this decision
