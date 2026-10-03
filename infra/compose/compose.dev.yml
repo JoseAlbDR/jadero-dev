@@ -1,0 +1,47 @@
+# Local development dependencies only (ADR-027, ADR-029). The apps run on the host with `pnpm dev`.
+# Start: pnpm dev:up. Stop: pnpm dev:down. Reset the data: docker compose -f infra/compose/compose.dev.yml down -v
+# Every published port binds to 127.0.0.1, and the passwords here are fixed dev values, never used elsewhere.
+name: jadero-dev
+
+services:
+  postgres:
+    # pgvector on the official Postgres 18 image (WP-1 decision F); production uses the same major.
+    image: pgvector/pgvector:0.8.7-pg18
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      # Postgres 18 images keep PGDATA at /var/lib/postgresql/18/docker and declare the volume one level up.
+      - pgdata:/var/lib/postgresql
+      # Runs once, only when the data volume is empty: roles, databases, the vector extension.
+      - ./init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # TCP on purpose: during init the entrypoint runs a temporary server on the Unix socket only,
+      # so a socket check could pass before 01-databases.sql has finished.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+    mem_limit: 1024m
+
+  rabbitmq:
+    # Plain broker with the management UI (WP-1 decision H1); vhosts, users and definitions come in WP-5.
+    image: rabbitmq:4.3.6-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: dev
+      RABBITMQ_DEFAULT_PASS: dev
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 10s
+    mem_limit: 256m
+
+volumes:
+  pgdata: {}
