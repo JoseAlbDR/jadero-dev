@@ -9,7 +9,14 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!!**/node_modules", "!!**/dist", "!!**/.turbo", "!!**/coverage"]
+    "includes": [
+      "**",
+      "!!**/node_modules",
+      "!!**/dist",
+      "!!**/.turbo",
+      "!!**/coverage",
+      "!!docs/plan"
+    ]
   },
   "formatter": {
     "enabled": true,

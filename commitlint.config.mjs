@@ -27,6 +27,7 @@ export default {
         "ci",
         "docs",
         "adr",
+        "plan",
         "learning",
         "agents",
         "github",
