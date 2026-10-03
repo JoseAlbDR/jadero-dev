@@ -1,6 +1,6 @@
 ---
 wp: 3
-decision: pending
+decision: recorded
 adr: [ADR-003, ADR-006, ADR-007, ADR-009, ADR-010, ADR-029, ADR-042]
 ---
 
@@ -396,6 +396,15 @@ Answers as the owner gives them. `decision: recorded` is set after question 7.
 
 1. HTTP adapter: **A1, Express 5** (2026-10-03). The owner also has more experience with Express.
 2. Typed config: **B2, an `ApiConfig` abstract class provided with the parsed object** (2026-10-03).
+3. Database driver for readiness: **D1, `pg`** (2026-10-03). WP-10 inherits it. The owner uses `pg` at work and wants to learn it in depth.
+4. Health on failure: **E1, the Terminus body for `/health/*`**; problem+json for every other route (2026-10-03). Health is an operations contract, not an API error.
+5. OpenTelemetry wiring: **F1, `NodeSDK` with an explicit list** (http, express, pg, pino; amqplib in WP-5) loaded with `node --import` (2026-10-03). Within ADR-010; no new ADR.
+6. Module template: **G3, `templates/nest-module/{layered,hexagonal}/`**, type-checked and covered by dependency-cruiser (2026-10-03).
+7. Spike: **I3, one day, the eight rows as listed** (2026-10-03). Throwaway code on `spike/wp-3-nest12`; results in the step log; a no-go or wrapper that changes a decided library becomes an ADR before step 3.
+
+Defaults kept: C (health module in `platform-nest`, checks per service), H (one Postgres container per `pnpm test:int` run, one database per test file), J (`tsc --watch` plus `node --watch`), `api` on port 3001. No step marked known. No accepted ADR changes, so no new ADR.
+
+`decision: recorded` on 2026-10-03.
 
 ## Step log
 
