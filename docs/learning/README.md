@@ -1,6 +1,6 @@
 # Learning explainers
 
-One file per learning work package, `wp-NN.md`, written by `/learn-step` before any code lands under a learning path (hook `.claude/hooks/learning-gate.sh`, ADR-028, report 12.3). The owner reads it, asks until it is mechanical, decides, and only then does implementation start, in small visible steps that append to the step log.
+One file per learning work package, `wp-N.md` (the WP number as is, no zero padding: `wp-1.md`, `wp-11.md`), written by `/learn-step` before any code lands under a learning path (hook `.claude/hooks/learning-gate.sh`, ADR-028, report 12.3). The owner reads it, asks until it is mechanical, decides, and only then does implementation start, in small visible steps that append to the step log.
 
 Front matter:
 
