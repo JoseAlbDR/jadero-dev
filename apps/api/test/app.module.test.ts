@@ -24,7 +24,9 @@ describe("api config", () => {
   });
 
   it("injects ApiConfig into a provider of another module (DI by abstract class under Vitest)", async () => {
-    const config = toApiConfig(apiEnv.parse({ PORT: "3001" }));
+    const config = toApiConfig(
+      apiEnv.parse({ PORT: "3001", NODE_ENV: "test", LOG_LEVEL: "fatal" }),
+    );
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule.forRoot(config), FeatureModule],
     }).compile();
