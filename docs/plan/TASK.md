@@ -1,36 +1,24 @@
-# Task: close the open follow-ups of the jadero.dev v2 plan
+# Task: start the build of jadero.dev v2 (R0)
 
-You are continuing the planning of jadero.dev v2 with the owner, in conversation.
-Everything you need is in `docs/plan/`.
-This is planning work only: do not write application code, scaffold the app, or change anything outside `docs/plan/`.
+You are continuing jadero.dev v2 with the owner. Everything you need is in `docs/plan/`.
 
-## Where things stand (2026-10-03)
+## Where things stand (2026-10-03, second pass)
 
-The owner reviewed all 76 decisions; his marks are in `owner-marks.json` and are already applied:
+- All 76 decisions are recorded in `decisions.json` and `report.md` (55 `decided`, 21 `decided-with-change`, 0 `open`). The 14 follow-ups were answered by the owner in conversation; `owner-review-followups.md` carries each resolution and, in section 6, the audit (H-1 to H-7) that preceded them.
+- The build ships as releases R0 to R7 without dates (`report.md` section 14.1, `decisions.json` `tracking.milestones`). R0 is the walking skeleton; R1 puts the site in production without the agent; R2 is the agent core.
+- New work packages WP-52 to WP-56; manual actions M-38 to M-41.
+- The owner's pace rules: learning is the goal, no deadline; the fast path of D-38 (`known`) speeds up a step the owner already understands.
 
-- `decisions.json` and `report.md` record every decision with a `status`: 53 `decided`, 9 `decided-with-change`, 14 `open`.
-- `owner-review-followups.md` holds one item per open decision (F-1..F-14): his pick, his note quoted, the conflict and a recommendation.
-  It also answers the questions in his notes, lists the 9 changes applied from his notes, and has a "For firstmate" section.
-- Plan changes already made: new WP-50 (dead-letter archive, admin events page, replay) and WP-51 (generated OpenAPI); WP-45 moved out of launch (D-68 c); D-25 notes that LLM Guard was archived on 2026-07-09.
+## What to do next
 
-Do not redo the review. Steps 1-8 of the earlier task are done.
+1. WP-0 is done in substance. Create the ADR files in `docs/adr/` from the decided ADRs in `report.md` (MADR template, index generated), one PR.
+2. WP-49: create the GitHub epic, the WP sub-issues (WP-0 to WP-56), labels, the Project and the milestones R0 to R7 (no due dates) from `decisions.json`, with the `gh` CLI, after the owner confirms the repo settings (M-1).
+3. WP-1: repo foundation, as a learning WP (explainer first, decision recorded, small visible steps, explain-back; see `report.md` section 12.3).
+4. In parallel, the owner and firstmate start WP-52 (content track, M-40).
 
-## What to do
+## Rules
 
-1. Start by giving the owner a short summary of the 14 open items (F-1..F-14), one line each with your recommendation, and ask for his answers. He answers in Spanish; reply in Spanish in chat.
-   F-1 (D-45) also settles F-2 (D-2) and F-3 (D-47), so take it first.
-2. When he answers an item, record it append-only in `decisions.json` and `report.md`: set `status` to `decided` (or `decided-with-change` with `change` filled), set `decidedOption`, `decidedAt`, `decidedBy: "owner"`, keep `ownerPick`, `ownerNote`, `previousRecommendation` as history. Mark the F-n item in `owner-review-followups.md` as resolved with his answer.
-   If he picks a new option that does not exist yet (several recommendations are new options d or e described in the follow-ups file), add it to that decision's `options` with the same shape as the others.
-3. Propagate each answer into the affected ADRs, work packages and milestones in `report.md` and `decisions.json`.
-4. Leave D-73 open unless he decides it.
-5. Do not act on the "For firstmate" items; they belong to his separate agent orchestrator.
-6. Keep `decisions.json` valid JSON with the same schema and ids (ids are never renumbered; new items get the next free id). Validate before each commit.
-
-## Style
-
-Files in English, plain and concise, no hype words, no em dashes.
-
-## Delivery
-
-Commit to a branch named `plan/followups` with conventional one-line commits (for example `docs(plan): record owner answers to F-1..F-4`), push it, and open a pull request against `main`.
-End with a short summary: which F items are resolved, which remain, and which decisions changed outcome.
+- Planning files in English, plain and concise, no hype words, no em dashes. Chat with the owner in Spanish.
+- `decisions.json` keeps its schema and ids; new items get the next free id; validate before each commit.
+- Every change goes through a PR against `main` (squash merge), with conventional one-line commits.
+- Do not act on the "For firstmate" items in `owner-review-followups.md`.

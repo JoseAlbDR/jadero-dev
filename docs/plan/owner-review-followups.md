@@ -4,13 +4,15 @@ Source: your 76 marks in `owner-marks-2026-10-03.json` (picks made on 2026-10-02
 
 - **53 decided**: your pick stands as it is. Any question in the note is answered in section 3.
 - **9 decided with a change**: your pick stands, and your note added something compatible that I applied (section 2). Please check these.
-- **14 open**: the note contradicts or materially changes the pick, or there is no pick (section 1). I did not decide these for you. Each has my concrete recommendation.
+- **14 open**: the note contradicts or materially changes the pick, or there is no pick (section 1). I did not decide these for you. Each has my concrete recommendation. **Second pass (2026-10-03): all 14 are resolved; each item below carries its resolution, and section 6 holds the audit that preceded the answers.**
 
 `decisions.json` and `report.md` carry the same statuses. Where I recommend something new, I added the option with a new letter. No existing id was renumbered, renamed or removed.
 
 ## 1. Open: your call (14)
 
 ### F-1. D-45 Edge gateway (it also settles the edge part of D-2)
+**Resolved (second pass 2026-10-03): D-45 option d, phased.** nginx alone is the edge through R0 and R1; the thin NestJS gateway is WP-53 in R7, after the site is in production, with the entry rule that it takes on only what nginx cannot do. Rate limits are never enforced twice: per-route API limits move to the gateway when it lands, nginx keeps coarse ones. Why not in R0 as first proposed: ADR-002 itself warns that a gateway every call crosses is a new shared point of failure; building it after R1 keeps the walking skeleton thin and the stale cache in front of it.
+
 - **You picked:** a, host nginx as the gateway.
 - **Your note:** a NestJS gateway appeals for learning, even as one more point of failure. You are unsure despite picking a, the question repeats D-2, and you want the best of both worlds.
 - **Conflict:** option a means no gateway service at all; the note asks for one.
@@ -40,12 +42,16 @@ Source: your 76 marks in `owner-marks-2026-10-03.json` (picks made on 2026-10-02
 - **Your idea of asking firstmate to study the gateway at your employer:** this scout may not open any company repository, so I did not, and the plan does not need it. The public patterns above are the same ones. Whether a separate, pattern-only study is acceptable is for firstmate and you to decide; I flagged it (section 5).
 
 ### F-2. D-2 Runtime topology and edge
+**Resolved (second pass 2026-10-03): D-2 option a.** The card now covers only the deployables and same origin per audience; the edge is decided once, in D-45.
+
 - **You picked:** a.
 - **Your note:** "this one is repeated", plus the gateway wish.
 - **Conflict:** the same one as F-1. D-2 predates the service split, and D-45 was added with the split, so D-45 repeats D-2's edge part.
 - **My recommendation:** from now on, D-2 covers only the deployables and "same origin per audience" (`jadero.dev`, `admin.jadero.dev`). Your pick a already settles that part. The edge component is decided once, in D-45. If you confirm, I mark D-2 decided (a) as soon as D-45 is decided.
 
 ### F-3. D-47 Admin authorization across services
+**Resolved (second pass 2026-10-03): D-47 option a now, d with WP-53.** nginx `auth_request` to `api` through R6. The identity header is an HMAC with an internal key and a timestamp from the start, so a captured header expires; this does not need the gateway. When WP-53 lands, the session check moves into it and nginx stops running `auth_request`.
+
 - **You picked:** a, nginx `auth_request` plus a signed header.
 - **Your note:** what changes with the NestJS gateway, or with both nginx and the gateway?
 - **Answer:** with D-45 d, the check moves from nginx config into the gateway's code (new option **d** here):
@@ -58,6 +64,8 @@ Source: your 76 marks in `owner-marks-2026-10-03.json` (picks made on 2026-10-02
 - **My recommendation:** d if F-1 is d, otherwise a.
 
 ### F-4. D-59 Where the MCP servers run
+**Resolved (second pass 2026-10-03): D-59 option b.** `apps/mcp` is a stateless MCP edge service hosting both servers on `mcp.jadero.dev`. Two corrections to the first-pass text: (1) D-61 said `request_intro` goes through the agent's outbox; a service without a database has no outbox, so `mcp` calls `contact`'s internal endpoint and `contact` stores the pending intro and writes its own outbox; (2) the cost is closer to 2 to 3 days because each owning service needs an internal endpoint set. A point in favor the first pass missed: `api` becomes the OAuth 2.1 authorization server and `mcp` the protected resource server, the standard split, which is the better lesson.
+
 - **You picked:** a: the public MCP in `agent` and the admin MCP in `api`.
 - **Your note:** the MCPs should have their own service, not be mixed into others. Wouldn't b need events to keep the data in sync?
 - **Conflict:** your stated preference is b.
@@ -73,6 +81,8 @@ Source: your 76 marks in `owner-marks-2026-10-03.json` (picks made on 2026-10-02
   - OAuth 2.1 for the admin MCP gets one home.
 
 ### F-5. D-7 Runtime secrets
+**Resolved (second pass 2026-10-03): D-7 option d.** The owner has or creates a personal 1Password account (M-38). WP-8 installs the CLI and the service-account token; WP-9 renders the `.env` files with `op inject`; WP-34 (SOPS) is superseded. Honest note: the token on the server has the same blast radius as the `.env` files it replaces; the gain is rotation and documentation, not more secrecy.
+
 - **You picked:** a: secrets only on the server.
 - **Your note:** could 1Password, whose CLI you use lately, be an option?
 - **Conflict:** adopting 1Password changes where secrets come from.
@@ -94,6 +104,8 @@ Source: your 76 marks in `owner-marks-2026-10-03.json` (picks made on 2026-10-02
 - **My recommendation:** new option **d** (server-only, sourced from 1Password through `op inject`) if you have or want a personal 1Password account; otherwise a. It would replace the SOPS idea (WP-34) as the "secrets as code" learning item.
 
 ### F-6. D-16 RAG pipeline details (no option picked)
+**Resolved (second pass 2026-10-03): D-16 option d.** pgvector in R2; WP-54 (R7) adds the Qdrant adapter behind `KnowledgeIndexPort`, capped at 512 MB, compared on the same retrieval evals and adopted only if it wins. The semantic cache (D-69) stays in pgvector unless the index moves.
+
 - **Your note:** a looks fine, and Qdrant is interesting to learn but probably overkill. You would explore it if the server can run it.
 - **Answer:** the server can. A corpus of a few thousand chunks needs well under 512 MB (Qdrant's own benchmark serves a million small vectors in about 1.2 GB), so cap it at 512 MB (verify at WP time).
   - *What Qdrant would teach:*
@@ -109,6 +121,8 @@ Source: your 76 marks in `owner-marks-2026-10-03.json` (picks made on 2026-10-02
   - About 3 days, plus 300 to 500 MB while both stores run.
 
 ### F-7. D-25 Guard architecture
+**Resolved (second pass 2026-10-03): D-25 option e.** TypeScript guard with the Haiku classifier in R2 (WP-23); WP-55 (R7) adds the Python Prompt Guard 2 service behind the same port with timeout, circuit breaker and fallback to Haiku. Recorded as a deliberate exception to the brainstorm's TypeScript-everywhere rule. Counts against the ADR-027 memory rule (about 500 MB).
+
 - **You picked:** a.
 - **Your note:** you would not mind Python, because the agentic team uses it a lot. You want the pros and cons of building it all ourselves versus a Python library.
 - **Conflict:** the note reopens option c.
@@ -125,6 +139,8 @@ Source: your 76 marks in `owner-marks-2026-10-03.json` (picks made on 2026-10-02
   - It replaces the planned "Prompt Guard 2 in Node through ONNX" experiment. Python enters where it is strongest (running a model), and the chat never depends on it.
 
 ### F-8. D-42 How the agent gets content
+**Resolved (second pass 2026-10-03): D-42 option a, confirmed.** Source of truth in `api`, derived search index in `agent` (a CQRS read model): `api` never sees a vector, `agent` never edits content, and the index can be deleted and rebuilt from events at any time.
+
 - **You picked:** a.
 - **Your note:** why is data stored twice? The agent's data is what lives in the vector database for RAG, so the api should not know about it. You do not see the duplication or the split between api and agent.
 - **Conflict:** you picked a while doubting its premise, so I did not treat it as decided.
@@ -147,6 +163,8 @@ Source: your 76 marks in `owner-marks-2026-10-03.json` (picks made on 2026-10-02
 - **My recommendation:** a, now worded as "source of truth in `api`, derived search index in `agent`" (a CQRS read model). Confirm it, or choose c.
 
 ### F-9. D-49 Resilience policies (no option picked)
+**Resolved (second pass 2026-10-03): D-49 option a** (cockatiel). Verify at WP time that it is still maintained; `opossum` (a circuit breaker library from Red Hat) is the fallback.
+
 - **Your note:** not sure, because you do not know "composable" policies. They sound interesting to learn and, if they work well, to propose at work.
 - **Answer:** "composable" means small policies stacked around one call. In cockatiel, `wrap(timeout, retry, circuitBreaker)` builds a single policy that:
   - times out a provider call after 10 seconds;
@@ -157,6 +175,8 @@ Source: your 76 marks in `owner-marks-2026-10-03.json` (picks made on 2026-10-02
 - **My recommendation:** a (cockatiel). It is small, and something you can propose at work once you have used it here.
 
 ### F-10. D-50 Content layers and the approval gate (no option picked)
+**Resolved (second pass 2026-10-03): D-50 option a.** Wording fixed: entries are English only, so approval is per entry, not per locale (the decision table said per-locale; ADR-031's alignment bullet was already right).
+
 - **Your note:** you do not fully follow this one. The agent will hold far more detail than the CV in the vector database. Documents could be one or several per topic (bugs, tech debt, performance), or one per big feature; still to be decided.
 - **Answer:** what you describe is option a.
   - Layer A is the short CV. Layer B is the detailed knowledge base the RAG answers from.
@@ -167,11 +187,15 @@ Source: your 76 marks in `owner-marks-2026-10-03.json` (picks made on 2026-10-02
 - **My recommendation:** a.
 
 ### F-11. D-52 Visibility of approved entries (no option picked)
+**Resolved (second pass 2026-10-03): D-52 option a** with the owner's condition recorded (D-53 enforces it) and a per-entry `indexable` flag (default true) so a public entry can still be kept out of search engines.
+
 - **Your note:** fine, as long as no proprietary company information is included.
 - **Answer:** D-53 enforces exactly that condition: a checklist, a private denylist, the `public_names` allowlist and the importer's checks. Nothing becomes public until you approve it. Anything the agent can read, a visitor can extract, so "approved means public" holds either way; the pages only make it browsable and citable.
 - **My recommendation:** a, with your condition recorded on the decision.
 
 ### F-12. D-67 Entry metadata policy (no option picked)
+**Resolved (second pass 2026-10-03): D-67 option a** with the tolerant importer above. The request to firstmate stays in section 5.
+
 - **Your note:** fine, but ask firstmate to prepare the documentation in this format where possible. Sometimes not all the information or metadata will exist, so the design has to fit the data we have.
 - **My recommendation:** a, with a tolerant importer.
   - *Required:* `id`, `title`, `type`, `period`, `role` and `approved`, plus the headings `Summary`, `Problem`, `What he built` and `Questions this answers`.
@@ -184,11 +208,15 @@ Source: your 76 marks in `owner-marks-2026-10-03.json` (picks made on 2026-10-02
 - **Your request to firstmate** to prepare entries in this format is flagged in section 5; it is outside this scout.
 
 ### F-13. D-73 Site positioning (left open on purpose)
+**Resolved (second pass 2026-10-03): D-73 option a** with the backend-engineer wording; the owner rewrites the final sentence while writing content in R1. The Frontend craft pillar is renamed Product delivery.
+
 - **Your note:** decide later. You are not full-stack: you know some frontend and have used several frameworks, but have little experience with them. Your focus is backend.
 - **What I changed:** the draft line no longer says full-stack. It now reads "a backend engineer who designs, tests, ships and operates whole systems, with applied AI as one of them". It is still a draft for you to rewrite.
 - **My recommendation, for when you decide:** a, with that wording. Also rename the "Frontend craft" pillar to "Product delivery" (a fast, accessible site in three languages; El Refugio in production with real users), so the site does not claim frontend depth you do not want to claim.
 
 ### F-14. D-75 Launch scope balance
+**Resolved (second pass 2026-10-03): D-75 new option e.** Releases R0 to R7 without dates (report section 14.1), and the cutover to jadero.dev happens in R1 **without the agent**: the home is already designed to read complete with the agent resting (D-74), so the outdated site retires months earlier and the agent ships as R2 on its own. The v1.0 of option d (88 days) was still one big release; e makes the first production step smaller.
+
 - **You picked:** a.
 - **Your note:** "we'll talk about the launch". Build in order, part by part; each version can add features; start with the basics and the foundations; no hard deadline, since this is a personal learning project.
 - **Conflict:** a fixes one big launch scope (about 104 days after this review), while the note describes incremental releases with no deadline.
@@ -328,6 +356,41 @@ Source: your 76 marks in `owner-marks-2026-10-03.json` (picks made on 2026-10-02
 
 1. **D-45:** the owner suggests that firstmate study the gateway in the employer's code, for architecture and patterns only. This scout's rules forbid opening any company repository, and the plan does not depend on it. Firstmate and the captain decide whether such a study is allowed at all.
 2. **D-67:** the owner asks firstmate to prepare documentation (knowledge entries) in the agreed format where possible, accepting gaps in metadata. This is content work outside this scout; F-12's tolerant-importer rules say which gaps are acceptable.
+
+## 6. Second pass (2026-10-03): audit of this review and the owner's answers
+
+Before the owner answered F-1 to F-14, the review itself was audited against `report.md`, `decisions.json`, `owner-marks.json` and the artifact. The classifications were correct and the integration traceable. The problems were in what nobody had summed. Each finding is written so the owner can see the reasoning, not only the outcome.
+
+### H-1. Planning notes in a repo that becomes public (D-29)
+`docs/plan/` holds working notes: local machine paths, planning chatter, the employer's name in context, and in `owner-marks.json` a note on local development ports. gitleaks does not catch prose. **Owner's judgment:** none of it is proprietary, personal data or code, and the employer's name will be on the CV anyway. **Resolution:** no history rewrite; M-39 reviews and trims the working notes (`owner-marks.json`, `owner-intent.md`, `brainstorm.md`, `TASK.md`) in WP-28 before D-29. The owner decides what stays.
+
+### H-2. The follow-ups added memory one by one and nobody summed it
+Gateway (+150 MB), `mcp` (+150), Python guard (+500, image about 1 GB), Qdrant (+300 to 500). Production would go from about 4.3 GB to about 5.6 GB, and to about 7.2 GB with staging, on an 8 GB box. **Resolution:** conditional rows in the ADR-027 memory table and a rule: at most two of {gateway, guard-classifier, Qdrant} in production at once until measured; staging starts only the services under test; a learning item that loses its eval comparison is stopped. Every WP that adds a process updates the table before it merges.
+
+### H-3. The gateway contradicted the plan's own reasoning and landed on the critical path
+F-1 d put the gateway in M1. ADR-002 says a gateway every call crosses is exactly the shared point of failure the service split avoids, and the resilience table (section 3.5) would get worse: with the gateway down, chat, contact and admin fall together. The owner wants to learn the pattern, which is legitimate. **Resolution:** D-45 d phased: nginx through R1, gateway as WP-53 in R7 with an entry rule (only after R1 is live, only for what nginx cannot do). The lesson stays; the risk moves off the skeleton.
+
+### H-4. The MCP edge service left D-61 inconsistent
+A stateless `mcp` has no outbox, but D-61 said `request_intro` publishes through the agent's outbox. **Resolution:** `mcp` calls `contact`'s internal endpoint; `contact` owns the pending intro and its outbox. Also recorded: `api` is the OAuth 2.1 authorization server, `mcp` the resource server; and the cost is 2 to 3 days because of the internal endpoints.
+
+### H-5. Checkpoint encryption on the critical path
+D-17's change put AES-256-GCM with a custom serde into WP-22. The key would live on the same server as the database, so it protects a disk dump and little else; the purge at 24 hours, the backup exclusion and LangSmith masking are the controls that matter. **Resolution:** moved to optional WP-56 (R7). WP-22 stays focused on the graph.
+
+### H-6. Content was the biggest schedule risk and sat at the end
+R2 and R3 need approved knowledge entries; writing them was in WP-28. **Resolution:** WP-52, an owner and firstmate track from R0 with gates: 10 approved entries before WP-20, about 30 before WP-41 (M-40).
+
+### H-7. The first release could be smaller than the proposed v1.0
+Option d (88 days) was still one big release. D-74 already requires the home to read complete with the agent resting, so a site without the agent is a complete product. **Resolution:** D-75 option e, releases R0 to R7; cutover in R1, agent in R2.
+
+### Other points recorded
+- D-50 said "per-locale approval" while ADR-031 says entries are English only and approval is per entry; fixed.
+- D-65 said "files are the source" while its change says the database is the source of truth and files are the interchange format; the table row already carried the change, the ADR text now agrees.
+- The daily-rotated IP salt (ADR-021) resets the 40-per-day counter at the rotation boundary, so the real daily limit can be up to 80 for one IP; align the rotation with the window or use a salt per window at WP-23.
+- PR [JoseAlbDR/jadero-dev#1](https://github.com/JoseAlbDR/jadero-dev/pull/1) was closed without merge and the commit pushed to `main` directly, while the repo is squash-only through PRs and that flow is part of the showcase; from the second pass on, every plan change goes through a PR.
+- The artifact's "Need more detail" flag was not used in the first review; for the explanation sessions it is the cheaper way to mark what to explain.
+
+### What the owner decided in conversation (2026-10-03)
+F-1 d phased, F-2 a, F-3 a then d, F-4 b, F-5 d, F-6 d, F-7 e, F-8 a, F-9 a, F-10 a, F-11 a, F-12 a, F-13 a, F-14 e; D-17 encryption moved to WP-56; H-1 handled as M-39 without a history rewrite; WP-52 created. Counts: 55 decided, 21 decided with a change, 0 open. New work packages WP-52 to WP-56; manual actions M-38 to M-41. Next step: WP-0 is done in substance (every decision recorded); R0 starts with WP-49 (tickets) and WP-1 (repo foundation).
 
 ## Sources (checked 2026-10-03)
 

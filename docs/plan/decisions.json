@@ -1,6 +1,6 @@
 {
   "title": "jadero.dev v2: plan review",
-  "summary": "The build plan for jadero.dev v2, a multilingual (es, en, de) portfolio that proves broad engineering skills: backend architecture, reliability and messaging, testing, CI/CD and infrastructure, security, frontend craft, engineering process and applied AI. It supports an internal move to the agentic team and stands equally for any future role. The backend is a modular monolith plus a few services where isolation pays, with RabbitMQ between them, deployed by CI/CD to the owner's Hetzner CX33; the ask-me agent, RAG and MCP work is one strong showcase among those pillars. Each card is one decision with options, trade-offs and a recommendation; full reasoning lives in the ADRs of report.md, and nothing gets built until these are decided (WP-0). Owner review (2026-10-03): 53 decided, 9 decided with a change from the owner's notes, 14 open with concrete follow-ups in owner-review-followups.md.",
+  "summary": "The build plan for jadero.dev v2, a multilingual (es, en, de) portfolio that proves broad engineering skills: backend architecture, reliability and messaging, testing, CI/CD and infrastructure, security, frontend craft, engineering process and applied AI. It supports an internal move to the agentic team and stands equally for any future role. The backend is a modular monolith plus a few services where isolation pays, with RabbitMQ between them, deployed by CI/CD to the owner's Hetzner CX33; the ask-me agent, RAG and MCP work is one strong showcase among those pillars. Each card is one decision with options, trade-offs and a recommendation; full reasoning lives in the ADRs of report.md, and nothing gets built until these are decided (WP-0). Owner review (2026-10-03): all 76 decisions are recorded (55 decided, 21 decided with a change from the owner's notes or the second-pass audit); the open follow-ups were settled in conversation on 2026-10-03 and the plan ships as releases R0 to R7 without dates (owner-review-followups.md, section 6).",
   "areas": [
     {
       "id": "foundation",
@@ -198,11 +198,15 @@
       "why": "Same origin per audience keeps cookies first-party and removes CORS entirely. Which component runs the edge (nginx alone, or nginx plus a thin NestJS gateway) is now D-45's question.",
       "adr": "ADR-002",
       "learn": "API gateway, gateway offloading, same-origin policy, CORS.",
-      "status": "open",
+      "status": "decided-with-change",
       "ownerNote": "Repeats D-45. nginx looks simplest, but for learning the owner would like a NestJS gateway service, ideally the best of both; wants to discuss it.",
       "ownerPick": "a",
-      "openQuestion": "Confirm that D-2 now covers only the deployables and same origin per audience, with the edge component decided once in D-45.",
-      "followup": "F-2"
+      "followup": "F-2",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-03",
+      "change": "Scope narrowed (F-2): D-2 covers the deployables and same origin per audience (jadero.dev, admin.jadero.dev). The edge component is decided once, in D-45.",
+      "resolvedQuestion": "Confirm that D-2 now covers only the deployables and same origin per audience, with the edge component decided once in D-45."
     },
     {
       "id": "D-3",
@@ -484,13 +488,17 @@
       "why": "Recommendation changed from a to d after the owner's note (F-5): 1Password keeps runtime secrets off GitHub as a does, and adds easy rotation and recovery after a server loss; a stays right if the owner has no personal 1Password account.",
       "adr": "ADR-007",
       "learn": "Blast radius, least privilege, fail-fast configuration.",
-      "status": "open",
+      "status": "decided-with-change",
       "ownerNote": "Asks whether 1Password, whose CLI the owner uses lately for secrets, could be an option.",
       "ownerPick": "a",
-      "openQuestion": "Use a personal 1Password vault as the source of the server's secrets (d), or keep plain server-only files (a)?",
       "followup": "F-5",
       "previousRecommendation": "a",
-      "previousWhy": "Server-only secrets are the simplest safe default; SOPS stays available as an optional later work package (WP-34)."
+      "previousWhy": "Server-only secrets are the simplest safe default; SOPS stays available as an optional later work package (WP-34).",
+      "decidedOption": "d",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-03",
+      "change": "Owner has or will create a personal 1Password account (never the employer's). WP-8 installs the op CLI and the read-only service-account token on the server; WP-9 renders each service's .env with op inject from infra/env/<service>.env.tpl before docker compose up. WP-34 (SOPS) is superseded.",
+      "resolvedQuestion": "Use a personal 1Password vault as the source of the server's secrets (d), or keep plain server-only files (a)?"
     },
     {
       "id": "D-8",
@@ -1012,12 +1020,16 @@
       "why": "Recommendation changed from a to d after the owner's note (F-6): pgvector stays the launch store, and a Qdrant adapter behind the same port lets the evals decide, which teaches the vector engine without risking launch.",
       "adr": "ADR-016",
       "learn": "Embeddings, chunking, HNSW, full-text search, Reciprocal Rank Fusion, reranking.",
-      "status": "open",
+      "status": "decided-with-change",
       "ownerNote": "a seems fine, but Qdrant is interesting to learn, though maybe overkill; worth exploring if the server supports it, to broaden the stack.",
-      "openQuestion": "pgvector only (a), or pgvector now plus a Qdrant adapter after launch, decided by evals (d)?",
       "followup": "F-6",
       "previousRecommendation": "a",
-      "previousWhy": "Hybrid search with fusion is the reliable default for a small, name-heavy corpus, and pgvector keeps everything in one database the agent already owns."
+      "previousWhy": "Hybrid search with fusion is the reliable default for a small, name-heavy corpus, and pgvector keeps everything in one database the agent already owns.",
+      "decidedOption": "d",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-03",
+      "change": "pgvector is the index for R2. WP-54 (R7) adds a Qdrant adapter behind KnowledgeIndexPort, capped at 512 MB, measured with the same retrieval evals (recall@5, MRR, latency); adopted only if it wins. The semantic cache (D-69) stays in pgvector unless Qdrant replaces the index, then it moves in the same step.",
+      "resolvedQuestion": "pgvector only (a), or pgvector now plus a Qdrant adapter after launch, decided by evals (d)?"
     },
     {
       "id": "D-17",
@@ -1071,7 +1083,7 @@
       "decidedOption": "a",
       "decidedBy": "owner",
       "decidedAt": "2026-10-02",
-      "change": "Checkpoint payloads encrypted at rest with AES-256-GCM through a custom serializer and a rotatable key; 24-hour purge; checkpoints left out of off-site backups."
+      "change": "Checkpoint payloads encrypted at rest with AES-256-GCM through a custom serializer and a rotatable key; 24-hour purge; checkpoints left out of off-site backups. Second pass (2026-10-03): the encryption moves out of WP-22 into optional WP-56 (R7), because the key would live on the same server as the database and the real privacy controls are the 24-hour purge, the backup exclusion and LangSmith masking; WP-22 stays focused on the graph."
     },
     {
       "id": "D-18",
@@ -1495,13 +1507,17 @@
       "why": "Recommendation changed from a to e after the owner's note (F-7): LLM Guard was archived in July 2026, so the Python piece is a Prompt Guard 2 classifier service behind the existing port, added after launch with a fallback, so the chat never depends on it.",
       "adr": "ADR-020",
       "learn": "OWASP LLM Top 10 2025, defense in depth, canary tokens, untrusted-content policy.",
-      "status": "open",
+      "status": "decided-with-change",
       "ownerNote": "Open to Python to try another language, since the agentic team uses it a lot; wants the pros and cons of building everything vs using a Python library.",
       "ownerPick": "a",
-      "openQuestion": "Keep the TypeScript guard only (a), or add a Python Prompt Guard 2 classifier service after launch behind the same port (e)?",
       "followup": "F-7",
       "previousRecommendation": "a",
-      "previousWhy": "Building the layers teaches each defense and keeps them testable; libraries and datasets still feed rules and test cases."
+      "previousWhy": "Building the layers teaches each defense and keeps them testable; libraries and datasets still feed rules and test cases.",
+      "decidedOption": "e",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-03",
+      "change": "TypeScript guard module with the Haiku classifier in R2 (WP-23). WP-55 (R7) adds a small Python service (FastAPI + Prompt Guard 2 86M) as a second adapter behind GuardClassifierPort, called with a timeout and a circuit breaker that falls back to Haiku; the evals decide which adapter stays. Recorded as a deliberate exception to the brainstorm's TypeScript-everywhere rule: Python enters where it is strongest (running a model) and the chat never depends on it. It replaces the Prompt Guard 2 ONNX-in-Node experiment.",
+      "resolvedQuestion": "Keep the TypeScript guard only (a), or add a Python Prompt Guard 2 classifier service after launch behind the same port (e)?"
     },
     {
       "id": "D-26",
@@ -2364,14 +2380,17 @@
         }
       ],
       "recommendation": "a",
-      "why": "It is what makes the agent genuinely independent, which is the point of making it a service. Clarified after the owner's note (F-8): the agent keeps a search index derived from api's content, not a second copy to maintain.",
+      "why": "Confirmed by the owner after the explanation (F-8): api owns the content (source of truth: entries, revisions, approval state); agent owns a search index derived from it (chunks, embeddings, full-text), rebuildable from api's events at any time. This is a CQRS read model, not a second copy of the same thing: api never sees a vector and agent never edits content.",
       "adr": "ADR-029",
       "learn": "Event-carried state transfer, read model, CQRS-style separation.",
-      "status": "open",
+      "status": "decided",
       "ownerNote": "Asks why data is stored twice: the agent's data is what lives in the vector database for RAG and api should not know about it; does not see the duplication or the api and agent split.",
       "ownerPick": "a",
-      "openQuestion": "With the copy explained as a derived search index, confirm a, or choose c (the agent owns knowledge entries)?",
-      "followup": "F-8"
+      "followup": "F-8",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-03",
+      "resolvedQuestion": "With the copy explained as a derived search index, confirm a, or choose c (the agent owns knowledge entries)?"
     },
     {
       "id": "D-43",
@@ -2545,16 +2564,20 @@
         }
       ],
       "recommendation": "d",
-      "why": "Recommendation changed from a to d after the owner's note (F-1): nginx keeps the edge jobs it does best, while a thin NestJS gateway behind it teaches the gateway pattern in tested code; it stays thin (no business logic, no database, outside traffic only), so it does not become the coupling point the service split avoids.",
+      "why": "The owner wants to learn the gateway pattern; the plan's own warning (a gateway every call crosses is a new shared point of failure) is respected by building it after the site is live and keeping nginx's stale cache in front of it.",
       "adr": "ADR-002",
       "learn": "Gateway offloading, gateway routing, backends for frontends, reverse proxy caching, streaming through a proxy.",
-      "status": "open",
+      "status": "decided-with-change",
       "ownerNote": "A NestJS gateway service appeals for learning even as another point of failure; unsure despite picking a; the question repeats D-2; wants the best of both; suggests firstmate study the employer's gateway for patterns only.",
       "ownerPick": "a",
-      "openQuestion": "nginx only (a), or nginx at the edge plus a thin NestJS gateway for the API routes (d)?",
       "followup": "F-1",
       "previousRecommendation": "a",
-      "previousWhy": "nginx already covers every gateway job, and the stale cache adds real resilience for free."
+      "previousWhy": "nginx already covers every gateway job, and the stale cache adds real resilience for free.",
+      "decidedOption": "d",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-03",
+      "change": "Phased (second pass, F-1): nginx alone is the edge through R0 and R1, so the walking skeleton and the first production release carry no extra hop. The thin NestJS gateway is built as learning WP-53 in R7, after the site is in production, with an entry rule: it takes on only what nginx cannot do (admin session check in tested TypeScript, merged OpenAPI document, an admin backend-for-frontend); per-route API limits move to it and nginx keeps only coarse limits, so limits are never enforced twice. Pages and static files never pass through it.",
+      "resolvedQuestion": "nginx only (a), or nginx at the edge plus a thin NestJS gateway for the API routes (d)?"
     },
     {
       "id": "D-46",
@@ -2663,17 +2686,21 @@
           ]
         }
       ],
-      "recommendation": "d",
+      "recommendation": "a",
       "why": "Recommendation follows D-45 (F-3): with the gateway, the single decision point moves from nginx config into gateway code; if D-45 stays a, option a remains the choice.",
       "adr": "ADR-008",
       "learn": "Gateway authentication, trust boundaries.",
-      "status": "open",
+      "status": "decided-with-change",
       "ownerNote": "Asks what would change with the NestJS gateway, or with both nginx and the gateway.",
       "ownerPick": "a",
-      "openQuestion": "Follows D-45: a gateway session check (d) if D-45 is d, otherwise nginx auth_request (a).",
       "followup": "F-3",
       "previousRecommendation": "a",
-      "previousWhy": "It centralizes the security decision at the edge and keeps the services free of auth logic and of runtime dependencies on api."
+      "previousWhy": "It centralizes the security decision at the edge and keeps the services free of auth logic and of runtime dependencies on api.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-03",
+      "change": "a now, d later (F-3): nginx auth_request to api with a signed identity header through R6. The header is an HMAC with an internal key and a timestamp from the start, so a captured header expires. When WP-53 lands (R7), the session check moves into the gateway (option d) and nginx stops running auth_request; the services verify the header exactly as before.",
+      "resolvedQuestion": "Follows D-45: a gateway session check (d) if D-45 is d, otherwise nginx auth_request (a)."
     },
     {
       "id": "D-48",
@@ -2773,10 +2800,13 @@
       "why": "Composable, typed policies cover every failure mode around providers with little code, and the concepts stay visible in the configuration.",
       "adr": "ADR-029",
       "learn": "Circuit breaker, retry with backoff, timeout, bulkhead.",
-      "status": "open",
+      "status": "decided",
       "ownerNote": "Unsure because composable policies are new to the owner; interesting to learn and to propose at work if they work well.",
-      "openQuestion": "Confirm cockatiel (a).",
-      "followup": "F-9"
+      "followup": "F-9",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-03",
+      "resolvedQuestion": "Confirm cockatiel (a)."
     },
     {
       "id": "D-50",
@@ -2828,10 +2858,14 @@
       "why": "It turns the CV into a set of claims backed by evidence the visitor can explore, and the three-check gate makes leaking a draft a multi-bug event instead of a one-line mistake.",
       "adr": "ADR-031",
       "learn": "Summary and evidence layers, approval state machine, tombstone events, anti-entropy reconciliation, defense in depth.",
-      "status": "open",
+      "status": "decided-with-change",
       "ownerNote": "Not fully clear; the agent will hold far more detail than the CV in the vector database; documents could be one or several per topic (bugs, tech debt, performance) or one per big feature, to be decided.",
-      "openQuestion": "Confirm two layers with the approval gate (a), with entries per piece of work and topics as tags.",
-      "followup": "F-10"
+      "followup": "F-10",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-03",
+      "change": "Wording aligned with ADR-031: entries are English only, so approval is per entry (not per locale); topics such as tech debt or performance are filters on type, domain and patterns, not separate documents; a big feature becomes several entries linked through related.",
+      "resolvedQuestion": "Confirm two layers with the approval gate (a), with entries per piece of work and topics as tags."
     },
     {
       "id": "D-51",
@@ -2935,10 +2969,14 @@
       "why": "Approval already means public, so pages add transparency and citation targets at no extra risk; noindex is a fine variant if the owner prefers lower search visibility.",
       "adr": "ADR-031",
       "learn": "Citations to stable ids, approved equals public.",
-      "status": "open",
+      "status": "decided-with-change",
       "ownerNote": "Fine as long as no proprietary employer information is included.",
-      "openQuestion": "Confirm public work-log pages for approved entries (a), with no proprietary employer information.",
-      "followup": "F-11"
+      "followup": "F-11",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-03",
+      "change": "The owner's condition is recorded on the decision: nothing proprietary from the employer may appear, which D-53 enforces (checklist, private denylist, public_names allowlist, importer checks). Work-log pages carry a per-entry indexable flag (default true) so an entry can be public but kept out of search engines.",
+      "resolvedQuestion": "Confirm public work-log pages for approved entries (a), with no proprietary employer information."
     },
     {
       "id": "D-53",
@@ -3306,13 +3344,17 @@
       "why": "Recommendation changed from a to b after the owner's note (F-4): as a stateless edge adapter that calls the owning services, the MCP service needs neither a copy of the data nor events, and the rule against synchronous calls still holds between api, agent and contact.",
       "adr": "ADR-035",
       "learn": "Driving adapters, event-carried state transfer.",
-      "status": "open",
+      "status": "decided-with-change",
       "ownerNote": "Option b would need events to keep data in sync: more work but a new pattern; the owner thinks MCPs belong in their own service, not mixed into others.",
       "ownerPick": "a",
-      "openQuestion": "Process types of the owning services (a), or a stateless MCP edge service (b)?",
       "followup": "F-4",
       "previousRecommendation": "a",
-      "previousWhy": "It follows the same service rules as everything else: each server talks only to its own data, and cross-service facts arrive as events."
+      "previousWhy": "It follows the same service rules as everything else: each server talks only to its own data, and cross-service facts arrive as events.",
+      "decidedOption": "b",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-03",
+      "change": "b as a stateless MCP edge service: apps/mcp hosts the public and the admin MCP on mcp.jadero.dev, owns no database and keeps no copy of data; it translates MCP calls into HTTP calls to internal endpoints of the owning services (agent: search; api: CV, entries, admin actions; contact: intros). D-61 adjusted accordingly: request_intro calls contact's internal endpoint, contact stores the pending intro and writes its own outbox. For the admin MCP, api is the OAuth 2.1 authorization server (Better Auth) and mcp is the protected resource server, the standard split. Cost: about 150 MB, one internal endpoint set per service, about 2 to 3 days; WP-36 and WP-42 build it.",
+      "resolvedQuestion": "Process types of the owning services (a), or a stateless MCP edge service (b)?"
     },
     {
       "id": "D-60",
@@ -3415,7 +3457,8 @@
       "ownerNote": "Not fully clear, but fine; a chance to learn new concepts.",
       "decidedOption": "a",
       "decidedBy": "owner",
-      "decidedAt": "2026-10-02"
+      "decidedAt": "2026-10-02",
+      "change": "With D-59 b (second pass): the pending intro is created by contact through an internal HTTP endpoint called by the mcp service; contact writes the outbox row and sends the confirmation link; the mcp service owns no database."
     },
     {
       "id": "D-62",
@@ -3736,10 +3779,14 @@
       "why": "Descriptive fields improve answers, while provenance is for the owner's review, not for visitors.",
       "adr": "ADR-031",
       "learn": "Data classification, contextual headers.",
-      "status": "open",
+      "status": "decided-with-change",
       "ownerNote": "Fine; firstmate should prepare documentation in this format where possible; some information or metadata will be missing, so the design must follow the data available.",
-      "openQuestion": "Confirm the metadata policy (a) with a tolerant importer: a required minimum, optional fields with defaults.",
-      "followup": "F-12"
+      "followup": "F-12",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-03",
+      "change": "Tolerant importer: required are id, title, type, period, role, approved and the headings Summary, Problem, What he built and Questions this answers; everything else is optional with defaults (missing confidence means medium, so the agent hedges; stack, patterns, related, public_names, sources default to empty; cv_bullet defaults to none); an empty section produces no chunk; the word-count rule warns instead of blocking; the importer lists what is missing per entry.",
+      "resolvedQuestion": "Confirm the metadata policy (a) with a tolerant importer: a required minimum, optional fields with defaults."
     },
     {
       "id": "D-68",
@@ -4087,10 +4134,14 @@
       "why": "It matches the owner's stated intent: the move to the agentic team stays well supported by the AI pillar, while the same page works for any backend or platform role. Draft wording updated after the owner's note (F-13): backend engineer, not full-stack.",
       "adr": "report section 2A",
       "learn": "Positioning, audience analysis.",
-      "status": "open",
+      "status": "decided-with-change",
       "ownerNote": "Decide later; the owner is not full-stack (some frontend knowledge and several frameworks used, but little experience); the focus is backend.",
-      "openQuestion": "Decide the positioning later; the draft now says backend engineer, not full-stack.",
-      "followup": "F-13"
+      "followup": "F-13",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-03",
+      "change": "Direction fixed: a backend engineer who designs, tests, ships and operates whole systems, with applied AI as one of them (not full-stack). The Frontend craft pillar is renamed Product delivery. The owner rewrites the final sentence in their own voice while writing content in R1.",
+      "resolvedQuestion": "Decide the positioning later; the draft now says backend engineer, not full-stack."
     },
     {
       "id": "D-74",
@@ -4202,19 +4253,37 @@
             "The first public version has fewer showcase features",
             "Milestones need re-cutting"
           ]
+        },
+        {
+          "id": "e",
+          "label": "Release plan R0 to R7, cutover without the agent in R1",
+          "description": "No dates. R0 walking skeleton; R1 site, content, admin, contact, PDF CV, observability, then cutover to jadero.dev with the agent not yet shipped (the home is designed to read complete with the agent resting); R2 agent core; R3 visible quality (eval battery, Under the hood, chaos test); R4 public MCP; R5 recruiter and supervisor; R6 admin MCP; R7 learning extras (gateway, Qdrant, Python guard, checkpoint encryption, semantic cache, feedback, translation assistant, blue-green, lab).",
+          "pros": [
+            "The old site retires months earlier",
+            "Every release is small and deployable on its own",
+            "Nothing learning-only blocks the site"
+          ],
+          "cons": [
+            "The first public version has no AI showcase",
+            "Two cutover-grade QA passes (R1 and R2)"
+          ]
         }
       ],
-      "recommendation": "d",
-      "why": "Recommendation changed from b to d after the owner's note (F-14): with no deadline, a smaller v1.0 replaces the old site sooner and every later milestone ships as its own release, in order.",
+      "recommendation": "e",
+      "why": "The owner's own words: build in order, part by part, foundations first, no deadline. The home page (D-74) already reads complete with the agent resting, so shipping the site before the agent is coherent with the plan and retires the outdated site early.",
       "adr": "report section 2A",
       "learn": "Scope management, critical path.",
-      "status": "open",
+      "status": "decided-with-change",
       "ownerNote": "Talk about the launch later; build in order, part by part, each version adding features, foundations first; no hard deadline for a personal learning project.",
       "ownerPick": "a",
-      "openQuestion": "Launch scope as planned (a), or incremental releases without dates, starting with a v1.0 of about 88 days (d)?",
       "followup": "F-14",
       "previousRecommendation": "b",
-      "previousWhy": "It removes the work that deepens only one pillar from the critical path and keeps the page that proves many pillars, in line with the broad positioning."
+      "previousWhy": "It removes the work that deepens only one pillar from the critical path and keeps the page that proves many pillars, in line with the broad positioning.",
+      "decidedOption": "e",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-03",
+      "change": "Milestones M0 to M6 are replaced by releases R0 to R7 without target dates (section 14.1 and tracking.milestones). Pace is the owner's: the fast path of D-38 speeds a WP up when it drags.",
+      "resolvedQuestion": "Launch scope as planned (a), or incremental releases without dates, starting with a v1.0 of about 88 days (d)?"
     },
     {
       "id": "D-76",
@@ -4279,7 +4348,7 @@
       "dependsOn": [],
       "deliverable": "ADRs accepted or rejected in docs/adr/; D-1 to D-76 answered (owner review 2026-10-03: 62 recorded, 14 open in owner-review-followups.md).",
       "learns": "",
-      "milestone": "M0"
+      "milestone": "R0"
     },
     {
       "id": "WP-1",
@@ -4291,7 +4360,7 @@
       ],
       "deliverable": "Turborepo + pnpm, packages/config, Biome, dependency-cruiser skeleton, commitlint + lefthook, compose.dev.yml with Postgres and RabbitMQ, pnpm verify, AGENTS.md + CLAUDE.md, ADR files + index.",
       "learns": "Task graphs and caching, compiled vs just-in-time internal packages, ESM exports maps.",
-      "milestone": "M0"
+      "milestone": "R0"
     },
     {
       "id": "WP-2",
@@ -4303,7 +4372,7 @@
       ],
       "deliverable": "Skills (adr, learn-step, wp, explain), learning-gate and format hooks, settings, reviewer agent.",
       "learns": "How hooks turn process into mechanism.",
-      "milestone": "M0"
+      "milestone": "R0"
     },
     {
       "id": "WP-3",
@@ -4315,7 +4384,7 @@
       ],
       "deliverable": "packages/platform-nest (Zod config, pino, problem+json, health, OTel bootstrap); apps/api skeleton; Vitest + Testcontainers harness; Nest 12 compatibility spike. Module template with the layer conventions of ADR-003 (D-3).",
       "learns": "Nest modules, providers, DI scopes and lifecycle; the request pipeline; fail-fast configuration.",
-      "milestone": "M1"
+      "milestone": "R0"
     },
     {
       "id": "WP-4",
@@ -4327,7 +4396,7 @@
       ],
       "deliverable": "Next 16 + next-intl (three locales), Tailwind v4 + shadcn base, theme toggle, standalone build.",
       "learns": "",
-      "milestone": "M1"
+      "milestone": "R0"
     },
     {
       "id": "WP-5",
@@ -4339,7 +4408,7 @@
       ],
       "deliverable": "packages/messaging (port, RabbitMQ and in-memory adapters, CloudEvents envelope, outbox relay, inbox, retry and dead-letter topology), definitions.json, AsyncAPI stub, apps/agent skeleton; a ping event crosses the broker with one trace.",
       "learns": "Exchanges, bindings, queues, acks and prefetch; at-least-once delivery; outbox and inbox.",
-      "milestone": "M1"
+      "milestone": "R0"
     },
     {
       "id": "WP-6",
@@ -4353,7 +4422,7 @@
       ],
       "deliverable": "ci.yml with caching, affected runs per service, Postgres and RabbitMQ service containers, event contract tests, coverage gates, gitleaks, PR title lint.",
       "learns": "GitHub Actions model; why affected runs are safe.",
-      "milestone": "M1"
+      "milestone": "R0"
     },
     {
       "id": "WP-7",
@@ -4365,7 +4434,7 @@
       ],
       "deliverable": "One multi-stage non-root image per service, release-please with one component per service, GHCR push, SBOM, Trivy.",
       "learns": "Image layers, least-privilege containers, semver per service.",
-      "milestone": "M1"
+      "milestone": "R0"
     },
     {
       "id": "WP-8",
@@ -4375,9 +4444,9 @@
       "dependsOn": [
         "WP-0"
       ],
-      "deliverable": "Cloud Firewall, Tailscale, deploy user + forced command, ops compose (Postgres with a database per service, RabbitMQ with vhosts, Umami, Uptime Kuma), nginx vhosts + certificates, backups with a passed restore drill.",
+      "deliverable": "Cloud Firewall, Tailscale, deploy user + forced command, ops compose (Postgres with a database per service, RabbitMQ with vhosts, Umami, Uptime Kuma), nginx vhosts + certificates, backups with a passed restore drill. Second pass (D-7 d): install the op CLI and store the read-only 1Password service-account token on the server (mode 600).",
       "learns": "Docker networking vs host firewall, least-privilege SSH, backup vs restore.",
-      "milestone": "M1"
+      "milestone": "R0"
     },
     {
       "id": "WP-9",
@@ -4388,9 +4457,9 @@
         "WP-7",
         "WP-8"
       ],
-      "deliverable": "deploy(env, service, version) over Tailscale, per-service migrations, health-gated rollout and rollback, topology deploy, smoke tests. Milestone: walking skeleton live with an event crossing the broker.",
+      "deliverable": "deploy(env, service, version) over Tailscale, per-service migrations, health-gated rollout and rollback, topology deploy, smoke tests. Milestone: walking skeleton live with an event crossing the broker. Second pass (D-7 d): the deploy script renders each service's .env with op inject from infra/env/<service>.env.tpl (op:// references, never values) right before docker compose up; a deploy fails cleanly while 1Password is unreachable, running services are unaffected.",
       "learns": "Deployment as a state machine, expand/contract for schemas and messages.",
-      "milestone": "M1"
+      "milestone": "R0"
     },
     {
       "id": "WP-10",
@@ -4402,7 +4471,7 @@
       ],
       "deliverable": "Drizzle provider, schema conventions, per-service migration workflow, repositories, transactions, integration tests.",
       "learns": "Schema design, migrations as code, transactions, repository and unit of work.",
-      "milestone": "M2"
+      "milestone": "R1"
     },
     {
       "id": "WP-11",
@@ -4415,7 +4484,7 @@
       ],
       "deliverable": "apps/contact: form endpoint with Zod, Turnstile and honeypot, per-IP limit, store-and-forward with outbox, mailer consumer behind MailPort, circuit breaker, retry tiers, dead-letter queue and replay; the form on web.",
       "learns": "A complete small microservice end to end; circuit breaker; anti-spam rules.",
-      "milestone": "M2"
+      "milestone": "R1"
     },
     {
       "id": "WP-12",
@@ -4427,7 +4496,7 @@
       ],
       "deliverable": "Aggregates, translations, revisions, publish state machine, CV bullets and knowledge entries with per-locale approval, public endpoints with cache headers, contracts package.",
       "learns": "Domain modeling, aggregate boundaries, state machines, HTTP caching.",
-      "milestone": "M2"
+      "milestone": "R1"
     },
     {
       "id": "WP-13",
@@ -4439,7 +4508,7 @@
       ],
       "deliverable": "Better Auth with GitHub allow-list, sessions, CSRF, audit log, auth rate limits, nginx auth_request and the signed internal header.",
       "learns": "OAuth code + PKCE, sessions vs JWT, cookie flags, CSRF, gateway auth.",
-      "milestone": "M2"
+      "milestone": "R1"
     },
     {
       "id": "WP-14",
@@ -4452,7 +4521,7 @@
       ],
       "deliverable": "Outbox writes on publish and approval, relay in api-worker, content.published, knowledge.entry.approved and withdrawn, daily knowledge.snapshot, revalidation consumer, scheduled jobs.",
       "learns": "Dual-write problem, event-carried state transfer, idempotent consumers.",
-      "milestone": "M2"
+      "milestone": "R1"
     },
     {
       "id": "WP-15",
@@ -4464,7 +4533,7 @@
       ],
       "deliverable": "Three hero mockups as screenshots; owner picks the visual direction.",
       "learns": "",
-      "milestone": "M3"
+      "milestone": "R1"
     },
     {
       "id": "WP-16",
@@ -4475,9 +4544,9 @@
         "WP-12",
         "WP-15"
       ],
-      "deliverable": "Home built around the positioning and the proof-pillar strip with its evidence map (D-73, D-74), home, experience timeline with CV bullets and Ask about this, work-log pages for approved entries, case studies, projects, early archive, stack and skills, blog; safe Markdown; SEO; nginx stale cache; accessibility and performance budgets met.",
+      "deliverable": "Home built around the positioning and the proof-pillar strip with its evidence map (D-73, D-74), home, experience timeline with CV bullets and Ask about this, work-log pages for approved entries, case studies, projects, early archive, stack and skills, blog; safe Markdown; SEO; nginx stale cache; accessibility and performance budgets met. Second pass (D-52): work-log pages carry a per-entry indexable flag (default true) mapped to a noindex meta tag when false.",
       "learns": "",
-      "milestone": "M3"
+      "milestone": "R1"
     },
     {
       "id": "WP-17",
@@ -4490,7 +4559,7 @@
       ],
       "deliverable": "Static SPA on admin.jadero.dev: forms on shared contracts, translation tabs, structured knowledge-entry editor with approval checklist and private denylist, CV-to-entry linking with coverage view, preview, publish, media, contact inbox, dashboard stub. Full entry lifecycle (D-65): list with status, upload, edit as a new draft revision, re-import, withdraw, delete, export to the file format.",
       "learns": "",
-      "milestone": "M3"
+      "milestone": "R1"
     },
     {
       "id": "WP-18",
@@ -4502,7 +4571,7 @@
       ],
       "deliverable": "react-pdf per locale in api-worker, regenerated on publish.",
       "learns": "",
-      "milestone": "M3"
+      "milestone": "R1"
     },
     {
       "id": "WP-19",
@@ -4514,7 +4583,7 @@
       ],
       "deliverable": "packages/ai: ports, fakes, Anthropic, OpenAI and Voyage adapters, factory, AiModule, contract suites. Per-role chat model config with one default model and optional overrides (D-13, D-14).",
       "learns": "Ports and adapters, anti-corruption layer, contract tests, config-driven DI.",
-      "milestone": "M4"
+      "milestone": "R2"
     },
     {
       "id": "WP-20",
@@ -4527,7 +4596,7 @@
       ],
       "deliverable": "agent-ingest: read model, two-layer chunking with contextual headers, approval validation, withdrawal tombstones, daily reconciliation, embeddings, vector + full-text schema, index versions, re-index, blue-green switch; HNSW vs exact scan measured.",
       "learns": "Embeddings, chunking trade-offs, approximate nearest neighbor indexes, read models.",
-      "milestone": "M4"
+      "milestone": "R2"
     },
     {
       "id": "WP-21",
@@ -4539,7 +4608,7 @@
       ],
       "deliverable": "Hybrid search, RRF, reranker with a none A/B, threshold, parent-document expansion, drill-down by CV bullet id, recall@5 and MRR in CI.",
       "learns": "Lexical vs semantic search, rank fusion, reranking, measuring retrieval.",
-      "milestone": "M4"
+      "milestone": "R2"
     },
     {
       "id": "WP-22",
@@ -4549,9 +4618,9 @@
       "dependsOn": [
         "WP-21"
       ],
-      "deliverable": "StateGraph, nodes, bounded subgraph, tools on the read model, prompts as files, PostgresSaver, SSE endpoint, citations; model A/B experiment; prompt-cache measurement. Checkpoints encrypted at rest with an AES-256-GCM serializer (D-17).",
+      "deliverable": "StateGraph, nodes, bounded subgraph, tools on the read model, prompts as files, PostgresSaver, SSE endpoint, citations; model A/B experiment; prompt-cache measurement. Checkpoints encrypted at rest with an AES-256-GCM serializer (D-17). Second pass (D-17): checkpoint encryption moved to optional WP-56; WP-22 ships PostgresSaver with the 24-hour purge only.",
       "learns": "LangGraph state, reducers, edges, checkpoints; tool calling; streaming; prompt design.",
-      "milestone": "M4"
+      "milestone": "R2"
     },
     {
       "id": "WP-23",
@@ -4563,7 +4632,7 @@
       ],
       "deliverable": "Guard module and adapters, canary and output checks, PII middleware, throttler storage, nginx limits, Turnstile, usage accounting, daily budget breaker, circuit breakers on providers, provider spend limits configured.",
       "learns": "OWASP LLM Top 10 in practice, rate-limit algorithms, circuit breaker and bulkhead.",
-      "milestone": "M4"
+      "milestone": "R2"
     },
     {
       "id": "WP-24",
@@ -4575,7 +4644,7 @@
       ],
       "deliverable": "LangSmith per environment, datasets (golden, adversarial, retrieval, one drill-down item per CV bullet), approval-gate canary eval, evaluators, evals.yml with budget and gates.",
       "learns": "Evals vs tests, LLM-as-judge pitfalls, experiment comparison.",
-      "milestone": "M4"
+      "milestone": "R2"
     },
     {
       "id": "WP-25",
@@ -4587,7 +4656,7 @@
       ],
       "deliverable": "Terminal-style prompt, streaming render, source chips, limit and resting states including agent down, i18n, accessibility.",
       "learns": "",
-      "milestone": "M4"
+      "milestone": "R2"
     },
     {
       "id": "WP-26",
@@ -4597,9 +4666,9 @@
       "dependsOn": [
         "WP-23"
       ],
-      "deliverable": "OTel export with trace propagation through RabbitMQ, logging conventions, monitors per service, dead-letter and queue-depth alerts, external backstop, admin usage page.",
+      "deliverable": "OTel export with trace propagation through RabbitMQ, logging conventions, monitors per service, dead-letter and queue-depth alerts, external backstop, admin usage page. Release R1 covers web, api, api-worker, contact and the broker; the agent monitors, usage page and dead-letter alerts for agent queues are added in R2 with WP-23.",
       "learns": "Logs, metrics, traces; context propagation across a broker.",
-      "milestone": "M5"
+      "milestone": "R1"
     },
     {
       "id": "WP-27",
@@ -4611,7 +4680,7 @@
       ],
       "deliverable": "Stop each component in staging and verify the failure-mode table; fix what does not behave as designed.",
       "learns": "Failure-mode thinking, blast radius, verifying resilience.",
-      "milestone": "M5"
+      "milestone": "R1"
     },
     {
       "id": "WP-28",
@@ -4633,9 +4702,9 @@
         "WP-50",
         "WP-51"
       ],
-      "deliverable": "Owner writes the CV and knowledge entries and approves them per locale, translations reviewed, red-team audit, accessibility and performance checks, privacy notice, gitleaks history scan, repo public.",
+      "deliverable": "Owner writes the CV and knowledge entries and approves them per locale, translations reviewed, red-team audit, accessibility and performance checks, privacy notice, gitleaks history scan, repo public. Second pass (D-75 e): the R1 pass covers the site, admin, contact and content (no agent items: no red-team audit, no eval gates); it also reviews docs/plan/ working notes (owner-marks.json, owner-intent.md, brainstorm.md, TASK.md: local machine paths and planning chatter) and removes what the owner does not want public before D-29; the agent items repeat as a QA pass at the end of R2.",
       "learns": "",
-      "milestone": "M5"
+      "milestone": "R1"
     },
     {
       "id": "WP-29",
@@ -4645,9 +4714,9 @@
       "dependsOn": [
         "WP-28"
       ],
-      "deliverable": "jadero.dev switched, redirects, pm2 services and reCAPTCHA retired, old site archived.",
+      "deliverable": "jadero.dev switched, redirects, pm2 services and reCAPTCHA retired, old site archived. Second pass (D-75 e): cutover happens in R1 without the agent; the home shows positioning, pillars, case studies and timeline, and the Ask-me entry point ships with R2.",
       "learns": "",
-      "milestone": "M5"
+      "milestone": "R1"
     },
     {
       "id": "WP-30",
@@ -4659,7 +4728,7 @@
       ],
       "deliverable": "mcp process type of agent on mcp.jadero.dev: read-only tools + CV resource, limits, a connect-from-Claude page. Superseded by WP-36 (the public MCP moved to launch); id kept for stability.",
       "learns": "MCP tools, resources and transports; another driving adapter.",
-      "milestone": "M6"
+      "milestone": "R7"
     },
     {
       "id": "WP-31",
@@ -4671,7 +4740,7 @@
       ],
       "deliverable": "Graph visualization, node timings, trace links.",
       "learns": "",
-      "milestone": "M6"
+      "milestone": "R7"
     },
     {
       "id": "WP-32",
@@ -4684,7 +4753,7 @@
       ],
       "deliverable": "LLM-drafted translations through the chat port with a glossary; owner reviews.",
       "learns": "Structured output, translation prompting.",
-      "milestone": "M6"
+      "milestone": "R7"
     },
     {
       "id": "WP-33",
@@ -4696,7 +4765,7 @@
       ],
       "deliverable": "Two upstreams per service, switch and drain.",
       "learns": "Zero-downtime deployment.",
-      "milestone": "M6"
+      "milestone": "R7"
     },
     {
       "id": "WP-34",
@@ -4706,9 +4775,9 @@
       "dependsOn": [
         "WP-9"
       ],
-      "deliverable": "Encrypted env files, age key on the server.",
+      "deliverable": "Encrypted env files, age key on the server. Superseded by D-7 d (1Password with op inject, WP-8 and WP-9); created and closed as not planned, id kept.",
       "learns": "Secret management as code.",
-      "milestone": "M6"
+      "milestone": "R7"
     },
     {
       "id": "WP-35",
@@ -4720,7 +4789,7 @@
       ],
       "deliverable": "Admin upload and CLI that parse the agreed entry format, validate it, run the automated checks and record approval from the approved flag. Also exports an entry back to the file format (D-65). Launch scope.",
       "learns": "Parsing and validating structured documents; approval bound to a revision.",
-      "milestone": "M2"
+      "milestone": "R1"
     },
     {
       "id": "WP-36",
@@ -4731,9 +4800,9 @@
         "WP-11",
         "WP-21"
       ],
-      "deliverable": "mcp process type of agent: search_experience, get_entry, list_projects, list_skills, get_cv, CV and ADR resources, request_intro with a confirmation link, limits, a connect-from-Claude page. Launch scope; supersedes WP-30.",
+      "deliverable": "mcp process type of agent: search_experience, get_entry, list_projects, list_skills, get_cv, CV and ADR resources, request_intro with a confirmation link, limits, a connect-from-Claude page. Launch scope; supersedes WP-30. Second pass (D-59 b): built as apps/mcp, a stateless MCP edge service on mcp.jadero.dev that calls internal endpoints of agent (search), api (CV, entries) and contact (request_intro, D-61 adjusted); no process type inside agent. Release R4.",
       "learns": "MCP tools, resources and transports; out-of-band human confirmation.",
-      "milestone": "M5"
+      "milestone": "R4"
     },
     {
       "id": "WP-37",
@@ -4746,7 +4815,7 @@
       ],
       "deliverable": "Requirement extraction, evidence per requirement, fit matrix with citations and gaps, own limits, session-only retention. Launch scope.",
       "learns": "Structured extraction, map-reduce, evidence-grounded generation.",
-      "milestone": "M4"
+      "milestone": "R5"
     },
     {
       "id": "WP-38",
@@ -4759,7 +4828,7 @@
       ],
       "deliverable": "Diagram with live per-service health from Uptime Kuma (cached), ADR log, last chaos-test result. Launch scope.",
       "learns": "",
-      "milestone": "M5"
+      "milestone": "R3"
     },
     {
       "id": "WP-39",
@@ -4772,7 +4841,7 @@
       ],
       "deliverable": "journal post kind linked to WP ids, draft assistant from the learning recap, /now page. Launch scope.",
       "learns": "",
-      "milestone": "M3"
+      "milestone": "R1"
     },
     {
       "id": "WP-40",
@@ -4784,7 +4853,7 @@
       ],
       "deliverable": "Toy dataset, heuristic and LLM-judge evaluators, pairwise comparison, experiments, annotation queues. Launch scope.",
       "learns": "Datasets, evaluator types, experiments, judge bias, data leakage.",
-      "milestone": "M4"
+      "milestone": "R2"
     },
     {
       "id": "WP-41",
@@ -4798,7 +4867,7 @@
       ],
       "deliverable": "About 30 owner-approved items (direct, drill-down, out-of-scope, adversarial, es/en/de), built once the first approved entries are imported, wired into the CI gates. Launch scope.",
       "learns": "Golden datasets, reference-based evaluation.",
-      "milestone": "M4"
+      "milestone": "R3"
     },
     {
       "id": "WP-42",
@@ -4809,9 +4878,9 @@
         "WP-13",
         "WP-36"
       ],
-      "deliverable": "admin-mcp process type of api: draft posts, review translations, approve entries in two steps, spend and blocked attacks; protected resource metadata, PKCE, client ID metadata documents, scopes and step-up. After launch, the next learning WP.",
+      "deliverable": "admin-mcp process type of api: draft posts, review translations, approve entries in two steps, spend and blocked attacks; protected resource metadata, PKCE, client ID metadata documents, scopes and step-up. After launch, the next learning WP. Second pass (D-59 b): the admin MCP is hosted by apps/mcp as the protected resource server; api stays the OAuth 2.1 authorization server (Better Auth). Release R6.",
       "learns": "OAuth 2.1 in depth, protected resources, resource indicators, step-up authorization.",
-      "milestone": "M6"
+      "milestone": "R6"
     },
     {
       "id": "WP-43",
@@ -4824,7 +4893,7 @@
       ],
       "deliverable": "MCP tool and prompt backed by the recruiter agent. After launch.",
       "learns": "MCP prompts.",
-      "milestone": "M6"
+      "milestone": "R5"
     },
     {
       "id": "WP-44",
@@ -4837,7 +4906,7 @@
       ],
       "deliverable": "Curated framework_component content with approval, an MCP tool and resource. After launch.",
       "learns": "",
-      "milestone": "M6"
+      "milestone": "R4"
     },
     {
       "id": "WP-45",
@@ -4848,9 +4917,9 @@
         "WP-24",
         "WP-25"
       ],
-      "deliverable": "Thumbs up and down with signed run tokens, LangSmith feedback, annotation queue, promotion into the battery. Not in v1: the owner chose no feedback (D-68, option c); kept as a possible follow-up after launch.",
+      "deliverable": "Thumbs up and down with signed run tokens, LangSmith feedback, annotation queue, promotion into the battery. Not in v1: the owner chose no feedback (D-68, option c); kept as a possible follow-up after launch. Second pass (D-75 e): release R7, still a possible follow-up only (D-68 c).",
       "learns": "Human-in-the-loop evaluation, data flywheel.",
-      "milestone": "M6"
+      "milestone": "R7"
     },
     {
       "id": "WP-46",
@@ -4863,7 +4932,7 @@
       ],
       "deliverable": "pgvector cache, lookup, source-id invalidation, popularity threshold, hit and false-hit rates measured on the battery. After launch.",
       "learns": "Caching strategies, invalidation, cache poisoning.",
-      "milestone": "M6"
+      "milestone": "R7"
     },
     {
       "id": "WP-47",
@@ -4876,7 +4945,7 @@
       ],
       "deliverable": "Supervisor reusing the guard classification, handoffs to CV and recruiter agent subgraphs, per-agent limits and eval slices. Launch scope.",
       "learns": "Supervisor and handoff patterns, subgraphs.",
-      "milestone": "M4"
+      "milestone": "R5"
     },
     {
       "id": "WP-48",
@@ -4888,7 +4957,7 @@
       ],
       "deliverable": "Synthetic traffic, agent and broker outages, steady-state checks, report published to the journal and the Under the hood page. Launch scope.",
       "learns": "Chaos engineering, steady-state hypothesis.",
-      "milestone": "M5"
+      "milestone": "R3"
     },
     {
       "id": "WP-49",
@@ -4900,7 +4969,7 @@
       ],
       "deliverable": "The decided tracking structure, generated from this file's workPackages with the gh CLI: an epic issue with one sub-issue per WP (WP-30 created and closed as not planned, linking WP-36), milestones M0 to M6, labels, issue templates, a Project with fields, views and workflows. Right after WP-0.",
       "learns": "Ticket lifecycle, definition of ready and done, traceability.",
-      "milestone": "M0"
+      "milestone": "R0"
     },
     {
       "id": "WP-50",
@@ -4914,7 +4983,7 @@
       ],
       "deliverable": "A dead_letters table in each service's database, written from its dead-letter queues (generic code in packages/messaging); admin endpoints per service; an Events page in the admin with outbox, inbox, retry and dead-letter counts per event type and a replay action that republishes with a replayed-by header (D-12). Launch scope.",
       "learns": "Operating a message system: dead-letter handling, safe replay with idempotent consumers, operational visibility.",
-      "milestone": "M3"
+      "milestone": "R1"
     },
     {
       "id": "WP-51",
@@ -4927,7 +4996,69 @@
       ],
       "deliverable": "OpenAPI generated from the Zod contracts through @nestjs/swagger 12's standardSchemaConverter (zod-openapi), one document per service, a docs UI outside production, and a breaking-change check against main in CI (D-6). Launch scope.",
       "learns": "OpenAPI from schemas, API documentation as code, breaking-change detection.",
-      "milestone": "M2"
+      "milestone": "R1"
+    },
+    {
+      "id": "WP-52",
+      "title": "Content track: CV bullets and knowledge entries",
+      "tag": "owner",
+      "size": "L",
+      "dependsOn": [],
+      "deliverable": "Owner and firstmate track that runs in parallel from R0. Layer A CV bullets drafted before WP-12 ends; at least 10 approved Layer B entries in the agreed format imported through WP-35 before WP-20 starts, and about 30 before WP-41. Entries follow knowledge-entry-format.md with the tolerant rules of D-67; every entry passes the D-53 checklist. Gate: WP-20, WP-21 and WP-41 do not start without their entry count, so the agent is built and evaluated on real data from the first day.",
+      "learns": "",
+      "milestone": "R1"
+    },
+    {
+      "id": "WP-53",
+      "title": "NestJS API gateway",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-29",
+        "WP-13",
+        "WP-51"
+      ],
+      "deliverable": "apps/gateway behind nginx for /api/* on both origins (D-45 d, phased): routing to api, agent, contact and mcp; admin session check against api with a 30-second cache and the signed identity header (D-47 moves from a to d); strips inbound internal headers, adds correlation ids; per-route limits moved from nginx; merged OpenAPI document and docs UI; SSE pass-through with no buffering. Rules: no business logic, no database, outside traffic only; a restart loses nothing. Entry rule: built only after R1 is in production, and only for what nginx cannot do. Amends ADR-002, ADR-008 and ADR-029; nginx keeps TLS, static files, the stale page cache and coarse limits.",
+      "learns": "API gateway, gateway routing and offloading, backends for frontends, reverse proxying with streaming, session verification in tested TypeScript.",
+      "milestone": "R7"
+    },
+    {
+      "id": "WP-54",
+      "title": "Qdrant adapter behind the knowledge index port",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-21",
+        "WP-41"
+      ],
+      "deliverable": "Qdrant container in the ops compose capped at 512 MB (verify at WP time), a QdrantKnowledgeIndex adapter behind KnowledgeIndexPort (collections, payload filters for locale and index version, dense plus sparse hybrid query with RRF, collection aliases for the blue-green re-index), the same contract suite as the pgvector adapter, and a comparison on the retrieval eval (recall@5, MRR, latency) plus a journal post. Adopted as default only if it wins (D-16 d).",
+      "learns": "A dedicated vector engine: collections, payload filters, HNSW tuning, quantization, aliases; swapping a store behind a port and letting evals decide.",
+      "milestone": "R7"
+    },
+    {
+      "id": "WP-55",
+      "title": "Python guard classifier service",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-23",
+        "WP-41"
+      ],
+      "deliverable": "apps/guard-classifier: FastAPI service with Prompt Guard 2 86M (multilingual, CPU), uv, ruff and pytest, its own image and release line, capped at about 500 MB; a PromptGuardClassifier adapter behind GuardClassifierPort in agent, called with a timeout and a cockatiel circuit breaker that falls back to the Haiku classifier; adversarial and false-positive evals in es, en and de decide which adapter stays (D-25 e). Replaces the ONNX-in-Node experiment.",
+      "learns": "A polyglot service behind a port, running a classifier model in production, fallback and circuit breaking in the chat path, Python tooling used by the agentic team.",
+      "milestone": "R7"
+    },
+    {
+      "id": "WP-56",
+      "title": "Checkpoint encryption at rest (optional)",
+      "tag": "learning",
+      "size": "S",
+      "dependsOn": [
+        "WP-22"
+      ],
+      "deliverable": "A custom serde for PostgresSaver that encrypts checkpoint payloads with AES-256-GCM, a key id stored per row so the key can rotate, the key sourced from runtime secrets (D-7), a rotation runbook. Optional (D-17 second pass): the 24-hour purge, backup exclusion and LangSmith masking already cover the privacy goal.",
+      "learns": "Envelope encryption at rest, key rotation, where encryption does and does not help.",
+      "milestone": "R7"
     }
   ],
   "manualActions": [
@@ -5149,9 +5280,33 @@
     },
     {
       "id": "M-37",
-      "what": "Settle the 14 open decisions in owner-review-followups.md (D-2, D-7, D-16, D-25, D-42, D-45, D-47, D-49, D-50, D-52, D-59, D-67, D-73, D-75) and check the 9 changes applied to decided items.",
+      "what": "Settle the 14 open decisions in owner-review-followups.md (D-2, D-7, D-16, D-25, D-42, D-45, D-47, D-49, D-50, D-52, D-59, D-67, D-73, D-75) and check the 9 changes applied to decided items. Done 2026-10-03: all 14 settled in the second pass (owner-review-followups.md, section 6).",
       "when": "WP-0",
       "why": "They gate the ADRs and work packages they touch; the other 62 decisions are recorded."
+    },
+    {
+      "id": "M-38",
+      "what": "Create a personal 1Password vault for jadero.dev (never the employer's account), a read-only service account for that vault, and store its token on the server (mode 600).",
+      "when": "WP-8",
+      "why": "D-7 d: the deploy renders every .env from op:// references; GitHub never sees runtime secrets."
+    },
+    {
+      "id": "M-39",
+      "what": "Before making the repo public (D-29): review docs/plan/ working notes (owner-marks.json, owner-intent.md, brainstorm.md, TASK.md) and delete or redact what you do not want public (local machine paths, planning chatter). No history rewrite is required; the owner judged the content non-proprietary.",
+      "when": "WP-28 (R1)",
+      "why": "Planning notes are not covered by the content rules of ADR-031, and gitleaks does not catch prose."
+    },
+    {
+      "id": "M-40",
+      "what": "Start the content track (WP-52) with firstmate: CV bullets first, then knowledge entries in the agreed format; aim for 10 approved entries before WP-20 and about 30 before WP-41.",
+      "when": "From R0, in parallel",
+      "why": "The agent, retrieval evals and the battery need real approved entries; without them R2 runs on placeholders."
+    },
+    {
+      "id": "M-41",
+      "what": "Create the GitHub milestones R0 to R7 (no due dates) when WP-49 runs; do not create M0 to M6.",
+      "when": "WP-49",
+      "why": "D-75 e replaced the phase milestones with releases."
     }
   ],
   "tracking": {
@@ -5159,6 +5314,191 @@
     "tool": "GitHub Issues with sub-issues, a GitHub Project board and milestones",
     "hierarchy": "One epic issue (jadero.dev v2) with one sub-issue per work package titled WP-NN: <title>; a learning WP's explainer steps become its own sub-issues when it starts; dependencies become blocked-by links where available.",
     "milestones": [
+      {
+        "id": "R0",
+        "name": "Walking skeleton",
+        "exitCriterion": "An event crosses the broker on new.jadero.dev; CI, images and deploy work end to end",
+        "workPackages": [
+          "WP-0",
+          "WP-49",
+          "WP-1",
+          "WP-2",
+          "WP-3",
+          "WP-4",
+          "WP-5",
+          "WP-6",
+          "WP-7",
+          "WP-8",
+          "WP-9"
+        ],
+        "targetDate": null
+      },
+      {
+        "id": "R1",
+        "name": "Site in production",
+        "exitCriterion": "jadero.dev switched to v2 without the agent; content, admin, contact, PDF CV, observability and the game day done; old site and pm2 services retired",
+        "workPackages": [
+          "WP-52",
+          "WP-10",
+          "WP-11",
+          "WP-12",
+          "WP-13",
+          "WP-14",
+          "WP-51",
+          "WP-15",
+          "WP-16",
+          "WP-17",
+          "WP-18",
+          "WP-35",
+          "WP-39",
+          "WP-50",
+          "WP-26",
+          "WP-27",
+          "WP-28",
+          "WP-29"
+        ],
+        "targetDate": null
+      },
+      {
+        "id": "R2",
+        "name": "Agent core",
+        "exitCriterion": "The agent answers with citations in three languages, guarded, traced and evaluated, on real approved entries",
+        "workPackages": [
+          "WP-19",
+          "WP-20",
+          "WP-21",
+          "WP-40",
+          "WP-22",
+          "WP-23",
+          "WP-24",
+          "WP-25"
+        ],
+        "targetDate": null
+      },
+      {
+        "id": "R3",
+        "name": "Visible quality",
+        "exitCriterion": "Eval battery in CI, Under the hood page live, chaos test passed and published",
+        "workPackages": [
+          "WP-41",
+          "WP-38",
+          "WP-48"
+        ],
+        "targetDate": null
+      },
+      {
+        "id": "R4",
+        "name": "Public MCP",
+        "exitCriterion": "mcp.jadero.dev usable from any MCP client; request_intro confirmed out of band",
+        "workPackages": [
+          "WP-36",
+          "WP-44"
+        ],
+        "targetDate": null
+      },
+      {
+        "id": "R5",
+        "name": "Recruiter mode",
+        "exitCriterion": "Supervisor routes to the CV and recruiter agents; match_job_description over MCP",
+        "workPackages": [
+          "WP-37",
+          "WP-47",
+          "WP-43"
+        ],
+        "targetDate": null
+      },
+      {
+        "id": "R6",
+        "name": "Admin MCP",
+        "exitCriterion": "OAuth 2.1 protected admin MCP with step-up approvals",
+        "workPackages": [
+          "WP-42"
+        ],
+        "targetDate": null
+      },
+      {
+        "id": "R7",
+        "name": "Learning extras",
+        "exitCriterion": "Each item ships independently and only if its evals or its entry rule justify it; WP-30 and WP-34 are created and closed as superseded",
+        "workPackages": [
+          "WP-53",
+          "WP-54",
+          "WP-55",
+          "WP-56",
+          "WP-46",
+          "WP-45",
+          "WP-32",
+          "WP-33",
+          "WP-31",
+          "WP-30",
+          "WP-34"
+        ],
+        "targetDate": null
+      }
+    ],
+    "labels": {
+      "type": [
+        "type:epic",
+        "type:wp",
+        "type:task",
+        "type:bug",
+        "type:chore",
+        "type:adr"
+      ],
+      "tag": [
+        "tag:learning",
+        "tag:frontend",
+        "tag:ops",
+        "tag:owner",
+        "tag:agent-tooling"
+      ],
+      "size": [
+        "size:S",
+        "size:M",
+        "size:L"
+      ],
+      "area": [
+        "area:web",
+        "area:admin",
+        "area:api",
+        "area:agent",
+        "area:contact",
+        "area:messaging",
+        "area:mcp",
+        "area:evals",
+        "area:infra"
+      ],
+      "flags": [
+        "blocked",
+        "needs-decision",
+        "optional",
+        "superseded",
+        "security"
+      ]
+    },
+    "projectFields": [
+      "Status (Backlog, Ready, In progress, In review, Done)",
+      "WP id",
+      "Tag",
+      "Size",
+      "Area",
+      "Learning gate (n/a, explainer written, decision recorded, explained back)",
+      "Start date",
+      "Target date"
+    ],
+    "projectViews": [
+      "Board by status",
+      "Roadmap by milestone",
+      "Table grouped by tag",
+      "Learning (tag:learning)"
+    ],
+    "conventions": [
+      "Definition of ready: acceptance criteria written, ADRs decided, dependencies done, learning explainer scheduled.",
+      "Branch wp/NN-slug; PR title is a conventional commit scoped to the service; PR body says Closes #<issue>; squash merge.",
+      "release-please changelogs link each PR and, through it, the closed issue.",
+      "Issues and PRs follow the content rules (public-level only), because they become public with the repo."
+    ],
+    "previousMilestones": [
       {
         "id": "M0",
         "name": "Decide and set up",
@@ -5261,82 +5601,48 @@
         ]
       }
     ],
-    "labels": {
-      "type": [
-        "type:epic",
-        "type:wp",
-        "type:task",
-        "type:bug",
-        "type:chore",
-        "type:adr"
-      ],
-      "tag": [
-        "tag:learning",
-        "tag:frontend",
-        "tag:ops",
-        "tag:owner",
-        "tag:agent-tooling"
-      ],
-      "size": [
-        "size:S",
-        "size:M",
-        "size:L"
-      ],
-      "area": [
-        "area:web",
-        "area:admin",
-        "area:api",
-        "area:agent",
-        "area:contact",
-        "area:messaging",
-        "area:mcp",
-        "area:evals",
-        "area:infra"
-      ],
-      "flags": [
-        "blocked",
-        "needs-decision",
-        "optional",
-        "superseded",
-        "security"
-      ]
-    },
-    "projectFields": [
-      "Status (Backlog, Ready, In progress, In review, Done)",
-      "WP id",
-      "Tag",
-      "Size",
-      "Area",
-      "Learning gate (n/a, explainer written, decision recorded, explained back)",
-      "Start date",
-      "Target date"
-    ],
-    "projectViews": [
-      "Board by status",
-      "Roadmap by milestone",
-      "Table grouped by tag",
-      "Learning (tag:learning)"
-    ],
-    "conventions": [
-      "Definition of ready: acceptance criteria written, ADRs decided, dependencies done, learning explainer scheduled.",
-      "Branch wp/NN-slug; PR title is a conventional commit scoped to the service; PR body says Closes #<issue>; squash merge.",
-      "release-please changelogs link each PR and, through it, the closed issue.",
-      "Issues and PRs follow the content rules (public-level only), because they become public with the repo."
-    ]
+    "releases": "Second pass 2026-10-03 (D-75 e): releases R0 to R7 replace the phase milestones M0 to M6 (kept under previousMilestones for history). No target dates; the order is the commitment. GitHub milestones are named R0 to R7."
   },
   "review": {
     "date": "2026-10-03",
     "marks": "owner-marks-2026-10-03.json",
     "followups": "owner-review-followups.md",
     "counts": {
-      "decided": 53,
-      "open": 14,
-      "decided-with-change": 9
+      "decided": 55,
+      "decided-with-change": 21,
+      "open": 0
     },
     "statuses": {
       "decided": "The owner's pick stands as is; any question in the note is answered in the follow-ups file.",
       "decided-with-change": "The owner's pick stands and the note added a compatible change, recorded in the change field.",
       "open": "No pick, or the note contradicts or materially changes the pick; ownerPick, openQuestion and followup say what is pending."
+    },
+    "secondPass": {
+      "date": "2026-10-03",
+      "summary": "Audit of the first review pass plus the owner's answers to F-1..F-14 in conversation. All 14 open decisions are now decided (7 with a change). Findings H-1 to H-7 and their resolutions are in owner-review-followups.md, section 6.",
+      "resolved": {
+        "F-1": "D-45 d, phased: nginx through R1, gateway as WP-53 in R7",
+        "F-2": "D-2 a",
+        "F-3": "D-47 a now, d with WP-53",
+        "F-4": "D-59 b, stateless apps/mcp; D-61 adjusted",
+        "F-5": "D-7 d, 1Password with op inject; WP-34 superseded",
+        "F-6": "D-16 d, Qdrant adapter in WP-54 (R7)",
+        "F-7": "D-25 e, Python classifier service in WP-55 (R7)",
+        "F-8": "D-42 a confirmed (source of truth in api, derived index in agent)",
+        "F-9": "D-49 a",
+        "F-10": "D-50 a, approval per entry",
+        "F-11": "D-52 a with the owner's condition; indexable flag",
+        "F-12": "D-67 a, tolerant importer",
+        "F-13": "D-73 a, backend engineer wording; pillar renamed Product delivery",
+        "F-14": "D-75 e, releases R0 to R7, cutover in R1 without the agent"
+      },
+      "otherChanges": [
+        "D-17: checkpoint encryption moved from WP-22 to optional WP-56 (R7).",
+        "New work packages WP-52 (content track), WP-53 (gateway), WP-54 (Qdrant adapter), WP-55 (Python guard service), WP-56 (checkpoint encryption).",
+        "Releases R0 to R7 replace milestones M0 to M6; every WP has a release.",
+        "Memory budget rule in ADR-027: at most two of gateway, mcp, guard-classifier and Qdrant run in production until measured.",
+        "Manual actions M-38 to M-41 added."
+      ]
     }
   }
 }
