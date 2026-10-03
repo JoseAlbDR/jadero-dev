@@ -16,30 +16,26 @@ How to run the delivery flow on the owner's machine with Claude Code and firstma
 cd ~/dev/projects/jadero-dev && git switch main && git pull
 nvm use && corepack enable
 pnpm install          # prepare: lefthook install writes .git/hooks
-pnpm verify           # first run builds the cache
-pnpm verify           # FULL TURBO
+pnpm verify:all       # first run builds the cache (on main, plain verify runs nothing)
+pnpm verify:all       # FULL TURBO
 ```
 
 Commits on the owner's machine carry the owner's identity. A cloud session commits as the tool; its branch authors are reset before a PR (see `docs/agent-tooling.md`).
 
-## First local session: close WP-1
+## After a merge to main
 
-PR #66 is implemented, reviewed by the reviewer agent and green. What the cloud could not do: start Docker, the explain-back, the Recap.
+WP-1 closed this way on 2026-10-03: trace 3 checked with Docker on the owner's machine, the explain-back recorded in the Recap, the squash merge, the card moved to Done on its own.
 
-1. Squash merge #67 on GitHub first (process gaps and this playbook), so the skills you run are the corrected ones. It merges cleanly with #66 in either order.
-2. `git fetch && git switch wp/1-repo-foundation && git pull && nvm install && corepack enable && pnpm install`. Chain with `&&`: if the switch fails, nothing else runs on the wrong branch.
-3. `pnpm dev:up`, then the trace 3 check of `docs/learning/wp-1.md`: `psql -U agent -d content_dev` must be denied; `psql -U agent -d agent_dev -c '\dx'` must list `vector`; `http://localhost:15672` accepts user `dev`. Then `pnpm dev:down`.
-4. In Claude Code: "Append the dev:up result to step 6 of the WP-1 step log, then do my explain-back for steps 2, 4 and 7." Answer in your own words; the gaps go under Recap. Commit `docs(learning): add the WP-1 recap`. Push.
-5. Squash merge #66 on GitHub. The issue closes and the board moves to Done.
-6. On `main`: `git pull && pnpm verify`.
+On `main`: `git pull && pnpm verify:all`. `pnpm verify` runs nothing there ("No tasks were executed"): `--affected` compares with `main`, so on `main` nothing is affected. On a branch, `pnpm verify` is the right command.
 
-Also waiting, no code: the Project views and workflows (`scripts/github/README.md`); mark "Deployed to staging" and "Changelog entry" n/a on issue #9.
+Also waiting, no code: the Project views (`scripts/github/README.md`).
 
 ## Gates, in order
 
 - **Decision, before code.** The hook refuses edits under a learning path until the explainer says `decision: recorded`.
 - **Explain-back, before the merge.** The issue lists "Explained back by the owner"; the Recap lands in the same PR, so the history shows the code and what was understood of it together. A missed Recap lands later as a `docs(learning)` commit.
 - **`pnpm verify`, before every commit; CI and the reviewer agent, before the owner reviews.**
+- **`pnpm verify` again after merging `main` into a branch, before pushing.** A merge brings files that never passed your hooks (WP-1 pushed a merge with an unformatted file from another PR).
 
 ## Branch names and versions
 
@@ -96,6 +92,9 @@ The file is the textbook for this WP; the session is the teacher. Read the quest
 | a reviewer wants a design change | larger than a nit | decide; `/adr` first if an ADR changes |
 | `git switch` aborts: untracked `package.json` or `pnpm-lock.yaml` would be overwritten | a `pnpm` or `npx` run on `main` before WP-1 merged left them behind | look at them (`git status`, `cat package.json`), then `rm package.json pnpm-lock.yaml && rm -rf node_modules` and switch again |
 | `nvm use`: no .nvmrc found | the current branch predates WP-1 | switch to a branch with `.nvmrc`; `nvm install` installs and selects 24.x |
+| `pnpm verify` on `main`: "No tasks were executed" | `--affected` has no diff against `main` | `pnpm verify:all` |
+| RabbitMQ exits with `.erlang.cookie: eacces` | an old volume where a root process wrote the cookie | `user: rabbitmq` is in the compose file; run `pnpm dev:down && docker compose -f infra/compose/compose.dev.yml down -v` once |
+| Biome warns that `recommended` is deprecated | Biome 2.5 renamed it | `pnpm exec biome migrate --write` (it becomes `"preset": "recommended"`) |
 | Claude cannot read `.env.example` | `settings.json` denies `Read(.env.*)` | expected; it reads it through Bash |
 
 ## With firstmate
@@ -107,6 +106,7 @@ Point the implementers at `AGENTS.md`. The mapping (plan, approve, implement, re
 | Command | Does |
 |---|---|
 | `pnpm verify` | lint, architecture rules, typecheck, unit tests, affected only, cached |
+| `pnpm verify:all` | the same on every package; use it on `main` and in CI |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / format and safe fixes |
 | `pnpm depcruise` | import rules of ADR-003 and AGENTS.md section 4 |
 | `pnpm dev:up` / `pnpm dev:down` | Postgres 18 (pgvector) and RabbitMQ 4 |
