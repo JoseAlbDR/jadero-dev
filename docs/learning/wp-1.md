@@ -1,7 +1,7 @@
 ---
 wp: 1
-decision: pending
-adr: [ADR-001, ADR-024, ADR-009, ADR-025, ADR-004, ADR-027, ADR-028]
+decision: recorded
+adr: [ADR-001, ADR-024, ADR-009, ADR-025, ADR-042, ADR-027, ADR-028]
 ---
 
 # WP-1: Repo foundation
@@ -287,6 +287,20 @@ Answer each with a letter (or "your call"); the recommendation is in brackets.
 E (no project references), H (plain RabbitMQ, definitions in WP-5), I (lint and depcruise at the root) and K (dependency-free `.mjs` scripts) have a clear default; say so if you want any of them changed. Also say which steps you already know (D-38 fast path): Biome, commitlint + lefthook, Docker Compose and the ADR scripts are candidates.
 
 ## Decision
+
+Recorded 2026-10-03. The owner took the recommendation on every question.
+
+1. A1: plain compiled packages; `typecheck` and `test` depend on `^build`. A2 (`@jadero/source` condition) is a later, measured change.
+2. B1: TypeScript 6.0.3 in the catalog, matching `@nestjs/cli` 12.
+3. C2: pnpm 11 (11.28.2 today), pinned in `package.json`; the one-day `minimumReleaseAge` default stays on.
+4. D2: Node 24 LTS. Recorded as ADR-042, which supersedes ADR-004 on the Node line.
+5. Postgres 18: `pgvector/pgvector:0.8.7-pg18`; production (WP-8) uses the same major.
+6. G1: three databases and three roles in the dev init script.
+7. J1: fixed commit scope list (`scope-enum`); a new package adds its scope in the same PR.
+
+Defaults confirmed: E1 (no project references), H1 (plain RabbitMQ, definitions in WP-5), I1 (lint and depcruise once at the root), K (dependency-free `.mjs` ADR scripts).
+
+Fast path: none marked `known`; every step gets its two-line note and the explain-back covers steps 2, 4 and 7.
 
 ## Step log
 

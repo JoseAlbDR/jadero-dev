@@ -15,7 +15,7 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-001 | Monorepo tooling | accepted | D-1 | [0001-monorepo-tooling.md](0001-monorepo-tooling.md) |
 | ADR-002 | Runtime topology and the edge | accepted | D-2, D-44, D-45 | [0002-runtime-topology-and-the-edge.md](0002-runtime-topology-and-the-edge.md) |
 | ADR-003 | Internal architecture of each service | accepted | D-3 | [0003-internal-architecture-of-each-service.md](0003-internal-architecture-of-each-service.md) |
-| ADR-004 | NestJS major version and module system | accepted | D-4 | [0004-nestjs-major-version-and-module-system.md](0004-nestjs-major-version-and-module-system.md) |
+| ADR-004 | NestJS major version and module system | superseded by ADR-042 | D-4 | [0004-nestjs-major-version-and-module-system.md](0004-nestjs-major-version-and-module-system.md) |
 | ADR-005 | Data access (ORM) | accepted | D-5 | [0005-data-access.md](0005-data-access.md) |
 | ADR-006 | Validation, contracts and API documentation | accepted | D-6 | [0006-validation-contracts-and-api-documentation.md](0006-validation-contracts-and-api-documentation.md) |
 | ADR-007 | Configuration and secrets | accepted | D-7 | [0007-configuration-and-secrets.md](0007-configuration-and-secrets.md) |
@@ -53,5 +53,6 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-039 | Multi-agent supervisor | accepted | D-70 | [0039-multi-agent-supervisor.md](0039-multi-agent-supervisor.md) |
 | ADR-040 | Chaos test | accepted | D-71 | [0040-chaos-test.md](0040-chaos-test.md) |
 | ADR-041 | Work tracking from roadmap to tickets | accepted | D-72 | [0041-work-tracking-from-roadmap-to-tickets.md](0041-work-tracking-from-roadmap-to-tickets.md) |
+| ADR-042 | NestJS 12 on Node 24 LTS | accepted | D-4 | [0042-node-24-lts-runtime.md](0042-node-24-lts-runtime.md) |
 
 Read in this order for a first pass: 029 (service boundaries), 002 (topology and edge), 003 (inside a service), 012 (async work), 031 (content layers), 013 to 016 (AI layer and RAG), 020 and 021 (security), 025 to 027 (delivery and hosting), 041 (work tracking).
