@@ -6,7 +6,8 @@ import { z } from "zod";
  */
 export const platformEnv = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  PORT: z.coerce.number().int().min(1).max(65_535),
+  // string first, so a missing PORT reads "received undefined" instead of coerce's "received NaN"
+  PORT: z.string().pipe(z.coerce.number<string>().int().min(1).max(65_535)),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
   SERVICE_NAME: z.string().min(1),
 });

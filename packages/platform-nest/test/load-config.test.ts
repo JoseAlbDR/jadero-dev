@@ -74,6 +74,7 @@ describe("loadConfig", () => {
       "PORT",
       "DATABASE_URL",
     ]);
+    expect(lines[1]).toContain("received undefined");
     expect(lines.join("\n")).not.toContain("s3cr3t-value");
   });
 });
