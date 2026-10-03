@@ -11,6 +11,6 @@ adr: [ADR-030, ADR-012]
 fast_path: known        # optional: the owner already knows this step (D-38); skips the full explainer and explain-back
 ```
 
-Sections, in this order: First principles, One concrete trace, Patterns, Options and trade-offs, The question for the owner, Decision, Step log, Recap. Template: `wp-template.md`.
+Sections, in this order: Facts checked, First principles, One concrete trace (two for a service WP), Patterns, Options and trade-offs, The question for the owner, Proposed steps, Decision, Step log, Recap. Template: `wp-template.md`.
 
 Each explainer later becomes the raw material of a journal post (ADR-034).

@@ -4,7 +4,12 @@ decision: pending
 adr: []
 ---
 
-# WP-NN: <title>
+# WP-N: <title>
+
+## Facts checked
+
+| Tool | Version on YYYY-MM-DD | Source | Note |
+|---|---|---|---|
 
 ## First principles
 
@@ -15,6 +20,8 @@ adr: []
 ## Options and trade-offs
 
 ## The question for the owner
+
+## Proposed steps
 
 ## Decision
 

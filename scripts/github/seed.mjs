@@ -124,8 +124,9 @@ for (const wp of plan.workPackages) {
     "- [ ] Tests green with the coverage gates of ADR-009",
     "- [ ] AGENTS.md and docs updated where a rule or command changed",
     learning ? "- [ ] Journal post drafted" : "- [ ] n/a journal post",
-    "- [ ] Deployed to staging",
-    "- [ ] Changelog entry present (release-please)",
+    ...(wp.milestone === "R0"
+      ? ["- [ ] Deployed to staging: n/a until WP-8 and WP-9 land", "- [ ] Changelog entry (release-please): n/a until WP-6 and WP-7 land"]
+      : ["- [ ] Deployed to staging", "- [ ] Changelog entry present (release-please)"]),
     "",
     "Content rules apply: public-level only, no employer details, no secrets (the repo becomes public).",
   ].join("\n");
