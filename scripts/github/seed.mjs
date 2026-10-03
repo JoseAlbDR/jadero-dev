@@ -25,7 +25,7 @@ const READ_ONLY =
 function gh(cmdArgs, { json = false, input } = {}) {
   const line = cmdArgs.join(" ");
   if (DRY && !READ_ONLY.test(line)) {
-    log("  dry-run: gh", line.length > 160 ? line.slice(0, 160) + "..." : line);
+    log("  dry-run: gh", line.length > 160 ? `${line.slice(0, 160)}...` : line);
     return json ? null : "";
   }
   const out = execFileSync("gh", cmdArgs, {
