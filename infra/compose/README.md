@@ -7,3 +7,5 @@
 - Start with `pnpm dev:up` (waits for both healthchecks), stop with `pnpm dev:down`. Connection strings for the apps are in the root `.env.example`.
 - `init/01-databases.sql` runs only when the `pgdata` volume is empty. After changing it, reset the volume: `docker compose -f infra/compose/compose.dev.yml down -v`, then `pnpm dev:up`. This deletes all local data.
 - All passwords here are fixed dev values for local use only; ports bind to `127.0.0.1`, so nothing is reachable from the network.
+
+If RabbitMQ fails with `Error when reading /var/lib/rabbitmq/.erlang.cookie: eacces`, an older start left a root-owned cookie in the anonymous volume: `docker compose -f infra/compose/compose.dev.yml down -v`, then `pnpm dev:up`.

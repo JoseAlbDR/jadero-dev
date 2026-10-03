@@ -29,6 +29,10 @@ services:
   rabbitmq:
     # Plain broker with the management UI (WP-1 decision H1); vhosts, users and definitions come in WP-5.
     image: rabbitmq:4.3.6-management-alpine
+    # Run as the image's rabbitmq user. The image starts as root and drops to rabbitmq only for the server;
+    # the healthcheck (docker exec) would run as root with HOME=/var/lib/rabbitmq and, on a slow first boot,
+    # create .erlang.cookie as root before the server does, which then fails with eacces. One user for both.
+    user: rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: dev
       RABBITMQ_DEFAULT_PASS: dev
