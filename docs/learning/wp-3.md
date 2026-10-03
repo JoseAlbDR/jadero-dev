@@ -448,4 +448,7 @@ Amendments after the spike (2026-10-03):
 - Step 2, spike: throwaway code on `spike/wp-3-nest12` tested the eight rows on Nest 12; results under Options, "Spike results". Rows 1, 2, 4, 5, 7, 8 go; row 6 go except Nest controller spans; rows 3 and 6-pg wait for Docker on the owner's machine.
 - Why it matters: no library decided by an ADR fails, so no ADR changes. Row 3 passed later on the owner's machine. Two traps surfaced before any real code (Biome's `import type` fix breaks DI, the OTel SDK exports metrics and logs nobody asked for).
 
+- Step 3, platform package and `api` boot: `packages/platform-nest` (compiled to `dist/`, Nest as peer dependencies so there is one copy of `@nestjs/core`) with `loadConfig`, `platformEnv` and `configureApp`; `apps/api` validates its environment before `NestFactory.create` and provides `ApiConfig` globally; the Biome override for Nest paths. A bad environment now exits in about 290 ms with `PORT: Invalid input: expected string, received undefined`, and the DI test proves an abstract-class token resolves under Vitest.
+- Why: everything after this builds on one boot path, and a deploy with a missing variable fails at the container start, not on the first request. Found on the way: Nest exits the process when no HTTP adapter is installed (even in a test), `@nestjs/common` already imports `reflect-metadata`, and Biome's `noStaticOnlyClass` flags the `forRoot()` pattern.
+
 ## Recap
