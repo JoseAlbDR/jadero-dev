@@ -376,7 +376,7 @@ Code: branch `spike/wp-3-nest12`, folder `spike/nest12/` (a standalone pnpm root
 | 5 | @rekog/mcp-nest 2.0.7, @modelcontextprotocol/server 2.3.0 | go | `initialize`, `tools/list`, `tools/call` answer 200; the tool's input schema comes from Zod 4 |
 | 6 | sdk-node 0.222.0, instrumentation-http, -express 0.70.0, -pg 0.74.0, -pino 0.68.0 | go | SERVER span with `http.route=/health/ready`, Express spans, pg error spans against a dead port; log lines carry `trace_id` and `span_id` |
 | 6 | instrumentation-nestjs-core 0.68.0 | no-go as published | declares `>=4.0.0 <12`, so it patches nothing on Nest 12; with the range widened by hand it emits controller spans, so only the declared range blocks it |
-| 6-pg | same | owner runs locally | needs `pnpm dev:up` |
+| 6-pg | same, against `pnpm dev:up` | go | run on the owner's machine: `RESPONSE 200 {"database":"up"}` with spans `pg.connect`, `pg-pool.connect` and `pg.query:SELECT content_dev`. The parent link to the request span was not shown: the console exporter of sdk-node 0.222 prints `parentSpanContext`, not `parentId`, so the filter missed it; step 7 checks it in a test |
 | 7 | @langchain/core 1.2.14, @langchain/langgraph 1.4.18 | go | the same two-node graph runs in a plain Node script and inside a Nest provider; one zod in the tree |
 | 8 | install scripts | go | `protobufjs` (prints a warning), `ssh2` and `cpu-features` (optional native bindings for Docker over SSH) all set to `false` in `allowBuilds`; ssh2 works without its binding |
 
