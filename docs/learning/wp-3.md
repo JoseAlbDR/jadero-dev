@@ -363,6 +363,37 @@ x-request-id: c7d1e8a2-0b6f-4b8e-a1f3-5d9c2e7b4a10
 
 **J. Dev runner.** *J1.* `nest start --watch` (Nest CLI 12, uses tsc). *J2.* `tsc --watch` plus `node --watch --import ... dist/main.js` in the `dev` script, so dev starts exactly like production. Recommendation: J2, one fewer tool and the same `--import` line everywhere; the owner may prefer J1 if they like the CLI.
 
+### Spike results (step 2, 2026-10-03)
+
+Code: branch `spike/wp-3-nest12`, folder `spike/nest12/` (a standalone pnpm root, never merged). A frozen install exits 0 with no peer warnings; `pnpm peers check` reports no issues.
+
+| # | Installed | Verdict | Evidence |
+|---|---|---|---|
+| 1 | Nest 12.1.2, TypeScript 6.0.3, Vitest 5.0.3, zod 4.6.5 | go | the app boots from tsc output; a DI test passes under Vitest with no SWC plugin (with `emitDecoratorMetadata: false` the same test fails, so Oxc does read it) |
+| 2 | nestjs-pino 5.3.1, pino 10.4.0, pino-http 11.0.0 | go | a singleton `PinoLogger` line carries the id from `x-request-id`; Nest bootstrap lines are pino JSON; an invalid header gets a new UUID |
+| 3 | @golevelup/nestjs-rabbitmq 9.1.0, testcontainers 12.2.0 | owner runs locally | typechecks; Vitest loads the CommonJS package; needs Docker |
+| 4 | better-auth 1.7.7, @thallesp/nestjs-better-auth 2.8.0 | go | `GET /api/auth/ok` 200; guarded route 401 without a session, 200 after sign-up; the fallback (`toNodeHandler` from `better-auth/node`) also works |
+| 5 | @rekog/mcp-nest 2.0.7, @modelcontextprotocol/server 2.3.0 | go | `initialize`, `tools/list`, `tools/call` answer 200; the tool's input schema comes from Zod 4 |
+| 6 | sdk-node 0.222.0, instrumentation-http, -express 0.70.0, -pg 0.74.0, -pino 0.68.0 | go | SERVER span with `http.route=/health/ready`, Express spans, pg error spans against a dead port; log lines carry `trace_id` and `span_id` |
+| 6 | instrumentation-nestjs-core 0.68.0 | no-go as published | declares `>=4.0.0 <12`, so it patches nothing on Nest 12; with the range widened by hand it emits controller spans, so only the declared range blocks it |
+| 6-pg | same | owner runs locally | needs `pnpm dev:up` |
+| 7 | @langchain/core 1.2.14, @langchain/langgraph 1.4.18 | go | the same two-node graph runs in a plain Node script and inside a Nest provider; one zod in the tree |
+| 8 | install scripts | go | `protobufjs` (prints a warning), `ssh2` and `cpu-features` (optional native bindings for Docker over SSH) all set to `false` in `allowBuilds`; ssh2 works without its binding |
+
+Answers to the **verify** items:
+- The option is `@Body({ schema })` (also `@Query`, `@Param`), the pipe is `StandardSchemaValidationPipe` from `@nestjs/common`. On failure it throws `BadRequestException` with strings like `"email: Invalid email address"`, which loses the structured path. Its `exceptionFactory(issues)` receives the raw issues, so the problem-details filter gets them from there.
+- The ESM hook is `module.register("@opentelemetry/instrumentation/hook.mjs", import.meta.url)`. Without it there are no Express spans.
+- `app.close()` order is unchanged in Nest 12: `onModuleDestroy`, `beforeApplicationShutdown`, HTTP server closed, `onApplicationShutdown`.
+- `require(esm)` works: CommonJS packages that require `@nestjs/common` load.
+- Biome needs `javascript.parser.unsafeParameterDecoratorsEnabled: true` for `@Body()` and `@Inject()`.
+- Not checked: the Terminus failure body in 12.1.0 (step 6).
+
+Findings that touch step 3 and later:
+- Biome's `style/useImportType` rewrites a class injected only through a constructor type into `import type`, as a "safe fix" that the pre-commit hook applies. `tsc` stays green and the app fails at boot with `Nest can't resolve dependencies of the Consumer (?)`. This is the `verbatimModuleSyntax` trap from First principles, made automatic by a tool. Biome has no decorator-aware option.
+- `sdk-node` 0.222 also starts OTLP metric and log exporters to `127.0.0.1:4318` by default, failing silently; `instrumentation-pino` forwards every log record into that log pipeline. Fix, checked: `metricReaders: []`, `logRecordProcessors: []`, `new PinoInstrumentation({ disableLogSending: true })`.
+- nestjs-pino puts the id in `req.id` (a top-level `req_id` needs `customProps`), and its default serializer logs `remoteAddress` and all headers in clear: step 4 replaces it.
+- For later WPs: `@thallesp/nestjs-better-auth` installs a global guard, so health routes need `@AllowAnonymous()` (WP-13). `@rekog/mcp-nest` 2.x runs as a microservice transport and needs `@nestjs/microservices` (WP-36). golevelup's default subscribe error behavior is `REQUEUE`, which can loop forever, and `app.init()` blocks while the broker is down even with `wait: false` (WP-5).
+
 ## The question for the owner
 
 Answer each with a letter (or "your call"); the recommendation is in brackets.
@@ -407,5 +438,8 @@ Defaults kept: C (health module in `platform-nest`, checks per service), H (one 
 `decision: recorded` on 2026-10-03.
 
 ## Step log
+
+- Step 2, spike: throwaway code on `spike/wp-3-nest12` tested the eight rows on Nest 12; results under Options, "Spike results". Rows 1, 2, 4, 5, 7, 8 go; row 6 go except Nest controller spans; rows 3 and 6-pg wait for Docker on the owner's machine.
+- Why it matters: no library decided by an ADR fails, so no ADR changes; two traps surfaced before any real code (Biome's `import type` fix breaks DI, the OTel SDK exports metrics and logs nobody asked for).
 
 ## Recap
