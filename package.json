@@ -19,11 +19,15 @@
     "dev:up": "docker compose -f infra/compose/compose.dev.yml up -d --wait",
     "dev:down": "docker compose -f infra/compose/compose.dev.yml down",
     "adr:new": "node scripts/adr/new.mjs",
-    "adr:index": "node scripts/adr/index.mjs"
+    "adr:index": "node scripts/adr/index.mjs",
+    "prepare": "lefthook install"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@commitlint/cli": "catalog:",
+    "@commitlint/config-conventional": "catalog:",
     "dependency-cruiser": "catalog:",
+    "lefthook": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:"
   }

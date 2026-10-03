@@ -1,0 +1,17 @@
+# Git hooks, versioned with the repo (ADR-024). `pnpm install` runs the root `prepare` script,
+# which runs `lefthook install` and writes the hook files into .git/hooks.
+# Skip once with LEFTHOOK=0 git commit ...; CI runs the same checks, so a skip only delays the failure.
+
+pre-commit:
+  jobs:
+    - name: biome
+      glob: "*.{ts,tsx,js,mjs,cjs,json,jsonc}"
+      # Format and apply safe fixes to the staged files only, then stage the fixed files again.
+      run: pnpm exec biome check --write --no-errors-on-unmatched {staged_files}
+      stage_fixed: true
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      # {1} is the first argument git passes to the hook: the path of the message file.
+      run: pnpm exec commitlint --edit {1}
