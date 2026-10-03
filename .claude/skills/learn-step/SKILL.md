@@ -10,13 +10,14 @@ Learning gate for WP-$wp (step: $step, or the whole WP if empty).
 Read first: the WP row in `docs/plan/report.md` section 14, its GitHub issue, and the ADRs it implements (`docs/adr/`). Then write or extend `docs/learning/wp-$wp.md` from `docs/learning/wp-template.md` (front matter: `wp: $wp`, `decision: pending`, `adr: [ADR-...]`; add `fast_path: known` only when the owner says they already know this step):
 
 1. **First principles**: the concepts this step needs, explained from zero in plain language, one paragraph each. Assume a strong backend engineer who has not used this specific thing.
-2. **One concrete trace**: a real request, event or job through the code that will exist, with real payloads, real SQL, real file paths. Numbers, not adjectives.
+2. **One concrete trace**: a real request, event or job through the code that will exist, with real payloads, real SQL, real file paths. Numbers, not adjectives. A service WP gets two: the success path and one failure path (a validation error, a dependency down). A tooling WP's trace is a command run with its real output.
 3. **Patterns**: the named patterns (so the owner can look them up) and where each one appears in the trace.
 4. **Options and trade-offs**: at least two ways to build this step, pros and cons, what the ADR already decided and what is still open at this level.
 5. **The question for the owner**: one precise question (or a short list) that the owner must answer before code is written. If the ADR already decides everything, say so and ask only for the go.
 6. **Decision**: empty until the owner answers.
 7. **Step log**: empty; each implementation step appends two lines (what changed, why).
 8. **Recap**: empty; filled with the owner's explain-back and the gaps found.
+Also: a **Facts checked** table right after the intro (tool, version on the day, source, note), and a **Proposed steps** list after the question (4 to 8 steps, learning or known marked). When a WP includes a spike, its results go under a **Spike results** subsection of Options; a result that changes an answer the owner already gave is recorded under Decision as an amendment with the date, never by editing the original answer.
 
 Facts: version numbers and dates come from the npm registry (`npm view <pkg> version time --json`), Docker Hub or nodejs.org, never from memory; when a documentation site is unreachable, mark the behavior **verify** instead of guessing. The file is `docs/learning/wp-$wp.md` with the number as given, no zero padding (`wp-1.md`, not `wp-01.md`): the gate hook and the session hook look for that exact name. For a tooling WP the "trace" is a command run with its real output; for a service WP it is a request, event or job.
 

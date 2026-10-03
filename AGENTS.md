@@ -36,7 +36,7 @@ Status today: the repo foundation (workspace, lint, architecture rules, git hook
 
 ## 5. Learning protocol (ADR-028, report 12.3)
 
-Learning paths: `apps/api`, `apps/agent`, `apps/contact`, `apps/mcp`, `packages/messaging`, `packages/ai`, `packages/agent`, `packages/contracts`, `infra/`, `.github/workflows/`. For a WP tagged learning:
+Learning paths: `apps/api`, `apps/agent`, `apps/contact`, `apps/mcp`, `packages/messaging`, `packages/ai`, `packages/agent`, `packages/contracts`, `packages/platform-nest`, `templates/`, `infra/`, `.github/workflows/`, plus the repo tooling files (`turbo.json`, `pnpm-workspace.yaml`, `packages/config`). For a WP tagged learning:
 1. `/wp NN` lists the WP's concepts and decisions and creates branch `wp/NN-slug`.
 2. `/learn-step` writes `docs/learning/wp-NN.md`: concepts from first principles, one concrete trace (real payload, real SQL), named patterns, options with trade-offs, the exact question for the owner. Then it stops.
 3. The owner decides. The explainer's front matter gets `decision: recorded` (with the ADR link). Only then may code under the learning paths change (hook `learning-gate.sh` enforces it). Fast path (D-38): a step the owner already knows is marked `known` in the explainer and skips the full explainer and explain-back.

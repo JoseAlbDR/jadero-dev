@@ -20,6 +20,7 @@ What Claude Code (or any agent that reads `AGENTS.md`) finds here, why each piec
 | `.claude/skills/explain` | `/explain <topic>`: first principles plus a concrete trace with file:line and the ADR. | On demand |
 | `.claude/agents/reviewer.md` | Subagent with the review checklist: boundaries, messaging, AI and guards, OWASP LLM Top 10, testing gates, secrets, content rules, delivery, learning gate, docs. Reports, never fixes, never approves. | `@agent-reviewer`, or delegated by Claude before a PR review |
 | `docs/learning/` | Explainer template and the written explainers. | By the skills and the gate |
+| `docs/local-playbook.md` | The hands-on version of this flow for the owner's machine: setup, first session, daily loop, what to do when something blocks. | By the owner and firstmate |
 | `.github/ISSUE_TEMPLATE`, `PULL_REQUEST_TEMPLATE.md`, `scripts/github/seed.mjs` | The tracking structure of ADR-041 (WP-49). | By people and by `gh` |
 
 Security guardrails (no pushes to the default branch, no deploys, no ssh, no real providers in tests) are stated as rules in `AGENTS.md` section 7 and enforced by the owner's framework and sandbox; this repo does not duplicate them as hooks.
@@ -59,16 +60,28 @@ Model and effort: Opus 5.5 at high effort for learning WPs and the reviewer, med
 
 Compact after the decision is recorded (the reasoning is in the explainer) and after the reviewer has reported (keep the PR number, open findings and the step log).
 
-## What the WP-1 trial changed (2026-10-03)
+## What the two trials changed (2026-10-03)
 
-The first run of the flow (`/wp 1` and `/learn-step 1`, delegated to a subagent on Opus 5.5 from a cloud session) worked end to end and surfaced these gaps, fixed in the same PR as this note:
+The flow ran end to end on WP-1 from a cloud session (`/wp`, `/learn-step`, seven implementation steps delegated to subagents on Opus 5.5, PR #66, the reviewer agent, fixes) and `/wp 3` plus `/learn-step 3` ran on the first service WP. Everything below was fixed in #65 and in the PR that carries this note; the rest is listed as open.
 
-- `/wp` depended on a logged-in `gh` for the dependency check and the definition of done. It now accepts the GitHub MCP tools, says which source it used, and asks instead of guessing when neither is available.
-- `/learn-step` could not reach turborepo.com or pnpm.io through the cloud proxy. It may now query the npm registry, Docker Hub and nodejs.org through Bash, and must mark unverified behavior as **verify**.
-- The learning gate did not cover WP-1's own content (`turbo.json`, `pnpm-workspace.yaml`, `packages/config`, the dependency-cruiser, lefthook and commitlint configs). Those paths are now gated too.
-- Explainer file names take the WP number as is (`wp-1.md`); the README said `wp-NN.md`, which invited zero padding.
-- A "trace" for a tooling WP is a command run with real output; the skill says so now.
-- Issues created by the seed carry "Deployed to staging" and "Changelog entry" in every definition of done; for WPs before WP-6 to WP-9 they are n/a, and `/wp` marks them so.
+Fixed:
+
+- `/wp` works without a logged-in `gh` (GitHub MCP tools, or ask), names the source of the definition of done, marks n/a items, and has a rule for stacking a branch on an unmerged dependency (branch from its PR, rebase after the merge).
+- `/learn-step` may query the npm registry, Docker Hub and nodejs.org through Bash (documentation sites can be unreachable), marks unverified behavior as **verify**, asks for two traces on a service WP (success and failure), and the template gained a Facts checked table and a Proposed steps section. Spike results go under Options; a changed answer is an amendment under Decision.
+- The learning gate also covers the repo tooling files, `packages/platform-nest` and `templates/`.
+- Explainer names take the WP number as is (`wp-1.md`).
+- The seed marks staging and changelog items n/a for R0 work packages.
+- Commit identity: a cloud session commits as the tool, and a squash merge would then add a co-author trailer to `main`. The branch authors were reset to the owner before the PR; `git config user.name` and `user.email` in the checkout are set to the owner. Local sessions never see this.
+- Turborepo 2.11 writes an agent-rules block into `AGENTS.md` when it detects an agent; `turbo.json` sets `agentGuidance: false` so a dependency does not author agent instructions.
+- Turborepo's `.turbo/` metadata matched the root lint inputs, so the cache never hit; the inputs now exclude it.
+
+Open, for the owner:
+
+- ADR-010 offers `@nestjs/observe` as an alternative, but it cannot meet the ADR's own OTLP decision; and it puts the broker in `api`'s readiness check, which the outbox makes questionable (WP-3 explainer flags it for WP-5).
+- `docs/plan/report.md` names databases `jadero_content`; the dev init script uses the ADR-027 pattern `content_dev`. The report should follow the ADR.
+- `.claude/settings.json` denies `Read(.env.*)`, which also hides `.env.example` from the Read tool. Deny wins over allow; agents read it through Bash.
+- The explain-back and the Recap of WP-1 did not happen in the cloud session; they are the first local task. A learning WP run without the owner present is the exception, not the pattern.
+- `pnpm dev:up` could not run in the cloud (no Docker daemon); the compose stack is validated with `docker compose config` only until the owner starts it.
 
 ## Model and effort
 
