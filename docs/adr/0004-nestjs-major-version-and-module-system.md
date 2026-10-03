@@ -1,18 +1,18 @@
 ---
 id: ADR-004
 title: "NestJS major version and module system"
-status: accepted
+status: superseded
 date: 2026-10-03
 deciders: [owner]
 decisions: [D-4]
 supersedes: []
-superseded_by: null
+superseded_by: ADR-042
 source: docs/plan/report.md ("ADR-004: NestJS major version and module system")
 ---
 
 # ADR-004: NestJS major version and module system
 
-**Status:** Accepted (owner review 2026-10-03, D-4).
+**Status:** Superseded by ADR-042 (Node 24 LTS; the Nest 12, ESM and Vitest decision is restated there unchanged).
 
 Decided by the owner in the plan review of 2026-10-02 and 2026-10-03 (decisions D-4). This record was extracted verbatim from `docs/plan/report.md`; the narrative, traces and sources stay there. From now on this file is the canonical record: a new decision is a new ADR that supersedes this one, never an edit.
 

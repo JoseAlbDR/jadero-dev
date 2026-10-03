@@ -27,7 +27,7 @@ Commits on the owner's machine carry the owner's identity. A cloud session commi
 PR #66 is implemented, reviewed by the reviewer agent and green. What the cloud could not do: start Docker, the explain-back, the Recap.
 
 1. Squash merge #67 on GitHub first (process gaps and this playbook), so the skills you run are the corrected ones. It merges cleanly with #66 in either order.
-2. `git fetch && git switch wp/1-repo-foundation && git merge origin/main && git push`, then `nvm use && pnpm install`.
+2. `git fetch && git switch wp/1-repo-foundation && git pull && nvm install && corepack enable && pnpm install`. Chain with `&&`: if the switch fails, nothing else runs on the wrong branch.
 3. `pnpm dev:up`, then the trace 3 check of `docs/learning/wp-1.md`: `psql -U agent -d content_dev` must be denied; `psql -U agent -d agent_dev -c '\dx'` must list `vector`; `http://localhost:15672` accepts user `dev`. Then `pnpm dev:down`.
 4. In Claude Code: "Append the dev:up result to step 6 of the WP-1 step log, then do my explain-back for steps 2, 4 and 7." Answer in your own words; the gaps go under Recap. Commit `docs(learning): add the WP-1 recap`. Push.
 5. Squash merge #66 on GitHub. The issue closes and the board moves to Done.
@@ -94,6 +94,8 @@ The file is the textbook for this WP; the session is the teacher. Read the quest
 | changed `01-databases.sql`, nothing happened | init runs only on an empty volume | `docker compose -f infra/compose/compose.dev.yml down -v` |
 | the board card did not move | PR body lacks `Closes #N`, or a workflow is off | edit the body; check `scripts/github/README.md` |
 | a reviewer wants a design change | larger than a nit | decide; `/adr` first if an ADR changes |
+| `git switch` aborts: untracked `package.json` or `pnpm-lock.yaml` would be overwritten | a `pnpm` or `npx` run on `main` before WP-1 merged left them behind | look at them (`git status`, `cat package.json`), then `rm package.json pnpm-lock.yaml && rm -rf node_modules` and switch again |
+| `nvm use`: no .nvmrc found | the current branch predates WP-1 | switch to a branch with `.nvmrc`; `nvm install` installs and selects 24.x |
 | Claude cannot read `.env.example` | `settings.json` denies `Read(.env.*)` | expected; it reads it through Bash |
 
 ## With firstmate

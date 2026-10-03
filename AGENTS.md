@@ -4,27 +4,28 @@ Personal site of the owner: a multilingual (es, en, de) portfolio with an ask-me
 
 ## 1. Where the truth lives
 
-- `docs/adr/`: 41 accepted decision records. Read `docs/adr/README.md` first. An accepted ADR is never edited; a change is a new ADR that supersedes it (`/adr`).
+- `docs/adr/`: the decision records (ADR-001 to ADR-042). Read `docs/adr/README.md` first. An accepted ADR is never edited; a change is a new ADR that supersedes it (`/adr`).
 - `docs/plan/report.md`: the narrative plan (architecture, traces, work packages, releases R0 to R7). On a conflict, the ADR file wins.
 - `docs/plan/decisions.json`: the 76 owner decisions as data; ids never change.
 - `docs/learning/`: one explainer per learning WP (the learning gate, section 5).
 - GitHub Issues: the epic `jadero.dev v2`, one sub-issue per WP, milestones R0 to R7, Project board (ADR-041). The issue is the task; the PR closes it.
 
-Status today: documentation only. Code lands from WP-1 on. Commands below exist once their WP is merged.
+Status today: the repo foundation (workspace, lint, architecture rules, git hooks, dev containers, ADR scripts) is in place; services land from WP-3 on.
 
 ## 2. Map (target layout, ADR-001)
 
 `apps/web` Next.js 16 public site · `apps/admin` static SPA · `apps/api` NestJS content, auth, media, cv (+ `api-worker`) · `apps/agent` NestJS knowledge, chat, guards, usage (+ `agent-ingest`) · `apps/contact` NestJS form and mail · `apps/mcp` stateless MCP edge (R4) · `packages/contracts` Zod DTOs and events · `packages/messaging` bus port, RabbitMQ and in-memory adapters, outbox, inbox · `packages/platform-nest` bootstrap only · `packages/ai` AI ports and adapters · `packages/agent` LangGraph graph, no Nest · `packages/ui`, `packages/cv`, `packages/config` · `infra/` compose, nginx, rabbitmq, scripts · `.github/workflows/`.
 
-## 3. Commands (from WP-1)
+## 3. Commands
 
-- `pnpm dev:up` Postgres and RabbitMQ in Docker · `pnpm dev` all apps in watch mode · `pnpm dev --filter=<app>...`
-- `pnpm verify` lint, typecheck, unit tests, affected only: the single "am I done" command. Run it before every commit.
-- `pnpm test:int` Testcontainers (needs Docker) · `pnpm db:generate`, `pnpm db:migrate` per service
-- `pnpm adr:new`, `pnpm adr:index` · `pnpm eval` spends money: never without `EVAL_CONFIRMED=1` and the owner's yes.
+- `pnpm verify` lint, architecture check, typecheck, unit tests, affected only and cached by Turborepo: the single "am I done" command. Run it before every commit.
+- `pnpm lint` Biome check, never writes · `pnpm lint:fix` format and safe fixes · `pnpm depcruise` architecture rules · `pnpm test` all unit tests
+- `pnpm dev:up` / `pnpm dev:down` Postgres and RabbitMQ in Docker (`infra/compose/`, connection strings in `.env.example`) · `pnpm dev` apps in watch mode, once apps exist
+- `pnpm adr:new "Title"` next ADR from the template · `pnpm adr:index` regenerate the index in `docs/adr/README.md` · `pnpm adr:index --check` fail when it is stale
+- Arrive with their WP: `pnpm test:int` (Testcontainers, needs Docker), `pnpm db:generate` and `pnpm db:migrate` per service, `pnpm eval` (spends money: never without `EVAL_CONFIRMED=1` and the owner's yes).
 - Size test workers from load: `VITEST_MAX_WORKERS` = 12 minus the 1-minute load average minus 3, at least 1, at most 6.
 
-## 4. Architecture rules (enforced by dependency-cruiser from WP-1; `.claude/rules/` carries the detail)
+## 4. Architecture rules (import rules enforced by dependency-cruiser; `.claude/rules/` carries the detail)
 
 1. Services own their database; no service reads another's tables; no shared ORM entities (ADR-029).
 2. Between `api`, `agent` and `contact` only asynchronous messages through the outbox and RabbitMQ; synchronous HTTP only at the edge (nginx, the MCP edge service, later the gateway).
@@ -45,7 +46,7 @@ Frontend WPs (`apps/web`, `apps/admin`, `packages/ui`) skip the gate: build to t
 
 ## 6. Conventions
 
-- Conventional one-line commits scoped to the service (`feat(agent): add hybrid retrieval`); the PR title is the squash commit and the changelog line. Branch `wp/NN-slug`; PR body `Closes #<issue>`.
+- Conventional one-line commits scoped to the service (`feat(agent): add hybrid retrieval`); the PR title is the squash commit and the changelog line. Branch `wp/NN-slug` for a work package (the learning gate reads the number from it), `chore/`, `fix/` or `docs/` for anything else; versions come from the squash commit's type, never from the branch name. PR body `Closes #<issue>`.
 - Never add tool attribution footers, model names or session links to commits, PR bodies or code.
 - Zod for every boundary; RFC 9457 problem details for errors; JSDoc on every new public method; no hard-coded UI strings (next-intl).
 - Owner voice for any user-facing copy and docs: plain English, no hype words, no em dashes.

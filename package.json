@@ -1,0 +1,35 @@
+{
+  "name": "jadero-dev",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.28.2",
+  "engines": {
+    "node": ">=24.12.0 <25",
+    "pnpm": ">=11 <12"
+  },
+  "scripts": {
+    "verify": "turbo run lint depcruise typecheck test test:scripts --affected",
+    "lint": "biome ci .",
+    "lint:fix": "biome check --write .",
+    "depcruise": "depcruise --config .dependency-cruiser.cjs apps packages",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test test:scripts",
+    "test:scripts": "node --test \"scripts/**/*.test.mjs\"",
+    "dev": "turbo run dev",
+    "dev:up": "docker compose -f infra/compose/compose.dev.yml up -d --wait",
+    "dev:down": "docker compose -f infra/compose/compose.dev.yml down",
+    "adr:new": "node scripts/adr/new.mjs",
+    "adr:index": "node scripts/adr/index.mjs",
+    "prepare": "lefthook install"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@commitlint/cli": "catalog:",
+    "@commitlint/config-conventional": "catalog:",
+    "dependency-cruiser": "catalog:",
+    "lefthook": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
+  }
+}
