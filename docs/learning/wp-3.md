@@ -371,7 +371,7 @@ Code: branch `spike/wp-3-nest12`, folder `spike/nest12/` (a standalone pnpm root
 |---|---|---|---|
 | 1 | Nest 12.1.2, TypeScript 6.0.3, Vitest 5.0.3, zod 4.6.5 | go | the app boots from tsc output; a DI test passes under Vitest with no SWC plugin (with `emitDecoratorMetadata: false` the same test fails, so Oxc does read it) |
 | 2 | nestjs-pino 5.3.1, pino 10.4.0, pino-http 11.0.0 | go | a singleton `PinoLogger` line carries the id from `x-request-id`; Nest bootstrap lines are pino JSON; an invalid header gets a new UUID |
-| 3 | @golevelup/nestjs-rabbitmq 9.1.0, testcontainers 12.2.0 | owner runs locally | typechecks; Vitest loads the CommonJS package; needs Docker |
+| 3 | @golevelup/nestjs-rabbitmq 9.1.0, testcontainers 12.2.0 | go | run on the owner's machine (OrbStack): `Tests 2 passed (2)`, a publisher confirm plus ack, and a `Nack(false)` dead-lettered to the DLQ. Testcontainers needed the socket path (`DOCKER_HOST`, or `docker.host` in `~/.testcontainers.properties`) |
 | 4 | better-auth 1.7.7, @thallesp/nestjs-better-auth 2.8.0 | go | `GET /api/auth/ok` 200; guarded route 401 without a session, 200 after sign-up; the fallback (`toNodeHandler` from `better-auth/node`) also works |
 | 5 | @rekog/mcp-nest 2.0.7, @modelcontextprotocol/server 2.3.0 | go | `initialize`, `tools/list`, `tools/call` answer 200; the tool's input schema comes from Zod 4 |
 | 6 | sdk-node 0.222.0, instrumentation-http, -express 0.70.0, -pg 0.74.0, -pino 0.68.0 | go | SERVER span with `http.route=/health/ready`, Express spans, pg error spans against a dead port; log lines carry `trace_id` and `span_id` |
@@ -437,9 +437,15 @@ Defaults kept: C (health module in `platform-nest`, checks per service), H (one 
 
 `decision: recorded` on 2026-10-03.
 
+Amendments after the spike (2026-10-03):
+
+- S1, Biome on Nest code: **a**. A `biome.json` override for the Nest paths (`apps/api`, `apps/agent`, `apps/contact`, `apps/mcp`, `packages/platform-nest`, `templates/`) enables parameter decorators and turns `style/useImportType` off there, with a note in `.claude/rules/`. The rule stays on everywhere else.
+- S2, Nest controller spans: **a**, the fallback named before the spike: HTTP and Express spans only (they carry `http.route`), no patch. Revisit when `instrumentation-nestjs-core` declares Nest 12.
+- Nest 11 instead of 12? The owner asked to move to Nest 11 if it is more stable, to avoid a pile of workarounds. Answer: stay on 12. Of the spike findings only one comes from Nest 12 (the controller spans range), and S2 a needs no code for it. The Biome `import type` trap, the decorator parser flag and the OTel exporters behave the same on Nest 11. Nest 11 has no Standard Schema support, so ADR-006's validation would need an own Zod pipe or another library, and ADR-042 would need a superseding ADR. Workarounds in the plan: none patched; two configuration lines (Biome override, OTel exporters off).
+
 ## Step log
 
 - Step 2, spike: throwaway code on `spike/wp-3-nest12` tested the eight rows on Nest 12; results under Options, "Spike results". Rows 1, 2, 4, 5, 7, 8 go; row 6 go except Nest controller spans; rows 3 and 6-pg wait for Docker on the owner's machine.
-- Why it matters: no library decided by an ADR fails, so no ADR changes; two traps surfaced before any real code (Biome's `import type` fix breaks DI, the OTel SDK exports metrics and logs nobody asked for).
+- Why it matters: no library decided by an ADR fails, so no ADR changes. Row 3 passed later on the owner's machine. Two traps surfaced before any real code (Biome's `import type` fix breaks DI, the OTel SDK exports metrics and logs nobody asked for).
 
 ## Recap
