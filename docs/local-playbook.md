@@ -26,13 +26,24 @@ Commits on the owner's machine carry the owner's identity. A cloud session commi
 
 PR #66 is implemented, reviewed by the reviewer agent and green. What the cloud could not do: start Docker, the explain-back, the Recap.
 
-1. `git fetch && git switch wp/1-repo-foundation && pnpm install`.
-2. `pnpm dev:up`, then the trace 3 check of `docs/learning/wp-1.md`: `psql -U agent -d content_dev` must be denied; `psql -U agent -d agent_dev -c '\dx'` must list `vector`; `http://localhost:15672` accepts user `dev`. Then `pnpm dev:down`.
-3. In Claude Code: "Append the dev:up result to step 6 of the WP-1 step log, then do my explain-back for steps 2, 4 and 7." Answer in your own words; the gaps go under Recap. Commit `docs(learning): add the WP-1 recap`. Push.
-4. Squash merge #66 on GitHub. The issue closes and the board moves to Done.
-5. On `main`: `git pull && pnpm verify`.
+1. Squash merge #67 on GitHub first (process gaps and this playbook), so the skills you run are the corrected ones. It merges cleanly with #66 in either order.
+2. `git fetch && git switch wp/1-repo-foundation && git merge origin/main && git push`, then `nvm use && pnpm install`.
+3. `pnpm dev:up`, then the trace 3 check of `docs/learning/wp-1.md`: `psql -U agent -d content_dev` must be denied; `psql -U agent -d agent_dev -c '\dx'` must list `vector`; `http://localhost:15672` accepts user `dev`. Then `pnpm dev:down`.
+4. In Claude Code: "Append the dev:up result to step 6 of the WP-1 step log, then do my explain-back for steps 2, 4 and 7." Answer in your own words; the gaps go under Recap. Commit `docs(learning): add the WP-1 recap`. Push.
+5. Squash merge #66 on GitHub. The issue closes and the board moves to Done.
+6. On `main`: `git pull && pnpm verify`.
 
 Also waiting, no code: the Project views and workflows (`scripts/github/README.md`); mark "Deployed to staging" and "Changelog entry" n/a on issue #9.
+
+## Gates, in order
+
+- **Decision, before code.** The hook refuses edits under a learning path until the explainer says `decision: recorded`.
+- **Explain-back, before the merge.** The issue lists "Explained back by the owner"; the Recap lands in the same PR, so the history shows the code and what was understood of it together. A missed Recap lands later as a `docs(learning)` commit.
+- **`pnpm verify`, before every commit; CI and the reviewer agent, before the owner reviews.**
+
+## Branch names and versions
+
+Versions never come from branch names. With squash merges the PR title is the one commit on `main`; release-please reads its type (`feat` minor, `fix` patch, `!` major) per service. `wp/NN-slug` ties the branch to its issue and lets the learning gate find `docs/learning/wp-NN.md`. Work outside a WP uses `chore/`, `fix/` or `docs/`.
 
 ## What a session looks like
 
