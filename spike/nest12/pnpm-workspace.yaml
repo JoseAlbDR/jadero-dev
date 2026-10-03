@@ -1,0 +1,18 @@
+# Standalone root for the WP-3 compatibility spike (throwaway, never merged).
+# Its own workspace file keeps it out of the repo's workspace and lockfile.
+packages: []
+
+# Same supply-chain guard as the repo (pnpm 11 default, made explicit): a version must be a day old.
+minimumReleaseAge: 1440
+
+# Fail the install when Node or pnpm is outside the engines range.
+engineStrict: true
+
+# Row 8: install scripts found in this tree. protobufjs (via sdk-node's gRPC OTLP exporter) only
+# prints a version-scheme warning in postinstall; nothing is compiled, so it stays off.
+allowBuilds:
+  protobufjs: false
+  # ssh2 (via testcontainers -> dockerode) compiles an optional crypto binding and pulls
+  # cpu-features, which runs node-gyp. Both are only for Docker over SSH; ssh2 falls back to pure JS.
+  ssh2: false
+  cpu-features: false
