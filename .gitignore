@@ -1,0 +1,18 @@
+# Personal agent overrides
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/*.local.*
+
+# Secrets (templates with op:// references are committed; rendered files never)
+.env
+.env.*
+!.env.example
+infra/env/*.env
+
+# Node and build (from WP-1)
+node_modules/
+dist/
+.next/
+.turbo/
+coverage/
+*.log
