@@ -19,8 +19,13 @@
         "**/*.{ts,tsx,js,mjs,cjs,json,jsonc}",
         "biome.json",
         "!**/node_modules/**",
-        "!**/dist/**"
+        "!**/dist/**",
+        "!**/.turbo/**",
+        "!**/coverage/**"
       ]
+    },
+    "//#test:scripts": {
+      "inputs": ["scripts/**/*.mjs"]
     },
     "//#depcruise": {
       "inputs": [
@@ -29,7 +34,9 @@
         ".dependency-cruiser.cjs",
         "tsconfig.depcruise.json",
         "!**/node_modules/**",
-        "!**/dist/**"
+        "!**/dist/**",
+        "!**/.turbo/**",
+        "!**/coverage/**"
       ]
     },
     "dev": {

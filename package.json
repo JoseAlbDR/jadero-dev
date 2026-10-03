@@ -9,12 +9,13 @@
     "pnpm": ">=11.0.0"
   },
   "scripts": {
-    "verify": "turbo run lint depcruise typecheck test --affected",
+    "verify": "turbo run lint depcruise typecheck test test:scripts --affected",
     "lint": "biome ci .",
     "lint:fix": "biome check --write .",
     "depcruise": "depcruise --config .dependency-cruiser.cjs apps packages",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
+    "test": "turbo run test test:scripts",
+    "test:scripts": "node --test \"scripts/**/*.test.mjs\"",
     "dev": "turbo run dev",
     "dev:up": "docker compose -f infra/compose/compose.dev.yml up -d --wait",
     "dev:down": "docker compose -f infra/compose/compose.dev.yml down",
