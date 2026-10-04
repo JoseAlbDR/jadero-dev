@@ -245,7 +245,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 <script type="application/json" id="map-data">
 {
   "meta": {
-    "lastUpdated": "after WP-5",
+    "lastUpdated": "after WP-5 and WP-15",
     "kinds": {
       "app": "deployable app", "pkg": "library package", "module": "Nest module", "provider": "provider",
       "token": "DI token", "ext": "external library", "global": "app-level wiring", "env": "environment",
@@ -669,7 +669,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     "ws-web": {
       "label": "web", "sub": "@jadero/web", "kind": "app", "status": "real", "wp": "WP-4",
-      "what": "The public multilingual site (en, es, de) on Next.js 16. Today it is the skeleton: locale routing, theme tokens, a light, dark and system theme toggle, a locale switcher and a placeholder home.",
+      "what": "The public multilingual site (en, es, de) on Next.js 16. Today it is the skeleton: locale routing, theme tokens, a light, dark and system theme toggle, a locale switcher, a placeholder home and the WP-15 design mockups under `/mockups`.",
       "how": "`next build` with `output: \"standalone\"`, then `scripts/copy-standalone-assets.mjs` copies `.next/static` and `public/` next to `server.js`; `pnpm start` runs that server the way the image will. Runtime dependency on `@jadero/ui` (just-in-time: Next compiles its source through `transpilePackages`); dev dependency on `@jadero/config` for the tsconfig base and Vitest. `pnpm test` checks that every locale has the same non-empty message keys; `pnpm test:e2e` runs Playwright and axe against the standalone build. `SITE_URL` is a build-time variable that Turborepo hashes, together with `.env*`.",
       "why": "ADR-022 (next-intl, `localePrefix: always`, English default from D-19, cookie, hreflang), ADR-023 (Tailwind v4 tokens, shadcn/ui in packages/ui, next-themes) and ADR-026 (standalone output for the image). Result-only frontend: no learning gate.",
       "files": ["apps/web/package.json", "apps/web/next.config.ts", "apps/web/src/proxy.ts", "apps/web/src/i18n/", "apps/web/src/app/[locale]/", "apps/web/src/components/", "apps/web/messages/", "apps/web/e2e/smoke.spec.ts"]
@@ -1181,7 +1181,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "c-e2e": {
       "label": "pnpm test:e2e", "sub": "Playwright · axe · standalone build", "kind": "check", "status": "real", "wp": "WP-4",
       "what": "Smoke tests per locale for web, kept out of `pnpm verify`.",
-      "how": "`turbo run test:e2e` builds web first (`dependsOn: [\"build\"]`), then Playwright starts the standalone `server.js` and checks: the redirect from `/` by Accept-Language and by cookie, each locale's `lang`, heading and hreflang links, the localized 404, the theme class surviving a reload, and no axe WCAG 2.2 AA violations in light and dark mode. It drives the installed Chrome (`channel: \"chrome\"`).",
+      "how": "`turbo run test:e2e` builds web first (`dependsOn: [\"build\"]`), then Playwright starts the standalone `server.js` and checks: the redirect from `/` by Accept-Language and by cookie, each locale's `lang`, heading and hreflang links, the localized 404, the theme class surviving a reload, and no axe WCAG 2.2 AA violations in light and dark mode, on the home and on each design mockup. It drives the installed Chrome (`channel: \"chrome\"`).",
       "why": "ADR-009 (Playwright smoke per locale for the web, no coverage percentage) and ADR-023 (axe in CI). CI runs it from WP-6.",
       "files": ["apps/web/playwright.config.ts", "apps/web/e2e/smoke.spec.ts", "apps/web/turbo.json"]
     },
@@ -1215,10 +1215,10 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     "w-page": {
       "label": "[locale]/page.tsx", "sub": "prerendered per locale", "kind": "step", "status": "real", "wp": "WP-4",
-      "what": "The placeholder home, or the localized 404 for an unknown path.",
-      "how": "Built once per locale at `next build` and served as static HTML. `[locale]/[...rest]/page.tsx` calls `notFound()`, which renders `[locale]/not-found.tsx` in the visitor's language.",
-      "why": "WP-16 builds the real home and pages; each new page adds its localized pathname in `routing.ts`.",
-      "files": ["apps/web/src/app/[locale]/page.tsx", "apps/web/src/app/[locale]/not-found.tsx", "apps/web/src/app/[locale]/[...rest]/page.tsx"]
+      "what": "The placeholder home, the WP-15 design mockups, or the localized 404 for an unknown path.",
+      "how": "Built once per locale at `next build` and served as static HTML. `[locale]/[...rest]/page.tsx` calls `notFound()`, which renders `[locale]/not-found.tsx` in the visitor's language. `[locale]/mockups/` holds five throwaway hero mockups (terminal, editorial, bento, hybrid and bento-agent, the direction picked in ADR-045) with `noindex`: each page marks its root with `data-direction`, and `mockups.css` overrides the `packages/ui` tokens with `:root:has([data-direction=...])`, so the header takes the direction too.",
+      "why": "WP-16 builds the real home and pages; each new page adds its localized pathname in `routing.ts`. The mockups let the owner confirm the ADR-023 direction from screenshots (D-23) and are deleted once one is picked.",
+      "files": ["apps/web/src/app/[locale]/page.tsx", "apps/web/src/app/[locale]/not-found.tsx", "apps/web/src/app/[locale]/[...rest]/page.tsx", "apps/web/src/app/[locale]/mockups/"]
     },
     "c-precommit": {
       "label": "lefthook pre-commit", "sub": "biome check --write on staged files", "kind": "check", "status": "real", "wp": "WP-1",

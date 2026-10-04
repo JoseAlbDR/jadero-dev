@@ -12,5 +12,12 @@ export const routing = defineRouting({
   localePrefix: "always",
   pathnames: {
     "/": "/",
+    // WP-15 throwaway mockups; removed once the owner picks a direction.
+    "/mockups": "/mockups",
+    "/mockups/terminal": "/mockups/terminal",
+    "/mockups/editorial": "/mockups/editorial",
+    "/mockups/bento": "/mockups/bento",
+    "/mockups/hybrid": "/mockups/hybrid",
+    "/mockups/bento-agent": "/mockups/bento-agent",
   },
 });

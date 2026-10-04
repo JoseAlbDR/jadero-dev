@@ -12,4 +12,5 @@ paths:
 - Budgets: WCAG 2.2 AA (axe in CI), Lighthouse 95+ on content pages, LCP under 2 s mobile; the chat bundle is lazy-loaded.
 - The home must read complete with the agent resting (R1 ships without the agent). Pillar strip and evidence map are acceptance criteria (report 2A).
 - Admin is a static SPA (Vite + React); it calls `/api/*` on `admin.jadero.dev` only; forms are built on the Zod contracts.
-- Deliver with screenshots in the PR; the owner reviews results, not code, here.
+- Deliver with screenshots in the PR (an artifact gallery linked from a PR comment, since `gh` cannot upload images); the owner reviews results, not code, here.
+- Visual direction: ADR-045 (Bento glass, agent as a dark terminal card next to the hero).

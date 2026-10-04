@@ -1378,10 +1378,12 @@
       "recommendation": "a",
       "why": "The editorial base reads as senior and credible to any engineering audience, and the terminal-style prompt adds one memorable interaction without making the agent the whole story; the final call comes from the mockups.",
       "adr": "ADR-023",
-      "status": "decided",
-      "decidedOption": "a",
+      "status": "decided-with-change",
+      "decidedOption": "c",
       "decidedBy": "owner",
-      "decidedAt": "2026-10-02"
+      "decidedAt": "2026-10-04",
+      "ownerNote": "2026-10-04, after the WP-15 mockups: first confirmed option a as the hybrid (ADR-044), then switched the same day to Bento glass with the agent as a dark terminal card next to the hero (ADR-045, supersedes ADR-044). Switchable designs from the admin were discarded as overkill.",
+      "change": "Bento glass (option c) instead of the editorial base, with a bento-native agent terminal as large as the hero so the agent stands out; concrete choices in ADR-045."
     },
     {
       "id": "D-24",

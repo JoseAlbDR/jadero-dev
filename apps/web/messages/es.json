@@ -22,5 +22,55 @@
   },
   "LocaleSwitcher": {
     "label": "Idioma"
+  },
+  "Mockups": {
+    "metaTitle": "Direcciones de diseño",
+    "indexTitle": "Direcciones de diseño",
+    "indexLead": "Tres maquetas desechables de la portada para elegir la dirección visual. El texto es provisional.",
+    "notice": "Maqueta, no es la web real",
+    "directions": {
+      "terminal": "Editorial de terminal",
+      "editorial": "Editorial suizo",
+      "bento": "Bento de cristal",
+      "hybrid": "Editorial suizo + bloque de terminal",
+      "bento-agent": "Bento de cristal + terminal del agente"
+    },
+    "summaries": {
+      "terminal": "Nativo para desarrolladores: una sans con acento monoespaciado, casi negro con un acento vivo, el prompt como portada.",
+      "editorial": "Sereno y maduro: un titular serif en una rejilla de 12 columnas, un acento apagado, el prompt como un elemento discreto.",
+      "bento": "Actual: una rejilla de tarjetas de cristal sobre un degradado suave, esquinas grandes, pequeños movimientos al pasar el ratón.",
+      "hybrid": "La dirección 2 con el bloque completo del prompt de la 1: el titular serif y la rejilla, más la tarjeta de terminal.",
+      "bento-agent": "Bento de cristal con el agente como tarjeta de terminal oscura, tan grande como la portada y a su lado."
+    },
+    "role": "Ingeniero backend",
+    "headline": "Diseño, pruebo, despliego y opero sistemas backend, desde el modelo de datos hasta el servidor donde corren.",
+    "lead": "Esta web es uno de ellos: explora el código, las decisiones y la arquitectura en vivo.",
+    "ctaWork": "Leer los casos de estudio",
+    "ctaArchitecture": "Ver la arquitectura",
+    "promptLabel": "Pregúntame lo que quieras sobre mi trabajo",
+    "promptHint": "Prueba con una de estas",
+    "questions": {
+      "deploy": "¿Cómo se despliega esta web?",
+      "outbox": "¿Por qué un outbox entre los servicios?",
+      "tests": "¿Qué tests corren en cada pull request?"
+    },
+    "resting": "El asistente llega en una versión posterior. Todo lo demás funciona sin él.",
+    "pillarsTitle": "Lo que demuestra esta web",
+    "pillars": {
+      "backend": "Arquitectura backend",
+      "reliability": "Fiabilidad y mensajería",
+      "testing": "Testing y calidad",
+      "cicd": "CI/CD e infraestructura",
+      "security": "Seguridad",
+      "delivery": "Entrega de producto",
+      "ai": "IA aplicada",
+      "process": "Proceso de ingeniería"
+    },
+    "stackTitle": "Stack",
+    "nowTitle": "Ahora",
+    "nowBody": "Construyendo jadero.dev v2 en público, una versión tras otra.",
+    "caseTitle": "Caso de estudio destacado",
+    "caseName": "jadero.dev",
+    "caseBody": "Servicios, mensajería, tests y despliegues detrás de una web personal."
   }
 }
