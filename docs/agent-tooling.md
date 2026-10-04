@@ -9,7 +9,7 @@ What Claude Code (or any agent that reads `AGENTS.md`) finds here, why each piec
 | `AGENTS.md` | The canonical, tool-neutral instructions: where the truth lives, map, commands, architecture rules, the learning protocol, conventions, hard rules, how-tos. Kept short on purpose. | Always (imported by `CLAUDE.md`; read natively by agents that support AGENTS.md) |
 | `CLAUDE.md` | `@AGENTS.md` plus a few Claude-specific notes (plan mode, subagents, where overrides go). | Always, by Claude Code |
 | `CLAUDE.local.md`, `.claude/settings.local.json` | Personal overrides, gitignored. | Always, by the person who has them |
-| `.claude/rules/*.md` | Path-scoped rules with a `paths:` front matter: services, AI and agent, testing, infra, frontend, docs. Each restates the ADRs that apply to those files. | Only when the agent reads or edits a matching file |
+| `.claude/rules/*.md` | Path-scoped rules with a `paths:` front matter: services, Nest, AI and agent, testing, infra, frontend, docs. Each restates the ADRs that apply to those files. | Only when the agent reads or edits a matching file |
 | `.claude/settings.json` | Permissions (the usual dev commands pre-approved; `.env` files denied), fake providers as default env, three hooks. | Session start |
 | `.claude/hooks/learning-gate.sh` | PreToolUse on Edit/Write: on a `wp/NN-*` branch, a file under a learning path may change only when `docs/learning/wp-NN.md` says `decision: recorded` (or `fast_path: known`, D-38). Exit 2 denies with the reason. The one mechanism that enforces the learning requirement. | Every edit |
 | `.claude/hooks/format.sh` | PostToolUse on Edit/Write: Biome format of the touched file once the repo has Biome (WP-1). Never fails. | Every edit |
@@ -20,7 +20,7 @@ What Claude Code (or any agent that reads `AGENTS.md`) finds here, why each piec
 | `.claude/skills/explain` | `/explain <topic>`: first principles plus a concrete trace with file:line and the ADR. | On demand |
 | `.claude/agents/reviewer.md` | Subagent with the review checklist: boundaries, messaging, AI and guards, OWASP LLM Top 10, testing gates, secrets, content rules, delivery, learning gate, docs. Reports, never fixes, never approves. | `@agent-reviewer`, or delegated by Claude before a PR review |
 | `docs/learning/` | Explainer template and the written explainers. | By the skills and the gate |
-| `docs/local-playbook.md` | The hands-on version of this flow for the owner's machine: setup, first session, daily loop, what to do when something blocks. | By the owner and firstmate |
+| `docs/local-playbook.md` | The hands-on version of this flow for the owner's machine: setup, what a session looks like, daily loop, what to do when something blocks. | By the owner and firstmate |
 | `.github/ISSUE_TEMPLATE`, `PULL_REQUEST_TEMPLATE.md`, `scripts/github/seed.mjs` | The tracking structure of ADR-041 (WP-49). | By people and by `gh` |
 
 Security guardrails (no pushes to the default branch, no deploys, no ssh, no real providers in tests) are stated as rules in `AGENTS.md` section 7 and enforced by the owner's framework and sandbox; this repo does not duplicate them as hooks.
@@ -78,10 +78,9 @@ Fixed:
 
 Open, for the owner:
 
-- ADR-010 offers `@nestjs/observe` as an alternative, but it cannot meet the ADR's own OTLP decision; and it puts the broker in `api`'s readiness check, which the outbox makes questionable (WP-3 explainer flags it for WP-5).
+- The `@nestjs/observe` question of ADR-010 is settled by WP-3 decision F1 (`NodeSDK` with an explicit list, no new ADR). Whether the broker belongs in `api`'s readiness check, given the outbox, is still open; WP-5 decides.
 - `docs/plan/report.md` names databases `jadero_content`; the dev init script uses the ADR-027 pattern `content_dev`. The report should follow the ADR.
-- The explain-back and the Recap of WP-1 did not happen in the cloud session; they are the first local task. A learning WP run without the owner present is the exception, not the pattern.
-- `pnpm dev:up` could not run in the cloud (no Docker daemon); the compose stack is validated with `docker compose config` only until the owner starts it.
+- A learning WP run without the owner present is the exception, not the pattern. WP-1 ran in the cloud; its explain-back and the first `pnpm dev:up` were done afterwards on the owner's machine and are recorded in `docs/learning/wp-1.md`.
 
 ## Model and effort
 
@@ -90,5 +89,5 @@ The project does not pin a model in `.claude/settings.json`; the owner's own set
 ## Maintenance
 
 - A new rule goes into the matching `.claude/rules/*.md`, not into `AGENTS.md`, unless it applies everywhere.
-- When a command changes (WP-1 introduces the real `pnpm` scripts), update `AGENTS.md` section 3 in the same PR.
+- When a command changes, update `AGENTS.md` section 3 in the same PR.
 - `AGENTS.md` stays short: if it grows past about 150 lines, move detail into a rule or a skill.
