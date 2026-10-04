@@ -80,7 +80,6 @@ Open, for the owner:
 
 - ADR-010 offers `@nestjs/observe` as an alternative, but it cannot meet the ADR's own OTLP decision; and it puts the broker in `api`'s readiness check, which the outbox makes questionable (WP-3 explainer flags it for WP-5).
 - `docs/plan/report.md` names databases `jadero_content`; the dev init script uses the ADR-027 pattern `content_dev`. The report should follow the ADR.
-- `.claude/settings.json` denies `Read(.env.*)`, which also hides `.env.example` from the Read tool. Deny wins over allow; agents read it through Bash.
 - The explain-back and the Recap of WP-1 did not happen in the cloud session; they are the first local task. A learning WP run without the owner present is the exception, not the pattern.
 - `pnpm dev:up` could not run in the cloud (no Docker daemon); the compose stack is validated with `docker compose config` only until the owner starts it.
 
