@@ -14,6 +14,14 @@ Archive of the review page at https://claude.ai/artifact/HJZzB1Bkafy3t22kcUnHVA,
 - **`docs/plan/owner-marks.json` is the same export.** Both files were refreshed from the live database on 2026-10-04, so the later edits for D-16, D-45, D-49, D-50, D-52, D-59 and D-67 are in both.
 - **Not redacted.** The notes name the owner's employer and the owner's work there. That passes the content rules (ADR-031): no proprietary code or configuration, no client names, no personal data, no secrets.
 
+## Review page rules
+
+- The marks live in the page's store (the `marks` collection of the artifact database), never in `data.json`, so a republish of the page never overwrites them.
+- Export the marks only after the owner says marking is done. The first export, on 2026-10-03, missed the late picks for D-16, D-45, D-49, D-50, D-52, D-59 and D-67.
+- Before republishing, diff the marked answers against the current `docs/plan/decisions.json`: a mark refers to an option id, so a changed option must not move under it.
+- Decision ids and option ids are never renumbered. A retired decision keeps its id.
+- A note can override a pick: when the owner's note contradicts the chosen option, the note wins and the decision goes to the follow-ups file (`docs/plan/owner-review-followups.md`) until the owner settles it.
+
 ## Republish
 
 Only on the owner's request. Regenerate `data.json` from `docs/plan/decisions.json` (`cp docs/plan/decisions.json docs/artifacts/v2-plan/data.json`), then publish `index.html` with the Artifact tool, `url` set to the link above and `files` mapping `data.json` to this folder's copy. Do not pass `capabilities`, so the page keeps `db` and `user`, and never write to the `marks` collection: it holds the owner's marks.
