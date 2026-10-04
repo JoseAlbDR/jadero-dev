@@ -39,3 +39,35 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
     databaseUrl: env.DATABASE_URL,
   };
 }
+
+/**
+ * The environment of `api-worker`, the second process type of `api` (report section 3.2): the same
+ * variables, plus the broker it publishes to and the heartbeat interval. Its `PORT` serves health
+ * checks only.
+ */
+export const apiWorkerEnv = apiEnv.extend({
+  SERVICE_NAME: z.string().min(1).default("api-worker"),
+  RABBITMQ_URL: z.url({ protocol: /^amqps?$/ }),
+  HEARTBEAT_INTERVAL_MS: z.coerce.number<string>().int().min(1000).default(300_000),
+});
+
+/** The parsed `api-worker` environment. */
+export type ApiWorkerEnv = z.output<typeof apiWorkerEnv>;
+
+/** The configuration of `api-worker`; it also provides {@link ApiConfig} for the shared modules. */
+export abstract class ApiWorkerConfig extends ApiConfig {
+  abstract readonly rabbitmqUrl: string;
+  abstract readonly heartbeatIntervalMs: number;
+}
+
+/**
+ * @param env the result of `loadConfig(apiWorkerEnv)`.
+ * @returns the worker configuration.
+ */
+export function toApiWorkerConfig(env: ApiWorkerEnv): ApiWorkerConfig {
+  return {
+    ...toApiConfig(env),
+    rabbitmqUrl: env.RABBITMQ_URL,
+    heartbeatIntervalMs: env.HEARTBEAT_INTERVAL_MS,
+  };
+}

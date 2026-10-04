@@ -1,8 +1,8 @@
 {
-  "name": "@jadero/api",
+  "name": "@jadero/agent",
   "version": "0.0.0",
   "private": true,
-  "description": "Content, auth, media and CV service (ADR-001), with its api-worker process type (outbox relay, heartbeat).",
+  "description": "Knowledge, chat, guards and usage service (ADR-001). WP-5: the skeleton, with its consumer process type (agent-ingest from WP-20).",
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -12,8 +12,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:int": "vitest run -c vitest.int.config.ts",
-    "dev:worker": "PORT=3011 SERVICE_NAME=api-worker OTEL_SERVICE_NAME=api-worker node --watch-path=dist --watch-path=../../packages/platform-nest/dist --watch-path=../../packages/messaging/dist --watch-preserve-output --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/worker.js",
-    "start:worker": "node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/worker.js",
+    "dev:worker": "PORT=3012 SERVICE_NAME=agent-consumer OTEL_SERVICE_NAME=agent-consumer node --watch-path=dist --watch-path=../../packages/platform-nest/dist --watch-path=../../packages/messaging/dist --watch-preserve-output --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/consumer.js",
+    "start:consumer": "node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/consumer.js",
     "migrate": "node --env-file-if-exists=.env dist/migrate.js"
   },
   "dependencies": {

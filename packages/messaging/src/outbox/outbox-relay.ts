@@ -1,15 +1,9 @@
 import type { CloudEventEnvelope } from "@jadero/contracts";
 import { context, propagation } from "@opentelemetry/api";
 import { errorKind } from "../error-kind.js";
+import type { MessagingLog } from "../log.js";
 import type { MessageBus } from "../message-bus.js";
 import { inTransaction, type SqlPool } from "../sql/sql-executor.js";
-
-/** Structured logging, the shape pino's logger already has: fields first, then the message. */
-export interface MessagingLog {
-  debug(fields: Record<string, unknown>, message: string): void;
-  info(fields: Record<string, unknown>, message: string): void;
-  warn(fields: Record<string, unknown>, message: string): void;
-}
 
 /** Options of the relay (WP-5 decision L1). */
 export interface OutboxRelayOptions {

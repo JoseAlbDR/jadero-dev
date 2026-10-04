@@ -6,6 +6,7 @@ export {
   type InMemoryMessageBusOptions,
 } from "./in-memory-message-bus.js";
 export { cleanupInbox, idempotent, recordInInbox } from "./inbox/idempotent.js";
+export type { MessagingLog } from "./log.js";
 export {
   type Delivery,
   MessageBus,
@@ -16,7 +17,6 @@ export { createEnvelope, currentTraceparent, uuidv7 } from "./outbox/envelope.js
 export { addToOutbox } from "./outbox/outbox.js";
 export {
   backoffSeconds,
-  type MessagingLog,
   OutboxRelay,
   type OutboxRelayOptions,
   type RelayRun,

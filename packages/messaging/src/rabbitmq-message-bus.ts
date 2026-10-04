@@ -5,6 +5,7 @@ import type { ChannelWrapper } from "amqp-connection-manager";
 import type { ConsumeMessage } from "amqplib";
 import type { z } from "zod";
 import { dispatch } from "./dispatch.js";
+import type { MessagingLog } from "./log.js";
 import { MessageBus, type OutgoingMessage, type Subscription } from "./message-bus.js";
 import { DEFAULT_RETRY_TIERS_MS, dispose } from "./outcome.js";
 import {
@@ -34,8 +35,10 @@ export interface RabbitMqMessageBusOptions {
   readonly retryTiersMs?: readonly number[];
   /** How long a delivery is held before it is put back when its copy fails (default 1 s). */
   readonly redeliverDelayMs?: number;
-  /** Where golevelup logs; Nest's logger shape, so `PinoLogger` fits. */
+  /** Where golevelup logs its connection events; Nest's logger shape. */
   readonly logger?: LoggerService;
+  /** Where the adapter logs each delivery's outcome (ids and types, never bodies). */
+  readonly log?: MessagingLog;
 }
 
 type AnySubscription = Subscription<EventContract<string, z.ZodType>>;
@@ -64,6 +67,7 @@ export class RabbitMqMessageBus extends MessageBus {
   private readonly publishTimeoutMs: number;
   private readonly redeliverDelayMs: number;
   private readonly prefetch: number;
+  private readonly log: MessagingLog | undefined;
   private consuming: Promise<unknown> | undefined;
 
   /** @param options the broker URI and the policy settings. */
@@ -73,6 +77,7 @@ export class RabbitMqMessageBus extends MessageBus {
     this.publishTimeoutMs = options.publishTimeoutMs ?? 5000;
     this.redeliverDelayMs = options.redeliverDelayMs ?? 1000;
     this.prefetch = options.prefetch ?? 10;
+    this.log = options.log;
     this.connection = new AmqpConnection({
       uri: options.uri,
       enableDirectReplyTo: false,
@@ -149,8 +154,21 @@ export class RabbitMqMessageBus extends MessageBus {
   /** @inheritdoc */
   override async close(): Promise<void> {
     await this.stop();
-    await this.consumerChannel.close();
-    await this.connection.close();
+    const closing = (async () => {
+      await this.consumerChannel.close();
+      await this.connection.close();
+    })();
+    if (this.connection.connected) {
+      await closing;
+      return;
+    }
+    // Never connected (broker down since boot): amqp-connection-manager's close() waits for a
+    // connect attempt that may never settle, which would hang a SIGTERM. Give it a moment, then
+    // let the shutdown go on; there is nothing to flush without a connection.
+    await Promise.race([
+      closing.catch(() => undefined),
+      new Promise((resolve) => setTimeout(resolve, 1000).unref()),
+    ]);
   }
 
   private track(work: Promise<void>): void {
@@ -166,8 +184,27 @@ export class RabbitMqMessageBus extends MessageBus {
     } catch {
       body = undefined;
     }
+    const started = Date.now();
     const outcome = await dispatch(this.subscriptions.get(queue) ?? [], body, attempt, queue);
     const disposition = dispose(outcome, attempt, this.retryTiersMs);
+    const fields = {
+      queue,
+      event_id: raw.properties.messageId,
+      type: (body as { type?: unknown } | undefined)?.type,
+      attempt,
+      duration_ms: Date.now() - started,
+    };
+    if (disposition.action === "ack") this.log?.info(fields, "event handled");
+    else if (disposition.action === "retry")
+      this.log?.warn(
+        {
+          ...fields,
+          delay_ms: disposition.delayMs,
+          reason: outcome.kind === "retry" ? outcome.reason : undefined,
+        },
+        "event retry scheduled",
+      );
+    else this.log?.warn({ ...fields, reason: disposition.reason }, "event dead-lettered");
     const retryExchange = retryExchangeName(serviceOfQueue(queue));
     const headers = copyHeaders(raw);
     try {

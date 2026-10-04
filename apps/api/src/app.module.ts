@@ -1,9 +1,10 @@
 import { HealthModule, LoggingModule, TelemetryModule } from "@jadero/platform-nest";
 import { type DynamicModule, Module } from "@nestjs/common";
 import { ApiConfig } from "./config/api-config.js";
+import { DevPingModule } from "./modules/ping/index.js";
 import { PostgresModule, PostgresReadinessCheck } from "./modules/platform/index.js";
 
-/** The root module of `api`. Feature modules join from WP-10 on. */
+/** The root module of `api`, the HTTP process type. Feature modules join from WP-10 on. */
 @Module({})
 export class AppModule {
   /**
@@ -25,6 +26,8 @@ export class AppModule {
         }),
         HealthModule.forRoot({ imports: [PostgresModule], checks: [PostgresReadinessCheck] }),
         TelemetryModule,
+        // POST /dev/ping exists in development only (WP-5 decision W1 c).
+        ...(config.nodeEnv === "development" ? [DevPingModule] : []),
       ],
       providers: [{ provide: ApiConfig, useValue: config }],
       exports: [ApiConfig],

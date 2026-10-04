@@ -20,7 +20,7 @@
     "test:e2e": "turbo run test:e2e",
     "test:scripts": "node --test \"scripts/**/*.test.mjs\"",
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "turbo run dev dev:worker",
     "dev:up": "docker compose -f infra/compose/compose.dev.yml up -d --wait",
     "dev:down": "docker compose -f infra/compose/compose.dev.yml down",
     "adr:new": "node scripts/adr/new.mjs",

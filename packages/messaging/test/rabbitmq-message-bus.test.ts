@@ -38,6 +38,19 @@ describe("RabbitMqMessageBus with the broker down", () => {
   });
 });
 
+describe("RabbitMqMessageBus shutdown with the broker down since boot", () => {
+  it("closes within about a second instead of waiting for a connection that never comes", async () => {
+    const bus = new RabbitMqMessageBus({
+      uri: "amqp://nobody:nothing@127.0.0.1:1/none",
+      logger: silent,
+    });
+    await bus.start();
+    const started = Date.now();
+    await bus.close();
+    expect(Date.now() - started).toBeLessThan(2000);
+  });
+});
+
 describe("test images", () => {
   it("use the same RabbitMQ and Postgres tags as the dev stack, so dev and tests cannot drift", () => {
     const compose = readFileSync(

@@ -28,6 +28,7 @@
     "@opentelemetry/api": "catalog:",
     "@opentelemetry/exporter-trace-otlp-proto": "catalog:",
     "@opentelemetry/instrumentation": "catalog:",
+    "@opentelemetry/instrumentation-amqplib": "catalog:",
     "@opentelemetry/instrumentation-express": "catalog:",
     "@opentelemetry/instrumentation-http": "catalog:",
     "@opentelemetry/instrumentation-pg": "catalog:",
