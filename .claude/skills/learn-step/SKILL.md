@@ -1,6 +1,6 @@
 ---
 name: learn-step
-description: The learning gate for a learning work package. Writes docs/learning/wp-NN.md (first principles, one concrete trace, patterns, options, the exact question for the owner) and stops for the owner's decision. Required before code lands under a learning path (hook learning-gate.sh enforces it).
+description: The learning gate for a learning work package. Writes docs/learning/wp-N.md (first principles, one concrete trace, patterns, options, the exact question for the owner) and stops for the owner's decision. Required before code lands under a learning path (hook learning-gate.sh enforces it).
 user-invocable: true
 arguments: [wp, step]
 allowed-tools: Read, Write, Edit, Glob, Grep, WebFetch, WebSearch, Bash(git status*), Bash(git branch*), Bash(git diff*), Bash(npm view *), Bash(pnpm view *), Bash(curl -s *), Bash(docker manifest inspect *)
