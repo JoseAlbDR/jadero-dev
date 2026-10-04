@@ -31,6 +31,7 @@ It never needs to read the whole plan or every ADR: the explainer of the WP is w
 | Topic | This repo expects | Possible clash | Rule |
 |---|---|---|---|
 | Decisions before code | `learning-gate.sh` denies edits under learning paths until `decision: recorded` | an autonomous implementer that plans and codes in one pass | firstmate must stop after the plan and after the explainer; a denied edit is the process, never something to route around |
+| Reports | a request for a report or a fit check changes nothing | opening pull requests on its own findings | deliver the report and wait for the owner's go; then one PR per agreed change, in the order the owner sets |
 | Who decides | the owner answers every backend and agent pattern question | firstmate picking defaults to keep moving | firstmate recommends; only the owner records the decision. "Take the recommendation" is allowed only when the owner says it |
 | Step size | one step, one commit, the owner sees it run (step contract, `AGENTS.md` section 5) | batching a WP into one diff | keep the step list from `/wp`; one commit per step; the check question waits for the owner's answer |
 | Decision records | ADRs tracked in `docs/adr/`, superseded never edited, `/adr` | the framework keeps decisions untracked | decisions that change an ADR become a new ADR in the repo; the framework's own notes stay outside it |
