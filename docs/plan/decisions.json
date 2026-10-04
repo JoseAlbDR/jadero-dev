@@ -1378,7 +1378,7 @@
       "recommendation": "a",
       "why": "The editorial base reads as senior and credible to any engineering audience, and the terminal-style prompt adds one memorable interaction without making the agent the whole story; the final call comes from the mockups.",
       "adr": "ADR-023",
-      "status": "decided-with-change",
+      "status": "decided",
       "decidedOption": "c",
       "decidedBy": "owner",
       "decidedAt": "2026-10-04",

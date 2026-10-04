@@ -99,6 +99,13 @@
   --aurora-1: oklch(0.85 0.1 290);
   --aurora-2: oklch(0.88 0.08 200);
   --aurora-3: oklch(0.88 0.08 340);
+  /* Agent terminal: the same dark values in both themes. */
+  --term-bg: oklch(0.17 0.02 275);
+  --term-raised: oklch(0.22 0.025 275);
+  --term-line: oklch(1 0 0 / 14%);
+  --term-fg: oklch(0.95 0.01 275);
+  --term-muted: oklch(0.74 0.02 275);
+  --term-signal: oklch(0.84 0.12 200);
 }
 
 :root.dark:has([data-direction="bento"]) {
@@ -125,15 +132,6 @@
 }
 
 /* The agent terminal of the bento direction: dark in both themes, with a glowing accent border. */
-:root:has([data-direction="bento"]) {
-  --term-bg: oklch(0.17 0.02 275);
-  --term-raised: oklch(0.22 0.025 275);
-  --term-line: oklch(1 0 0 / 14%);
-  --term-fg: oklch(0.95 0.01 275);
-  --term-muted: oklch(0.74 0.02 275);
-  --term-signal: oklch(0.84 0.12 200);
-}
-
 .mockup-term {
   background: var(--term-bg);
 }

@@ -35,7 +35,7 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-020 | Guard architecture and guardrail libraries | accepted | D-25 | [0020-guard-architecture-and-guardrail-libraries.md](0020-guard-architecture-and-guardrail-libraries.md) |
 | ADR-021 | Abuse and cost controls | accepted | D-26, D-27, D-28 | [0021-abuse-and-cost-controls.md](0021-abuse-and-cost-controls.md) |
 | ADR-022 | Internationalization | accepted | D-19, D-20 | [0022-internationalization.md](0022-internationalization.md) |
-| ADR-023 | Design system and visual direction | accepted | D-23, D-74 | [0023-design-system-and-visual-direction.md](0023-design-system-and-visual-direction.md) |
+| ADR-023 | Design system and visual direction | superseded by ADR-045 | D-23, D-74 | [0023-design-system-and-visual-direction.md](0023-design-system-and-visual-direction.md) |
 | ADR-024 | Lint, format and architecture fitness functions | accepted | D-35 | [0024-lint-format-and-architecture-fitness-functions.md](0024-lint-format-and-architecture-fitness-functions.md) |
 | ADR-025 | Versioning and releases | accepted | D-36 | [0025-versioning-and-releases.md](0025-versioning-and-releases.md) |
 | ADR-026 | Pipeline, environments, images and deploy | accepted | D-29, D-32 | [0026-pipeline-environments-images-and-deploy.md](0026-pipeline-environments-images-and-deploy.md) |
@@ -57,7 +57,7 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-042 | NestJS 12 on Node 24 LTS | accepted | D-4 | [0042-node-24-lts-runtime.md](0042-node-24-lts-runtime.md) |
 | ADR-043 | Configuration loaded before Nest, and secrets | accepted | D-7 | [0043-configuration-loaded-before-nest-and-secrets.md](0043-configuration-loaded-before-nest-and-secrets.md) |
 | ADR-044 | Visual direction confirmed from the mockups | superseded by ADR-045 | D-23 | [0044-visual-direction-confirmed-from-the-mockups.md](0044-visual-direction-confirmed-from-the-mockups.md) |
-| ADR-045 | Bento glass with the agent terminal | accepted | D-23 | [0045-bento-glass-with-the-agent-terminal.md](0045-bento-glass-with-the-agent-terminal.md) |
+| ADR-045 | Bento glass with the agent terminal | accepted | D-23, D-74 | [0045-bento-glass-with-the-agent-terminal.md](0045-bento-glass-with-the-agent-terminal.md) |
 <!-- adr-index:end -->
 
 Read in this order for a first pass: 029 (service boundaries), 002 (topology and edge), 003 (inside a service), 012 (async work), 031 (content layers), 013 to 016 (AI layer and RAG), 020 and 021 (security), 025 to 027 (delivery and hosting), 041 (work tracking).
