@@ -16,3 +16,7 @@ dist/
 .turbo/
 coverage/
 *.log
+
+# Next.js generated files
+next-env.d.ts
+*.tsbuildinfo

@@ -1,0 +1,25 @@
+{
+  "name": "@jadero/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Public site (ADR-001, ADR-022, ADR-023). WP-4: the skeleton.",
+  "type": "module",
+  "scripts": {
+    "build": "next build && node scripts/copy-standalone-assets.mjs",
+    "dev": "next dev",
+    "start": "node .next/standalone/apps/web/server.js",
+    "typecheck": "next typegen && tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@jadero/config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "typescript": "catalog:"
+  }
+}
