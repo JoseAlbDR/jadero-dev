@@ -108,7 +108,7 @@ describe("transactional outbox", () => {
     await ping();
     await ping();
     await pool.query(
-      "UPDATE messaging.outbox SET published_at = now() - interval '8 days' WHERE id = (SELECT min(id) FROM messaging.outbox)",
+      "UPDATE messaging.outbox SET published_at = now() - interval '8 days' WHERE id = (SELECT id FROM messaging.outbox ORDER BY created_at LIMIT 1)",
     );
     const relay = new OutboxRelay({ pool, bus: new RecordingBus() as MessageBus });
     expect(await relay.cleanup()).toBe(1);

@@ -136,8 +136,12 @@ export class RabbitMqMessageBus extends MessageBus {
 
   /** @inheritdoc Cancels the consumers, then waits for the deliveries in progress. */
   override async stop(): Promise<void> {
-    if (!this.consuming) return;
+    const registering = this.consuming;
+    if (!registering) return;
     this.consuming = undefined;
+    // consume() registers its consumer only after the channel is set up; cancelling before that
+    // finishes would miss it and the consumer would start anyway (found by the contract suite).
+    await registering.catch(() => undefined);
     await this.consumerChannel.cancelAll();
     await Promise.allSettled([...this.inFlight]);
   }
