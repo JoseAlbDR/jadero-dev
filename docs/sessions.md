@@ -18,17 +18,20 @@ The session loads `CLAUDE.md` (which imports `AGENTS.md`) by itself, and the Ses
 | Security | runs in a sandbox, plus the repo's permission settings | no sandbox unless the owner sets one up: the protection is the `.env` deny in `.claude/settings.json`, the learning gate and the owner reviewing each step |
 | Artifacts (code map, process pages) | can republish them | edits the repo files; the next cloud session republishes |
 
-## Prompt: start a work package
+## Prompt: start the next work package
 
-Change the number, title and issue; the rest stays.
+The same prompt starts every backend or learning work package; the session picks the WP from the plan and the open issues.
 
 ```
-Next work package in jadero-dev: WP-5 (messaging foundation and the agent skeleton), issue #13, a
-learning WP. Follow the repo's flow exactly (AGENTS.md section 5, docs/agent-tooling.md, docs/sessions.md):
-1. git fetch origin, then pnpm install && pnpm verify:all on origin/main.
-2. /wp 5: check that its dependencies are closed, create wp/5-<slug> from origin/main, propose 4 to 8
-   steps and the definition of done from the issue, then stop.
-3. After my go: /learn-step 5. Self-contained explainer; concepts labelled Own, Recognize or Delegate;
+Next work package in jadero-dev. First pick it: git fetch origin; read docs/plan/decisions.json
+(workPackages) and the open WP issues; list the WPs whose dependencies are all closed, in release order,
+marking each as backend/learning or frontend; recommend the next backend/learning one and wait for my
+choice. Then follow the repo's flow exactly (AGENTS.md section 5, docs/agent-tooling.md,
+docs/sessions.md) for that WP, called WP-N below:
+1. pnpm install && pnpm verify:all on origin/main.
+2. /wp N: check that its dependencies are closed, create wp/N-<slug> from origin/main, propose 4 to 8
+   steps and the definition of done from its issue, then stop.
+3. After my go: /learn-step N. Self-contained explainer; concepts labelled Own, Recognize or Delegate;
    for each decision the forces, at least three options (one you would not pick, and when it would
    win) and what would make it wrong; all questions in one message, recommendations in a separate block
    after the questions. I answer first with my pick and one risk, then we compare. Stop. No code under
@@ -37,11 +40,28 @@ learning WP. Follow the repo's flow exactly (AGENTS.md section 5, docs/agent-too
    step contract (AGENTS.md section 5): files, explainer paragraph and ADR lines before writing (stop if
    the code would depart from an ADR), pnpm verify, show it running, privacy check, two step-log lines
    from the diff, one check question for me, one scoped commit. @agent-reviewer after about half the
-   steps. Steps that need Docker: tell me the exact commands and wait for my output.
+   steps. Steps that need Docker in a cloud session: tell me the exact commands and wait for my output.
 5. Last step: update docs/architecture/code-map.html (its JSON data) and the docs the WP changed.
-6. Open the PR with Closes #13, run @agent-reviewer, fix its findings, then do my explain-back in
-   interview form (why, what else, when to change it, what happens when it fails; I draw the main
+6. Open the PR with Closes #<its issue>, run @agent-reviewer, fix its findings, then do my explain-back
+   in interview form (why, what else, when to change it, what happens when it fails; I draw the main
    trace from memory) and write it in the Recap. I write the journal post. I merge.
+Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.
+```
+
+To force a specific WP, replace the first two sentences with "Next work package in jadero-dev: WP-N (<title>)."
+
+## Prompt: a frontend work package
+
+Frontend WPs (`apps/web`, `apps/admin`, `packages/ui`) are result-only (AGENTS.md section 5): no learning gate, no explainer, no explain-back. They can run in their own session while a backend WP runs in another, as long as the two do not touch the same files.
+
+```
+Frontend work package in jadero-dev: WP-N (<title>), issue #<n>. Result-only, no learning gate.
+git fetch origin; /wp N (dependencies, branch wp/N-<slug> from origin/main, steps, definition of done),
+then build it step by step to the design system and the ADRs it names, without stopping for me
+except for product or content questions (copy, layout choices that change what a visitor sees).
+Each step: pnpm verify, one scoped commit (feat(web): ...), a screenshot of the result. Last step:
+the code map if the workspace changed. Then the PR with Closes #<n>, @agent-reviewer, fix its
+findings, and send me the screenshots and the PR link. I merge.
 Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.
 ```
 

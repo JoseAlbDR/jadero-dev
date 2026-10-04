@@ -36,7 +36,7 @@ A step the owner already knows: `fast_path: known` in the explainer, no full exp
 
 ## Sessions
 
-Every work package runs in a Claude Code session started in this repo. `docs/sessions.md` has what a session reads, the differences between a cloud and a local session, and the prompts to start a WP, resume one or do a chore.
+Every work package runs in a Claude Code session started in this repo. `docs/sessions.md` has what a session reads, the differences between a cloud and a local session, and the prompts to start the next WP, run a frontend WP, resume one or do a chore.
 
 ## The delivery flow, end to end
 
