@@ -298,7 +298,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "figures": [
         {
           "type": "graph", "title": "Nest module and DI graph of api", "viewBox": [1000, 780],
-          "caption": "LoggingModule provides the nestjs-pino Logger (through LoggerModule); configureApp consumes it with app.get(Logger) and hands it to app.useLogger. ApiConfig and ReadinessCheck are abstract classes used as DI tokens; PG_POOL and READINESS_CHECKS are symbol tokens. HealthModule comes from platform-nest; api plugs its Postgres check into it. TelemetryModule exists in platform-nest but AppModule does not import it yet, so its arrow is dashed. Dashed boxes are planned.",
+          "caption": "LoggingModule provides the nestjs-pino Logger (through LoggerModule); configureApp consumes it with app.get(Logger) and hands it to app.useLogger. ApiConfig and ReadinessCheck are abstract classes used as DI tokens; PG_POOL and READINESS_CHECKS are symbol tokens. HealthModule comes from platform-nest; api plugs its Postgres check into it. TelemetryModule, also from platform-nest, flushes the spans of the last requests when the app closes. Dashed boxes are planned.",
           "lanes": [
             { "x": 8, "y": 10, "w": 984, "h": 606, "label": "DI container · built by NestFactory.create" },
             { "x": 8, "y": 640, "w": 984, "h": 130, "label": "configureApp(app) · app-level, outside any module" }
@@ -316,7 +316,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             { "from": "di-appmodule", "to": "apiconfig", "label": "provides", "kind": "provides" },
             { "from": "di-appmodule", "to": "di-logging", "label": "imports forRoot(...)", "kind": "imports", "labelAt": [317, 118] },
             { "from": "di-appmodule", "to": "di-health", "label": "imports", "kind": "imports" },
-            { "from": "di-appmodule", "to": "di-telemetry", "label": "not imported yet", "kind": "planned", "labelAt": [652, 124] },
+            { "from": "di-appmodule", "to": "di-telemetry", "label": "imports", "kind": "imports", "labelAt": [652, 124] },
             { "from": "di-logging", "to": "di-loggermodule", "label": "imports, re-exports", "kind": "imports" },
             { "from": "di-loggermodule", "to": "di-logger", "label": "provides", "kind": "provides" },
             { "from": "di-loggermodule", "to": "di-pinologger", "label": "provides", "kind": "provides" },
@@ -463,7 +463,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
               "path": ["r-express", "r-pinohttp", "r-router", "r-filter", "r-log"],
               "request": "GET /nope\nx-request-id: trace-three-0001",
               "response": "HTTP/1.1 404 Not Found\ncontent-type: application/problem+json\nx-request-id: trace-three-0001\n\n{\n  \"type\": \"about:blank\",\n  \"title\": \"Not Found\",\n  \"status\": 404,\n  \"detail\": \"Cannot GET /nope\",\n  \"instance\": \"/nope\",\n  \"requestId\": \"trace-three-0001\",\n  \"traceId\": \"4bf92f3577b34da6a3ce929d0e0e4736\"\n}\n\nlog line:\n{\"level\":40,\"service\":\"api\",\"req_id\":\"trace-three-0001\",\n \"trace_id\":\"4bf92f3577b34da6a3ce929d0e0e4736\",\"span_id\":\"00f067aa0ba902b7\",\n \"res\":{\"statusCode\":404},\"msg\":\"request completed\"}\n\nconsole span:\n{ traceId: '4bf92f3577b34da6a3ce929d0e0e4736', name: 'GET', kind: 1, ... }",
-              "note": "The same 404 as before, started with `pnpm start` so the instrumentation entry is loaded. ProblemDetailsFilter adds `traceId` from `currentTraceId()`, the pino instrumentation adds `trace_id` and `span_id` to the line, and the console exporter prints the `GET` span (plus the Express middleware spans) with the same id. The ids here are examples in the right format; the shape is what step 7 showed on `api` and what `packages/platform-nest/test/telemetry.test.ts` asserts with a real `node --import`."
+              "note": "The same 404 as before, started with `pnpm start` and `OTEL_TRACES_EXPORTER=console` (the dev `.env`), so the instrumentation entry is loaded and prints spans. ProblemDetailsFilter adds `traceId` from `currentTraceId()`, the pino instrumentation adds `trace_id` and `span_id` to the line, and the console exporter prints the `GET` span (plus the Express middleware spans) with the same id. The ids here are examples in the right format; the shape is what step 7 showed on `api` and what `packages/platform-nest/test/telemetry.test.ts` asserts with a real `node --import`."
             }
           ]
         },
@@ -654,7 +654,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "rule-domain-only-domain": {
       "label": "domain imports only domain", "sub": "domain-imports-only-domain · error", "kind": "rule", "status": "real", "wp": "WP-1, fixed in WP-3 step 8",
       "what": "A file in `src/modules/<m>/domain/` may import only the same module's domain folder and Node built-ins: no other layer, no other module, no npm package.",
-      "how": "`from` matches `^(apps|packages|templates)/<pkg>/src/modules/<m>/domain/`; `to` flags anything whose path is not `$1/$2/src/modules/$3/domain/` and is not a Node built-in (`dependencyTypesNot: [core]`). Before step 8 the rule only looked at imports into `apps/`, so a domain file could import `@nestjs/common` and pass. Now an npm import fails too.",
+      "how": "`from` matches `^(apps|packages|templates)/<pkg>/src/modules/<m>/domain/`; `to` flags anything whose path is not `$1/$2/src/modules/$3/domain/` and is not a Node built-in (`dependencyTypesNot: [core]`). `*.test.ts` files next to domain code are exempt, so they may import the test runner. Before step 8 the rule only looked at imports into `apps/`, so a domain file could import `@nestjs/common` and pass. Now an npm import fails too, including packages that ship from their own `dist/`: the global exclude is narrowed to the workspace's build folders (`^(apps|packages|templates)/<pkg>/(dist|coverage|.turbo|.next)/`). Known gap: a domain file importing a workspace package (`@jadero/*`) resolves into that package's `dist/`, which the exclude still drops.",
       "why": "ADR-003: the domain layer is plain TypeScript, so its rules run and test without Nest or a database. The template's `Widget` is the first domain code it guards; api's hexagonal modules arrive with WP-12.",
       "files": [".dependency-cruiser.cjs"]
     },
@@ -682,7 +682,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "di-appmodule": {
       "label": "AppModule.forRoot(config)", "sub": "root dynamic module · global", "kind": "module", "status": "real", "wp": "WP-3 step 3",
       "what": "The root module of api, built around an already validated configuration.",
-      "how": "A static `forRoot(config)` returns a `DynamicModule` with `global: true`. It imports `LoggingModule.forRoot({ serviceName, level, pretty })` from the config (pretty only when `nodeEnv` is development), imports `HealthModule.forRoot({ imports: [PostgresModule], checks: [PostgresReadinessCheck] })`, provides `ApiConfig` with `useValue: config` and exports it, so any module (PostgresModule included) can inject it without importing AppModule.",
+      "how": "A static `forRoot(config)` returns a `DynamicModule` with `global: true`. It imports `LoggingModule.forRoot({ serviceName, level, pretty })` from the config (pretty only when `nodeEnv` is development), `HealthModule.forRoot({ imports: [PostgresModule], checks: [PostgresReadinessCheck] })` and `TelemetryModule`, provides `ApiConfig` with `useValue: config` and exports it, so any module (PostgresModule included) can inject it without importing AppModule.",
       "why": "Because the config is parsed before the module is built, a bad environment never reaches a module (WP-3 decision B2). `forRoot` takes the config as an argument instead of reading `process.env`, which keeps the environment read in one place (ADR-043).",
       "files": ["apps/api/src/app.module.ts", "apps/api/test/app.module.test.ts", "apps/api/test/setup/boot.ts"]
     },
@@ -703,7 +703,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "di-health": {
       "label": "HealthModule.forRoot({ imports, checks })", "sub": "platform-nest · Terminus", "kind": "module", "status": "real", "wp": "WP-3 step 6",
       "what": "`/health/live` and `/health/ready`, the same in every service, with each service bringing its own readiness checks.",
-      "how": "`forRoot(options)` imports `TerminusModule.forRoot({ logger: false })` plus the modules in `options.imports`, declares `HealthController`, provides `ShutdownState` and every class in `options.checks`, and builds `READINESS_CHECKS` with a factory that collects the check instances into an array. api calls it as `HealthModule.forRoot({ imports: [PostgresModule], checks: [PostgresReadinessCheck] })`.",
+      "how": "`forRoot(options)` imports `TerminusModule.forRoot({ logger: false })` plus the modules in `options.imports`, declares `HealthController`, provides `ShutdownState` (with the optional `drainMs`, default 0, as `SHUTDOWN_DRAIN_MS`) and every class in `options.checks`, and builds `READINESS_CHECKS` with a factory that collects the check instances into an array. api calls it as `HealthModule.forRoot({ imports: [PostgresModule], checks: [PostgresReadinessCheck] })`.",
       "why": "WP-3 decision C: endpoints and status codes must be identical for Docker Compose and Uptime Kuma, while the checks are service specific. Terminus does the response shape (ADR-010).",
       "files": ["packages/platform-nest/src/health/health.module.ts", "packages/platform-nest/test/health.test.ts", "apps/api/src/app.module.ts"]
     },
@@ -717,8 +717,8 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "di-shutdownstate": {
       "label": "ShutdownState", "sub": "readiness flag", "kind": "provider", "status": "real", "wp": "WP-3 step 6",
       "what": "A flag that turns true when shutdown starts.",
-      "how": "Implements `beforeApplicationShutdown`, which Nest calls after `onModuleDestroy` and before the HTTP server closes. The readiness endpoint reports a `shutdown` indicator as down once it is set.",
-      "why": "Graceful shutdown: readiness answers 503 so no new traffic arrives, while requests already in flight finish (WP-3 first principles, lifecycle).",
+      "how": "Implements `beforeApplicationShutdown`, which Nest calls after `onModuleDestroy` and before the HTTP server closes. The readiness endpoint reports a `shutdown` indicator as down once it is set. With `HealthModule.forRoot({ drainMs })` the hook then waits that many milliseconds before returning, so the server stays open while readiness answers 503. The default is 0: no wait.",
+      "why": "With `drainMs` 0, Nest closes the server right after the flag flips, so the flag only protects requests already in flight; a probe will usually not see the 503. Behind a load balancer that polls readiness, set `drainMs` to a few probe intervals so it stops sending traffic before the listener closes (WP-3 first principles, lifecycle).",
       "files": ["packages/platform-nest/src/health/shutdown-state.ts"]
     },
     "di-healthcontroller": {
@@ -759,7 +759,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "di-pgpool": {
       "label": "PG_POOL", "sub": "symbol token · useFactory(ApiConfig)", "kind": "token", "status": "real", "wp": "WP-3 step 6",
       "what": "The `pg` connection pool.",
-      "how": "`useFactory: (config: ApiConfig) => new Pool({ connectionString: config.databaseUrl, max: 2, connectionTimeoutMillis: 1000 })` with `inject: [ApiConfig]`. The pool connects lazily, so api boots while the database is down and readiness reports it. Consumers use `@Inject(PG_POOL)` because `Pool` is a class from a library, not our token.",
+      "how": "`useFactory: (config: ApiConfig) => new Pool({ connectionString: config.databaseUrl, max: 2, connectionTimeoutMillis: 1000, query_timeout: 1000 })` with `inject: [ApiConfig]`. `query_timeout` frees the connection when a readiness check times out. The pool connects lazily, so api boots while the database is down and readiness reports it. Consumers use `@Inject(PG_POOL)` because `Pool` is a class from a library, not our token.",
       "why": "A symbol token keeps the pool out of string keys and makes the binding explicit. A small pool of 2 is enough for a readiness probe until WP-10 sizes it for real queries.",
       "files": ["apps/api/src/modules/platform/postgres.module.ts", "apps/api/src/modules/platform/postgres.tokens.ts"]
     },
@@ -801,9 +801,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "di-telemetry": {
       "label": "TelemetryModule", "sub": "platform-nest · flushes spans", "kind": "module", "status": "real", "wp": "WP-3 step 7",
       "what": "Ties the SDK started by the instrumentation entry to the app's shutdown, so the last requests' spans are exported.",
-      "how": "Provides a private `TelemetryFlusher` whose `onApplicationShutdown` calls `shutdownTelemetry()`. That hook runs after the HTTP server has closed, like PoolCloser. Exported from `@jadero/platform-nest`, but `AppModule.forRoot` does not import it yet, so today api ends without a final flush; with the console exporter each span is written as it ends, so nothing is lost in dev.",
+      "how": "Provides a private `TelemetryFlusher` whose `onApplicationShutdown` calls `shutdownTelemetry()`. That hook runs after the HTTP server has closed, like PoolCloser. `AppModule.forRoot` imports it next to LoggingModule and HealthModule. A test closes a module that imports it and checks the SDK's `shutdown` ran once.",
       "why": "The SDK lives outside Nest (it starts before Nest exists), so a small module is the bridge to Nest's lifecycle. Batched OTLP export needs the flush, otherwise spans still in the buffer are dropped on SIGTERM.",
-      "files": ["packages/platform-nest/src/telemetry/telemetry.module.ts", "packages/platform-nest/src/telemetry/telemetry-state.ts", "apps/api/src/app.module.ts"]
+      "files": ["packages/platform-nest/src/telemetry/telemetry.module.ts", "packages/platform-nest/src/telemetry/telemetry-state.ts", "apps/api/src/app.module.ts", "packages/platform-nest/test/telemetry.test.ts"]
     },
     "di-feature": {
       "label": "feature providers", "sub": "planned · WP-10 on", "kind": "provider", "status": "planned", "wp": "WP-10 on",
@@ -829,15 +829,15 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "g-filter": {
       "label": "ProblemDetailsFilter", "sub": "global @Catch() filter", "kind": "global", "status": "real", "wp": "WP-3 step 5",
       "what": "The one exception filter: every error leaves as `application/problem+json` (RFC 9457).",
-      "how": "`RequestValidationException` becomes 400 `validation-failed` with an `errors` array; any other HttpException under 500 keeps its status and message as `about:blank`; anything else is a generic 500 whose stack goes only to the error log. Every body carries `requestId` from pino-http and, when telemetry is on, `traceId` from `currentTraceId()`.",
-      "why": "ADR-006: one error shape for every route and service. Exception shielding keeps internals out of responses. Health routes will keep their own body (WP-3 decision E1).",
+      "how": "`RequestValidationException` becomes 400 `validation-failed` with an `errors` array; any other HttpException under 500 keeps its status and message as `about:blank`; an Express middleware error with a 4xx `status` and `expose: true` (body-parser's 413 payload too large, 415 unsupported media type) keeps its status the same way instead of becoming a 500; anything else is a generic 500 whose stack goes only to the error log. `instance` is the path only, without the query string, and Nest's 404 message is cut the same way, because a query may carry an email or a token. Every body carries `requestId` from pino-http and, when telemetry is on, `traceId` from `currentTraceId()`.",
+      "why": "ADR-006: one error shape for every route and service. Exception shielding keeps internals out of responses. Health routes keep their own body (WP-3 decision E1).",
       "files": ["packages/platform-nest/src/errors/problem-details.filter.ts", "packages/platform-nest/src/errors/problem-details.ts", "packages/platform-nest/test/problem-details.e2e.test.ts"]
     },
     "g-shutdown": {
       "label": "enableShutdownHooks()", "sub": "SIGTERM runs app.close()", "kind": "global", "status": "real", "wp": "WP-3 step 3",
       "what": "Makes SIGTERM and SIGINT run `app.close()` and the lifecycle hooks.",
-      "how": "Nest listens for the signals and calls `onModuleDestroy`, then `beforeApplicationShutdown` (ShutdownState flips readiness to 503), closes the HTTP server, then `onApplicationShutdown` (PoolCloser ends the Postgres pool; TelemetryModule would flush spans here once AppModule imports it). The configure-app test checks a probe's `onApplicationShutdown` runs.",
-      "why": "Graceful shutdown for containers: readiness drops first, in-flight requests finish, and the pool closes last (WP-3 first principles, lifecycle).",
+      "how": "Nest listens for the signals and calls `onModuleDestroy`, then `beforeApplicationShutdown` (ShutdownState flips readiness to 503), closes the HTTP server, then `onApplicationShutdown` (PoolCloser ends the Postgres pool, TelemetryModule flushes the spans). The configure-app test checks a probe's `onApplicationShutdown` runs.",
+      "why": "Graceful shutdown for containers: requests in flight finish before the pool closes and the spans are flushed. Whether probes see the 503 before the listener closes depends on `drainMs` (see ShutdownState): with the default 0, Nest closes the server right after the flag flips (WP-3 first principles, lifecycle).",
       "files": ["packages/platform-nest/src/bootstrap/configure-app.ts", "packages/platform-nest/test/configure-app.test.ts"]
     },
     "b-node": {
@@ -850,13 +850,13 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "b-otel": {
       "label": "--import instrumentation", "sub": "before main.js", "kind": "step", "status": "real", "wp": "WP-3 step 7",
       "what": "The OpenTelemetry entry, `@jadero/platform-nest/instrumentation`, which Node runs before it loads `main.js`.",
-      "how": "It registers the ESM loader hook (`register(\"@opentelemetry/instrumentation/hook.mjs\", import.meta.url)`), validates `telemetryEnv` with `loadConfig` (a bad value exits 1 and names the variable), builds `NodeSDK` with http, express, pg and pino instrumentations, starts it and keeps it for shutdown. With `OTEL_TRACES_EXPORTER=none` it starts nothing.",
+      "how": "It registers the ESM loader hook (`register(\"@opentelemetry/instrumentation/hook.mjs\", import.meta.url)`), validates `telemetryEnv` with `loadConfig` (a bad value exits 1 and names the variable), builds `NodeSDK` with http, express, pg and pino instrumentations, starts it and keeps it for shutdown. With `OTEL_TRACES_EXPORTER=none`, the default, it starts nothing; dev sets `console` in `.env`.",
       "why": "In ESM every import of `main.js` loads before its first line, so patching from inside `main.ts` would be too late and would silently produce no spans. A separate file loaded with `--import` is the only place early enough (WP-3 decision F1).",
       "files": ["packages/platform-nest/src/telemetry/instrumentation.ts", "packages/platform-nest/src/telemetry/create-sdk.ts", "packages/platform-nest/test/telemetry.test.ts", "packages/platform-nest/test/fixtures/otel-smoke.mjs"]
     },
     "telemetryenv": {
       "label": "telemetryEnv", "sub": "OTEL_* in platform-nest", "kind": "env", "status": "real", "wp": "WP-3 step 7",
-      "what": "The OpenTelemetry variables under their standard names: `OTEL_SERVICE_NAME` (required), `OTEL_TRACES_EXPORTER` (`console`, `otlp` or `none`, default `console`) and `OTEL_EXPORTER_OTLP_ENDPOINT`.",
+      "what": "The OpenTelemetry variables under their standard names: `OTEL_SERVICE_NAME` (required), `OTEL_TRACES_EXPORTER` (`console`, `otlp` or `none`, default `none`; `apps/api/.env.example` sets `console` for dev) and `OTEL_EXPORTER_OTLP_ENDPOINT`.",
       "how": "A `z.object` with a `superRefine`: the endpoint is required when the exporter is `otlp`, and the error names `OTEL_EXPORTER_OTLP_ENDPOINT`.",
       "why": "Validated like every other config (ADR-043), so a typo in a deploy fails at start instead of quietly exporting nothing.",
       "files": ["packages/platform-nest/src/telemetry/telemetry-env.ts", "packages/platform-nest/test/telemetry.test.ts"]
@@ -871,7 +871,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "otel-sdk": {
       "label": "NodeSDK", "sub": "http, express, pg, pino", "kind": "ext", "status": "real", "wp": "WP-3 step 7",
       "what": "The OpenTelemetry Node SDK, built by `createTelemetrySdk(env)`.",
-      "how": "An explicit instrumentation list: `HttpInstrumentation`, `ExpressInstrumentation`, `PgInstrumentation` and `PinoInstrumentation({ disableLogSending: true })`. Traces only: `metricReaders: []` and `logRecordProcessors: []`, because sdk-node otherwise starts OTLP metric and log exporters to `:4318` by itself (spike row 6). Spans go to the console (`SimpleSpanProcessor`) or to OTLP over protobuf (`BatchSpanProcessor`). amqplib joins in WP-5.",
+      "how": "An explicit instrumentation list: `HttpInstrumentation`, `ExpressInstrumentation`, `PgInstrumentation` and `PinoInstrumentation({ disableLogSending: true })`. `HttpInstrumentation` gets a hook that redacts the client address, peer address and user agent on incoming spans. Traces only: `metricReaders: []` and `logRecordProcessors: []`, because sdk-node otherwise starts OTLP metric and log exporters to `:4318` by itself (spike row 6). Spans go to the console (`SimpleSpanProcessor`) or to OTLP over protobuf (`BatchSpanProcessor`). amqplib joins in WP-5.",
       "why": "WP-3 decision F1: an explicit list, not the auto-instrumentation bundle, so the project knows what is patched. Decision S2: no Nest controller spans, because `instrumentation-nestjs-core` does not declare Nest 12 yet; HTTP and Express spans already carry `http.route`.",
       "files": ["packages/platform-nest/src/telemetry/create-sdk.ts"]
     },
@@ -976,14 +976,14 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "r-filter": {
       "label": "ProblemDetailsFilter", "sub": "on error · application/problem+json", "kind": "step", "status": "real", "wp": "WP-3 step 5", "branch": true,
       "what": "Turns whatever was thrown into an RFC 9457 body.",
-      "how": "Validation: 400 with `errors`. Other 4xx: status and message kept. Anything else: generic 500, stack only in the error log with the request id. On `/health/*` the controller-scoped `HealthBodyFilter` catches the 503 first and keeps the Terminus body.",
+      "how": "Validation: 400 with `errors`. Other 4xx, including body-parser's 413 and 415: status and message kept. `instance` is the path without the query string. Anything else: generic 500, stack only in the error log with the request id. On `/health/*` the controller-scoped `HealthBodyFilter` catches the 503 first and keeps the Terminus body.",
       "why": "One error format for clients and the admin; internals never leak (ADR-006).",
       "files": ["packages/platform-nest/src/errors/problem-details.filter.ts"]
     },
     "r-log": {
       "label": "request log line", "sub": "\"request completed\"", "kind": "step", "status": "real", "wp": "WP-3 step 4",
       "what": "One JSON line per request when the response finishes.",
-      "how": "Carries `service`, `req_id`, `req: { method, url }`, `res: { statusCode }` and the response time, plus `trace_id` and `span_id` when telemetry is on (added by the pino instrumentation). Level from `requestLogLevel`: `/health/*` debug when it passes and warn when it fails, other 5xx error, other 4xx warn, else info.",
+      "how": "Carries `service`, `req_id`, `req: { method, url }` (the URL as a path, without the query string), `res: { statusCode }` and the response time, plus `trace_id` and `span_id` when telemetry is on (added by the pino instrumentation). Level from `requestLogLevel`: `/health/*` debug when it passes and warn when it fails, other 5xx error, other 4xx warn, else info.",
       "why": "Lines are easy to grep by request id, and no headers, body or client IP are written (AGENTS.md section 7).",
       "files": ["packages/platform-nest/src/logging/logger-params.ts"]
     },
@@ -1039,7 +1039,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "c-depcruise": {
       "label": "dependency-cruiser", "sub": "pnpm depcruise", "kind": "check", "status": "real", "wp": "WP-1",
       "what": "Checks which file may import which (section 1 rules).",
-      "how": "Reads the import graph of apps/, packages/ and templates/, counting `import type` too, and resolves through `exports`.",
+      "how": "Reads the import graph of apps/, packages/ and templates/, counting `import type` too, and resolves through `exports`. Only the workspace's own build folders are excluded, so npm packages that ship from `dist/` stay visible to the rules.",
       "why": "Architecture fitness functions (ADR-024).",
       "files": [".dependency-cruiser.cjs", "tsconfig.depcruise.json"]
     },
@@ -1123,8 +1123,8 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "t-span": {
       "label": "HTTP SERVER span", "sub": "HttpInstrumentation", "kind": "step", "status": "real", "wp": "WP-3 step 7",
       "what": "The span the http instrumentation opens for each incoming request. It carries the trace id.",
-      "how": "The patched `http` module starts a span named `GET` (or the method) when a request arrives; Express spans become its children and set `http.route`. pg query spans join the same trace.",
-      "why": "One trace per request, without touching controller code. Nest controller spans are off (decision S2).",
+      "how": "The patched `http` module starts a span named `GET` (or the method) when a request arrives; Express spans become its children and set `http.route`. pg query spans join the same trace. A `startIncomingSpanHook` overwrites `client.address`, `network.peer.address`, `network.peer.port` and `user_agent.original` with redacted values on every incoming span.",
+      "why": "One trace per request, without touching controller code. Nest controller spans are off (decision S2). Visitor data stays out of spans as it stays out of logs (AGENTS.md section 7); the client address would come from `X-Forwarded-For` behind nginx. The test checks a real span shows `client.address: redacted`.",
       "files": ["packages/platform-nest/src/telemetry/create-sdk.ts"]
     },
     "t-ctx": {
@@ -1149,10 +1149,10 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/platform-nest/src/telemetry/create-sdk.ts", "packages/platform-nest/test/telemetry.test.ts"]
     },
     "t-export": {
-      "label": "span exporter", "sub": "console in dev · OTLP later", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "label": "span exporter", "sub": "none by default · console in dev", "kind": "step", "status": "real", "wp": "WP-3 step 7",
       "what": "Where finished spans go.",
-      "how": "`OTEL_TRACES_EXPORTER=console` prints each span as it ends; `otlp` batches them to `OTEL_EXPORTER_OTLP_ENDPOINT/v1/traces`; `none` turns telemetry off.",
-      "why": "Console is enough to see traces locally; the OTLP collector and trace viewer come with the observability WPs (ADR-010).",
+      "how": "`OTEL_TRACES_EXPORTER` picks it. `none`, the default, starts no SDK at all; `console` (set in `apps/api/.env.example` for dev) prints each span as it ends; `otlp` batches them to `OTEL_EXPORTER_OTLP_ENDPOINT/v1/traces`.",
+      "why": "`none` by default so production never prints spans by accident. Console is enough to see traces locally; the OTLP collector and trace viewer come with the observability WPs (ADR-010).",
       "files": ["packages/platform-nest/src/telemetry/create-sdk.ts", "packages/platform-nest/src/telemetry/telemetry-env.ts"]
     },
     "m-notes-index": {

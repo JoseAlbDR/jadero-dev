@@ -42,19 +42,20 @@ If the framework runs the implementers, point them at `AGENTS.md`; it is tool-ne
 
 ## The delivery flow, end to end
 
-One work package moves through nine stages. The owner moves cards to Ready and In progress; the Project workflows move them to In review (PR with `Closes #`) and Done (merge).
+One work package moves through ten stages. The owner moves cards to Ready and In progress; the Project workflows move them to In review (PR with `Closes #`) and Done (merge).
 
 | # | Stage | Who | Output |
 |---|---|---|---|
 | 1 | Ready on the board: dependencies closed, acceptance written, ADRs accepted | Owner | Card in Ready |
 | 2 | `/wp NN` | Agent | Branch `wp/NN-slug`, step list, definition of done; stops for the go |
-| 3 | `/learn-step NN` (learning WPs) | Agent writes, owner reads | `docs/learning/wp-NN.md`, `decision: pending`; the gate is closed |
+| 3 | `/learn-step NN` (learning WPs) | Agent writes, owner reads | `docs/learning/wp-NN.md`, self-contained, all questions in one message, `decision: pending`; the gate is closed |
 | 4 | Decision | Owner | `decision: recorded` with the ADR link; `/adr` first if an ADR changes |
 | 5 | Implement one step at a time | Agent in the main session | Green `pnpm verify`, one scoped commit, two lines in the step log, per step |
-| 6 | PR | Agent | Title = conventional commit; body `Closes #N`; CI; card moves to In review |
-| 7 | Review | `@agent-reviewer`, then the owner | Findings fixed and pushed; the owner explains the design back (Recap) |
-| 8 | Merge | Owner | Squash; issue closes; card to Done; release-please PR per service |
-| 9 | Ship and write up | Owner present | Staging, production, journal post |
+| 6 | Map and docs (last step) | Agent | `docs/architecture/code-map.html` data and the docs the WP changed; artifacts republished when the session can |
+| 7 | PR | Agent | Title = conventional commit; body `Closes #N`; CI; card moves to In review |
+| 8 | Review, then explain back | `@agent-reviewer`, then the owner | Findings fixed and pushed; the owner explains the design back in their own words (not the decision questions); answers and gaps in the Recap |
+| 9 | Merge | Owner | Squash (remove any tool footer from the body); issue closes; card to Done; release-please PR per service |
+| 10 | Ship and write up | Owner present | Staging, production, journal post |
 
 Model and effort: Opus 5.5 at high effort for learning WPs and the reviewer, medium for frontend and chores. When the main session runs on a heavier model than the task needs, `/wp` and `/learn-step` can be delegated to a subagent on Opus; implementation stays in the main session so the owner sees each step.
 
