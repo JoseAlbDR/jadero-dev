@@ -65,6 +65,12 @@ findings, and send me the screenshots and the PR link. I merge.
 Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.
 ```
 
+Notes for this prompt (from WP-4):
+
+- A session cannot attach images to a PR from the command line. It saves the screenshots in its scratchpad and lists the paths; the owner drags the ones that matter into a PR comment. The e2e tests are the evidence the issue requires; screenshots are for the owner's visual review.
+- Catalog or other tooling changes hit the learning gate even on a frontend branch: see AGENTS.md section 5.
+- To try the result locally, stay on the branch until the PR is merged: on `main`, `pnpm --filter @jadero/web dev` matches nothing before the merge, and `pnpm install` there removes the web packages.
+
 ## Two sessions in parallel
 
 A backend WP and a frontend WP can run at the same time, one session each (for example the backend one in the cloud and the frontend one locally), when their dependencies are closed and they work in different folders. Each session has its own branch from `origin/main`. They still share a few files:

@@ -88,6 +88,15 @@ Learning happens during the build too: every learning step ends with one one-lin
 - Privacy issues (visitor IP in OpenTelemetry spans, query strings in error bodies) were found only in the PR review. Rule: a privacy check at the end of every step.
 - Commits were pushed to a PR after it was said to be ready, and the merge took only part of them. Rule: a ready PR gets no new commits without telling the owner.
 - The reviewer found one high and five medium issues; a mid-WP review would have found most of them earlier.
+## Lessons from WP-4 (2026-10-04)
+
+- The learning gate blocked the catalog on a frontend WP. Rule: ask the owner, then a fast-path `wp-N.md` that lists every tooling change (AGENTS.md section 5).
+- `pnpm install` quietly wrote a supply-chain exclusion for a day-old package. Rule: read `git diff pnpm-workspace.yaml` after every install; pin an older version instead.
+- An agent's `next dev` left an uncommitted block in `apps/web/AGENTS.md` and blocked the owner's `git switch`. Rule: the block is committed; a session leaves the tree as clean as it found it.
+- Two servers listened on the same port and curl reached the stale one. Rule: stop servers by port and check the port before starting (`apps/web/AGENTS.md`).
+- The reviewer found a page-level bug in layout-level metadata (every page inherited the home's canonical) and a build-time variable treated as runtime. Rule: for prerendered pages, ask "is this read at build or at request time?".
+- Screenshots cannot reach a PR from the command line. Rule: the session lists their paths; the owner attaches what matters.
+
 ## When something blocks
 
 | Symptom | Cause | Do |
@@ -95,6 +104,11 @@ Learning happens during the build too: every learning step ends with one one-lin
 | `learning-gate: ... not yet` | edit under a learning path before the decision | read, answer, let the agent record it; never route around the hook |
 | `ERR_PNPM_UNSUPPORTED_ENGINE` | Node outside 24.12 to 24.x | `nvm use` |
 | pnpm picks an older version or refuses one | `minimumReleaseAge`: younger than 24 hours | wait a day or pin the previous version in the catalog; say so in the step log |
+| `pnpm install` added `minimumReleaseAgeExclude` to `pnpm-workspace.yaml` | a catalog version younger than the minimum release age | never keep the exclusion (it switches off the supply-chain check for that package): delete it and pin the previous version |
+| `ERR_PNPM_IGNORED_BUILDS` | a new dependency has an install script and pnpm 11 wants a decision | read what the script does, then add the package to `allowBuilds` (`false` when it only builds from source or checks for a prebuilt binary) with a one-line reason |
+| `git switch` aborts: `apps/web/AGENTS.md` would be overwritten | an agent ran `next dev` while the Next.js agent-rules block was missing, and Next appended it | commit the block (it is meant to stay); if it is not yours to commit, `git restore apps/web/AGENTS.md` |
+| `pnpm --filter @jadero/web dev`: "No projects matched" | you are on `main` before the PR that adds the app is merged | merge first, or stay on the branch |
+| `pnpm verify` reports lint warnings that were already fixed | a Turborepo input list misses the changed file type (CSS was missing until WP-4) | add the type to the task's `inputs` in `turbo.json` |
 | commit rejected: scope | commitlint | `type(scope): subject`; scopes live in `commitlint.config.mjs` |
 | commit rejected by Biome | unsafe fix or syntax error | `pnpm lint:fix`, then fix by hand |
 | `pnpm verify` never hits the cache | an input that changes every run | check `inputs` in `turbo.json`; `turbo run test --summarize` |

@@ -29,3 +29,19 @@ pnpm test:e2e                            # from the root: build, then Playwright
 - App code (`src/`) reads the environment only in `src/config/site.ts`. `SITE_URL` is baked in at build time (pages are prerendered): set it before `next build`; Turborepo hashes it and `.env*`.
 - Every page sets its own canonical and hreflang links with `localeAlternates` in its `generateMetadata`; the layout sets none.
 - The map of this app is section 7 of `docs/architecture/code-map.html`; update it when the request path changes.
+
+## Notes for agent sessions
+
+- The block below is written by Next.js: `next dev` adds it when an agent runs it, and only while it is missing. Keep it committed and unedited, or every agent run leaves an uncommitted change that blocks `git switch`.
+- Next renames its process to `next-server`, so `pkill -f server.js` finds nothing. Stop a server by its port: `lsof -nP -iTCP:<port> -sTCP:LISTEN -t | xargs kill`. Check the port is free before starting another one, or curl may reach the old server.
+- Screenshots without Playwright browsers: `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --window-size=1280,800 --screenshot=<file>.png <url>`; add `--force-dark-mode --blink-settings=preferredColorScheme=0` for dark mode. Save them in the session's scratchpad, never in the repo.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
