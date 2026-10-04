@@ -15,6 +15,10 @@
       "env": ["AI_*_PROVIDER", "MAIL_PROVIDER"],
       "passThroughEnv": ["VITEST_MAX_WORKERS"]
     },
+    "test:int": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
     "//#lint": {
       "inputs": [
         "**/*.{ts,tsx,js,mjs,cjs,json,jsonc}",

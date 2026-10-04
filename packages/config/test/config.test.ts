@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { workersFromLoad } from "../vitest/base.js";
+import { baseConfig, integrationConfig, workersFromLoad } from "../vitest/base.js";
 
 const read = (path: string) => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
 
@@ -38,5 +38,14 @@ describe("workersFromLoad", () => {
     expect(workersFromLoad(0)).toBe(3);
     process.env.VITEST_MAX_WORKERS = "99";
     expect(workersFromLoad(0)).toBe(6);
+  });
+});
+
+describe("unit and integration configs", () => {
+  it("keeps *.int.test.ts out of the unit run and runs only them in the integration run", () => {
+    expect(baseConfig().test?.exclude).toContain("**/*.int.test.ts");
+    const integration = integrationConfig(["test/setup/global.ts"]).test;
+    expect(integration?.include).toEqual(["test/**/*.int.test.ts"]);
+    expect(integration?.globalSetup).toEqual(["test/setup/global.ts"]);
   });
 });

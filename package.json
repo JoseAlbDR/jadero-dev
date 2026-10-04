@@ -16,6 +16,7 @@
     "depcruise": "depcruise --config .dependency-cruiser.cjs apps packages",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test test:scripts",
+    "test:int": "turbo run test:int",
     "test:scripts": "node --test \"scripts/**/*.test.mjs\"",
     "dev": "turbo run dev",
     "dev:up": "docker compose -f infra/compose/compose.dev.yml up -d --wait",
