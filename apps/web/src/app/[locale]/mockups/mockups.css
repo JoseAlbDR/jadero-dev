@@ -53,3 +53,29 @@
   background-size: 22px 22px;
   mask-image: linear-gradient(to bottom, black, transparent 85%);
 }
+
+/* Direction 2, "Swiss editorial": warm paper, ink and one muted terracotta accent. */
+[data-direction="editorial"] {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
+}
+
+:root:has([data-direction="editorial"]) {
+  --background: oklch(0.975 0.01 80);
+  --foreground: oklch(0.19 0.01 60);
+  --muted: oklch(0.94 0.01 75);
+  --muted-foreground: oklch(0.45 0.012 60);
+  --border: oklch(0.86 0.012 70);
+  --accent: oklch(0.93 0.012 75);
+  --signal: oklch(0.5 0.13 40);
+}
+
+:root.dark:has([data-direction="editorial"]) {
+  --background: oklch(0.165 0.006 60);
+  --foreground: oklch(0.93 0.01 80);
+  --muted: oklch(0.21 0.006 60);
+  --muted-foreground: oklch(0.71 0.01 70);
+  --border: oklch(1 0 0 / 14%);
+  --accent: oklch(0.23 0.006 60);
+  --signal: oklch(0.74 0.12 45);
+}
