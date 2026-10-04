@@ -8,7 +8,7 @@ How the owner's framework (firstmate) runs this repo's delivery flow on the owne
 2. `CLAUDE.md` and `.claude/` (`rules/`, `skills/`, `agents/reviewer.md`, `hooks/learning-gate.sh`, `settings.json`).
 3. `docs/agent-tooling.md`: the ten stages, who does what, the gates.
 4. `docs/local-playbook.md`: setup, daily loop, the "When something blocks" table.
-5. For the WP at hand: its row in `docs/plan/decisions.json` and `docs/plan/report.md` section 14, its GitHub issue, the ADRs it names, and `docs/learning/wp-NN.md` once written.
+5. For the WP at hand: its row in `docs/plan/decisions.json` and `docs/plan/report.md` section 14, its GitHub issue, the ADRs it names, and `docs/learning/wp-N.md` once written.
 6. To see the code at a glance: `docs/architecture/code-map.html` (open it in a browser).
 
 It never needs to read the whole plan or every ADR: the explainer of the WP is written to be self-contained.
@@ -18,7 +18,7 @@ It never needs to read the whole plan or every ADR: the explainer of the WP is w
 | Stage | This repo | firstmate concept |
 |---|---|---|
 | Open | `/wp NN`: dependencies closed, branch `wp/NN-slug` from `origin/main`, 4 to 8 proposed steps, definition of done; stops | plan |
-| Learn | `/learn-step NN`: writes `docs/learning/wp-NN.md` (self-contained, all questions in one message); stops | (no equivalent) |
+| Learn | `/learn-step NN`: writes `docs/learning/wp-N.md` (self-contained, all questions in one message); stops | (no equivalent) |
 | Decide | the owner answers; answers go under Decision, front matter `decision: recorded` | approve |
 | Build | one step at a time: explain the files first, write, `pnpm verify`, one scoped commit, two lines in the step log, show it running | implement |
 | Map | last step: update `docs/architecture/code-map.html` and the docs the WP changed | (no equivalent) |
