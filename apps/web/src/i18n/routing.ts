@@ -18,5 +18,6 @@ export const routing = defineRouting({
     "/mockups/editorial": "/mockups/editorial",
     "/mockups/bento": "/mockups/bento",
     "/mockups/hybrid": "/mockups/hybrid",
+    "/mockups/bento-agent": "/mockups/bento-agent",
   },
 });
