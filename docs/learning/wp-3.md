@@ -1,7 +1,7 @@
 ---
 wp: 3
 decision: recorded
-adr: [ADR-003, ADR-006, ADR-007, ADR-009, ADR-010, ADR-029, ADR-042]
+adr: [ADR-003, ADR-006, ADR-007, ADR-009, ADR-010, ADR-029, ADR-042, ADR-043]
 ---
 
 # WP-3: Service platform and API skeleton
@@ -235,7 +235,7 @@ content-type: application/json; charset=utf-8
 
 10'. Logged at `warn` (5xx from health is expected during an outage; a 5xx elsewhere logs at `error`). `/health/live` still answers `200 {"status":"ok"}`, so nothing restarts the container, which is the point: the process is fine, its database is not. After `docker compose start postgres`, the pool reconnects on the next check and readiness returns 200 without a restart.
 
-**SIGTERM.** `beforeApplicationShutdown` sets the readiness flag to false, so a probe during shutdown gets 503 with `{"status":"error",...,"error":{"shutdown":{"status":"down"}}}`; the HTTP server closes after in-flight requests; `onApplicationShutdown` ends the pool; the instrumentation entry's SIGTERM handler calls `sdk.shutdown()` to flush spans; exit code 0.
+**SIGTERM.** `beforeApplicationShutdown` sets the readiness flag to false, so a probe during shutdown gets 503 with `{"status":"error",...,"error":{"shutdown":{"status":"down"}}}`; the HTTP server closes after in-flight requests; `onApplicationShutdown` ends the pool; `TelemetryModule` flushes the SDK in `onApplicationShutdown`; exit code 0. (As built: Nest closes the server right after `beforeApplicationShutdown`, so a probe sees the 503 only with `HealthModule.forRoot({ drainMs })` set; default 0.)
 
 ### Trace 2: a validation failure returns problem+json
 
@@ -430,7 +430,7 @@ Answers as the owner gives them. `decision: recorded` is set after question 7.
 
 1. HTTP adapter: **A1, Express 5** (2026-10-03). The owner also has more experience with Express.
 2. Typed config: **B2, an `ApiConfig` abstract class provided with the parsed object** (2026-10-03).
-3. Database driver for readiness: **D1, `pg`** (2026-10-03). WP-10 inherits it. The owner uses `pg` at work and wants to learn it in depth.
+3. Database driver for readiness: **D1, `pg`** (2026-10-03). WP-10 inherits it. The owner wants to learn `pg` in depth.
 4. Health on failure: **E1, the Terminus body for `/health/*`**; problem+json for every other route (2026-10-03). Health is an operations contract, not an API error.
 5. OpenTelemetry wiring: **F1, `NodeSDK` with an explicit list** (http, express, pg, pino; amqplib in WP-5) loaded with `node --import` (2026-10-03). Within ADR-010; no new ADR.
 6. Module template: **G3, `templates/nest-module/{layered,hexagonal}/`**, type-checked and covered by dependency-cruiser (2026-10-03).

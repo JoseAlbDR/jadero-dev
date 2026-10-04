@@ -14,4 +14,4 @@ paths:
 - It also turns off `complexity/noStaticOnlyClass`: a Nest module class with only `static forRoot()` is the framework's dynamic-module pattern.
 - The same override enables `unsafeParameterDecoratorsEnabled`, so Biome parses `@Body()`, `@Inject()` and friends.
 - Relative imports carry `.js` (ESM, `module: NodeNext`); use `import.meta.dirname`, not `__dirname`.
-- Read the environment only through the service's config (ADR-007): `loadConfig` from `@jadero/platform-nest` at boot, then the typed config class (`ApiConfig` in `api`) by injection. No `process.env` anywhere else.
+- Read the environment only through the service's config (ADR-043): `loadConfig` from `@jadero/platform-nest` at boot, then the typed config class (`ApiConfig` in `api`) by injection. No `process.env` anywhere else.

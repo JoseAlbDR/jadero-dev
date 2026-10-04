@@ -13,7 +13,7 @@ How to run the delivery flow on the owner's machine with Claude Code and firstma
 | Claude Code | current | model Opus 5.5 in the user settings (`/model`); the repo pins none | high effort for learning WPs; the reviewer agent inherits the model |
 
 ```bash
-cd ~/dev/projects/jadero-dev && git switch main && git pull
+cd jadero-dev && git switch main && git pull
 nvm use && corepack enable
 pnpm install          # prepare: lefthook install writes .git/hooks
 pnpm verify:all       # first run builds the cache (on main, plain verify runs nothing)

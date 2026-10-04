@@ -35,7 +35,7 @@ The own loader. Each service has one Zod schema built on `platformEnv`, validate
 
 Restated from ADR-007 unchanged:
 - Runtime secrets live only on the server, rendered from a personal 1Password vault with `op inject` at deploy (`infra/env/<service>.env.tpl` with `op://` references; WP-8 and WP-9; manual action M-38). SOPS (WP-34) stays superseded. CI holds only CI-scoped keys.
-- Never print secrets; config errors and the boot log name variables, never values.
+- Never print secrets; config errors and the boot log name variables, never values. ADR-007 also asked the boot log to list which variables are set; that is dropped on purpose: a failed boot names every bad variable, and a list of set names on a good boot added nothing the schema does not already say.
 - `.env.example` files default every AI provider to `fake`, so the stack runs locally and in CI without keys or spend.
 - Separate provider keys per environment, each with its own spend limit (ADR-021).
 
