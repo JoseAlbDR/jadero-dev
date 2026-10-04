@@ -102,6 +102,7 @@ Learning happens during the build too: every learning step ends with one one-lin
 
 | Symptom | Cause | Do |
 |---|---|---|
+| Stacked PRs closed without merging after the first one merged | Squash merge with branch deletion removes the base of the next PR, and GitHub closes it | Do not stack PRs in a repo that squash-merges: one PR per change from `main`, or merge the stack with merge commits. To recover, open one PR from `main` with the top branch's tree (`git checkout <top> -- .`) |
 | `learning-gate: ... not yet` | edit under a learning path before the decision | read, answer, let the agent record it; never route around the hook |
 | `ERR_PNPM_UNSUPPORTED_ENGINE` | Node outside 24.12 to 24.x | `nvm use` |
 | pnpm picks an older version or refuses one | `minimumReleaseAge`: younger than 24 hours | wait a day or pin the previous version in the catalog; say so in the step log |
