@@ -274,7 +274,7 @@ The trace uses the shapes the questions propose as defaults; where an answer cha
 
 ### P. Port shape
 
-Already decided by the ADRs: ADR-029 decides: golevelup behind our port, an in-memory adapter for unit tests.
+Already decided by ADR-029: golevelup behind our port, an in-memory adapter for unit tests.
 
 Forces: handlers should be testable without a broker; the retry and dead-letter policy should live in one place; the port should not grow a copy of the whole AMQP API; less code is less to maintain.
 
@@ -287,7 +287,7 @@ What would make this wrong: if handlers keep needing AMQP details the port does 
 
 ### T. Who declares the topology
 
-Already decided by the ADRs: ADR-029 decides: `infra/rabbitmq/definitions.json` is the reviewed source of truth; vhosts `/prod` and `/staging`, one user per service and vhost, each allowed only its own queues.
+Already decided by ADR-029: `infra/rabbitmq/definitions.json` is the reviewed source of truth; vhosts `/prod` and `/staging`, one user per service and vhost, each allowed only its own queues.
 
 Forces: one reviewed place for the topology; least privilege (a service user that can *configure* can also delete or redeclare); a mismatch between what code asserts and what exists breaks the channel (`PRECONDITION_FAILED` when arguments differ); developers want `pnpm dev:up` to just work; definitions with real passwords are a secret.
 
@@ -302,7 +302,7 @@ What would make this wrong: frequent topology changes that make the two-file edi
 
 ### R. Retry routing
 
-Already decided by the ADRs: ADR-029 decides: TTL retry queues of 10 s, 1 min and 10 min, then a DLQ per queue; ADR-012: every queue has a DLQ.
+Already decided by ADR-029: TTL retry queues of 10 s, 1 min and 10 min, then a DLQ per queue; ADR-012: every queue has a DLQ.
 
 Forces: a retry must go back only to the queue that failed (Trace 2a, step 3); the tier must grow with the attempt; no message may be lost between queues; no hot loop; the topology should stay readable.
 
@@ -315,7 +315,7 @@ What would make this wrong: if most failures turn out to be permanent (bugs), ti
 
 ### S. Outbox and inbox storage before WP-10
 
-Already decided by the ADRs: ADR-012: outbox in each producer's database, inbox in each consumer's database, same transaction as the effects; ADR-005: Drizzle, repositories wrap it; WP-3 decision D1: `pg` is the driver.
+Already decided by ADR-012: outbox in each producer's database, inbox in each consumer's database, same transaction as the effects; ADR-005: Drizzle, repositories wrap it; WP-3 decision D1: `pg` is the driver.
 
 Forces: the outbox insert must join the caller's transaction, so the store has to accept a transaction handle from outside; `packages/messaging` must not depend on Drizzle or on any service's schema; WP-10 will add Drizzle and must not need to rewrite messaging; DDL must reach each service's database.
 
@@ -328,7 +328,7 @@ What would make this wrong: if WP-10 picks a different driver than `pg` (it inhe
 
 ### L. Relay trigger and claim
 
-Already decided by the ADRs: ADR-012 decides: claim with `FOR UPDATE SKIP LOCKED`, publish with confirms, mark sent; `api-worker` relays for `api`.
+Already decided by ADR-012: claim with `FOR UPDATE SKIP LOCKED`, publish with confirms, mark sent; `api-worker` relays for `api`.
 
 Forces: latency between commit and publish; load on Postgres when idle; behavior under a broker outage; simplicity.
 
@@ -343,7 +343,7 @@ What would make this wrong: if a future feature needs sub-second propagation (L2
 
 ### I. Inbox key and retention
 
-Already decided by the ADRs: ADR-012 decides: an `inbox` table of processed event ids in the consumer's transaction.
+Already decided by ADR-012: an `inbox` table of processed event ids in the consumer's transaction.
 
 Forces: one service may have several consumers of the same event (e.g. in `agent`, ingestion and a usage counter); a duplicate can arrive late (a replay from the DLQ days later, WP-50); the table must not grow forever.
 
@@ -355,7 +355,7 @@ Retention, with a clear default: keep inbox rows 30 days, deleted by a daily cle
 
 ### E. Envelope and the trace across the outbox
 
-Already decided by the ADRs: ADR-029 decides: CloudEvents 1.0 with `id`, `source`, versioned `type`, `time`, `traceparent`; ADR-010 decides: `traceparent` in RabbitMQ headers through `instrumentation-amqplib`, and the outbox stores the request's `traceparent`.
+Already decided by ADR-029: CloudEvents 1.0 with `id`, `source`, versioned `type`, `time`, `traceparent`; ADR-010 decides: `traceparent` in RabbitMQ headers through `instrumentation-amqplib`, and the outbox stores the request's `traceparent`.
 
 Forces: the id must be unique and cheap to index; consumers should parse one shape; the trace should be one tree in the backend; OTel's messaging conventions prefer links for batches.
 
@@ -368,7 +368,7 @@ Id generation, with a clear default: UUIDv7 created in code, because the envelop
 
 ### W. Process types, readiness and the ping
 
-Already decided by the ADRs: report 3.2 decides: `api` and `api-worker` process types; ADR-012: `api-worker` relays; WP-3 forward question: the broker in `api-worker`'s readiness, not `api`'s.
+Already decided by report section 3.2: `api` and `api-worker` process types; ADR-012: `api-worker` relays; WP-3 forward question: the broker in `api-worker`'s readiness, not `api`'s.
 
 Forces: the deliverable needs `api` to `agent` with one trace; the skeleton should be the shape WP-11, WP-14 and WP-20 extend, not a shortcut they undo; the ping trigger must not become a public endpoint; a heartbeat would be useful later (the "Under the hood" page shows broker lag).
 
