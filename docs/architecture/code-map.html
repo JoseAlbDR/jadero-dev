@@ -221,7 +221,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
   <header class="top">
     <div class="eyebrow">jadero.dev v2 · monorepo · NestJS 12 on Node 24</div>
     <h1>Code map</h1>
-    <p class="lede">How the repo fits together today: which package depends on which, what the <code>api</code> container injects at runtime, the two module shapes new code copies, how <code>api</code> boots, what a request passes through and how one trace id follows it, and how the build, <code>pnpm dev</code> and the checks run. Click or tap any box for what it is, how it works, why it was built this way, and where the code lives.</p>
+    <p class="lede">How the repo fits together today: which package depends on which, what the <code>api</code> container injects at runtime, the two module shapes new code copies, how <code>api</code> boots, what a request passes through and how one trace id follows it, how the build, <code>pnpm dev</code> and the checks run, and what a page request passes through in <code>web</code>. Click or tap any box for what it is, how it works, why it was built this way, and where the code lives.</p>
   </header>
   <nav class="toc" id="toc" aria-label="Sections"></nav>
   <main id="sections"></main>
@@ -245,7 +245,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 <script type="application/json" id="map-data">
 {
   "meta": {
-    "lastUpdated": "after WP-3 step 8",
+    "lastUpdated": "after WP-4",
     "kinds": {
       "app": "deployable app", "pkg": "library package", "module": "Nest module", "provider": "provider",
       "token": "DI token", "ext": "external library", "global": "app-level wiring", "env": "environment",
@@ -282,7 +282,10 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             { "from": "ws-template", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "labelAt": [222, 560] },
             { "points": [[590, 256], [590, 186]], "label": "packages never import apps", "kind": "forbidden", "ref": "rule-shared-no-apps", "labelAt": [590, 222] },
             { "from": "ws-ai", "to": "ext-nest-db", "label": "never", "kind": "forbidden", "ref": "rule-ai-agent-no-nest" },
-            { "from": "ws-agent-pkg", "to": "ext-nest-db", "label": "never", "kind": "forbidden", "ref": "rule-ai-agent-no-nest" }
+            { "from": "ws-agent-pkg", "to": "ext-nest-db", "label": "never", "kind": "forbidden", "ref": "rule-ai-agent-no-nest" },
+            { "from": "ws-web", "to": "ws-ui", "label": "workspace:*", "kind": "dep", "via": [[660, 240], [660, 398], [470, 398]], "labelAt": [660, 288] },
+            { "from": "ws-web", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "via": [[660, 240], [660, 500], [260, 500]], "hideLabel": true },
+            { "from": "ws-ui", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "hideLabel": true }
           ]
         },
         {
@@ -498,7 +501,22 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
         {
           "type": "cards", "title": "Checks and when they run",
           "caption": "pnpm verify is the single \"am I done\" command; lefthook runs Biome and commitlint at commit time.",
-          "cards": ["c-verify", "c-build", "c-biome", "c-depcruise", "c-typecheck", "c-vitest", "c-testint", "c-precommit", "c-commitlint", "c-compose"]
+          "cards": ["c-verify", "c-build", "c-biome", "c-depcruise", "c-typecheck", "c-vitest", "c-testint", "c-e2e", "c-precommit", "c-commitlint", "c-compose"]
+        }
+      ]
+    },
+    {
+      "id": "web", "eyebrow": "7 · Web", "title": "What a page request passes through in web",
+      "intro": "apps/web is a Next.js 16 App Router app with next-intl. Every URL carries its locale (/en, /es, /de); the proxy sends anything else to one. Pages are prerendered once per locale at build time and served by the standalone server.js. No call to api yet: content arrives in WP-16.",
+      "figures": [
+        {
+          "type": "steps", "title": "Page request in web",
+          "steps": ["w-proxy", "w-layout", "w-messages", "w-providers", "w-page"],
+          "examples": [
+            { "id": "ex-web-redirect", "label": "No locale in the path", "path": ["w-proxy"], "request": "GET /\naccept-language: de-DE,de;q=0.9", "response": "HTTP/1.1 307 Temporary Redirect\nlocation: /de\nlink: <https://jadero.dev/en>; rel=\"alternate\"; hreflang=\"en\", ..." },
+            { "id": "ex-web-page", "label": "A locale home", "path": ["w-proxy", "w-layout", "w-messages", "w-providers", "w-page"], "request": "GET /es\naccept-language: en", "response": "HTTP/1.1 200 OK\nset-cookie: NEXT_LOCALE=es; Path=/; Max-Age=31536000; SameSite=lax\n\n<html lang=\"es\">\n<link rel=\"canonical\" href=\"https://jadero.dev/es\"/>\n<link rel=\"alternate\" hrefLang=\"de\" href=\"https://jadero.dev/de\"/>\n...\n<h1>jadero.dev</h1>" },
+            { "id": "ex-web-404", "label": "Unknown path in a locale", "path": ["w-proxy", "w-layout", "w-messages", "w-providers", "w-page"], "request": "GET /de/nope", "response": "HTTP/1.1 404 Not Found\n\n<html lang=\"de\">\n<h1>Seite nicht gefunden</h1>" }
+          ]
         }
       ]
     }
@@ -554,11 +572,11 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["apps/mcp (not created yet)"]
     },
     "ws-web": {
-      "label": "web", "sub": "planned · R1", "kind": "app", "status": "planned", "wp": "R1",
-      "what": "The public multilingual site (es, en, de) on Next.js 16.",
-      "how": "Result-only frontend built to the design system; no learning gate.",
-      "why": "ADR-022 (internationalization) and ADR-023 (design system).",
-      "files": ["apps/web (not created yet)"]
+      "label": "web", "sub": "@jadero/web", "kind": "app", "status": "real", "wp": "WP-4",
+      "what": "The public multilingual site (en, es, de) on Next.js 16. Today it is the skeleton: locale routing, theme tokens, a light, dark and system theme toggle, a locale switcher and a placeholder home.",
+      "how": "`next build` with `output: \"standalone\"`, then `scripts/copy-standalone-assets.mjs` copies `.next/static` and `public/` next to `server.js`; `pnpm start` runs that server the way the image will. Runtime dependency on `@jadero/ui` (just-in-time: Next compiles its source through `transpilePackages`); dev dependency on `@jadero/config` for the tsconfig base and Vitest. `pnpm test` checks that every locale has the same non-empty message keys; `pnpm test:e2e` runs Playwright and axe against the standalone build.",
+      "why": "ADR-022 (next-intl, `localePrefix: always`, English default from D-19, cookie, hreflang), ADR-023 (Tailwind v4 tokens, shadcn/ui in packages/ui, next-themes) and ADR-026 (standalone output for the image). Result-only frontend: no learning gate.",
+      "files": ["apps/web/package.json", "apps/web/next.config.ts", "apps/web/src/proxy.ts", "apps/web/src/i18n/", "apps/web/src/app/[locale]/", "apps/web/src/components/", "apps/web/messages/", "apps/web/e2e/smoke.spec.ts"]
     },
     "ws-admin": {
       "label": "admin", "sub": "planned · R1", "kind": "app", "status": "planned", "wp": "R1",
@@ -596,11 +614,11 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/agent (not created yet)"]
     },
     "ws-ui": {
-      "label": "ui", "sub": "planned", "kind": "pkg", "status": "planned", "wp": "planned, WP not set",
-      "what": "Shared UI components for web and admin.",
-      "how": "Built to the design system; frontend, so it skips the learning gate.",
-      "why": "ADR-023 (design system and visual direction).",
-      "files": ["packages/ui (not created yet)"]
+      "label": "ui", "sub": "@jadero/ui", "kind": "pkg", "status": "real", "wp": "WP-4",
+      "what": "Design tokens and the shadcn/ui components the repo owns, shared by web and later admin. Today: `theme.css`, the `Button` and `cn`.",
+      "how": "Just-in-time package: `exports` point at TypeScript and CSS source (`./theme.css`, `./components/*`, `./cn`), no build step; each app compiles it. An app imports Tailwind, then `@jadero/ui/theme.css`, and adds an `@source` for `packages/ui/src` so Tailwind sees the component classes. `components.json` lets `shadcn add` write new components here.",
+      "why": "ADR-023: CSS-first Tailwind v4 tokens in OKLCH with light and dark values, shadcn/ui owned in packages/ui. The values are a neutral base until the WP-15 mockups pick the typefaces and the accent.",
+      "files": ["packages/ui/package.json", "packages/ui/src/theme.css", "packages/ui/src/components/button.tsx", "packages/ui/src/lib/cn.ts", "packages/ui/components.json"]
     },
     "ws-cv": {
       "label": "cv", "sub": "planned", "kind": "pkg", "status": "planned", "wp": "planned, WP not set",
@@ -675,7 +693,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "rule-no-orphans": {
       "label": "no orphan files", "sub": "no-orphans · warning", "kind": "rule", "status": "real", "wp": "WP-1", "warn": true,
       "what": "A file nothing imports and that imports nothing is probably dead.",
-      "how": "Warning only; config files and declarations are exempt through `KNOWN_CONFIG_FILES`.",
+      "how": "Warning only; config files, declarations and the Next.js App Router entry files (`page`, `layout`, `not-found`, `proxy.ts`, which the framework loads by name) are exempt through `KNOWN_CONFIG_FILES`.",
       "why": "Keeps dead code visible without blocking a commit.",
       "files": [".dependency-cruiser.cjs"]
     },
@@ -1063,6 +1081,48 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "how": "`turbo run test:int` runs each package's `vitest.int.config.ts`, built from `integrationConfig()`: only `test/**/*.int.test.ts`, longer timeouts, and a global setup. api's global setup first calls `useDockerContextHost()`, then starts one `pgvector/pgvector:0.8.7-pg18` container per run and provides its URL; each test file creates and drops its own database. A unit test keeps that tag equal to `compose.dev.yml`.",
       "why": "WP-3 decision H: one container per run, one database per file, so files run in parallel without sharing rows. `pnpm verify` stays fast and Docker-free; CI runs these from WP-6. Testcontainers looks only at `DOCKER_HOST`, `~/.testcontainers.properties` and `/var/run/docker.sock`, not at the Docker CLI context that OrbStack, Colima and Docker Desktop use on macOS. `useDockerContextHost()` asks `docker context inspect` and sets `DOCKER_HOST` when none is set, so `pnpm test:int` works wherever `pnpm dev:up` works.",
       "files": ["apps/api/vitest.int.config.ts", "apps/api/test/setup/postgres.global-setup.ts", "apps/api/test/setup/docker-host.ts", "apps/api/test/docker-host.test.ts", "apps/api/test/setup/test-database.ts", "apps/api/test/images.test.ts", "packages/config/vitest/base.js"]
+    },
+    "c-e2e": {
+      "label": "pnpm test:e2e", "sub": "Playwright · axe · standalone build", "kind": "check", "status": "real", "wp": "WP-4",
+      "what": "Smoke tests per locale for web, kept out of `pnpm verify`.",
+      "how": "`turbo run test:e2e` builds web first (`dependsOn: [\"build\"]`), then Playwright starts the standalone `server.js` and checks: the redirect from `/` by Accept-Language and by cookie, each locale's `lang`, heading and hreflang links, the localized 404, the theme class surviving a reload, and no axe WCAG 2.2 AA violations in light and dark mode. It drives the installed Chrome (`channel: \"chrome\"`).",
+      "why": "ADR-009 (Playwright smoke per locale for the web, no coverage percentage) and ADR-023 (axe in CI). CI runs it from WP-6.",
+      "files": ["apps/web/playwright.config.ts", "apps/web/e2e/smoke.spec.ts", "apps/web/turbo.json"]
+    },
+    "w-proxy": {
+      "label": "proxy.ts", "sub": "next-intl middleware", "kind": "step", "status": "real", "wp": "WP-4",
+      "what": "Makes sure every path carries a supported locale.",
+      "how": "`createMiddleware(routing)` from next-intl. A path without a locale gets a 307 to the locale from the `NEXT_LOCALE` cookie, else from Accept-Language, else `en`. On a locale path it sets the cookie (one year) when the locale differs from the detected one, and adds hreflang `Link` headers. The matcher skips `/api`, `/_next` and files with an extension.",
+      "why": "ADR-022 and D-19. Next 16 renamed `middleware.ts` to `proxy.ts`.",
+      "files": ["apps/web/src/proxy.ts", "apps/web/src/i18n/routing.ts"]
+    },
+    "w-layout": {
+      "label": "[locale]/layout.tsx", "sub": "locale, metadata, <html>", "kind": "step", "status": "real", "wp": "WP-4",
+      "what": "Validates the locale and renders the document shell.",
+      "how": "`requireLocale` narrows the segment or calls `notFound()`; `setRequestLocale` keeps the page static; `generateStaticParams` lists en, es, de; `generateMetadata` sets the title, description, canonical and hreflang alternates (with `x-default` to en) from `SITE_URL`.",
+      "why": "ADR-022: static rendering per locale, hreflang alternates. The root `app/layout.tsx` only passes children through, because only this layout knows the `lang`.",
+      "files": ["apps/web/src/app/[locale]/layout.tsx", "apps/web/src/i18n/locale.ts", "apps/web/src/app/layout.tsx"]
+    },
+    "w-messages": {
+      "label": "i18n/request.ts", "sub": "messages per locale", "kind": "step", "status": "real", "wp": "WP-4",
+      "what": "Loads the UI strings of the request's locale.",
+      "how": "`getRequestConfig` reads the locale and imports `messages/<locale>.json`. `global.d.ts` types the keys from `en.json`, so a missing key is a type error; a Vitest check fails when a locale's keys differ or a string is empty.",
+      "why": "ADR-022: UI strings in messages files with a CI check; content translations come from the API later.",
+      "files": ["apps/web/src/i18n/request.ts", "apps/web/src/i18n/global.d.ts", "apps/web/messages/", "apps/web/test/messages.test.ts"]
+    },
+    "w-providers": {
+      "label": "providers", "sub": "NextIntlClientProvider · ThemeProvider", "kind": "step", "status": "real", "wp": "WP-4",
+      "what": "Gives client components the messages and the theme.",
+      "how": "next-themes injects an inline script that puts the `dark` class on `<html>` from localStorage or the system preference before the first paint (`suppressHydrationWarning` on `<html>` for that one difference). `SiteHeader` renders the locale switcher and the three-way theme toggle.",
+      "why": "ADR-023: light, dark and system with no flash on load.",
+      "files": ["apps/web/src/components/theme-provider.tsx", "apps/web/src/components/theme-toggle.tsx", "apps/web/src/components/locale-switcher.tsx", "apps/web/src/components/site-header.tsx"]
+    },
+    "w-page": {
+      "label": "[locale]/page.tsx", "sub": "prerendered per locale", "kind": "step", "status": "real", "wp": "WP-4",
+      "what": "The placeholder home, or the localized 404 for an unknown path.",
+      "how": "Built once per locale at `next build` and served as static HTML. `[locale]/[...rest]/page.tsx` calls `notFound()`, which renders `[locale]/not-found.tsx` in the visitor's language.",
+      "why": "WP-16 builds the real home and pages; each new page adds its localized pathname in `routing.ts`.",
+      "files": ["apps/web/src/app/[locale]/page.tsx", "apps/web/src/app/[locale]/not-found.tsx", "apps/web/src/app/[locale]/[...rest]/page.tsx"]
     },
     "c-precommit": {
       "label": "lefthook pre-commit", "sub": "biome check --write on staged files", "kind": "check", "status": "real", "wp": "WP-1",
