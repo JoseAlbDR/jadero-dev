@@ -73,7 +73,7 @@ Follow the repo's flow exactly (AGENTS.md section 5, docs/agent-tooling.md, docs
    files and why before writing, pnpm verify, one scoped commit, two lines in the step log, show it
    running. Steps that need Docker run here (pnpm dev:up, pnpm test:int).
 5. Last step: update docs/architecture/code-map.html (its JSON data) and the docs the WP changed.
-6. Open the PR with Closes #<issue of WP-5>, run @agent-reviewer, fix its findings, then ask me the
+6. Open the PR with Closes #13, run @agent-reviewer, fix its findings, then ask me the
    explain-back questions (only about what the explainer taught) and write my answers and the gaps in
    the Recap. I merge.
 Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.
