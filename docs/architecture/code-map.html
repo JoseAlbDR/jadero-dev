@@ -234,6 +234,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
         <li>Add a box: add an entry to <code>nodes</code> (label, sub, kind, status, wp, what, how, why, files), then place it in a figure: <code>place</code> for a graph (x, y, width, height in the figure's viewBox), or add its id to <code>steps</code> or <code>cards</code>. A steps figure counts from 1 unless it sets <code>"start"</code>.</li>
         <li>Add an arrow: add <code>{ "from", "to", "label", "kind" }</code> to the figure's <code>edges</code>. Kinds: dep, dev, imports, provides, injects, consumes, throws, extends, lifecycle, flow, planned, forbidden. Add <code>"hideLabel": true</code> when a gap is too small for the label. Use <code>via</code> points to route around a box.</li>
         <li>When a planned box becomes real, change its <code>status</code> to <code>real</code> and its edges from <code>planned</code> to their real kind.</li>
+        <li>A new event type gets a card in section 8's event catalog and its path in the graph there (producer, exchange, consumer queues, tables).</li>
         <li>Bump <code>meta.lastUpdated</code>, save in <code>docs/architecture/code-map.html</code>, and republish the artifact from the same file.</li>
       </ol>
     </div>
@@ -533,6 +534,205 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "title": "How an event crosses the broker",
       "intro": "WP-5: a system.ping.v1 event travels from api to agent with one trace. api never talks to RabbitMQ in the request: it writes an outbox row in its own transaction, and api-worker relays it. agent's consumer applies it once, however often it arrives. Four processes: api, api-worker, agent, agent consumer.",
       "figures": [
+        {
+          "type": "graph",
+          "title": "Where system.ping.v1 travels: processes, tables, exchanges and queues",
+          "viewBox": [
+            1000,
+            610
+          ],
+          "caption": "Read top left to bottom right. api only writes a row; api-worker is the only process that talks to RabbitMQ for api. The exchange copies the message into every bound queue; the agent consumer applies it inside one transaction with its inbox and acks after the commit. A failed delivery goes as a copy through agent.retry to a wait queue and comes back to the same queue after its TTL; after the last tier it goes to the DLQ. Dashed red arrows are the paths a message takes when something fails.",
+          "lanes": [
+            {
+              "x": 8,
+              "y": 10,
+              "w": 320,
+              "h": 360,
+              "label": "api · content_dev"
+            },
+            {
+              "x": 340,
+              "y": 10,
+              "w": 320,
+              "h": 590,
+              "label": "RabbitMQ · vhost dev"
+            },
+            {
+              "x": 672,
+              "y": 10,
+              "w": 320,
+              "h": 480,
+              "label": "agent · agent_dev"
+            }
+          ],
+          "place": {
+            "e-request": [
+              24,
+              50,
+              288,
+              52
+            ],
+            "g-outbox": [
+              24,
+              170,
+              288,
+              52
+            ],
+            "e-relay": [
+              24,
+              290,
+              240,
+              52
+            ],
+            "g-unrouted": [
+              380,
+              170,
+              264,
+              52
+            ],
+            "e-route": [
+              380,
+              290,
+              264,
+              52
+            ],
+            "g-queue": [
+              380,
+              410,
+              264,
+              52
+            ],
+            "g-retry": [
+              380,
+              492,
+              264,
+              48
+            ],
+            "g-dlq": [
+              380,
+              552,
+              264,
+              44
+            ],
+            "g-heartbeat": [
+              720,
+              170,
+              256,
+              52
+            ],
+            "e-inbox": [
+              720,
+              290,
+              256,
+              52
+            ],
+            "e-consume": [
+              720,
+              410,
+              256,
+              52
+            ]
+          },
+          "edges": [
+            {
+              "from": "e-request",
+              "to": "g-outbox",
+              "label": "INSERT, same transaction",
+              "kind": "flow"
+            },
+            {
+              "from": "e-relay",
+              "to": "g-outbox",
+              "label": "claim FOR UPDATE SKIP LOCKED",
+              "kind": "consumes"
+            },
+            {
+              "from": "e-relay",
+              "to": "e-route",
+              "label": "publish, confirm",
+              "kind": "flow",
+              "labelAt": [
+                322,
+                316
+              ]
+            },
+            {
+              "from": "e-route",
+              "to": "g-unrouted",
+              "label": "no binding matches",
+              "kind": "throws"
+            },
+            {
+              "from": "e-route",
+              "to": "g-queue",
+              "label": "binding system.ping.v1",
+              "kind": "flow"
+            },
+            {
+              "from": "g-queue",
+              "to": "e-consume",
+              "label": "deliver",
+              "kind": "flow",
+              "labelAt": [
+                682,
+                436
+              ]
+            },
+            {
+              "from": "e-consume",
+              "to": "e-inbox",
+              "label": "INSERT (consumer, event_id)",
+              "kind": "flow"
+            },
+            {
+              "from": "e-inbox",
+              "to": "g-heartbeat",
+              "label": "new event: upsert",
+              "kind": "flow"
+            },
+            {
+              "from": "e-consume",
+              "to": "g-retry",
+              "label": "retry copy",
+              "kind": "throws",
+              "labelAt": [
+                700,
+                500
+              ]
+            },
+            {
+              "from": "g-retry",
+              "to": "g-queue",
+              "label": "TTL expires",
+              "kind": "throws",
+              "hideLabel": true
+            },
+            {
+              "from": "e-consume",
+              "to": "g-dlq",
+              "label": "dead copy",
+              "kind": "throws",
+              "labelAt": [
+                930,
+                520
+              ],
+              "via": [
+                [
+                  930,
+                  574
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "type": "cards",
+          "title": "Event catalog",
+          "caption": "Every event type, its producer and its consumer queues. A new event adds a card here and its path to the graph above; the same list is the AsyncAPI catalog in packages/contracts/asyncapi.json.",
+          "cards": [
+            "ev-system-ping-v1"
+          ]
+        },
         {
           "type": "steps",
           "title": "One ping, api to agent",
@@ -1452,7 +1652,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["infra/rabbitmq/definitions.json", "packages/messaging/src/topology/definitions.ts"]
     },
     "e-consume": {
-      "label": "RabbitMqMessageBus", "sub": "agent consumer · prefetch 10", "kind": "step", "status": "real", "wp": "WP-5 step 4",
+      "label": "RabbitMqMessageBus", "sub": "agent consumer · prefetch 4", "kind": "step", "status": "real", "wp": "WP-5 step 4",
       "what": "Parses the envelope, checks the contract, runs the handler, applies the outcome.",
       "how": "`dispatch` then `dispose`: done acks, retry copies to the wait queue through agent.retry and acks, dead copies to the DLQ with the reason.",
       "why": "Decision P1 and R1: one failure policy, no handler can loop.",
@@ -1513,6 +1713,55 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "how": "api: Postgres only; api-worker and the agent consumer: Postgres and RabbitMQ.",
       "why": "A broker outage never takes api out of rotation.",
       "files": ["apps/api/src/worker.module.ts", "apps/agent/src/consumer.module.ts"]
+    },
+    "g-outbox": {
+      "label": "messaging.outbox", "sub": "table in content_dev", "kind": "file", "status": "real", "wp": "WP-5 step 5",
+      "what": "One row per event to publish, written in the same transaction as the change that caused it.",
+      "how": "Columns: id (the CloudEvents id), type, routing_key, envelope (jsonb, exactly what goes on the wire), attempts, next_attempt_at, last_error (error kind only), published_at. A partial index on unsent rows keeps the relay's poll cheap; published rows are deleted after 7 days by the daily cleanup.",
+      "why": "ADR-012: the event commits with the change or not at all (transactional outbox). api never talks to RabbitMQ.",
+      "files": ["packages/messaging/sql/0001_messaging.sql"]
+    },
+    "g-unrouted": {
+      "label": "jadero.unrouted", "sub": "alternate exchange + queue", "kind": "step", "status": "real", "wp": "WP-5 step 4",
+      "what": "Where a message goes when no binding matches its routing key, instead of being dropped.",
+      "how": "`jadero.events` and every service's retry exchange name it as `alternate-exchange`. Without it RabbitMQ would confirm the publish and discard the message.",
+      "why": "Decision T4: a typo in a routing key or a queue missing from the topology must be visible, not silent.",
+      "files": ["packages/messaging/src/topology/definitions.ts"]
+    },
+    "g-queue": {
+      "label": "agent.system.ping", "sub": "quorum queue · delivery limit 20", "kind": "step", "status": "real", "wp": "WP-5 step 4",
+      "what": "agent's queue for the ping; its own copy of every system.ping.v1.",
+      "how": "Declared in definitions.json; a policy sets at-least-once dead-lettering to `jadero.dlx` and the delivery limit. Bound to `jadero.events` by `system.ping.v1` and to `agent.retry` by its own name, so expired retries come back here only.",
+      "why": "One queue per consumer and purpose (ADR-029): a slow or failing consumer never affects another consumer's copy.",
+      "files": ["packages/messaging/src/topology/jadero.ts", "infra/rabbitmq/definitions.json"]
+    },
+    "g-retry": {
+      "label": "agent.retry → wait queues", "sub": "10 s · 1 min · 10 min, then back up", "kind": "step", "status": "real", "wp": "WP-5 step 4",
+      "what": "The service's retry exchange and its three wait queues.",
+      "how": "The consumer publishes a copy with `x-jadero-attempt` to `agent.system.ping.retry.<tier>` through `agent.retry`, then acks the original. A wait queue has no consumer; its TTL policy dead-letters the copy back through `agent.retry` to `agent.system.ping`.",
+      "why": "Decision R1: growing delays without timers in code, and a retry never reaches another consumer's queue.",
+      "files": ["packages/messaging/src/rabbitmq-message-bus.ts", "packages/messaging/src/topology/definitions.ts"]
+    },
+    "g-dlq": {
+      "label": "agent.system.ping.dlq", "sub": "after the last tier", "kind": "step", "status": "real", "wp": "WP-5 step 4",
+      "what": "Messages that failed four times, or failed in a way retrying cannot fix (a payload that breaks the contract).",
+      "how": "The consumer copies them here with the reason in `x-jadero-dead-reason`; the broker also dead-letters here through `jadero.dlx` when the delivery limit is hit.",
+      "why": "ADR-012: a person decides; WP-50 archives them and adds a replay action, safe because consumers are idempotent.",
+      "files": ["packages/messaging/src/rabbitmq-message-bus.ts"]
+    },
+    "g-heartbeat": {
+      "label": "broker_heartbeat", "sub": "table in agent_dev", "kind": "file", "status": "real", "wp": "WP-5 step 6",
+      "what": "agent's read model of the ping: when the path last worked, per source.",
+      "how": "Upserted in the inbox's transaction; the upsert only moves forward in time, because delivery order is not guaranteed.",
+      "why": "ADR-029 rule 3: agent keeps its own read model fed by events. A future lag signal for WP-26 and the Under the hood page.",
+      "files": ["apps/agent/sql/0001_broker_heartbeat.sql", "apps/agent/src/modules/heartbeat/heartbeat.repository.ts"]
+    },
+    "ev-system-ping-v1": {
+      "label": "system.ping.v1", "sub": "api → agent.system.ping", "kind": "file", "status": "real", "wp": "WP-5",
+      "what": "A probe that crosses the whole messaging path. Data: `{ trigger: \"manual\" | \"heartbeat\" }`.",
+      "how": "Producer: api, through its outbox (`PingService`: `POST /dev/ping` in development, the heartbeat in api-worker every 5 minutes). Consumer: `agent.system.ping` (agent's consumer process) into `broker_heartbeat`. Type `dev.jadero.system.ping.v1`; schema, fixture and frozen compatibility snapshot in packages/contracts.",
+      "why": "Decision W1 c: proves outbox, relay, broker, consumer, inbox and the trace in every environment.",
+      "files": ["packages/contracts/src/events/system-ping.v1.ts", "packages/contracts/fixtures/system.ping.v1.json", "packages/contracts/compat/system.ping.v1.json"]
     }
   }
 }
