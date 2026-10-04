@@ -52,7 +52,7 @@ jadero.dev v2. Branch: wp/3-service-platform. ... WP-3 explainer: docs/learning/
 > My answers: 1 Express, 2 ApiConfig class, 3 pg, ... Record the decision.
 docs/learning/wp-3.md: decision: recorded. The gate is open.
 > Step 2. Explain each file before you write it.
-(writes, runs pnpm verify, commits feat(platform-nest): ..., appends two lines to the step log)
+(/step 3 2: the session explains, the implementer agent writes, runs pnpm verify, commits feat(platform-nest): ..., appends two lines to the step log)
 > Open the PR and run @agent-reviewer.
 > Fix the high and medium findings, then ask me the explain-back questions.
 ```
@@ -68,7 +68,7 @@ Never typed: a push to `main`, a deploy, `pnpm eval` without `EVAL_CONFIRMED=1`.
 | Learn | read `docs/learning/wp-N.md`; ask; answer | `/learn-step NN` writes and stops; records the decision | |
 | Build | one step at a time; answer the check question; stop and ask | names files and ADR lines, writes, `pnpm verify`, privacy check, step log from the diff, one check question, one scoped commit; mid-WP review for M or larger | |
 | Review | explain the design back; review on GitHub | PR with `Closes #`; `@agent-reviewer`; fixes; Recap gaps | In review (automatic) |
-| Close | squash merge; later deploy and journal | | Done (automatic) |
+| Close | journal draft by an agent, corrected by the owner (`/wrap-wp`); squash merge; later deploy | | Done (automatic) |
 
 Compact after the decision is recorded and after the reviewer has reported. Keep: branch, WP id, explainer path, step list with done marks, open findings.
 
@@ -77,7 +77,7 @@ Compact after the decision is recorded and after the reviewer has reported. Keep
 The file is the textbook for this WP; the session is the teacher. You never read ADRs or other WPs to decide: the session gives you, in the chat, each ADR decision the WP implements (problem, example, decision, alternatives with when each would win, patterns, a diagram where it helps), its implementation choices one line each, and the few open questions (only architecture no ADR decides) with the recommendations in a separate block after them. The file holds the same plus the traces and a "Named here" table. The agent challenges your answers when it disagrees; that dialogue is the point. Nothing is to memorize; an explain-back you cannot answer means the explainer missed something, and it gets taught and added, not re-tested. Ask about any paragraph or file. A step you already know: say "known" (`fast_path: known`). A fact marked **verify** was not confirmed from a primary source; verify it at implementation time. Learning survives the PR: the Recap can land after the merge in a docs commit. A learning WP run without the owner (as WP-1 was) gets its explain-back on the next session before moving on.
 
 
-What the owner learns (2026-10-04): the owner orchestrates agents and must be able to challenge them, so the explainer separates what to **own** (boundaries, consistency, failure modes, data flow and privacy, observability, data modeling, cost of change), what to **recognize** (named patterns) and what to **delegate** (library APIs, config, versions, in an appendix that is never asked). For every decision the owner answers first, with a pick and one risk, and only then reads the recommendation; options include one the agent would not choose and when it would win, plus "what would make this wrong". The explain-back is interview practice: why, what else, when to change, what happens when it fails, and the main trace drawn from memory. The owner's PR review is a design review on the code map, not a code read. The journal post of each WP is written by the owner.
+What the owner learns (2026-10-04): the owner orchestrates agents and must be able to challenge them, so the explainer separates what to **own** (boundaries, consistency, failure modes, data flow and privacy, observability, data modeling, cost of change), what to **recognize** (named patterns) and what to **delegate** (library APIs, config, versions, in an appendix that is never asked). For every decision the owner answers first, with a pick and one risk, and only then reads the recommendation; options include one the agent would not choose and when it would win, plus "what would make this wrong". The explain-back is interview practice: why, what else, when to change, what happens when it fails, and the main trace drawn from memory. The owner's PR review is a design review on the code map, not a code read. The journal post of each WP is drafted by an agent from the Recap (`/wrap-wp`) and corrected by the owner (ADR-034).
 
 Learning happens during the build too: every learning step ends with one one-line check question on what was just built (for example "Postgres is down: what does `/health/live` answer?"). A wrong answer is explained on the spot, so the explain-back at the end confirms instead of discovering. WP-3 showed why: two gaps (live versus ready, why a package is compiled) surfaced only in the Recap.
 
@@ -139,7 +139,7 @@ Learning happens during the build too: every learning step ends with one one-lin
 
 | Page | Source in the repo | Published copy | Update when |
 |---|---|---|---|
-| Code map | `docs/architecture/code-map.html` (JSON data block) | claude.ai artifact | every WP that adds an app, package, module, provider or changes the request path (last step of `/wp`) |
+| Code map | `docs/architecture/code-map.html` (JSON data block) | claude.ai artifact | every WP that adds an app, package, module, provider or changes the request path (`/map`, last step of every WP) |
 | Delivery flow | `docs/process/delivery-flow.html` (mirrors `docs/agent-tooling.md`) | claude.ai artifact | the flow changes |
 | Local guide | `docs/process/local-guide.html` (mirrors this playbook) | claude.ai artifact | this playbook changes |
 
@@ -155,7 +155,7 @@ A session that can publish artifacts republishes them; one that cannot edits the
 | `pnpm depcruise` | import rules of ADR-003 and AGENTS.md section 4 |
 | `pnpm dev:up` / `pnpm dev:down` | Postgres 18 (pgvector) and RabbitMQ 4 |
 | `pnpm adr:new "Title"` / `pnpm adr:index` / `--check` | next ADR / regenerate the index / fail when stale |
-| `/wp NN`, `/learn-step NN`, `/explain X`, `/adr Title` | the four skills |
+| `/wp NN`, `/learn-step NN`, `/step NN M`, `/map`, `/wrap-wp NN`, `/explain X`, `/adr Title` | the seven skills |
 | `@agent-reviewer` | ten-point review before the owner looks at a PR |
 | `LEFTHOOK=0 git commit ...` | skip hooks once; CI runs the same checks |
 | `node scripts/github/seed.mjs` | re-seed issues and the Project after adding a WP |

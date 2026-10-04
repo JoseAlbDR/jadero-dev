@@ -1,5 +1,7 @@
 # Project kit: handover to firstmate
 
+Historical: delivered on 2026-10-04 (project-kit PRs #1, #6 and #7; the stacked #2 to #5 were closed and recovered as #6). Kept as the record of what the kit was built from; the kit's `docs/process/coverage.md` maps every item below.
+
 Written on 2026-10-04 at the end of WP-5. The owner asked firstmate to build the `project-kit` repository (https://github.com/JoseAlbDR/project-kit) because firstmate has what this repo does not: the owner's local files and the conversation where jadero.dev v2 was planned. This file is everything the Claude Code sessions of jadero-dev know that the kit needs, plus the prompt the owner gives firstmate. The plan for the kit itself is `docs/process/project-kit.md`.
 
 ## What jadero-dev already holds (copy, then replace project specifics with placeholders)

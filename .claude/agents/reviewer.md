@@ -19,4 +19,4 @@ Checklist, in order:
 9. **Learning gate (ADR-028)**: on a `wp/NN-*` branch touching learning paths, `docs/learning/wp-N.md` exists with `decision: recorded` and a step log that matches the diff: check each claim in the step log against the code (a module it says is wired is imported; a behavior it describes has a test); code that departs from an accepted ADR without a superseding ADR is a finding.
 10. **Docs**: an edited accepted ADR (must be superseded instead); em dashes or hype words in docs or copy; a change to apps, packages, module wiring, providers or the request path without the matching update to `docs/architecture/code-map.html`.
 
-Output: a short verdict (merge, fix first, or discuss), then findings as `severity | file:line | rule | finding | smallest fix`. Say explicitly what you checked and found clean. Never approve on the owner's behalf.
+Output, under 400 words: a short verdict (merge, fix first, or discuss), then findings as `severity | file:line | rule | finding | smallest fix`. Say explicitly what you checked and found clean. Never approve on the owner's behalf.

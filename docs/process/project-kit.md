@@ -1,6 +1,6 @@
 # Project kit: start a new project the jadero.dev way
 
-Approved by the owner on 2026-10-04. A template repository, `project-kit`, that the owner creates on GitHub and uses to start any new project with the same process as jadero.dev: decisions first, learning gate, small steps, an orchestrating main session. Nothing here is built yet; this file is the plan. Firstmate builds it from `docs/process/project-kit-handover.md`, which also holds the prompt.
+Approved by the owner on 2026-10-04. A template repository, `project-kit`, that the owner creates on GitHub and uses to start any new project with the same process as jadero.dev: decisions first, learning gate, small steps, an orchestrating main session. Built on 2026-10-04 by firstmate from `docs/process/project-kit-handover.md` (kit PRs #1, #6 and #7); this file is the plan and the sync rule. Where the kit's contents differ from the list below, the kit's README is the current inventory.
 
 ## What the kit holds
 
@@ -43,4 +43,4 @@ The rule, so the two never drift silently:
 
 ## History
 
-How jadero-dev itself went through phase 0 (the decisions, the plan review, the first work packages) will be written down in `docs/process/genesis.md`, as the worked example `/kickoff` follows.
+How jadero-dev itself went through phase 0 (the decisions, the plan review, the first work packages) is `docs/process/genesis.md` in project-kit, the worked example `/kickoff` follows.

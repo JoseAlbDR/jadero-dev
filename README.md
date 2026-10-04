@@ -4,8 +4,8 @@ Personal site v2: a multilingual portfolio (es, en, de) with an ask-me AI agent.
 
 Work in progress. Where things live:
 
-- `docs/adr/`: the architecture decision records (ADR-001 to ADR-043), with an index in `docs/adr/README.md`. Start there.
-- `docs/plan/`: the build plan (`report.md`), the decisions as data (`decisions.json`), the owner review and its follow-ups, and the task for the next step (`TASK.md`).
+- `docs/adr/`: the architecture decision records (ADR-001 to ADR-046), with an index in `docs/adr/README.md`. Start there.
+- `docs/plan/`: the build plan (`report.md`), the decisions as data (`decisions.json`), the owner review and its follow-ups, and the planner's original task (`TASK.md`, historical).
 - Releases R0 to R7 and the work packages are in `docs/plan/report.md`, section 14; tracking is GitHub Issues, a Project and milestones (ADR-041).
 
 ## Development
@@ -40,4 +40,4 @@ Hands-on guide for a local machine: `docs/local-playbook.md`. Tooling and the fl
 
 ## Status
 
-Release R0 (walking skeleton) in progress. Done: the plan, the ADRs, GitHub tracking, the agent tooling, the repo foundation (WP-1), the service platform with the API skeleton (WP-3) and the web skeleton (WP-4). Next: messaging and the agent skeleton (WP-5), and the design directions (WP-15) alongside. The map of the code is `docs/architecture/code-map.html`.
+Release R0 (walking skeleton) in progress. Done: the plan, the ADRs, GitHub tracking, the agent tooling, the repo foundation (WP-1), the service platform with the API skeleton (WP-3), the web skeleton (WP-4), the design directions (WP-15) and the messaging foundation with the agent skeleton (WP-5). Next: the data layer (WP-10), then CI (WP-6). The map of the code is `docs/architecture/code-map.html`.

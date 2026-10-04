@@ -4,7 +4,7 @@ Personal site of the owner: a multilingual (es, en, de) portfolio with an ask-me
 
 ## 1. Where the truth lives
 
-- `docs/adr/`: the decision records (ADR-001 to ADR-045). Read `docs/adr/README.md` first. An accepted ADR is never edited; a change is a new ADR that supersedes it (`/adr`).
+- `docs/adr/`: the decision records (ADR-001 to ADR-046). Read `docs/adr/README.md` first. An accepted ADR is never edited; a change is a new ADR that supersedes it (`/adr`).
 - `docs/plan/report.md`: the narrative plan (architecture, traces, work packages, releases R0 to R7). On a conflict, the ADR file wins.
 - `docs/plan/decisions.json`: the 76 owner decisions as data; ids never change.
 - `docs/learning/`: one explainer per learning WP (the learning gate, section 5).
@@ -45,12 +45,12 @@ Status today: the repo foundation (WP-1), the service platform (WP-3: `packages/
 
 ## 5. Learning protocol (ADR-028, report 12.3)
 
-Learning paths: `apps/api`, `apps/agent`, `apps/contact`, `apps/mcp`, `packages/messaging`, `packages/ai`, `packages/agent`, `packages/contracts`, `packages/platform-nest`, `templates/`, `infra/`, `.github/workflows/`, plus the repo tooling files the gate guards (`turbo.json`, `pnpm-workspace.yaml`, `packages/config`, `.dependency-cruiser.*`, `lefthook.yml`, `commitlint.config.*`). For a WP tagged learning:
+Learning paths: `apps/api`, `apps/agent`, `apps/contact`, `apps/mcp`, `apps/gateway`, `apps/guard-classifier`, `packages/messaging`, `packages/ai`, `packages/agent`, `packages/contracts`, `packages/platform-nest`, `templates/`, `infra/`, `.github/workflows/`, plus the repo tooling files the gate guards (`turbo.json`, `pnpm-workspace.yaml`, `packages/config`, `.dependency-cruiser.*`, `lefthook.yml`, `commitlint.config.*`). For a WP tagged learning:
 1. `/wp NN` lists the WP's concepts and decisions and creates branch `wp/NN-slug`.
 2. `/learn-step` writes `docs/learning/wp-N.md`, self-contained: each ADR decision the WP implements explained as problem, concrete example, decision, alternatives (why discarded, when each would win) and the patterns to recognize, with a diagram where it helps; the few open questions (only architecture no ADR decides); the implementation choices, one line each; one concrete trace (real payload, real SQL). The same content goes in the chat, so the owner decides without opening the file. Then it stops.
 3. The owner says go, objects to a choice or answers the open questions; the agent challenges an answer that differs from its recommendation and discusses it. The explainer's front matter gets `decision: recorded` (with the ADR link). Only then may code under the learning paths change (hook `learning-gate.sh` enforces it). Fast path (D-38): a step the owner already knows is marked `known` in the explainer and skips the full explainer and explain-back.
 4. Implement in small steps, each through `/step` (the main session explains and checks, the `implementer` agent builds), each following the step contract:
-   - **Before**: explain in a few plain lines what the step builds and which pattern it is, with a small example; name the files, the explainer heading each implements (a concept `C<n>` or an option block) and the ADR lines the step touches. If the code will differ from an ADR or a recorded decision, stop and ask; an ADR change is `/adr` first.
+   - **Before**: explain in a few plain lines what the step builds and which pattern it is, with a small example; name the files, the explainer heading each implements (a decision `D<n>`, an open question `Q<n>` or an implementation choice) and the ADR lines the step touches. If the code will differ from an ADR or a recorded decision, stop and ask; an ADR change is `/adr` first.
    - **Build**: write, `pnpm verify` green, show it running (a boot, a request, a test).
    - **Privacy check**: where does request data go (logs, spans, error bodies, headers)? No IPs in clear, no secrets, no bodies at info, no query strings.
    - **Step log**: two lines ("what just happened", "why") written from the step's `git diff`, not from memory. Never revert a file that holds uncommitted work; commit or stash first.
