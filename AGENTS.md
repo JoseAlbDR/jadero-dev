@@ -8,7 +8,7 @@ Personal site of the owner: a multilingual (es, en, de) portfolio with an ask-me
 - `docs/plan/report.md`: the narrative plan (architecture, traces, work packages, releases R0 to R7). On a conflict, the ADR file wins.
 - `docs/plan/decisions.json`: the 76 owner decisions as data; ids never change.
 - `docs/learning/`: one explainer per learning WP (the learning gate, section 5).
-- `docs/firstmate.md`: how the owner's framework runs this flow, where it may collide, and the prompts to start a WP.
+- `docs/sessions.md`: how a Claude Code session (cloud or local) runs a work package, and the prompts to start, resume or do a chore.
 - `docs/architecture/code-map.html`: the interactive map of the code (apps, packages, modules, what is injected where, boot and request paths). Updated by every WP that changes them; also published as an artifact.
 - GitHub Issues: the epic `jadero.dev v2`, one sub-issue per WP, milestones R0 to R7, Project board (ADR-041). The issue is the task; the PR closes it.
 

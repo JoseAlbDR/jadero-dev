@@ -54,10 +54,10 @@ a { color: var(--accent); }
 <main>
 <p class="eyebrow">jadero.dev v2 · process reference</p>
 <h1>How a work package moves from the board to production</h1>
-<p class="lede">The flow that ran end to end on WP-1 and WP-3, written down so the same flow runs locally with firstmate and the Claude Code tooling in the repo. Every rule here has a file in the repo as its source (<code>docs/agent-tooling.md</code>, <code>docs/local-playbook.md</code>, <code>docs/firstmate.md</code>); this page only orders them.</p>
+<p class="lede">The flow that ran end to end on WP-1 and WP-3, written down so every work package runs the same way in a Claude Code session started in the repo, in the cloud or locally. Every rule here has a file in the repo as its source (<code>docs/agent-tooling.md</code>, <code>docs/local-playbook.md</code>, <code>docs/sessions.md</code>); this page only orders them.</p>
 
 <nav class="toc">
-<a href="#roles">Roles</a><a href="#truth">Sources of truth</a><a href="#stages">The ten stages</a><a href="#explainback">Explain-back</a><a href="#gates">Gates</a><a href="#board">Board states</a><a href="#session">Session hygiene</a><a href="#firstmate">Firstmate mapping</a><a href="#daily">Daily checklist</a><a href="#wp1">WP-1 trial</a><a href="#wp3">WP-3 run</a>
+<a href="#roles">Roles</a><a href="#truth">Sources of truth</a><a href="#stages">The ten stages</a><a href="#explainback">Explain-back</a><a href="#gates">Gates</a><a href="#board">Board states</a><a href="#session">Session hygiene</a><a href="#sessions">Sessions</a><a href="#daily">Daily checklist</a><a href="#wp1">WP-1 trial</a><a href="#wp3">WP-3 run</a>
 </nav>
 
 <h2 id="roles">Roles</h2>
@@ -66,7 +66,6 @@ a { color: var(--accent); }
 <tr><td>Owner</td><td>Decides every backend and agent pattern, answers the questions in each explainer before any code, explains the design back after the PR review, reviews and merges every PR, runs anything that touches the server, secrets or money (<code>pnpm eval</code>).</td><td>Delegates a decision to an agent.</td></tr>
 <tr><td>Main session</td><td>Runs <code>/wp</code>, <code>/learn-step</code>, implements in small steps, keeps the step log, opens the PR. Model: Opus 5.5 is enough; a Mythos-class model is not needed for this work. Effort: high for learning WPs, medium for frontend and chores.</td><td>Pushes to <code>main</code>, deploys, ssh, real AI or mail providers in dev or tests, batches a whole WP into one diff.</td></tr>
 <tr><td>Subagents</td><td><code>@agent-reviewer</code> reviews every PR against the ADRs before the owner sees it. <code>Explore</code> does wide searches. A subagent can run <code>/wp</code> and <code>/learn-step</code> when the main session runs on a heavier model than the task needs.</td><td>Approves, merges, or implements on its own.</td></tr>
-<tr><td>Firstmate</td><td>The owner's framework: plan, approve, implement, review, MR. Points its implementers at <code>AGENTS.md</code>; its sandbox and guard hooks are the security layer.</td><td>Replaces the learning gate or the ADR files.</td></tr>
 </table></div>
 
 <h2 id="truth">Sources of truth, in order of precedence</h2>
@@ -150,13 +149,13 @@ a { color: var(--accent); }
 <h2 id="gates">The gates, and what enforces each</h2>
 <div class="tablewrap"><table>
 <tr><th>Gate</th><th>Enforced by</th><th>Where</th></tr>
-<tr><td>Learning</td><td><code>.claude/hooks/learning-gate.sh</code> (PreToolUse on Edit and Write)</td><td>Local Claude Code session; firstmate implementers must honor the same rule by reading the explainer's front matter</td></tr>
+<tr><td>Learning</td><td><code>.claude/hooks/learning-gate.sh</code> (PreToolUse on Edit and Write)</td><td>Every Claude Code session in the repo, cloud or local</td></tr>
 <tr><td>Done with my step?</td><td><code>pnpm verify</code> (lint, architecture check, typecheck, unit tests, affected only)</td><td>Before every commit, and again after merging <code>main</code> into the branch, before pushing</td></tr>
 <tr><td>Is main green?</td><td><code>pnpm verify:all</code> (same tasks, every package; <code>verify</code> runs nothing on <code>main</code>)</td><td>On <code>main</code> after a pull, and in CI once WP-6 lands</td></tr>
 <tr><td>Architecture</td><td>dependency-cruiser rules (WP-1), restated in <code>AGENTS.md</code> section 4 and <code>.claude/rules/services.md</code></td><td><code>pnpm verify</code> now, CI once WP-6 lands</td></tr>
 <tr><td>Quality</td><td>CI (WP-6) with the coverage gates of ADR-009; <code>@agent-reviewer</code></td><td>PR</td></tr>
 <tr><td>Content</td><td>ADR-031 rules in <code>AGENTS.md</code> section 7; the reviewer's point 7; gitleaks (WP-6)</td><td>Everything, since the repo becomes public</td></tr>
-<tr><td>Security</td><td>The owner's framework and sandbox. The repo states the rules; it does not duplicate the hooks.</td><td>Firstmate</td></tr>
+<tr><td>Security</td><td>Claude Code's permission settings (<code>.claude/settings.json</code> denies reading the real <code>.env</code> files), the learning gate and the owner's review. A sandbox applies only when the session runs in one (cloud sessions do; a local session may not). The repo states the rules in <code>AGENTS.md</code> section 7.</td><td>Every session</td></tr>
 <tr><td>Money</td><td><code>pnpm eval</code> runs only with <code>EVAL_CONFIRMED=1</code> and the owner's yes</td><td>Local</td></tr>
 </table></div>
 
@@ -184,19 +183,21 @@ a { color: var(--accent); }
 <h3>Cloud session versus local</h3>
 <p>In a cloud session <code>gh</code> is not authenticated as the owner, so the seed script, Project edits and anything that needs the owner's token run locally. Pushes and PRs work through the GitHub app. Locally, everything in this page works as written and the hooks run in the owner's Claude Code.</p>
 
-<h2 id="firstmate">Mapping onto firstmate</h2>
-<p>The full guide is <code>docs/firstmate.md</code>: what firstmate reads and in which order, the stages mapped to its concepts (Map and the learning gate have no equivalent), every place the two may collide with the rule for each, and the two prompts to start a session. The table below is the short version.</p>
+<h2 id="sessions">Sessions</h2>
+<p>Every work package runs in a Claude Code session started in this repo, in the cloud (claude.ai/code) or on the owner's machine. There is no other framework: <code>AGENTS.md</code>, <code>CLAUDE.md</code> and <code>.claude/</code> carry the whole flow. The full guide is <code>docs/sessions.md</code>.</p>
 <div class="tablewrap"><table>
-<tr><th>Firstmate concept</th><th>In this repo</th><th>Keep or replace</th></tr>
-<tr><td>Plan</td><td><code>/wp NN</code> step list, plus the issue's acceptance criteria</td><td>Either; the step list must end in commits with green <code>pnpm verify</code></td></tr>
-<tr><td>Approve</td><td>The owner's recorded decision in <code>docs/learning/wp-N.md</code></td><td>Keep: the hook reads this file</td></tr>
-<tr><td>Implement (per task)</td><td>One step of the list; the step log in the explainer</td><td>Firstmate implementers can run it; they read <code>AGENTS.md</code> and the rules files</td></tr>
-<tr><td>Review gate</td><td><code>@agent-reviewer</code> checklist in <code>.claude/agents/reviewer.md</code></td><td>Either; the checklist is plain Markdown and can be fed to the framework's reviewer</td></tr>
-<tr><td>MR</td><td>GitHub PR with <code>Closes #</code>, squash merge, release-please</td><td>Keep: GitHub, not GitLab, for this repo</td></tr>
-<tr><td>Guards and sandbox</td><td>Not in the repo; rules stated in <code>AGENTS.md</code> section 7</td><td>Firstmate's</td></tr>
-<tr><td>Commit skill, retro, learn habits</td><td>Not in the repo</td><td>Firstmate's, if adopted</td></tr>
+<tr><th>What differs</th><th>Cloud session</th><th>Local session</th></tr>
+<tr><td>Docker</td><td>Not available: the owner runs <code>pnpm dev:up</code> and <code>pnpm test:int</code> locally and pastes the output</td><td>Available (OrbStack works)</td></tr>
+<tr><td>Security</td><td>Runs in a sandbox, plus the repo's permission settings</td><td>No sandbox unless the owner sets one up: the protection is the <code>.env</code> deny in <code>.claude/settings.json</code>, the learning gate and the owner reviewing each step</td></tr>
+<tr><td>PR body</td><td>Gets a "Generated by Claude Code" footer; delete it before the squash</td><td>No footer</td></tr>
+<tr><td>Artifacts</td><td>Republishes the code map and the process pages</td><td>Edits the repo files; the next cloud session republishes</td></tr>
 </table></div>
-<p>What must stay repo-local whatever the framework does: <code>learning-gate.sh</code>, <code>docs/learning/</code>, <code>docs/adr/</code>, and the GitHub delivery conventions. The four skills can be dropped if firstmate brings equivalents. Nothing in the repo references the framework's paths or company material.</p>
+<p>Three prompts in <code>docs/sessions.md</code>, copied verbatim in the local guide:</p>
+<ul>
+<li><strong>Start a work package:</strong> <code>/wp</code>, then <code>/learn-step</code>, the decision, steps under the step contract, the code map, the PR, the review and the explain-back.</li>
+<li><strong>Resume a work package in a new session:</strong> read the explainer and the branch log, say where we are and which step is next, wait for the go.</li>
+<li><strong>A chore outside a work package:</strong> a <code>chore/</code> branch, one change, <code>pnpm verify</code> green, one commit, a PR without <code>Closes</code>.</li>
+</ul>
 
 <h2 id="daily">Daily checklist, local session</h2>
 <ol>
@@ -247,8 +248,8 @@ a { color: var(--accent); }
 <li><strong>The Docker context fix.</strong> Testcontainers does not read the Docker CLI context that OrbStack uses, so <code>pnpm test:int</code> failed where <code>pnpm dev:up</code> worked. The integration setup now asks <code>docker context inspect</code> and sets <code>DOCKER_HOST</code>.</li>
 <li><strong>The domain rule fix.</strong> Widening the dependency-cruiser rules to <code>templates/</code> showed that <code>domain-imports-only-domain</code> only flagged imports into <code>apps/</code>, so a domain file could import <code>@nestjs/common</code>. It now flags any import outside the module's <code>domain/</code>. The same widening caught a template test that imported an adapter from <code>application/</code>.</li>
 <li><strong>The code map.</strong> An interactive map of the repo (<code>docs/architecture/code-map.html</code>) now lives in the repo and is updated as the last step of every WP (the new Map stage). Reviewing the design through it found real fixes, applied in their own commit.</li>
-<li><strong>The firstmate guide.</strong> <code>docs/firstmate.md</code> records how firstmate runs this flow, where it may collide, and the prompts to start a session and a WP.</li>
 </ul>
+<p>After WP-3 the owner chose to run everything in Claude Code sessions from the repo; firstmate was tried for one fit check and not adopted.</p>
 
 <h3>Still open after the trials</h3>
 <ul>
