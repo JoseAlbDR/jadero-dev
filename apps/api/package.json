@@ -6,9 +6,11 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "dev": "node --watch-path=dist --watch-path=../../packages/platform-nest/dist --watch-preserve-output --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js",
+    "dev:build": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "start": "node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "start": "node --env-file-if-exists=.env dist/main.js",
     "test:int": "vitest run -c vitest.int.config.ts"
   },
   "dependencies": {
