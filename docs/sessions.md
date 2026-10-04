@@ -48,6 +48,10 @@ Answer in Spanish; files in plain English, no em dashes, no attribution lines in
 
 To force a specific WP, replace the first two sentences with "Next work package in jadero-dev: WP-N (<title>)."
 
+### First runs of the orchestrator flow
+
+WP-10 is the first WP built with the agents and skills of `.claude/rules/orchestration.md` (added after WP-5, not yet tried on a WP). During its first runs the main session watches for friction: an agent report that misses what the owner needs, a skill step that does not fit, the learning gate blocking a step it should allow, context still growing past about 300k tokens. Each finding goes into the step log, and at `/wrap-wp` into one `chore/` PR that fixes the agent, skill or rule.
+
 ## Prompt: a frontend work package
 
 Frontend WPs (`apps/web`, `apps/admin`, `packages/ui`) are result-only (AGENTS.md section 5): no learning gate, no explainer, no explain-back. They can run in their own session while a backend WP runs in another, as long as the two do not touch the same files.

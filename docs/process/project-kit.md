@@ -1,6 +1,6 @@
 # Project kit: start a new project the jadero.dev way
 
-Approved by the owner on 2026-10-04. A template repository, `project-kit`, that the owner creates on GitHub and uses to start any new project with the same process as jadero.dev: decisions first, learning gate, small steps, an orchestrating main session. Nothing here is built yet; this file is the plan.
+Approved by the owner on 2026-10-04. A template repository, `project-kit`, that the owner creates on GitHub and uses to start any new project with the same process as jadero.dev: decisions first, learning gate, small steps, an orchestrating main session. Nothing here is built yet; this file is the plan. Firstmate builds it from `docs/process/project-kit-handover.md`, which also holds the prompt.
 
 ## What the kit holds
 
