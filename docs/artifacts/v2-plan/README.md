@@ -6,7 +6,7 @@ Archive of the review page at https://claude.ai/artifact/HJZzB1Bkafy3t22kcUnHVA,
 | --- | --- | --- |
 | `index.html` | 25,634 bytes | The page as served, including the document skeleton the artifact service adds at publish time. It loads `data.json` and, inside claude.ai, reads and writes the `marks` collection of the artifact database (capabilities `db` and `user`). |
 | `data.json` | 264,885 bytes | The published data file, byte-identical to the artifact. Generated from `docs/plan/decisions.json`. |
-| `owner-marks.json` | 15055 bytes | The 76 documents of the `marks` collection (`{ at, choice, note }` per decision id), exported from the artifact database on 2026-10-04. |
+| `owner-marks.json` | 15,055 bytes | The 76 documents of the `marks` collection (`{ at, choice, note }` per decision id), exported from the artifact database on 2026-10-04. |
 
 ## Differences from the repo and from the live artifact
 
