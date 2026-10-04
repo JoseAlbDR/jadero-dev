@@ -78,7 +78,7 @@ Notes for this prompt (from WP-4):
 
 ## Two sessions in parallel
 
-A backend WP and a frontend WP can run at the same time, one session each (for example the backend one in the cloud and the frontend one locally), when their dependencies are closed and they work in different folders. Each session has its own branch from `origin/main`. They still share a few files:
+A backend WP and a frontend WP can run at the same time, one session each (for example the backend one in the cloud and the frontend one locally), when their dependencies are closed and they work in different folders. Each session has its own branch from `origin/main`. Learning code is built in the main checkout of its session, never in a git worktree: the learning gate reads the WP number from the branch name. They still share a few files:
 
 - `pnpm-lock.yaml`, `pnpm-workspace.yaml` (catalog), root `package.json`, `turbo.json`, `commitlint.config.mjs` (scopes);
 - `docs/architecture/code-map.html`, `README.md` and `AGENTS.md` (status lines).

@@ -111,6 +111,9 @@ Learning happens during the build too: every learning step ends with one one-lin
 | `pnpm --filter @jadero/web dev`: "No projects matched" | you are on `main` before the PR that adds the app is merged | merge first, or stay on the branch |
 | `pnpm verify` reports lint warnings that were already fixed | a Turborepo input list misses the changed file type (CSS was missing until WP-4) | add the type to the task's `inputs` in `turbo.json` |
 | commit rejected: scope | commitlint | `type(scope): subject`; scopes live in `commitlint.config.mjs` |
+| commits land without lefthook or commitlint running | a tool set `core.hooksPath` in the repo's git config, so git skips `.git/hooks` | `git config --unset core.hooksPath && pnpm lefthook install` |
+| `pnpm dev` leaves an app out, or Turborepo waits on a persistent task | the default concurrency is lower than the number of persistent processes once each app has a second process (`api-worker`, the `agent` consumer) | run the persistent tasks with `--concurrency=20` (the `dev` script does) |
+| `pnpm lint` fails on a file a generator just wrote | the generator wrote unformatted output (the AsyncAPI catalog, `definitions.json`, the ADR index) | the generator runs the formatter on its output as its last step; fix the generator, not the file |
 | commit rejected by Biome | unsafe fix or syntax error | `pnpm lint:fix`, then fix by hand |
 | `pnpm verify` never hits the cache | an input that changes every run | check `inputs` in `turbo.json`; `turbo run test --summarize` |
 | `pnpm dev:up` fails on 5432 | a local Postgres | stop it, or change the host port in the compose file and `.env.example` |

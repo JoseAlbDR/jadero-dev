@@ -111,6 +111,13 @@ export function replaceBetweenMarkers(readme, body) {
 }
 
 function main() {
+  if (process.argv.includes("--help") || process.argv.includes("-h")) {
+    console.log(
+      "Usage: pnpm adr:index            rewrite the ADR table in docs/adr/README.md\n" +
+        "       pnpm adr:index --check    exit 1 when the table is stale, change nothing",
+    );
+    return;
+  }
   const adrDir = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "docs", "adr");
   const readmePath = join(adrDir, "README.md");
   const adrs = readdirSync(adrDir)

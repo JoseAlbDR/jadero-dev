@@ -38,7 +38,12 @@ export function nextNumber(files) {
 }
 
 function main() {
-  const title = process.argv.slice(2).join(" ").trim();
+  const args = process.argv.slice(2);
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log('Usage: pnpm adr:new "Title of the decision"');
+    return;
+  }
+  const title = args.join(" ").trim();
   if (!title) {
     console.error('Usage: pnpm adr:new "Title of the decision"');
     process.exit(1);

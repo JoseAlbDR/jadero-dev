@@ -38,6 +38,8 @@ The rule, so the two never drift silently:
 - When `project-kit` is not attached, the session adds one line to `docs/process/kit-backlog.md` in the same jadero-dev PR: the PR, the files, what to port.
 - `/wrap-wp` checks the backlog at the end of every WP and ports what is waiting when `project-kit` is attached.
 - A change made in `project-kit` first (from a new project) comes back to jadero-dev the same way, through a `chore/` PR, and is listed in the backlog until it lands.
+- Phase 0 tooling (`/kickoff`, the `grilling` and `domain-modeling` skills, the kickoff playbook) lives only in the kit: jadero-dev is past phase 0, so it is tried on the first new project, not here.
+- Porting the ADR template, `/adr` or `scripts/adr/` includes re-checking the kit's `.claude/skills/domain-modeling/ADR-FORMAT.md`, the bridge that tells the domain-modeling skill how an ADR is laid out.
 
 ## History
 

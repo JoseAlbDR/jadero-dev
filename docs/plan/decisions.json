@@ -5607,7 +5607,7 @@
   },
   "review": {
     "date": "2026-10-03",
-    "marks": "owner-marks-2026-10-03.json",
+    "marks": "owner-marks.json",
     "followups": "owner-review-followups.md",
     "counts": {
       "decided": 55,
