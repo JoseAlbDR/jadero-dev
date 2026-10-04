@@ -1,0 +1,21 @@
+/*
+ * WP-15 throwaway mockups (ADR-023). Each direction overrides the tokens of packages/ui for the page
+ * that renders it: `:root:has(...)` reaches the header too, so the whole page takes the direction.
+ * `--signal` is the one accent of a direction, used as `text-(--signal)`. Deleted with the mockups.
+ */
+
+/* Fonts are set on the wrapper, which carries the next/font variables. */
+[data-direction] {
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@keyframes mockup-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+.mockup-caret {
+  animation: mockup-caret 1.1s steps(1) infinite;
+}
