@@ -8,6 +8,7 @@ Personal site of the owner: a multilingual (es, en, de) portfolio with an ask-me
 - `docs/plan/report.md`: the narrative plan (architecture, traces, work packages, releases R0 to R7). On a conflict, the ADR file wins.
 - `docs/plan/decisions.json`: the 76 owner decisions as data; ids never change.
 - `docs/learning/`: one explainer per learning WP (the learning gate, section 5).
+- `docs/architecture/code-map.html`: the interactive map of the code (apps, packages, modules, what is injected where, boot and request paths). Updated by every WP that changes them; also published as an artifact.
 - GitHub Issues: the epic `jadero.dev v2`, one sub-issue per WP, milestones R0 to R7, Project board (ADR-041). The issue is the task; the PR closes it.
 
 Status today: the repo foundation (workspace, lint, architecture rules, git hooks, dev containers, ADR scripts) is in place; services land from WP-3 on.
@@ -19,6 +20,7 @@ Status today: the repo foundation (workspace, lint, architecture rules, git hook
 ## 3. Commands
 
 - `pnpm verify` lint, architecture check, typecheck, unit tests, affected only and cached by Turborepo: the single "am I done" command. Run it before every commit and again after merging `main`, before pushing. `pnpm verify:all` runs the same on every package (on `main`, where nothing is affected, and in CI).
+- `pnpm build` compiles every package (`dist/`); run it after a pull when the editor says a workspace package "has no exported member": editors read the compiled `.d.ts`
 - `pnpm lint` Biome check, never writes · `pnpm lint:fix` format and safe fixes · `pnpm depcruise` architecture rules · `pnpm test` all unit tests
 - `pnpm dev:up` / `pnpm dev:down` Postgres and RabbitMQ in Docker (`infra/compose/`, connection strings in `.env.example`) · `pnpm dev` apps in watch mode, once apps exist
 - `pnpm adr:new "Title"` next ADR from the template · `pnpm adr:index` regenerate the index in `docs/adr/README.md` · `pnpm adr:index --check` fail when it is stale

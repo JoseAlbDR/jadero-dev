@@ -18,6 +18,7 @@
     "test": "turbo run test test:scripts",
     "test:int": "turbo run test:int",
     "test:scripts": "node --test \"scripts/**/*.test.mjs\"",
+    "build": "turbo run build",
     "dev": "turbo run dev",
     "dev:up": "docker compose -f infra/compose/compose.dev.yml up -d --wait",
     "dev:down": "docker compose -f infra/compose/compose.dev.yml down",

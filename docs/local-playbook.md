@@ -96,6 +96,7 @@ The file is the textbook for this WP; the session is the teacher. You never read
 | RabbitMQ exits with `.erlang.cookie: eacces` | an old volume where a root process wrote the cookie | `user: rabbitmq` is in the compose file; run `pnpm dev:down && docker compose -f infra/compose/compose.dev.yml down -v` once |
 | Biome warns that `recommended` is deprecated | Biome 2.5 renamed it | `pnpm exec biome migrate --write` (it becomes `"preset": "recommended"`) |
 | Testcontainers: `Could not find a working container runtime strategy` (`pnpm dev:up` works) | the socket is not at `/var/run/docker.sock`; Compose reads the Docker context, Testcontainers does not | one line in `~/.testcontainers.properties`: `docker.host=unix:///Users/<you>/.orbstack/run/docker.sock` (OrbStack; the path is what `docker context inspect --format '{{.Endpoints.docker.Host}}'` prints), or prefix the command with `DOCKER_HOST=...` |
+| Editor: `Module '"@jadero/platform-nest"' has no exported member 'X'` while `pnpm verify` is green | the editor reads the package's compiled `dist/index.d.ts`, which is older than the source after a pull | `pnpm build` (Turborepo builds packages in dependency order); `pnpm verify` builds them too |
 | Claude cannot read `.env.example` | `settings.json` denies `Read(.env.*)` | expected; it reads it through Bash |
 
 ## With firstmate
