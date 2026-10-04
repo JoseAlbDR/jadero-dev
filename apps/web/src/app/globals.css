@@ -1,0 +1,5 @@
+@import "tailwindcss";
+@import "@jadero/ui/theme.css";
+
+/* Tailwind scans this app by default; the shared components live in packages/ui. */
+@source "../../../../packages/ui/src";

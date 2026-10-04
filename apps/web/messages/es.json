@@ -1,0 +1,26 @@
+{
+  "Metadata": {
+    "title": "jadero.dev",
+    "description": "Web personal y portfolio de un ingeniero de software."
+  },
+  "HomePage": {
+    "title": "jadero.dev",
+    "lead": "La nueva versión de esta web está en construcción."
+  },
+  "NotFound": {
+    "title": "Página no encontrada",
+    "description": "La página que buscas no existe."
+  },
+  "Header": {
+    "home": "Inicio"
+  },
+  "ThemeToggle": {
+    "label": "Tema de color",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "system": "Sistema"
+  },
+  "LocaleSwitcher": {
+    "label": "Idioma"
+  }
+}

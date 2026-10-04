@@ -74,7 +74,7 @@ Compact after the decision is recorded and after the reviewer has reported. Keep
 
 ## How the owner learns
 
-The file is the textbook for this WP; the session is the teacher. You never read ADRs or other WPs to answer: the file has a "How to read this file" table (what to read before each question) and a "Named here" table (one line per WP or ADR it names). The session asks all the questions in one message, each with that pointer; a question that depends on another carries a recommendation per possible answer of the first. Nothing is to memorize; an explain-back you cannot answer means the explainer missed something, and it gets taught and added, not re-tested. Ask about any paragraph or file. A step you already know: say "known" (`fast_path: known`). A fact marked **verify** was not confirmed from a primary source; verify it at implementation time. Learning survives the PR: the Recap can land after the merge in a docs commit. A learning WP run without the owner (as WP-1 was) gets its explain-back on the next session before moving on.
+The file is the textbook for this WP; the session is the teacher. You never read ADRs or other WPs to answer: the file has a "How to read this file" reading route (per question, links to the concept headings, trace steps and option block to read first) and a "Named here" table (one line per WP or ADR it names). The session asks all the questions in one message, each with those links and the knowledge it needs in two or three sentences, recommendations in a separate block after the questions; a question that depends on another carries a recommendation per possible answer of the first. Nothing is to memorize; an explain-back you cannot answer means the explainer missed something, and it gets taught and added, not re-tested. Ask about any paragraph or file. A step you already know: say "known" (`fast_path: known`). A fact marked **verify** was not confirmed from a primary source; verify it at implementation time. Learning survives the PR: the Recap can land after the merge in a docs commit. A learning WP run without the owner (as WP-1 was) gets its explain-back on the next session before moving on.
 
 
 What the owner learns (2026-10-04): the owner orchestrates agents and must be able to challenge them, so the explainer separates what to **own** (boundaries, consistency, failure modes, data flow and privacy, observability, data modeling, cost of change), what to **recognize** (named patterns) and what to **delegate** (library APIs, config, versions, in an appendix that is never asked). For every decision the owner answers first, with a pick and one risk, and only then reads the recommendation; options include one the agent would not choose and when it would win, plus "what would make this wrong". The explain-back is interview practice: why, what else, when to change, what happens when it fails, and the main trace drawn from memory. The owner's PR review is a design review on the code map, not a code read. The journal post of each WP is written by the owner.
@@ -88,6 +88,16 @@ Learning happens during the build too: every learning step ends with one one-lin
 - Privacy issues (visitor IP in OpenTelemetry spans, query strings in error bodies) were found only in the PR review. Rule: a privacy check at the end of every step.
 - Commits were pushed to a PR after it was said to be ready, and the merge took only part of them. Rule: a ready PR gets no new commits without telling the owner.
 - The reviewer found one high and five medium issues; a mid-WP review would have found most of them earlier.
+## Lessons from WP-4 (2026-10-04)
+
+- The learning gate blocked the catalog on a frontend WP. Rule: ask the owner, then a fast-path `wp-N.md` that lists every tooling change (AGENTS.md section 5).
+- `pnpm install` quietly wrote a supply-chain exclusion for a day-old package. Rule: read `git diff pnpm-workspace.yaml` after every install; pin an older version instead.
+- An agent's `next dev` left an uncommitted block in `apps/web/AGENTS.md` and blocked the owner's `git switch`. Rule: the block is committed; a session leaves the tree as clean as it found it.
+- Two servers listened on the same port and curl reached the stale one. Rule: stop servers by port and check the port before starting (`apps/web/AGENTS.md`).
+- The reviewer found a page-level bug in layout-level metadata (every page inherited the home's canonical) and a build-time variable treated as runtime. Rule: for prerendered pages, ask "is this read at build or at request time?".
+- Screenshots cannot reach a PR from the command line. Rule: the session lists their paths; the owner attaches what matters.
+- A React warning that only development builds print (a script tag rendered on the client) slipped past the e2e suite, which runs the production build, and the first fix shipped without a failing test. Rule: reproduce dev-only warnings in a Vitest component test (`// @vitest-environment jsdom`, which runs React's development build), see it fail, then fix; and click through the site in `next dev` before calling a frontend WP done.
+
 ## When something blocks
 
 | Symptom | Cause | Do |
@@ -95,6 +105,11 @@ Learning happens during the build too: every learning step ends with one one-lin
 | `learning-gate: ... not yet` | edit under a learning path before the decision | read, answer, let the agent record it; never route around the hook |
 | `ERR_PNPM_UNSUPPORTED_ENGINE` | Node outside 24.12 to 24.x | `nvm use` |
 | pnpm picks an older version or refuses one | `minimumReleaseAge`: younger than 24 hours | wait a day or pin the previous version in the catalog; say so in the step log |
+| `pnpm install` added `minimumReleaseAgeExclude` to `pnpm-workspace.yaml` | a catalog version younger than the minimum release age | never keep the exclusion (it switches off the supply-chain check for that package): delete it and pin the previous version |
+| `ERR_PNPM_IGNORED_BUILDS` | a new dependency has an install script and pnpm 11 wants a decision | read what the script does, then add the package to `allowBuilds` (`false` when it only builds from source or checks for a prebuilt binary) with a one-line reason |
+| `git switch` aborts: `apps/web/AGENTS.md` would be overwritten | an agent ran `next dev` while the Next.js agent-rules block was missing, and Next appended it | commit the block (it is meant to stay); if it is not yours to commit, `git restore apps/web/AGENTS.md` |
+| `pnpm --filter @jadero/web dev`: "No projects matched" | you are on `main` before the PR that adds the app is merged | merge first, or stay on the branch |
+| `pnpm verify` reports lint warnings that were already fixed | a Turborepo input list misses the changed file type (CSS was missing until WP-4) | add the type to the task's `inputs` in `turbo.json` |
 | commit rejected: scope | commitlint | `type(scope): subject`; scopes live in `commitlint.config.mjs` |
 | commit rejected by Biome | unsafe fix or syntax error | `pnpm lint:fix`, then fix by hand |
 | `pnpm verify` never hits the cache | an input that changes every run | check `inputs` in `turbo.json`; `turbo run test --summarize` |

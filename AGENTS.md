@@ -12,7 +12,7 @@ Personal site of the owner: a multilingual (es, en, de) portfolio with an ask-me
 - `docs/architecture/code-map.html`: the interactive map of the code (apps, packages, modules, what is injected where, boot and request paths). Updated by every WP that changes them; also published as an artifact.
 - GitHub Issues: the epic `jadero.dev v2`, one sub-issue per WP, milestones R0 to R7, Project board (ADR-041). The issue is the task; the PR closes it.
 
-Status today: the repo foundation (WP-1) and the service platform (WP-3: `packages/platform-nest`, the `apps/api` skeleton, the module template in `templates/nest-module/`) are in place. Each app may carry its own `AGENTS.md` (`apps/api/AGENTS.md`).
+Status today: the repo foundation (WP-1), the service platform (WP-3: `packages/platform-nest`, the `apps/api` skeleton, the module template in `templates/nest-module/`) and the web skeleton (WP-4: `apps/web` with next-intl and the theme toggle, `packages/ui` with the tokens and the shadcn base) are in place. Each app may carry its own `AGENTS.md` (`apps/api/AGENTS.md`, `apps/web/AGENTS.md`).
 
 ## 2. Map (target layout, ADR-001)
 
@@ -26,6 +26,7 @@ Status today: the repo foundation (WP-1) and the service platform (WP-3: `packag
 - `pnpm dev:up` / `pnpm dev:down` Postgres and RabbitMQ in Docker (`infra/compose/`, connection strings in `.env.example`) · `pnpm dev` the apps in watch mode (`tsc --watch` plus `node --watch`; each app needs its `.env`, copied from its `.env.example`)
 - `pnpm adr:new "Title"` next ADR from the template · `pnpm adr:index` regenerate the index in `docs/adr/README.md` · `pnpm adr:index --check` fail when it is stale
 - `pnpm test:int` integration tests (`*.int.test.ts`) against real containers through Testcontainers; needs Docker, not part of `pnpm verify`
+- `pnpm test:e2e` builds `web` and runs its Playwright smoke and axe checks per locale against the standalone server; needs Google Chrome installed, not part of `pnpm verify`
 - New module: copy a shape from `templates/nest-module/` (layered or hexagonal, see its README)
 - Arrive with their WP: `pnpm db:generate` and `pnpm db:migrate` per service, `pnpm eval` (spends money: never without `EVAL_CONFIRMED=1` and the owner's yes).
 - Size test workers from load: `VITEST_MAX_WORKERS` = 12 minus the 1-minute load average minus 3, at least 1, at most 6.
@@ -43,10 +44,10 @@ Status today: the repo foundation (WP-1) and the service platform (WP-3: `packag
 
 Learning paths: `apps/api`, `apps/agent`, `apps/contact`, `apps/mcp`, `packages/messaging`, `packages/ai`, `packages/agent`, `packages/contracts`, `packages/platform-nest`, `templates/`, `infra/`, `.github/workflows/`, plus the repo tooling files (`turbo.json`, `pnpm-workspace.yaml`, `packages/config`). For a WP tagged learning:
 1. `/wp NN` lists the WP's concepts and decisions and creates branch `wp/NN-slug`.
-2. `/learn-step` writes `docs/learning/wp-N.md`, self-contained (a reading pointer per question and a one-line summary of every WP or ADR it names; all questions asked in one message): concepts from first principles, one concrete trace (real payload, real SQL), named patterns, options with trade-offs, the exact question for the owner. Then it stops.
+2. `/learn-step` writes `docs/learning/wp-N.md`, self-contained (a reading route that links each question to the concept headings, trace steps and option block to read first and a one-line summary of every WP or ADR it names; all questions asked in one message): concepts from first principles, one concrete trace (real payload, real SQL), named patterns, options with trade-offs, the exact question for the owner. Then it stops.
 3. The owner decides. The explainer's front matter gets `decision: recorded` (with the ADR link). Only then may code under the learning paths change (hook `learning-gate.sh` enforces it). Fast path (D-38): a step the owner already knows is marked `known` in the explainer and skips the full explainer and explain-back.
 4. Implement in small steps in the main session, each following the step contract:
-   - **Before**: name the files, the explainer paragraph each implements and the ADR lines the step touches. If the code will differ from an ADR or a recorded decision, stop and ask; an ADR change is `/adr` first.
+   - **Before**: name the files, the explainer heading each implements (a concept `C<n>` or an option block) and the ADR lines the step touches. If the code will differ from an ADR or a recorded decision, stop and ask; an ADR change is `/adr` first.
    - **Build**: write, `pnpm verify` green, show it running (a boot, a request, a test).
    - **Privacy check**: where does request data go (logs, spans, error bodies, headers)? No IPs in clear, no secrets, no bodies at info, no query strings.
    - **Step log**: two lines ("what just happened", "why") written from the step's `git diff`, not from memory. Never revert a file that holds uncommitted work; commit or stash first.
@@ -56,7 +57,7 @@ Learning paths: `apps/api`, `apps/agent`, `apps/contact`, `apps/mcp`, `packages/
 5. Recap: the owner explains the design back in interview form (why this way, what else, when to change it, what happens when it fails; the main trace drawn from memory); record gaps; `pnpm verify` green; commit.
 
 Aim of the learning: the owner orchestrates agents and challenges their proposals, so explainers teach design, architecture and patterns (tier **Own**), name the patterns to recognize, and move library details to a delegated appendix. The owner answers each decision before reading the recommendation. Review of a PR by the owner is a design review on the code map: what crosses a boundary, where the data goes, what happens when a piece fails.
-Frontend WPs (`apps/web`, `apps/admin`, `packages/ui`) skip the gate: build to the design system, show screenshots.
+Frontend WPs (`apps/web`, `apps/admin`, `packages/ui`) skip the gate: build to the design system, show screenshots. The hook still guards the repo tooling files (catalog in `pnpm-workspace.yaml`, `turbo.json`, `.dependency-cruiser.cjs`): when a frontend WP must change them, ask the owner, then add a short `docs/learning/wp-N.md` with `decision: recorded` and `fast_path: known` that names each tooling change (WP-4 is the example).
 
 ## 6. Conventions
 

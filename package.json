@@ -17,6 +17,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test test:scripts",
     "test:int": "turbo run test:int",
+    "test:e2e": "turbo run test:e2e",
     "test:scripts": "node --test \"scripts/**/*.test.mjs\"",
     "build": "turbo run build",
     "dev": "turbo run dev",

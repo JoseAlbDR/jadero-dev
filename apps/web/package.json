@@ -1,0 +1,38 @@
+{
+  "name": "@jadero/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Public site (ADR-001, ADR-022, ADR-023). WP-4: the skeleton.",
+  "type": "module",
+  "scripts": {
+    "build": "next build && node scripts/copy-standalone-assets.mjs",
+    "dev": "next dev",
+    "start": "node .next/standalone/apps/web/server.js",
+    "typecheck": "next typegen && tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@jadero/ui": "workspace:*",
+    "lucide-react": "catalog:",
+    "next": "catalog:",
+    "next-intl": "catalog:",
+    "next-themes": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "catalog:",
+    "@jadero/config": "workspace:*",
+    "@playwright/test": "catalog:",
+    "@tailwindcss/postcss": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "jsdom": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

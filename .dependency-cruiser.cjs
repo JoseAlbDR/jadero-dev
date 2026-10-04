@@ -16,7 +16,10 @@ const KNOWN_CONFIG_FILES = [
   "(^|/)\\.[^/]+\\.(js|cjs|mjs|ts|json)$",
   "\\.d\\.(c|m)?ts$",
   "(^|/)tsconfig[^/]*\\.json$",
-  "(^|/)(vitest|vite|next|drizzle|commitlint)\\.config\\.(js|cjs|mjs|ts)$",
+  "(^|/)(vitest|vite|next|drizzle|commitlint|playwright|postcss)\\.config\\.(js|cjs|mjs|ts)$",
+  // Next.js App Router entry files: the framework loads them by file name, nothing imports them.
+  "^apps/web/src/app/(.*/|)(page|layout|not-found|global-not-found|error|global-error|loading|template|default|forbidden|unauthorized|route|sitemap|robots|manifest|icon|apple-icon|opengraph-image|twitter-image)\\.tsx?$",
+  "^apps/web/src/(proxy|instrumentation)\\.ts$",
 ];
 
 module.exports = {
