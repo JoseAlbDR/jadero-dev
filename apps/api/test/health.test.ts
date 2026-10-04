@@ -2,7 +2,8 @@ import type { INestApplication } from "@nestjs/common";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bootApi } from "./setup/boot.js";
 
-// The "Postgres stopped" half of trace 1, without Docker: nothing listens on port 1.
+// The "Postgres stopped" half of trace 1, without Docker: nothing listens on port 1. Also the
+// real app's 404, which runs through the global problem-details filter.
 describe("api health with its database down", () => {
   let app: INestApplication;
   let base: string;
@@ -30,5 +31,16 @@ describe("api health with its database down", () => {
       error: { database: { status: "down", message: "unavailable" } },
     });
     expect(JSON.stringify(body)).not.toContain("127.0.0.1");
+  });
+
+  it("answers an unknown route with a 404 problem", async () => {
+    const res = await fetch(`${base}/posts/42`);
+    expect(res.status).toBe(404);
+    expect(res.headers.get("content-type")).toMatch(/^application\/problem\+json/);
+    expect(await res.json()).toMatchObject({
+      type: "about:blank",
+      title: "Not Found",
+      instance: "/posts/42",
+    });
   });
 });

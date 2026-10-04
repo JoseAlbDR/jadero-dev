@@ -37,15 +37,21 @@ export function requestId(req: IncomingMessage, res: ServerResponse): string {
 
 /**
  * The level of the one line pino-http writes per request. Health probes run every few seconds:
- * `debug` when they pass, `warn` when they fail (the failing check logs its own cause). Other
- * requests: errors at `error`, client errors at `warn`, everything else at `info`.
+ * `debug` when they pass, `warn` on the expected 503 (the failing check logs its own cause);
+ * any other failure on a health route follows the general rule. Other requests: errors at `error`, client errors at `warn`, everything else at `info`.
  * @param req the request.
  * @param res the finished response.
  * @param error the error pino-http saw, if any.
  * @returns the pino level for the request line.
  */
 export function requestLogLevel(req: IncomingMessage, res: ServerResponse, error?: Error): Level {
-  if (req.url?.startsWith("/health/")) return res.statusCode >= 400 ? "warn" : "debug";
+  if (
+    req.url?.startsWith("/health/") &&
+    !error &&
+    (res.statusCode < 400 || res.statusCode === 503)
+  ) {
+    return res.statusCode === 503 ? "warn" : "debug";
+  }
   if (error || res.statusCode >= 500) return "error";
   if (res.statusCode >= 400) return "warn";
   return "info";

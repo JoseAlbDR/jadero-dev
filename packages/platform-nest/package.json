@@ -2,7 +2,7 @@
   "name": "@jadero/platform-nest",
   "version": "0.0.0",
   "private": true,
-  "description": "Bootstrap shared by the NestJS services: fail-fast config, structured logging, app wiring. Infrastructure only, no domain code. Compiled to dist/.",
+  "description": "Bootstrap shared by the NestJS services: fail-fast config, structured logging, problem details, health checks, app wiring. Infrastructure only, no domain code. Compiled to dist/.",
   "type": "module",
   "exports": {
     ".": {

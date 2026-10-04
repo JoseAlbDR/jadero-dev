@@ -238,6 +238,8 @@ content-type: application/json; charset=utf-8
 
 ### Trace 2: a validation failure returns problem+json
 
+As built (step 5): the body and log line match below except that `traceId`, `trace_id` and `span_id` arrive with OpenTelemetry in step 7, and there is no `ip_hash` (the client IP is not logged in WP-3, owner's choice).
+
 There is no real endpoint with a body in `api` until WP-11 and WP-12, so the platform's own end-to-end test uses a fixture controller that exists only under `packages/platform-nest/test/fixtures/`:
 
 ```ts
