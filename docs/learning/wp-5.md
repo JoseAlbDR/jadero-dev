@@ -1,6 +1,6 @@
 ---
 wp: 5
-decision: pending
+decision: recorded
 adr: [ADR-003, ADR-009, ADR-010, ADR-012, ADR-029]
 ---
 
@@ -427,7 +427,20 @@ Each step ends with a green `pnpm verify` and one scoped commit, and two lines i
 
 ## Decision
 
-<!-- Filled with the owner's answers. -->
+Answers as the owner gave them on 2026-10-04. All within the accepted ADRs; no ADR changes.
+
+1. Port shape: **P1**, a thin `MessageBus` port; handlers return `done`, `retry` or `dead`, and the adapter owns ack, retry routing, dead-lettering and logging.
+2. Topology: **T4**, a TypeScript topology module that generates `infra/rabbitmq/definitions.json`, with a test that fails when they differ; services get no `configure` permission and check their queues at startup; alternate exchange `jadero.unrouted`.
+3. Retry routing: **R1**, the adapter copies a failed message to its own queue's wait queue (10 s, 1 min, 10 min, back through the default exchange) and acks the original; after the last tier, reject into `jadero.dlx` and the queue's DLQ; a schema failure goes straight to the DLQ.
+4. Storage before WP-10: **S1**, `OutboxStore` and `InboxStore` ports over a minimal `SqlExecutor`, implemented with `pg`; the tables in a `messaging` schema, SQL shipped by `packages/messaging`.
+5. Relay: **L1**, poll every 1 s, batch 50, lock held during the publish, publish timeout 5 s, per-row backoff 1 s doubling to 60 s, sent rows cleaned after 7 days.
+6. Inbox key: **I1**, `(consumer, event_id)`, rows kept 30 days.
+7. Envelope and trace: **E1**, structured mode, UUIDv7 ids, the relay restores the stored `traceparent` as parent context before publishing.
+8. Process types and the ping: **W1** with **(c)**: `api-worker` (relay) and `agent`'s consumer as separate processes with their own readiness; a heartbeat every 5 minutes from `api-worker` plus `POST /dev/ping` in development only.
+
+No step marked `known`. Every answer matched the recommendation; the owner asked for a simpler learning format (see Recap notes once agreed).
+
+`decision: recorded` on 2026-10-04.
 
 ## Step log
 
