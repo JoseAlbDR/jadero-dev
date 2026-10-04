@@ -533,6 +533,9 @@ No step marked `known`. Every answer matched the recommendation; the owner asked
 
 ## Step log
 
+- Step 2, contracts: new compiled package `packages/contracts` with the CloudEvents envelope (`cloudEventEnvelope`), `defineEvent(routingKey, data)` that derives the `type` and the envelope schema from one string and refuses keys that are not `<context>.<event>.v<N>`, and the first event `system.ping.v1` (`trigger: manual | heartbeat`); one JSON fixture per event, which a test parses for every contract; `asyncapi.json` (AsyncAPI 3.1) generated from the Zod schemas, with tests that fail when it is stale or invalid. 19 tests.
+- Why: the contract is the boundary between services, so producer and consumer share one schema and one example, and a consumer accepts newer producers because unknown fields are dropped (expand/contract). Noted for WP-6: `@vitest/coverage-v8` is not installed anywhere yet, so the ADR-009 coverage gates cannot run until CI adds it.
+
 ## Recap
 
 <!-- Interview form: why, alternatives, when to change, failure; the main trace drawn from memory. -->

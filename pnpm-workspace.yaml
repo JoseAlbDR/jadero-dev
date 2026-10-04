@@ -5,6 +5,7 @@ packages:
 
 # One version per tool for the whole repo (single-version policy). Packages write "catalog:".
 catalog:
+  "@asyncapi/parser": 3.6.3
   "@biomejs/biome": 2.5.15
   "@commitlint/cli": 21.2.3
   "@commitlint/config-conventional": 21.2.3
@@ -44,6 +45,8 @@ catalog:
 # Dependency install scripts stay off (pnpm 11 fails the install on an undecided one).
 # lefthook's postinstall only runs `lefthook install`, which the root `prepare` script already does.
 allowBuilds:
+  # @asyncapi/parser -> @stoplight/spectral-core -> @scarf/scarf: its postinstall only sends download analytics.
+  "@scarf/scarf": false
   # testcontainers -> ssh2 -> cpu-features: optional native bindings for Docker over SSH; ssh2 works without them.
   cpu-features: false
   lefthook: false
