@@ -134,6 +134,41 @@ figcaption { color: var(--muted); font-size: 13.5px; max-width: 80ch; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font: 400 12px var(--font-mono); color: var(--muted); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .legend svg { width: 30px; height: 10px; }
+/* focus, layers, event explorer */
+.edge.faint { opacity: 0.22; }
+.edge.on, .edge.hop-done, .edge.fail { opacity: 1; }
+.edge.hop-next { opacity: 0.3; }
+.edge.hop-cur path { stroke: var(--accent); stroke-width: 3.6; stroke-dasharray: none; }
+.elabel.hop-cur rect { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1; }
+.elabel.hop-cur text { fill: var(--ink); font-weight: 600; }
+.edge.gone, .elabel.gone { visibility: hidden; }
+.edge.layer-off, .elabel.layer-off { display: none; }
+.node.dim { opacity: 0.28; }
+.node.sel rect { stroke: var(--accent); stroke-width: 3.2; }
+.node.sel .lbl { font-weight: 600; }
+.ctl-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
+.ctl-row .lead { font: 500 11px/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-right: 4px; }
+.chip, .layer, .ex-ctl button {
+  font: 500 12px/1.2 var(--font-mono); padding: 6px 10px; border-radius: 999px; cursor: pointer; min-height: 30px;
+  background: var(--sheet); color: var(--ink); border: 1px solid var(--line); display: inline-flex; align-items: center; gap: 6px;
+}
+.chip.planned { border-style: dashed; color: var(--planned); }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--sheet); border-style: solid; }
+.chip.clear { color: var(--muted); border-style: dashed; }
+.chip:disabled, .ex-ctl button:disabled { opacity: 0.45; cursor: default; }
+.layer svg { width: 26px; height: 10px; }
+.layer[aria-pressed="false"] { color: var(--muted); text-decoration: line-through; }
+.layer[aria-pressed="false"] svg { opacity: 0.3; }
+.chip:focus-visible, .layer:focus-visible, .ex-ctl button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.explorer { display: grid; gap: 8px; background: var(--sheet); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 6px; padding: 10px 12px; min-width: 0; }
+.explorer .ex-cap { margin: 0; font-size: 13.5px; max-width: 90ch; }
+.explorer .ex-cap strong { font: 600 12px var(--font-mono); color: var(--accent); margin-right: 6px; }
+.explorer .ex-fail { margin: 0; font-size: 13px; color: var(--consume); max-width: 90ch; }
+.ex-ctl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ex-ctl .count { font: 500 12px var(--font-mono); color: var(--muted); min-width: 9ch; text-align: center; }
+.ex-ctl button[aria-pressed="true"] { background: var(--consume-soft); border-color: var(--consume); color: var(--ink); }
+.card[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); background: var(--accent-soft); }
+.card .pick { font: 500 11px var(--font-mono); color: var(--accent); }
 /* steps and cards */
 ol.steps, .cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); }
 .cards { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
@@ -203,6 +238,8 @@ pre {
 #panel .links .rel { color: var(--muted); font-size: 12.5px; }
 @media (max-width: 760px) {
   nav.toc { flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; }
+  .ctl-row.chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+  .ctl-row.chips > * { flex: none; }
   #panel {
     top: auto; left: 0; width: 100%; max-height: 72vh; border-left: 0; border-top: 1px solid var(--line);
     border-radius: 12px 12px 0 0; box-shadow: 0 -8px 24px rgb(0 0 0 / 0.18);
@@ -214,6 +251,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 .stamp { font: 500 13px var(--font-mono); color: var(--ink); }
 @media (prefers-reduced-motion: no-preference) {
   #panel { transition: transform 0.18s ease-out; }
+  .edge, .elabel, .node { transition: opacity 0.15s ease-out; }
 }
 </style>
 
@@ -221,7 +259,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
   <header class="top">
     <div class="eyebrow">jadero.dev v2 · monorepo · NestJS 12 on Node 24</div>
     <h1>Code map</h1>
-    <p class="lede">How the repo fits together today: which package depends on which, what the <code>api</code> container injects at runtime, the two module shapes new code copies, how <code>api</code> boots, what a request passes through and how one trace id follows it, how the build, <code>pnpm dev</code> and the checks run, what a page request passes through in <code>web</code>, and how an event crosses the broker from <code>api</code> to <code>agent</code>. Click or tap any box for what it is, how it works, why it was built this way, and where the code lives.</p>
+    <p class="lede">How the repo fits together today: which package depends on which, what the <code>api</code> container injects at runtime, the two module shapes new code copies, how <code>api</code> boots, what a request passes through and how one trace id follows it, how the build, <code>pnpm dev</code> and the checks run, what a page request passes through in <code>web</code>, and how an event crosses the broker from <code>api</code> to <code>agent</code>. Click or tap any box for what it is, how it works, why it was built this way, and where the code lives. Arrows start faded: pick one or more boxes in a graph's Focus row (or click them) to see only their arrows, and switch arrow kinds off under Layers.</p>
   </header>
   <nav class="toc" id="toc" aria-label="Sections"></nav>
   <main id="sections"></main>
@@ -234,7 +272,8 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
         <li>Add a box: add an entry to <code>nodes</code> (label, sub, kind, status, wp, what, how, why, files), then place it in a figure: <code>place</code> for a graph (x, y, width, height in the figure's viewBox), or add its id to <code>steps</code> or <code>cards</code>. A steps figure counts from 1 unless it sets <code>"start"</code>.</li>
         <li>Add an arrow: add <code>{ "from", "to", "label", "kind" }</code> to the figure's <code>edges</code>. Kinds: dep, dev, imports, provides, injects, consumes, throws, extends, lifecycle, flow, planned, forbidden. Add <code>"hideLabel": true</code> when a gap is too small for the label. Use <code>via</code> points to route around a box.</li>
         <li>When a planned box becomes real, change its <code>status</code> to <code>real</code> and its edges from <code>planned</code> to their real kind.</li>
-        <li>A new event type gets a card in section 8's event catalog and its path in the graph there (producer, exchange, consumer queues, tables).</li>
+        <li>Focus chips and layer toggles need no JSON: every graph gets a chip for each placed box that has an arrow, and a layer toggle for each edge kind it uses. Arrows drawn with <code>points</code> (no <code>from</code>/<code>to</code>) are annotations and never fade. The viewer's selection and layers are kept per figure in the browser (keys <code>codemap:fig:&lt;section id&gt;&lt;figure index&gt;</code>), so moving a figure only resets them.</li>
+        <li>A new event type gets a card in section 8's event catalog, its path in the graph there (producer, exchange, consumer queues, tables), and an entry under that graph's <code>events</code>, keyed by the card's node id: <code>{ "summary", "hops": [{ "edge", "caption" }], "failure": [edge indexes], "failureNote" }</code>. <code>edge</code> is the index in the figure's <code>edges</code> array (counting from 0), so adding or removing an edge above it shifts the numbers: update them in the same change. A card whose id has an <code>events</code> entry becomes the explorer's toggle; the event's details open from the explorer's button.</li>
         <li>Bump <code>meta.lastUpdated</code>, save in <code>docs/architecture/code-map.html</code>, and republish the artifact from the same file.</li>
       </ol>
     </div>
@@ -246,7 +285,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 <script type="application/json" id="map-data">
 {
   "meta": {
-    "lastUpdated": "after WP-5 and WP-15",
+    "lastUpdated": "after WP-5 and WP-15 · focus, layers and event explorer, 2026-10-04",
     "kinds": {
       "app": "deployable app", "pkg": "library package", "module": "Nest module", "provider": "provider",
       "token": "DI token", "ext": "external library", "global": "app-level wiring", "env": "environment",
@@ -535,6 +574,14 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "intro": "WP-5: a system.ping.v1 event travels from api to agent with one trace. api never talks to RabbitMQ in the request: it writes an outbox row in its own transaction, and api-worker relays it. agent's consumer applies it once, however often it arrives. Four processes: api, api-worker, agent, agent consumer.",
       "figures": [
         {
+          "type": "cards",
+          "title": "Event catalog",
+          "caption": "Every event type, its producer and its consumer queues. Select an event to follow its path on the graph below, one hop at a time. A new event adds a card here and its path to the graph (its edges, plus an entry under the graph's events); the same list is the AsyncAPI catalog in packages/contracts/asyncapi.json.",
+          "cards": [
+            "ev-system-ping-v1"
+          ]
+        },
+        {
           "type": "graph",
           "title": "Where system.ping.v1 travels: processes, tables, exchanges and queues",
           "viewBox": [
@@ -723,15 +770,49 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
                 ]
               ]
             }
-          ]
-        },
-        {
-          "type": "cards",
-          "title": "Event catalog",
-          "caption": "Every event type, its producer and its consumer queues. A new event adds a card here and its path to the graph above; the same list is the AsyncAPI catalog in packages/contracts/asyncapi.json.",
-          "cards": [
-            "ev-system-ping-v1"
-          ]
+          ],
+          "events": {
+            "ev-system-ping-v1": {
+              "summary": "The happy path, 7 hops from the request in api to the heartbeat row in agent, with one trace id the whole way. Press Next to walk it.",
+              "hops": [
+                {
+                  "edge": 0,
+                  "caption": "api (`POST /dev/ping`, or the heartbeat in api-worker) builds the CloudEvents envelope, checks it against the Zod contract and inserts it into `messaging.outbox` in `content_dev`, in the same transaction as the change. The envelope stores the request's `traceparent`. api answers 202; RabbitMQ is not touched."
+                },
+                {
+                  "edge": 1,
+                  "caption": "api-worker's `OutboxRelay` polls every 1 s and claims unpublished rows with `FOR UPDATE SKIP LOCKED`, so two workers never take the same row. For each row it restores the stored `traceparent` as the parent context."
+                },
+                {
+                  "edge": 2,
+                  "caption": "The relay publishes to the topic exchange `jadero.events` with routing key `system.ping.v1` and waits for the publisher confirm (5 s timeout). The amqplib instrumentation writes `traceparent` into the message headers. Only after the confirm does the row get `published_at`."
+                },
+                {
+                  "edge": 4,
+                  "caption": "`jadero.events` matches the binding `system.ping.v1` and writes the message into the quorum queue `agent.system.ping`. Every other queue bound to the same key would get its own copy."
+                },
+                {
+                  "edge": 5,
+                  "caption": "The broker delivers to agent's consumer process (prefetch 4). The instrumentation reads `traceparent` from the headers and opens the process span in the same trace; the adapter parses the envelope and the data with the contract from packages/contracts."
+                },
+                {
+                  "edge": 6,
+                  "caption": "`idempotent()` inserts `(consumer, event_id)` into `messaging.inbox` in `agent_dev` with `ON CONFLICT DO NOTHING RETURNING`. One row back: the first time, run the effects. No row: a duplicate, skip them."
+                },
+                {
+                  "edge": 7,
+                  "caption": "The effect upserts `broker_heartbeat` in the same transaction as the inbox row. After the commit the adapter acks; a crash before the ack redelivers the message and the inbox absorbs the repeat."
+                }
+              ],
+              "failure": [
+                3,
+                8,
+                9,
+                10
+              ],
+              "failureNote": "Failure paths: no binding matches, so the alternate exchange puts it in `jadero.unrouted`. A transient error in the consumer sends a copy through `agent.retry` to a wait queue (10 s, 1 min, 10 min) and acks the original; the TTL brings it back to `agent.system.ping`. After the last tier, or when the payload does not parse, a dead copy goes to `agent.system.ping.dlq`."
+            }
+          }
         },
         {
           "type": "steps",
@@ -1792,13 +1873,23 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     (links[a] = links[a] || []).push({ dir: "out", kind: kind, label: label, other: b });
     (links[b] = links[b] || []).push({ dir: "in", kind: kind, label: label, other: a });
   }
-  function makeClickable(node, id) {
+  function makeClickable(node, id, before) {
     node.setAttribute("tabindex", "0");
     node.setAttribute("role", "button");
-    node.setAttribute("aria-label", (NODES[id] ? NODES[id].label : id) + ": show details");
-    node.addEventListener("click", () => { openPanel(id); });
-    node.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); openPanel(id); } });
+    node.setAttribute("aria-label", (NODES[id] ? NODES[id].label : id) + (before ? ": focus and show details" : ": show details"));
+    function go() { if (before) before(); openPanel(id); }
+    node.addEventListener("click", go);
+    node.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); } });
   }
+  function btn(cls, html, pressed) {
+    var b = h("button", cls, html); b.type = "button";
+    if (pressed != null) b.setAttribute("aria-pressed", String(pressed));
+    return b;
+  }
+  // Per-viewer memory (focus and layers per figure). Storage can be missing or throw: the page works without it.
+  function load(key) { try { var v = localStorage.getItem("codemap:" + key); return v ? JSON.parse(v) : null; } catch (_) { return null; } }
+  function save(key, v) { try { localStorage.setItem("codemap:" + key, JSON.stringify(v)); } catch (_) { /* no storage */ } }
+  var EVENT_CTL = {}; // event node id -> explorer controller of the graph that holds its path
 
   // Clip a line from rect center toward (tx, ty) at the rect border.
   function clip(r, tx, ty) {
@@ -1821,6 +1912,8 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     return lines.slice(0, 2);
   }
 
+  // A graph figure: chips to focus on nodes, layer toggles per edge kind, and, when the figure
+  // carries "events", an explorer that walks one event's path hop by hop.
   function renderGraph(fig, figEl, idx) {
     var W = fig.viewBox[0], H = fig.viewBox[1];
     var canvas = h("div", "canvas");
@@ -1842,12 +1935,14 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     var labelLayer = el("g", {}, svg);
     var nodeLayer = el("g", {}, svg);
     var place = fig.place || {};
-    (fig.edges || []).forEach((e) => {
+    var edges = [];   // same index as fig.edges: { e, g, lg } or null when an end is not placed
+    var nodeEls = {}; // node id -> <g>
+    (fig.edges || []).forEach((e, ei) => {
       var pts;
       if (e.points) pts = e.points.slice();
       else {
         var a = place[e.from], b = place[e.to];
-        if (!a || !b) return;
+        if (!a || !b) { edges.push(null); return; }
         var via = e.via || [];
         var first = via.length ? via[0] : center(b);
         var last = via.length ? via[via.length - 1] : center(a);
@@ -1858,18 +1953,44 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       var g = el("g", { "class": "edge e-" + e.kind }, edgeLayer);
       var d = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
       el("path", { d: d, "marker-end": "url(#mk-" + idx + "-" + e.kind + ")" }, g);
-      if (e.label && !e.hideLabel) {
+      var lg = null;
+      if (e.label) {
         var mid;
         if (e.labelAt) mid = e.labelAt;
         else { var i = Math.floor((pts.length - 1) / 2); mid = [(pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2]; }
-        var lg = el("g", { "class": "elabel e-" + e.kind + (e.ref ? " ref" : "") }, labelLayer);
+        lg = el("g", { "class": "elabel e-" + e.kind + (e.ref ? " ref" : "") }, labelLayer);
         var w = e.label.length * 6.4 + 10;
         el("rect", { x: mid[0] - w / 2, y: mid[1] - 9, width: w, height: 17, rx: 3 }, lg);
         var t = el("text", { x: mid[0], y: mid[1] + 3.5, "text-anchor": "middle" }, lg);
         t.textContent = e.label;
         if (e.ref) { makeClickable(lg, e.ref); register(e.ref, lg); }
       }
+      edges.push({ e: e, i: ei, g: g, lg: lg, rel: !!(e.from && e.to) });
     });
+
+    // Nodes that take part in an edge get a chip, in placement order.
+    var linked = {};
+    edges.forEach((r) => { if (r && r.rel) { linked[r.e.from] = true; linked[r.e.to] = true; } });
+    var chipIds = Object.keys(place).filter((id) => linked[id] && NODES[id]);
+
+    var key = "fig:" + idx;
+    var stored = load(key) || {};
+    var state = {
+      sel: (stored.sel || []).filter((id) => chipIds.indexOf(id) >= 0),
+      off: (stored.off || []).filter((k) => used[k]),
+      ev: null, hop: -1, fail: false
+    };
+    var chipBtns = {}, layerBtns = {}, clearBtn = null;
+
+    function toggleSel(id) {
+      if (chipIds.indexOf(id) < 0) return;
+      var at = state.sel.indexOf(id);
+      if (at >= 0) state.sel.splice(at, 1); else state.sel.push(id);
+      if (state.ev) explorer.select(null, true);
+      persist(); apply();
+    }
+    function persist() { save(key, { sel: state.sel, off: state.off }); }
+
     Object.keys(place).forEach((id) => {
       var r = place[id], n = NODES[id];
       if (!n) return;
@@ -1888,18 +2009,164 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
         var sub = n.sub, maxS = Math.floor((r[2] - 12) / 5.6);
         s.textContent = sub.length > maxS ? sub.slice(0, maxS - 1) + "…" : sub;
       }
-      makeClickable(g, id);
+      makeClickable(g, id, linked[id] ? () => { toggleSel(id); } : null);
       register(id, g);
+      nodeEls[id] = g;
     });
+
+    // Focus chips.
+    if (chipIds.length) {
+      var chips = h("div", "ctl-row chips");
+      chips.setAttribute("role", "group");
+      chips.setAttribute("aria-label", "Focus: show only the arrows of the selected boxes");
+      chips.appendChild(h("span", "lead", "Focus"));
+      clearBtn = btn("chip clear", "Clear");
+      clearBtn.addEventListener("click", () => { state.sel = []; persist(); apply(); });
+      chips.appendChild(clearBtn);
+      chipIds.forEach((id) => {
+        var b = btn("chip" + (NODES[id].status === "planned" ? " planned" : ""), esc(NODES[id].label), false);
+        b.addEventListener("click", () => { toggleSel(id); });
+        chips.appendChild(b); chipBtns[id] = b;
+      });
+      figEl.appendChild(chips);
+    }
+
+    // Event explorer (only when the figure carries event paths).
+    var explorer = makeExplorer(fig, edges, state, () => { apply(); });
+    if (explorer.box) figEl.appendChild(explorer.box);
     figEl.appendChild(canvas);
-    // legend
-    var lg = h("div", "legend");
+
+    // Layers: the legend doubles as the toggle bar.
+    var layers = h("div", "ctl-row layers");
+    layers.setAttribute("role", "group");
+    layers.setAttribute("aria-label", "Layers: arrow kinds shown");
+    layers.appendChild(h("span", "lead", "Layers"));
     Object.keys(used).forEach((k) => {
-      var span = h("span");
-      span.innerHTML = '<svg viewBox="0 0 30 10" aria-hidden="true"><g class="edge e-' + k + '"><path d="M1,5 L29,5"/></g></svg>' + esc(EDGE_NAMES[k] || k);
-      lg.appendChild(span);
+      var b = btn("layer", '<svg viewBox="0 0 30 10" aria-hidden="true"><g class="edge e-' + k + '"><path d="M1,5 L29,5"/></g></svg>' + esc(EDGE_NAMES[k] || k), true);
+      b.addEventListener("click", () => {
+        var at = state.off.indexOf(k);
+        if (at >= 0) state.off.splice(at, 1); else state.off.push(k);
+        persist(); apply();
+      });
+      layers.appendChild(b); layerBtns[k] = b;
     });
-    figEl.appendChild(lg);
+    figEl.appendChild(layers);
+
+    function setCls(node, cls) {
+      ["faint", "on", "gone", "hop-cur", "hop-done", "hop-next", "fail", "layer-off", "dim", "sel"].forEach((c) => { node.classList.remove(c); });
+      cls.forEach((c) => { if (c) node.classList.add(c); });
+    }
+    function apply() {
+      Object.keys(chipBtns).forEach((id) => { chipBtns[id].setAttribute("aria-pressed", String(state.sel.indexOf(id) >= 0)); });
+      if (clearBtn) clearBtn.disabled = !state.sel.length;
+      Object.keys(layerBtns).forEach((k) => { layerBtns[k].setAttribute("aria-pressed", String(state.off.indexOf(k) < 0)); });
+      var hot = {}, lit = {};
+      var path = state.ev ? explorer.path(state.ev) : null;
+      edges.forEach((r) => {
+        if (!r) return;
+        var e = r.e, off = state.off.indexOf(e.kind) >= 0 ? "layer-off" : null;
+        var ec = [], lc = [];
+        if (!r.rel) { ec = [off]; lc = [off]; } // free annotations (a rule drawn as a line) never fade
+        else if (path) {
+          var hp = path.hopOf[r.i], f = path.fail[r.i];
+          if (hp != null) {
+            var st = state.hop < 0 ? "hop-done" : hp === state.hop ? "hop-cur" : hp < state.hop ? "hop-done" : "hop-next";
+            ec = [st, off];
+            lc = [(st === "hop-next" || (e.hideLabel && st !== "hop-cur")) ? "gone" : null, st === "hop-cur" ? "hop-cur" : null, off];
+            if (st !== "hop-next") { lit[e.from] = true; lit[e.to] = true; }
+            if (st === "hop-cur") { hot[e.from] = true; hot[e.to] = true; }
+          } else if (f && state.fail) {
+            ec = ["fail", off]; lc = [e.hideLabel ? "gone" : null, off];
+            lit[e.from] = true; lit[e.to] = true;
+          } else { ec = ["gone", off]; lc = ["gone", off]; }
+        } else if (state.sel.length) {
+          var touch = state.sel.indexOf(e.from) >= 0 || state.sel.indexOf(e.to) >= 0;
+          if (touch && !off) { lit[e.from] = true; lit[e.to] = true; }
+          ec = [touch ? "on" : "gone", off];
+          lc = [touch && !e.hideLabel ? null : "gone", off];
+        } else { ec = ["faint", off]; lc = ["gone", off]; }
+        setCls(r.g, ec);
+        if (r.lg) setCls(r.lg, lc);
+      });
+      if (!path) state.sel.forEach((id) => { hot[id] = true; lit[id] = true; });
+      var focusing = !!path || state.sel.length > 0;
+      Object.keys(nodeEls).forEach((id) => {
+        setCls(nodeEls[id], focusing ? [hot[id] ? "sel" : null, lit[id] ? null : "dim"] : []);
+      });
+      explorer.render();
+      if (path && state.hop >= 0 && canvas.scrollWidth > canvas.clientWidth) {
+        var cur = svg.querySelector(".edge.hop-cur");
+        if (cur) {
+          var bb = cur.getBBox(), scale = svg.clientWidth / W;
+          canvas.scrollTo({ left: Math.max(0, (bb.x + bb.width / 2) * scale - canvas.clientWidth / 2), behavior: "smooth" });
+        }
+      }
+    }
+    apply();
+  }
+
+  // The explorer box for a graph with "events": a caption per hop, Previous / Next, failure toggle.
+  function makeExplorer(fig, edges, state, onChange) {
+    var evs = fig.events || {};
+    var ids = Object.keys(evs).filter((id) => NODES[id]);
+    var none = { box: null, select: () => {}, render: () => {}, path: () => null };
+    if (!ids.length) return none;
+    var box = h("div", "explorer");
+    box.setAttribute("role", "region");
+    box.setAttribute("aria-label", "Event explorer");
+    var head = h("div", "fig-title", "Event explorer");
+    var cap = h("p", "ex-cap"); cap.setAttribute("aria-live", "polite");
+    var failNote = h("p", "ex-fail"); failNote.hidden = true;
+    var ctl = h("div", "ex-ctl");
+    var prev = btn(null, "Previous"), count = h("span", "count"), next = btn(null, "Next");
+    var fail = btn(null, "Show failure paths", false), details = btn(null, "Event details"), close = btn(null, "Close");
+    [prev, count, next, fail, details, close].forEach((x) => { ctl.appendChild(x); });
+    [head, cap, failNote, ctl].forEach((x) => { box.appendChild(x); });
+    var cards = {}; // event id -> catalog card button
+
+    prev.addEventListener("click", () => { if (state.hop >= 0) { state.hop--; onChange(); } });
+    next.addEventListener("click", () => { var n = evs[state.ev].hops.length; if (state.hop < n - 1) { state.hop++; onChange(); } });
+    fail.addEventListener("click", () => { state.fail = !state.fail; onChange(); });
+    details.addEventListener("click", () => { if (state.ev) openPanel(state.ev); });
+    close.addEventListener("click", () => { var c = cards[state.ev]; ctlApi.select(null); if (c) c.focus({ preventScroll: true }); });
+
+    var ctlApi = {
+      box: box,
+      path: (id) => {
+        var p = evs[id], hopOf = {}, fl = {};
+        p.hops.forEach((x, i) => { hopOf[x.edge] = i; });
+        (p.failure || []).forEach((i) => { fl[i] = true; });
+        return { hopOf: hopOf, fail: fl };
+      },
+      select: (id, quiet) => {
+        state.ev = id && evs[id] ? id : null; state.hop = -1;
+        if (state.ev) state.sel = [];
+        Object.keys(cards).forEach((k) => { cards[k].setAttribute("aria-pressed", String(k === state.ev)); });
+        if (!quiet) onChange();
+        if (state.ev && !quiet) box.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      },
+      card: (id, b) => { cards[id] = b; },
+      render: () => {
+        var on = !!state.ev;
+        ctl.hidden = !on;
+        if (!on) {
+          cap.innerHTML = "Pick an event in the catalog to follow its path across the graph, one hop at a time.";
+          failNote.hidden = true; return;
+        }
+        var p = evs[state.ev], n = p.hops.length;
+        if (state.hop < 0) cap.innerHTML = "<strong>" + esc(NODES[state.ev].label) + "</strong>" + fmt(p.summary || "The whole path, " + n + " hops. Press Next to walk it one hop at a time.");
+        else cap.innerHTML = "<strong>Hop " + (state.hop + 1) + "</strong>" + fmt(p.hops[state.hop].caption);
+        count.textContent = state.hop < 0 ? "Overview" : (state.hop + 1) + " of " + n;
+        prev.disabled = state.hop < 0;
+        next.disabled = state.hop >= n - 1;
+        fail.disabled = !(p.failure && p.failure.length);
+        fail.setAttribute("aria-pressed", String(state.fail));
+        failNote.hidden = !(state.fail && p.failureNote);
+        failNote.innerHTML = p.failureNote ? fmt(p.failureNote) : "";
+      }
+    };
+    ids.forEach((id) => { EVENT_CTL[id] = ctlApi; });
+    return ctlApi;
   }
 
   function renderSteps(fig, figEl) {
@@ -1949,10 +2216,23 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       var b = h("button", "card k-" + n.kind + (n.warn ? " warn" : "") + (n.status === "planned" ? " planned" : ""));
       b.type = "button";
       b.innerHTML = '<span class="t">' + esc(n.label) + '</span><span class="d">' + esc(n.sub || "") + "</span>";
-      b.addEventListener("click", () => { openPanel(id); });
       li.appendChild(b); ul.appendChild(li); register(id, b);
+      pendingCards.push({ id: id, b: b });
     });
     figEl.appendChild(ul);
+  }
+  // After every figure exists: a card whose node has a path in a graph's "events" becomes a
+  // toggle that drives that graph's explorer (its details move to the explorer's button).
+  var pendingCards = [];
+  function wireCards() {
+    pendingCards.forEach((c) => {
+      var ctl = EVENT_CTL[c.id];
+      if (!ctl) { c.b.addEventListener("click", () => { openPanel(c.id); }); return; }
+      c.b.setAttribute("aria-pressed", "false");
+      c.b.insertAdjacentHTML("beforeend", '<span class="pick">Follow its path</span>');
+      ctl.card(c.id, c.b);
+      c.b.addEventListener("click", () => { ctl.select(c.b.getAttribute("aria-pressed") === "true" ? null : c.id); });
+    });
   }
 
   var toc = document.getElementById("toc"), main = document.getElementById("sections");
@@ -1976,6 +2256,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     });
     main.appendChild(s);
   });
+  wireCards();
   document.getElementById("stamp").textContent = "Last updated: " + DATA.meta.lastUpdated;
 
   var panel = document.getElementById("panel");
