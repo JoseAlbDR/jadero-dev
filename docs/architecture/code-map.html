@@ -245,7 +245,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 <script type="application/json" id="map-data">
 {
   "meta": {
-    "lastUpdated": "after WP-4",
+    "lastUpdated": "after WP-5",
     "kinds": {
       "app": "deployable app", "pkg": "library package", "module": "Nest module", "provider": "provider",
       "token": "DI token", "ext": "external library", "global": "app-level wiring", "env": "environment",
@@ -285,7 +285,14 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             { "from": "ws-agent-pkg", "to": "ext-nest-db", "label": "never", "kind": "forbidden", "ref": "rule-ai-agent-no-nest" },
             { "from": "ws-web", "to": "ws-ui", "label": "workspace:*", "kind": "dep", "via": [[660, 240], [660, 398], [470, 398]], "labelAt": [660, 288] },
             { "from": "ws-web", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "via": [[660, 240], [660, 500], [260, 500]], "hideLabel": true },
-            { "from": "ws-ui", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "hideLabel": true }
+            { "from": "ws-ui", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "hideLabel": true },
+            { "from": "ws-api", "to": "ws-messaging", "label": "workspace:*", "kind": "dep", "hideLabel": true },
+            { "from": "ws-api", "to": "ws-contracts", "label": "workspace:*", "kind": "dep", "hideLabel": true },
+            { "from": "ws-agent-app", "to": "ws-platform", "label": "workspace:*", "kind": "dep", "hideLabel": true },
+            { "from": "ws-agent-app", "to": "ws-messaging", "label": "workspace:*", "kind": "dep", "hideLabel": true },
+            { "from": "ws-agent-app", "to": "ws-contracts", "label": "workspace:*", "kind": "dep", "hideLabel": true },
+            { "from": "ws-messaging", "to": "ws-contracts", "label": "workspace:*", "kind": "dep", "hideLabel": true },
+            { "from": "ws-agent-app", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "hideLabel": true }
           ]
         },
         {
@@ -519,6 +526,95 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
           ]
         }
       ]
+    },
+    {
+      "id": "messaging",
+      "eyebrow": "8 · Messaging",
+      "title": "How an event crosses the broker",
+      "intro": "WP-5: a system.ping.v1 event travels from api to agent with one trace. api never talks to RabbitMQ in the request: it writes an outbox row in its own transaction, and api-worker relays it. agent's consumer applies it once, however often it arrives. Four processes: api, api-worker, agent, agent consumer.",
+      "figures": [
+        {
+          "type": "steps",
+          "title": "One ping, api to agent",
+          "steps": [
+            "e-request",
+            "e-outbox",
+            "e-relay",
+            "e-route",
+            "e-consume",
+            "e-inbox",
+            "e-ack"
+          ],
+          "examples": [
+            {
+              "id": "ex-ping",
+              "label": "Ping arrives",
+              "path": [
+                "e-request",
+                "e-outbox",
+                "e-relay",
+                "e-route",
+                "e-consume",
+                "e-inbox",
+                "e-ack"
+              ],
+              "request": "POST /dev/ping   (api, development only)",
+              "response": "HTTP/1.1 202 Accepted\n\n{\"eventId\":\"0199b1c4-7e2a-7c3d-9f10-3a5b7c9d1e2f\"}",
+              "note": "About a second later the relay publishes it; the consumer logs `event handled` with the same trace_id as the request. Source: docs/learning/wp-5.md, Trace 1."
+            },
+            {
+              "id": "ex-duplicate",
+              "label": "Same event twice",
+              "path": [
+                "e-relay",
+                "e-route",
+                "e-consume",
+                "e-inbox",
+                "e-ack"
+              ],
+              "request": "api-worker dies after RabbitMQ confirmed, before its COMMIT",
+              "response": "row still unpublished, sent again on the next poll\ninbox INSERT returns no row: effects skipped, ack",
+              "note": "At-least-once delivery, exactly-once effects. Source: packages/messaging/test/outbox-inbox.int.test.ts and apps/agent/test/heartbeat.int.test.ts."
+            },
+            {
+              "id": "ex-retry",
+              "label": "Consumer database down",
+              "path": [
+                "e-route",
+                "e-consume"
+              ],
+              "request": "agent's Postgres stops; a ping arrives",
+              "response": "copy to agent.system.ping.retry.10s via agent.retry, original acked\nthen 1 min, then 10 min; the 4th failure goes to agent.system.ping.dlq",
+              "note": "4 runs over 11 min 10 s, never a requeue loop. Source: the contract suite in packages/messaging/test/support/message-bus-contract.ts."
+            },
+            {
+              "id": "ex-broker-down",
+              "label": "Broker down",
+              "path": [
+                "e-request",
+                "e-outbox",
+                "e-relay"
+              ],
+              "request": "docker compose stop rabbitmq; POST /dev/ping",
+              "response": "api still answers 202; the row waits\nrelay: publish timeout after 5 s, attempts + 1, next try in 1 s, 2 s, 4 s ... 60 s\napi-worker /health/ready 503 (broker), api /health/ready 200",
+              "note": "No synchronous path touches the broker. Source: docs/learning/wp-5.md, Trace 2b."
+            }
+          ]
+        },
+        {
+          "type": "cards",
+          "title": "Decisions this path rests on",
+          "caption": "Recorded in docs/learning/wp-5.md (Decision) on 2026-10-04; ADR-012 and ADR-029 decide the patterns.",
+          "cards": [
+            "d-p1",
+            "d-t4",
+            "d-r1",
+            "d-s1",
+            "d-e1",
+            "d-w1"
+          ]
+        }
+      ]
     }
   ],
   "nodes": {
@@ -551,11 +647,11 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/config/package.json", "packages/config/tsconfig/base.json", "packages/config/tsconfig/node-service.json", "packages/config/tsconfig/node-library.json", "packages/config/vitest/base.js"]
     },
     "ws-agent-app": {
-      "label": "agent", "sub": "planned · WP-5", "kind": "app", "status": "planned", "wp": "WP-5",
-      "what": "The ask-me agent service: knowledge, chat, guards and usage, plus an `agent-ingest` worker.",
-      "how": "Will boot through platform-nest like api, keep its own read model of content fed by events, and wrap the LangGraph graph from `packages/agent`.",
-      "why": "AGENTS.md rule 3: the agent never calls api; it keeps its own read model fed by events (ADR-029).",
-      "files": ["apps/agent (not created yet)"]
+      "label": "agent", "sub": "@jadero/agent", "kind": "app", "status": "real", "wp": "WP-5",
+      "what": "The knowledge, chat, guards and usage service. Today it is the skeleton: an HTTP process with health checks and a consumer process that reads system.ping.v1 into its own broker_heartbeat table through the inbox.",
+      "how": "Two process types from one codebase: `dist/main.js` (HTTP, port 3002, ready when its database answers) and `dist/consumer.js` (port 3012 for health only, ready when Postgres and RabbitMQ answer; `agent-ingest` from WP-20). `HeartbeatConsumer` subscribes to `agent.system.ping` with `idempotent()`, so the inbox insert and the upsert share one transaction. `pnpm --filter @jadero/agent migrate` creates the messaging schema and its tables.",
+      "why": "ADR-029: agent owns agent_dev and learns about other services only from events; the agent never calls api. The consumer is its own process so a slow or failing consumer never takes the chat down (report section 3.2).",
+      "files": ["apps/agent/AGENTS.md", "apps/agent/src/main.ts", "apps/agent/src/consumer.ts", "apps/agent/src/modules/heartbeat/", "apps/agent/sql/0001_broker_heartbeat.sql"]
     },
     "ws-contact": {
       "label": "contact", "sub": "planned · WP-11", "kind": "app", "status": "planned", "wp": "WP-11",
@@ -586,18 +682,18 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["apps/admin (not created yet)"]
     },
     "ws-contracts": {
-      "label": "contracts", "sub": "planned · WP-12", "kind": "pkg", "status": "planned", "wp": "WP-12",
-      "what": "Zod DTOs and event schemas shared by services and the admin.",
-      "how": "Events use a CloudEvents envelope and versioned names like `content.post-published.v1`, changed expand and contract.",
-      "why": "AGENTS.md rule 5 and ADR-006: one schema validates the admin form, the API body and an agent tool input.",
-      "files": ["packages/contracts (not created yet)"]
+      "label": "contracts", "sub": "@jadero/contracts", "kind": "pkg", "status": "real", "wp": "WP-5",
+      "what": "Message contracts as Zod: the CloudEvents 1.0 envelope, defineEvent and the first event, system.ping.v1, with one example fixture per event and the AsyncAPI 3.1 catalog generated from the schemas.",
+      "how": "`defineEvent(\"system.ping.v1\", schema)` derives the routing key, the type `dev.jadero.system.ping.v1` and the envelope schema. A fixture test parses every event's example; a compatibility test compares each version's schema with its frozen copy in `compat/`, so within a version only optional fields can be added. Compiled to dist/; zod is a peer dependency.",
+      "why": "ADR-029 and AGENTS.md rule 5: one shared contract per event, versioned and changed expand/contract, so producer and consumer can deploy in any order.",
+      "files": ["packages/contracts/src/envelope.ts", "packages/contracts/src/define-event.ts", "packages/contracts/src/events/", "packages/contracts/fixtures/", "packages/contracts/compat/", "packages/contracts/asyncapi.json"]
     },
     "ws-messaging": {
-      "label": "messaging", "sub": "planned · WP-5", "kind": "pkg", "status": "planned", "wp": "WP-5",
-      "what": "The bus port with RabbitMQ and in-memory adapters, plus the outbox and inbox.",
-      "how": "Services write events to an outbox table in the same transaction; a relay publishes them to RabbitMQ; consumers dedupe through an inbox.",
-      "why": "ADR-029 and AGENTS.md rule 2: between api, agent and contact only asynchronous messages.",
-      "files": ["packages/messaging (not created yet)"]
+      "label": "messaging", "sub": "@jadero/messaging", "kind": "pkg", "status": "real", "wp": "WP-5",
+      "what": "The MessageBus port with RabbitMQ and in-memory adapters, the shared retry and dead-letter policy, the topology that generates infra/rabbitmq/definitions.json, the transactional outbox with its relay, and the inbox.",
+      "how": "Handlers return done, retry or dead; `dispatch` and `dispose` decide for both adapters (retries at 10 s, 1 min, 10 min through the service's retry exchange, then the DLQ). `addToOutbox(tx, ...)` joins the caller's transaction through the `SqlExecutor` seam; `OutboxRelay` claims rows with FOR UPDATE SKIP LOCKED and publishes with confirms; `idempotent(pool, effects)` is the inbox. A nine-behavior contract suite runs against both adapters.",
+      "why": "ADR-012 and ADR-029: no lost events (outbox), no repeated effects (inbox), no hot loops (consumer-routed retries), one failure policy for every service.",
+      "files": ["packages/messaging/src/message-bus.ts", "packages/messaging/src/rabbitmq-message-bus.ts", "packages/messaging/src/outbox/", "packages/messaging/src/inbox/", "packages/messaging/src/topology/", "packages/messaging/sql/0001_messaging.sql"]
     },
     "ws-ai": {
       "label": "ai", "sub": "planned · WP-19", "kind": "pkg", "status": "planned", "wp": "WP-19",
@@ -1326,6 +1422,97 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "how": "Since step 8, `domain-imports-only-domain` flags every import outside the module's `domain/` folder except Node built-ins, npm packages included.",
       "why": "Before the fix a domain file could import `@nestjs/common` and pass; widening the rules to `templates/` found it.",
       "files": [".dependency-cruiser.cjs"]
+    },
+    "e-request": {
+      "label": "POST /dev/ping", "sub": "api · PingService", "kind": "step", "status": "real", "wp": "WP-5 step 6",
+      "what": "A development-only request starts the trace.",
+      "how": "`DevPingModule` is imported only when NODE_ENV=development; the heartbeat in api-worker calls the same `PingService` every 5 minutes.",
+      "why": "Decision W1 c: an instant trace for the demo, and a synthetic check that keeps proving the path in every environment.",
+      "files": ["apps/api/src/modules/ping/"]
+    },
+    "e-outbox": {
+      "label": "INSERT messaging.outbox", "sub": "same transaction as the change", "kind": "step", "status": "real", "wp": "WP-5 step 5",
+      "what": "The event is saved as a row, with the request's traceparent inside the envelope.",
+      "how": "`inTransaction(pool, tx => addToOutbox(tx, systemPingV1, data, \"jadero/api\"))`; `createEnvelope` checks the data against the contract first.",
+      "why": "ADR-012: the transactional outbox removes the dual write; the broker leaves the request path.",
+      "files": ["packages/messaging/src/outbox/outbox.ts", "packages/messaging/src/outbox/envelope.ts"]
+    },
+    "e-relay": {
+      "label": "OutboxRelay", "sub": "api-worker · every 1 s", "kind": "step", "status": "real", "wp": "WP-5 step 5",
+      "what": "Claims up to 50 due rows, publishes each with its trace restored, marks them published.",
+      "how": "FOR UPDATE SKIP LOCKED; publisher confirm with a 5 s timeout; a failure counts the attempt and backs the row off 1 s doubling to 60 s.",
+      "why": "Decision L1: polling is enough for a few events a day; the claim keeps two relays from publishing the same row.",
+      "files": ["packages/messaging/src/outbox/outbox-relay.ts", "apps/api/src/worker.ts"]
+    },
+    "e-route": {
+      "label": "jadero.events", "sub": "topic exchange", "kind": "step", "status": "real", "wp": "WP-5 step 4",
+      "what": "Routes system.ping.v1 to every bound queue; nothing bound means jadero.unrouted, never a silent drop.",
+      "how": "Topology generated from packages/messaging/src/topology into infra/rabbitmq/definitions.json; queue settings are policies.",
+      "why": "Decision T4: one reviewed source, services without configure rights.",
+      "files": ["infra/rabbitmq/definitions.json", "packages/messaging/src/topology/definitions.ts"]
+    },
+    "e-consume": {
+      "label": "RabbitMqMessageBus", "sub": "agent consumer · prefetch 10", "kind": "step", "status": "real", "wp": "WP-5 step 4",
+      "what": "Parses the envelope, checks the contract, runs the handler, applies the outcome.",
+      "how": "`dispatch` then `dispose`: done acks, retry copies to the wait queue through agent.retry and acks, dead copies to the DLQ with the reason.",
+      "why": "Decision P1 and R1: one failure policy, no handler can loop.",
+      "files": ["packages/messaging/src/rabbitmq-message-bus.ts", "packages/messaging/src/dispatch.ts"]
+    },
+    "e-inbox": {
+      "label": "idempotent()", "sub": "inbox + effects, one transaction", "kind": "step", "status": "real", "wp": "WP-5 step 5",
+      "what": "Inserts (consumer, event_id); only a new row runs the effect (the broker_heartbeat upsert).",
+      "how": "`INSERT ... ON CONFLICT DO NOTHING RETURNING`; a failing effect rolls back the inbox row too.",
+      "why": "Decision I1: at-least-once delivery made safe; keyed by consumer so two consumers in one database stay independent.",
+      "files": ["packages/messaging/src/inbox/idempotent.ts", "apps/agent/src/modules/heartbeat/heartbeat.consumer.ts"]
+    },
+    "e-ack": {
+      "label": "ack", "sub": "after the commit", "kind": "step", "status": "real", "wp": "WP-5 step 4",
+      "what": "The message leaves the queue only after the effects committed.",
+      "how": "A crash before the ack redelivers it; the inbox absorbs the repeat.",
+      "why": "The ack is the consumer's commit point (ADR-012).",
+      "files": ["packages/messaging/src/rabbitmq-message-bus.ts"]
+    },
+    "d-p1": {
+      "label": "P1 · thin port", "sub": "handlers return an outcome", "kind": "rule", "status": "real", "wp": "WP-5",
+      "what": "MessageBus is an abstract class; handlers return done, retry or dead and never ack.",
+      "how": "In-memory and RabbitMQ adapters pass the same contract suite.",
+      "why": "One place for the failure policy; consumer tests run without a broker.",
+      "files": ["packages/messaging/src/message-bus.ts"]
+    },
+    "d-t4": {
+      "label": "T4 · topology as code", "sub": "generates definitions.json", "kind": "rule", "status": "real", "wp": "WP-5",
+      "what": "A typed module describes exchanges, queues, policies, users and permissions.",
+      "how": "`pnpm --filter @jadero/messaging topology`; a test fails when the JSON is stale.",
+      "why": "Least privilege and no drift between code and broker.",
+      "files": ["packages/messaging/src/topology/"]
+    },
+    "d-r1": {
+      "label": "R1 · consumer-routed retries", "sub": "10 s, 1 min, 10 min, DLQ", "kind": "rule", "status": "real", "wp": "WP-5",
+      "what": "A failed delivery is copied to its own queue's wait queue, then acked.",
+      "how": "Wait queues have a TTL policy and dead-letter back through the service's retry exchange.",
+      "why": "Exact tiers, retries never reach other consumers.",
+      "files": ["packages/messaging/src/outcome.ts"]
+    },
+    "d-s1": {
+      "label": "S1 · SqlExecutor seam", "sub": "pg now, Drizzle in WP-10", "kind": "rule", "status": "real", "wp": "WP-5",
+      "what": "Outbox and inbox take the caller's transaction as a minimal executor.",
+      "how": "A pg.PoolClient fits as is; sql/0001_messaging.sql is applied by each service's migrate script.",
+      "why": "WP-10 adds Drizzle without rewriting messaging.",
+      "files": ["packages/messaging/src/sql/sql-executor.ts"]
+    },
+    "d-e1": {
+      "label": "E1 · one trace", "sub": "structured CloudEvents", "kind": "rule", "status": "real", "wp": "WP-5",
+      "what": "The envelope is the body; the relay restores the stored traceparent before publishing.",
+      "how": "AmqplibInstrumentation injects it into headers and continues it on consume.",
+      "why": "ADR-010: a trace runs from the request to the consumer without gaps.",
+      "files": ["packages/platform-nest/src/telemetry/create-sdk.ts"]
+    },
+    "d-w1": {
+      "label": "W1 · process types", "sub": "api-worker, agent consumer", "kind": "rule", "status": "real", "wp": "WP-5",
+      "what": "Background work runs in its own process with its own readiness.",
+      "how": "api: Postgres only; api-worker and the agent consumer: Postgres and RabbitMQ.",
+      "why": "A broker outage never takes api out of rotation.",
+      "files": ["apps/api/src/worker.module.ts", "apps/agent/src/consumer.module.ts"]
     }
   }
 }
