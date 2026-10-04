@@ -594,7 +594,7 @@ Explain-back on 2026-10-04, after the PR review fixes, in interview form. The ow
 
 Gaps: 1 (who publishes) is the one that matters; 3 (why not requeue) and 6 (what happens inside the consumer) are partial. The owner asked for a picture of how events travel; the code map now has a flow graph of `system.ping.v1` (processes, tables, exchanges, queues, failure paths) and an event catalog in section 8, and every new event adds itself there.
 
-The one-trace demo with Docker is pending: `pnpm dev` failed on Turborepo's default concurrency of 10 with 10 persistent tasks; the script now passes `--concurrency=20`.
+The one-trace demo with Docker: `pnpm dev` first failed on Turborepo's default concurrency of 10 with 10 persistent tasks (the script now passes `--concurrency=20`), then flooded the console with the relay's poll spans (now suppressed); after both fixes the owner ran `POST /dev/ping` (202 with the event id) and confirmed it working on 2026-10-04.
 
 ## Delegated details
 
