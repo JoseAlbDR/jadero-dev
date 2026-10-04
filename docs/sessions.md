@@ -66,3 +66,50 @@ commits to a PR after saying it is ready.
 - A request for a report or a check changes nothing until the owner says go; then one PR per agreed change.
 - Compact after the decision is recorded and after the review; keep branch, WP, explainer path, step list with done marks and open findings.
 - One session per WP is enough when compacting at those two points; a new session resumes with the prompt above.
+
+## A dedicated local profile
+
+A separate Claude Code profile keeps this repo's sessions apart from any other setup: point `CLAUDE_CONFIG_DIR` at its own directory (for example an alias that runs `CLAUDE_CONFIG_DIR=<profile dir> claude`). The repo brings its own project settings, hooks, skills, rules and the reviewer agent; the profile only needs the personal part.
+
+Profile `settings.json`:
+
+```json
+{
+  "model": "opus",
+  "effortLevel": "high",
+  "attribution": { "commit": "", "pr": "" }
+}
+```
+
+- `attribution` with empty strings stops the `Co-Authored-By` trailer on commits and the "Generated with Claude Code" line on PRs (AGENTS.md section 6).
+- Permission `deny` rules and hooks merge across scopes; a profile cannot weaken the project's `.env` deny. Other keys in the project settings win over the profile.
+- The sandbox is off by default locally (`sandbox.enabled`). Without it, the protection is the `.env` deny, the learning gate and the owner reviewing each step; turn it on if wanted, and make sure it can reach the Docker socket.
+- No other plugins, hooks or MCP servers are needed; anything left over from another framework (guard hooks, a commit skill, its own `CLAUDE.md` rules) should be off in this profile.
+
+Profile `CLAUDE.md` (personal preferences that do not belong in the public repo):
+
+```
+Chat with me in Spanish; everything written to files stays in English.
+```
+
+Machine tools: Node 24 through the version manager (`.nvmrc`), `corepack enable` (pnpm 11), `git` with the owner's name and email, `gh auth login` with the `repo` and `project` scopes, `jq` (the learning gate hook uses it), Docker or OrbStack running.
+
+## Smoke test for a new profile or machine
+
+Run once in a new session of the profile, from the repo:
+
+```
+Check this machine and profile for jadero-dev and report each item as ok or failing, changing nothing:
+1. node -v is 24.x, pnpm -v is 11.x, jq --version works, docker info answers, gh auth status shows
+   repo and project scopes, git config user.name and user.email are mine.
+2. git switch main && git pull && pnpm install && pnpm verify:all is green, and pnpm test:int passes.
+3. The learning gate: on a scratch branch wp/99-gate-check, try to edit apps/api/src/main.ts and confirm
+   the hook denies it; then delete the branch.
+4. Make a commit on a scratch branch and show git log -1 --format=%B: no Co-Authored-By line. Then
+   delete the branch without pushing.
+5. Read apps/api/.env.example (allowed) and confirm reading a real .env file is denied.
+```
+
+## Context between work packages
+
+Everything a session needs lives in the repo: the explainer (decision, step log, recap), the PR, the code map. Start each work package with a fresh context (`/clear` or a new session) and the start prompt above; inside a work package, compact after the decision is recorded and after the review, or start a new session with the resume prompt.
