@@ -5,6 +5,7 @@ packages:
 
 # One version per tool for the whole repo (single-version policy). Packages write "catalog:".
 catalog:
+  "@axe-core/playwright": 4.13.0
   "@biomejs/biome": 2.5.15
   "@commitlint/cli": 21.2.3
   "@commitlint/config-conventional": 21.2.3

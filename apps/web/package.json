@@ -9,7 +9,8 @@
     "dev": "next dev",
     "start": "node .next/standalone/apps/web/server.js",
     "typecheck": "next typegen && tsc --noEmit -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@jadero/ui": "workspace:*",
@@ -21,7 +22,9 @@
     "react-dom": "catalog:"
   },
   "devDependencies": {
+    "@axe-core/playwright": "catalog:",
     "@jadero/config": "workspace:*",
+    "@playwright/test": "catalog:",
     "@tailwindcss/postcss": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

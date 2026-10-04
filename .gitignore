@@ -20,3 +20,7 @@ coverage/
 # Next.js generated files
 next-env.d.ts
 *.tsbuildinfo
+
+# Playwright
+test-results/
+playwright-report/
