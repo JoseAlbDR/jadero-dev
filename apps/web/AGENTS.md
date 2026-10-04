@@ -18,6 +18,7 @@ pnpm test:e2e                            # from the root: build, then Playwright
 - `src/i18n/`: `routing.ts` (locales, default, cookie, localized pathnames), `navigation.ts` (use its `Link` and `usePathname`, never `next/link`), `request.ts` (messages per request), `locale.ts` (`requireLocale`), `alternates.ts` (`localeAlternates`), `global.d.ts` (typed keys from `messages/en.json`).
 - `src/app/[locale]/`: the locale layout (`<html lang>`, metadata with hreflang, providers, header), the home, the localized 404 and a catch-all that triggers it. `src/app/layout.tsx` only passes children through.
 - `src/components/`: app components (header, theme provider and toggle, locale switcher). Reusable, text-free components go to `packages/ui`.
+- `src/app/[locale]/mockups/`: the WP-15 hero mockups (`/mockups/terminal`, `/editorial`, `/bento`), throwaway and `noindex`. Each overrides the tokens in `mockups.css` through its `data-direction`; delete the folder, its `routing.pathnames` entries, the `Mockups` messages and its e2e block once the owner picks a direction.
 - `messages/{en,es,de}.json`: every UI string. `test/messages.test.ts` fails when a locale's keys differ from English or a string is empty.
 - `e2e/`: Playwright smoke and axe checks per locale; `playwright.config.ts` serves the standalone build.
 
@@ -34,7 +35,7 @@ pnpm test:e2e                            # from the root: build, then Playwright
 
 - The block below is written by Next.js: `next dev` adds it when an agent runs it, and only while it is missing. Keep it committed and unedited, or every agent run leaves an uncommitted change that blocks `git switch`.
 - Next renames its process to `next-server`, so `pkill -f server.js` finds nothing. Stop a server by its port: `lsof -nP -iTCP:<port> -sTCP:LISTEN -t | xargs kill`. Check the port is free before starting another one, or curl may reach the old server.
-- Screenshots without Playwright browsers: `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --window-size=1280,800 --screenshot=<file>.png <url>`; add `--force-dark-mode --blink-settings=preferredColorScheme=0` for dark mode. Save them in the session's scratchpad, never in the repo.
+- Screenshots without Playwright browsers: `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --window-size=1280,800 --screenshot=<file>.png <url>`; add `--force-dark-mode --blink-settings=preferredColorScheme=0` for dark mode. Save them in the session's scratchpad, never in the repo. Headless Chrome keeps a minimum window width of about 500 px and crops the rest, so a 390 px screenshot looks cut off; for mobile, use Playwright with `channel: "chrome"` and a real `viewport`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
