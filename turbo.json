@@ -26,7 +26,10 @@
         "!**/node_modules/**",
         "!**/dist/**",
         "!**/.turbo/**",
-        "!**/coverage/**"
+        "!**/coverage/**",
+        "!**/.next/**",
+        "!**/test-results/**",
+        "!**/playwright-report/**"
       ]
     },
     "//#test:scripts": {
@@ -42,7 +45,10 @@
         "!**/node_modules/**",
         "!**/dist/**",
         "!**/.turbo/**",
-        "!**/coverage/**"
+        "!**/coverage/**",
+        "!**/.next/**",
+        "!**/test-results/**",
+        "!**/playwright-report/**"
       ]
     },
     "dev": {

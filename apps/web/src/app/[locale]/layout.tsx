@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { ReactNode } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SITE_URL } from "@/config/site";
 import { requireLocale } from "@/i18n/locale";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
@@ -19,7 +20,8 @@ export function generateStaticParams() {
 }
 
 /**
- * Title, description and `hreflang` alternates for the locale's home.
+ * Base URL, title and description shared by every page of a locale. Canonical and hreflang links
+ * are per page (`localeAlternates`), never here, or every page would inherit the home's.
  * @param props.params the route params with the locale segment.
  */
 export async function generateMetadata({
@@ -28,16 +30,9 @@ export async function generateMetadata({
   const locale = requireLocale((await params).locale);
   const t = await getTranslations({ locale, namespace: "Metadata" });
   return {
-    metadataBase: new URL(process.env.SITE_URL ?? "https://jadero.dev"),
+    metadataBase: SITE_URL,
     title: t("title"),
     description: t("description"),
-    alternates: {
-      canonical: `/${locale}`,
-      languages: {
-        ...Object.fromEntries(routing.locales.map((l) => [l, `/${l}`])),
-        "x-default": `/${routing.defaultLocale}`,
-      },
-    },
   };
 }
 

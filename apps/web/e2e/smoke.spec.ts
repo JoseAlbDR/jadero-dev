@@ -5,6 +5,8 @@ import en from "../messages/en.json" with { type: "json" };
 import es from "../messages/es.json" with { type: "json" };
 
 const LOCALES = { en, es, de } as const;
+// The build bakes SITE_URL into the prerendered HTML; the default matches src/config/site.ts.
+const SITE = (process.env.SITE_URL ?? "https://jadero.dev").replace(/\/$/, "");
 
 test.describe("locale routing (ADR-022)", () => {
   test("sends / to the Accept-Language locale", async ({ browser }) => {
@@ -23,12 +25,13 @@ test.describe("locale routing (ADR-022)", () => {
     await context.close();
   });
 
-  test("remembers the chosen locale in a cookie", async ({ page, context }) => {
+  test("remembers the chosen locale in a session cookie", async ({ page, context }) => {
     await page.goto("/en");
     await page.getByRole("link", { name: "Deutsch" }).click();
     await expect(page).toHaveURL(/\/de$/);
     const cookie = (await context.cookies()).find((c) => c.name === "NEXT_LOCALE");
     expect(cookie?.value).toBe("de");
+    expect(cookie?.expires).toBe(-1); // session cookie: no persistent preference (owner's choice)
     await page.goto("/");
     await expect(page).toHaveURL(/\/de$/);
   });
@@ -41,13 +44,28 @@ for (const [locale, messages] of Object.entries(LOCALES)) {
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(messages.HomePage.title);
       await expect(page.getByText(messages.HomePage.lead)).toBeVisible();
-      await expect(page.locator('link[rel="alternate"][hreflang]')).toHaveCount(4);
+      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+        "href",
+        `${SITE}/${locale}`,
+      );
+      const alternates = await page
+        .locator('link[rel="alternate"][hreflang]')
+        .evaluateAll((links) =>
+          links.map((l) => [l.getAttribute("hreflang"), l.getAttribute("href")]),
+        );
+      expect(alternates).toEqual([
+        ["en", `${SITE}/en`],
+        ["es", `${SITE}/es`],
+        ["de", `${SITE}/de`],
+        ["x-default", `${SITE}/en`],
+      ]);
     });
 
     test("renders the localized 404", async ({ page }) => {
       const response = await page.goto(`/${locale}/does-not-exist`);
       expect(response?.status()).toBe(404);
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(messages.NotFound.title);
+      await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
     });
 
     for (const colorScheme of ["light", "dark"] as const) {

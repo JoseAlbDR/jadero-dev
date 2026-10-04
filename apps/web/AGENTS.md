@@ -5,7 +5,7 @@ The public multilingual site (ADR-001, ADR-022, ADR-023). Today (WP-4) it is the
 ## Run it
 
 ```sh
-cp apps/web/.env.example apps/web/.env   # once; SITE_URL for canonical and hreflang links
+cp apps/web/.env.example apps/web/.env   # once; SITE_URL, read at build time for canonical and hreflang links
 pnpm --filter @jadero/web dev            # next dev on port 3000
 pnpm --filter @jadero/web build          # standalone output, assets copied next to server.js
 pnpm --filter @jadero/web start          # node .next/standalone/apps/web/server.js, as the image will
@@ -15,7 +15,7 @@ pnpm test:e2e                            # from the root: build, then Playwright
 ## Layout
 
 - `src/proxy.ts`: the next-intl middleware (Next 16 calls it proxy). A path without a locale gets a 307 to the cookie locale, else Accept-Language, else `en`.
-- `src/i18n/`: `routing.ts` (locales, default, cookie, localized pathnames), `navigation.ts` (use its `Link` and `usePathname`, never `next/link`), `request.ts` (messages per request), `locale.ts` (`requireLocale`), `global.d.ts` (typed keys from `messages/en.json`).
+- `src/i18n/`: `routing.ts` (locales, default, cookie, localized pathnames), `navigation.ts` (use its `Link` and `usePathname`, never `next/link`), `request.ts` (messages per request), `locale.ts` (`requireLocale`), `alternates.ts` (`localeAlternates`), `global.d.ts` (typed keys from `messages/en.json`).
 - `src/app/[locale]/`: the locale layout (`<html lang>`, metadata with hreflang, providers, header), the home, the localized 404 and a catch-all that triggers it. `src/app/layout.tsx` only passes children through.
 - `src/components/`: app components (header, theme provider and toggle, locale switcher). Reusable, text-free components go to `packages/ui`.
 - `messages/{en,es,de}.json`: every UI string. `test/messages.test.ts` fails when a locale's keys differ from English or a string is empty.
@@ -26,5 +26,6 @@ pnpm test:e2e                            # from the root: build, then Playwright
 - No hard-coded UI strings: add the key to all three message files (the test and the typed keys catch a miss).
 - A new page adds its localized pathname to `routing.pathnames` (`/es/proyectos`, `/de/projekte`), calls `setRequestLocale` and stays static.
 - Colors and radii come from the tokens in `packages/ui/src/theme.css` (`bg-background`, `text-muted-foreground`); no raw color values in components.
-- Server-side environment reads are limited to `SITE_URL` in the locale layout until the site has a config module.
+- App code (`src/`) reads the environment only in `src/config/site.ts`. `SITE_URL` is baked in at build time (pages are prerendered): set it before `next build`; Turborepo hashes it and `.env*`.
+- Every page sets its own canonical and hreflang links with `localeAlternates` in its `generateMetadata`; the layout sets none.
 - The map of this app is section 7 of `docs/architecture/code-map.html`; update it when the request path changes.

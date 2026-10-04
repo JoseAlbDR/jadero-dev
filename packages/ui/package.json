@@ -10,6 +10,7 @@
   "exports": {
     "./theme.css": "./src/theme.css",
     "./components/*": "./src/components/*.tsx",
+    "./lib/*": "./src/lib/*.ts",
     "./cn": "./src/lib/cn.ts"
   },
   "scripts": {
@@ -26,9 +27,11 @@
     "@jadero/config": "workspace:*",
     "@types/react": "catalog:",
     "react": "catalog:",
+    "react-dom": "catalog:",
     "typescript": "catalog:"
   },
   "peerDependencies": {
-    "react": "^19"
+    "react": "^19",
+    "react-dom": "^19"
   }
 }

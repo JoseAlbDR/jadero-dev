@@ -8,8 +8,8 @@ export function SiteHeader() {
   const t = useTranslations("Header");
   return (
     <header className="mx-auto flex max-w-3xl items-center justify-between px-6 py-6">
-      <Link href="/" aria-label={t("home")} className="font-serif text-lg tracking-tight">
-        jadero.dev
+      <Link href="/" className="font-serif text-lg tracking-tight">
+        jadero.dev<span className="sr-only">, {t("home")}</span>
       </Link>
       <div className="flex items-center gap-4">
         <LocaleSwitcher />

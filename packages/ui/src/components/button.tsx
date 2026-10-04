@@ -3,6 +3,7 @@ import { Slot } from "radix-ui";
 import type { ComponentProps } from "react";
 import { cn } from "../lib/cn";
 
+/** Class names for each button variant and size; use it to style a link as a button. */
 const buttonVariants = cva(
   "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
