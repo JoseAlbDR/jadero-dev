@@ -19,6 +19,7 @@ export default {
         "contracts",
         "messaging",
         "platform-nest",
+        "templates",
         "ai",
         "ui",
         "cv",

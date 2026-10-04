@@ -36,6 +36,7 @@
       "inputs": [
         "apps/**",
         "packages/**",
+        "templates/**",
         ".dependency-cruiser.cjs",
         "tsconfig.depcruise.json",
         "!**/node_modules/**",

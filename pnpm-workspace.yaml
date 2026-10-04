@@ -1,6 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "templates/*"
 
 # One version per tool for the whole repo (single-version policy). Packages write "catalog:".
 catalog:
