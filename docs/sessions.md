@@ -31,13 +31,14 @@ docs/sessions.md) for that WP, called WP-N below:
 1. pnpm install && pnpm verify:all on origin/main.
 2. /wp N: check that its dependencies are closed, create wp/N-<slug> from origin/main, propose 4 to 8
    steps and the definition of done from its issue, then stop.
-3. After my go: /learn-step N. Self-contained explainer; concepts labelled Own, Recognize or Delegate;
-   for each decision the forces, at least three options (one you would not pick, and when it would
-   win) and what would make it wrong; all questions in one message, recommendations in a separate block
-   after the questions. I answer first with my pick and one risk, then we compare. Stop. No code under
-   learning paths.
+3. After my go: /learn-step N. In the chat, before asking anything: each ADR decision the WP implements
+   as problem, concrete example, decision, alternatives (why discarded, when each would win) and the
+   patterns to recognize, with a diagram where it helps; then your implementation choices, one line
+   each; then only the open architecture questions no ADR decides, recommendations in a separate block
+   after them. Challenge my answers when you disagree. Stop. No code under learning paths.
 4. When I answer: record the decision (decision: recorded), then build one step at a time under the
-   step contract (AGENTS.md section 5): files, explainer paragraph and ADR lines before writing (stop if
+   step contract (AGENTS.md section 5): a short plain explanation of what the step builds and its
+   pattern, files, explainer heading and ADR lines before writing (stop if
    the code would depart from an ADR), pnpm verify, show it running, privacy check, two step-log lines
    from the diff, one check question for me, one scoped commit. @agent-reviewer after about half the
    steps. Steps that need Docker in a cloud session: tell me the exact commands and wait for my output.
