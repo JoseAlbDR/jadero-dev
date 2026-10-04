@@ -20,6 +20,7 @@ pnpm verify:all  # the same on every package, for main and CI
 pnpm build     # compile every package (dist/)
 pnpm dev       # apps in watch mode (copy apps/<app>/.env.example to .env first)
 pnpm test:int  # integration tests against real containers (needs Docker)
+pnpm test:e2e  # web smoke and accessibility tests in Chrome against the built site
 ```
 
 `AGENTS.md` lists every command. The first `pnpm dev:up` on a machine also proves the database-per-service setup: see `infra/compose/README.md`.
@@ -39,4 +40,4 @@ Hands-on guide for a local machine: `docs/local-playbook.md`. Tooling and the fl
 
 ## Status
 
-Release R0 (walking skeleton) in progress. Done: the plan, the ADRs, GitHub tracking, the agent tooling, the repo foundation (WP-1) and the service platform with the API skeleton (WP-3). Next: messaging and the agent skeleton (WP-5); the web skeleton (WP-4) can run alongside. The map of the code is `docs/architecture/code-map.html`.
+Release R0 (walking skeleton) in progress. Done: the plan, the ADRs, GitHub tracking, the agent tooling, the repo foundation (WP-1), the service platform with the API skeleton (WP-3) and the web skeleton (WP-4). Next: messaging and the agent skeleton (WP-5), and the design directions (WP-15) alongside. The map of the code is `docs/architecture/code-map.html`.

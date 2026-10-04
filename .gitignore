@@ -16,3 +16,11 @@ dist/
 .turbo/
 coverage/
 *.log
+
+# Next.js generated files
+next-env.d.ts
+*.tsbuildinfo
+
+# Playwright
+test-results/
+playwright-report/
