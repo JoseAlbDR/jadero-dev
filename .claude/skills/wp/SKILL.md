@@ -12,4 +12,6 @@ Start WP-$wp.
 3. Check the gate: if `tag` is `learning`, look for `docs/learning/wp-$wp.md` and its `decision:` line. If missing or pending, the next step is `/learn-step $wp`, not code.
 4. `git fetch origin && git switch -c wp/$wp-<slug> origin/main` (slug: short kebab-case of the title). If a dependency's PR is still open and the owner accepts starting on top of it, branch from that PR's branch instead, say so in the explainer's intro, and rebase onto `origin/main` as the first action after that PR merges.
 5. Propose the step list: 4 to 8 small steps, each ending in a green `pnpm verify` and a commit; name which steps are learning steps and which the owner may mark `known` (D-38 fast path). For learning WPs, step 1 is always the explainer.
+The last proposed step of every WP that changes code is "docs and map": update `docs/architecture/code-map.html` (its JSON data block) for any new app, package, module, provider, injection or request-path change, and republish its artifact when the session can publish artifacts.
+
 6. Print the definition of done from the issue (its "Definition of done" section; when the issue cannot be read, the same text comes from `scripts/github/seed.mjs`, say which source you used). Mark items that cannot apply yet (staging and release-please arrive in WP-6 to WP-9) as n/a with the reason. Then stop for the owner's go.

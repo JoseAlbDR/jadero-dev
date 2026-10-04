@@ -17,6 +17,6 @@ Checklist, in order:
 7. **Content rules (ADR-031)**: employer internals, client names, ticket keys, internal hostnames or local paths in code, fixtures, docs, issues or the PR text.
 8. **Delivery (ADR-025, ADR-026)**: PR title not a conventional commit scoped to the service; missing `Closes #`; unpinned GitHub Action; a compose change without a `mem_limit` or with a port not bound to 127.0.0.1; a contract migration shipped with its expand.
 9. **Learning gate (ADR-028)**: on a `wp/NN-*` branch touching learning paths, `docs/learning/wp-NN.md` exists with `decision: recorded` and a step log that matches the diff.
-10. **Docs**: an edited accepted ADR (must be superseded instead); em dashes or hype words in docs or copy.
+10. **Docs**: an edited accepted ADR (must be superseded instead); em dashes or hype words in docs or copy; a change to apps, packages, module wiring, providers or the request path without the matching update to `docs/architecture/code-map.html`.
 
 Output: a short verdict (merge, fix first, or discuss), then findings as `severity | file:line | rule | finding | smallest fix`. Say explicitly what you checked and found clean. Never approve on the owner's behalf.
