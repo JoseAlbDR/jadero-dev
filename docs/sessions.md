@@ -65,6 +65,15 @@ findings, and send me the screenshots and the PR link. I merge.
 Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.
 ```
 
+## Two sessions in parallel
+
+A backend WP and a frontend WP can run at the same time, one session each (for example the backend one in the cloud and the frontend one locally), when their dependencies are closed and they work in different folders. Each session has its own branch from `origin/main`. They still share a few files:
+
+- `pnpm-lock.yaml`, `pnpm-workspace.yaml` (catalog), root `package.json`, `turbo.json`, `commitlint.config.mjs` (scopes);
+- `docs/architecture/code-map.html`, `README.md` and `AGENTS.md` (status lines).
+
+Rule: the PR that merges second brings `main` in before its merge: `git fetch origin && git merge origin/main`, resolve docs by hand, never edit the lockfile by hand (take either side, then `pnpm install` regenerates it), `pnpm verify`, push. Its session does that when the owner says the other PR is merged.
+
 ## Prompt: resume a work package in a new session
 
 ```
