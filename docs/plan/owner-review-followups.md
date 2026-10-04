@@ -124,12 +124,12 @@ Source: your 76 marks in `owner-marks-2026-10-03.json` (picks made on 2026-10-02
 **Resolved (second pass 2026-10-03): D-25 option e.** TypeScript guard with the Haiku classifier in R2 (WP-23); WP-55 (R7) adds the Python Prompt Guard 2 service behind the same port with timeout, circuit breaker and fallback to Haiku. Recorded as a deliberate exception to the brainstorm's TypeScript-everywhere rule. Counts against the ADR-027 memory rule (about 500 MB).
 
 - **You picked:** a.
-- **Your note:** you would not mind Python, because the agentic team uses it a lot. You want the pros and cons of building it all ourselves versus a Python library.
+- **Your note:** you would not mind Python, because it is common in applied AI. You want the pros and cons of building it all ourselves versus a Python library.
 - **Conflict:** the note reopens option c.
 - **New fact:** LLM Guard, the Python library option c named, was archived on 2026-07-09 and is no longer maintained, so it is out. The maintained Python choices are:
   - Meta's Prompt Guard 2 (86M), used directly or through LlamaFirewall. It is multilingual including Spanish and German, about 350 MB, and takes roughly 90 ms per check on a CPU (verify at WP time).
   - NVIDIA NeMo Guardrails: broader (dialog rails in Colang) and heavier.
-- **Pros of a Python piece:** real Python inside a TypeScript project, the language the agentic team uses, and a polyglot service behind a port.
+- **Pros of a Python piece:** real Python inside a TypeScript project, a language common in applied AI, and a polyglot service behind a port.
 - **Cons:** a second toolchain (uv, pytest, ruff), an image of about 1 GB with CPU torch, about 500 MB of RAM, and an HTTP hop in the chat path.
 - **My recommendation:** new option **e**.
   - Build a for launch: the own TypeScript guard module with the Haiku classifier.
@@ -362,7 +362,7 @@ Source: your 76 marks in `owner-marks-2026-10-03.json` (picks made on 2026-10-02
 Before the owner answered F-1 to F-14, the review itself was audited against `report.md`, `decisions.json`, `owner-marks.json` and the artifact. The classifications were correct and the integration traceable. The problems were in what nobody had summed. Each finding is written so the owner can see the reasoning, not only the outcome.
 
 ### H-1. Planning notes in a repo that becomes public (D-29)
-`docs/plan/` holds working notes: local machine paths, planning chatter, the employer's name in context, and in `owner-marks.json` a note on local development ports. gitleaks does not catch prose. **Owner's judgment:** none of it is proprietary, personal data or code, and the employer's name will be on the CV anyway. **Resolution:** no history rewrite; M-39 reviews and trims the working notes (`owner-marks.json`, `owner-intent.md`, `brainstorm.md`, `TASK.md`) in WP-28 before D-29. The owner decides what stays.
+`docs/plan/` holds working notes: local machine paths, planning chatter, the employer's name in context, and in `owner-marks.json` a note on local development ports. gitleaks does not catch prose. **Owner's judgment:** none of it is proprietary, personal data or code, and the employer's name will be on the CV anyway. **Resolution:** no history rewrite; M-39 reviews and trims the working notes (`owner-marks.json`, `owner-intent.md`, `brainstorm.md`, `TASK.md`, `knowledge-entry-format.md`, `report.md`, `decisions.json`, `owner-review-followups.md` and the archived copies in `docs/artifacts/v2-plan/`) in WP-28 before D-29; a first pass was done on 2026-10-04. The owner decides what stays.
 
 ### H-2. The follow-ups added memory one by one and nobody summed it
 Gateway (+150 MB), `mcp` (+150), Python guard (+500, image about 1 GB), Qdrant (+300 to 500). Production would go from about 4.3 GB to about 5.6 GB, and to about 7.2 GB with staging, on an 8 GB box. **Resolution:** conditional rows in the ADR-027 memory table and a rule: at most two of {gateway, guard-classifier, Qdrant} in production at once until measured; staging starts only the services under test; a learning item that loses its eval comparison is stopped. Every WP that adds a process updates the table before it merges.
