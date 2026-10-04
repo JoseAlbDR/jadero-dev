@@ -23,7 +23,7 @@ What Claude Code (or any agent that reads `AGENTS.md`) finds here and why each p
 | `docs/local-playbook.md` | The hands-on version of this flow for the owner's machine: setup, what a session looks like, daily loop, what to do when something blocks. | By the owner and every session |
 | `.github/ISSUE_TEMPLATE`, `PULL_REQUEST_TEMPLATE.md`, `scripts/github/seed.mjs` | The tracking structure of ADR-041 (WP-49). | By people and by `gh` |
 
-Security guardrails (no pushes to the default branch, no deploys, no ssh, no real providers in tests) are stated as rules in `AGENTS.md` section 7 and enforced by Claude Code's permission settings and sandbox; this repo does not duplicate them as hooks.
+Security guardrails (no pushes to the default branch, no deploys, no ssh, no real providers in tests) are stated as rules in `AGENTS.md` section 7 and backed by Claude Code's permission settings (the `.env` deny in `.claude/settings.json`), the learning gate and the owner's review, plus a sandbox when the session runs in one (cloud sessions do; a local one may not). This repo adds no guard hooks.
 
 ## How a learning WP runs with this tooling
 
