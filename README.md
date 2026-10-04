@@ -4,7 +4,7 @@ Personal site v2: a multilingual portfolio (es, en, de) with an ask-me AI agent.
 
 Work in progress. Where things live:
 
-- `docs/adr/`: the architecture decision records (ADR-001 to ADR-042), with an index in `docs/adr/README.md`. Start there.
+- `docs/adr/`: the architecture decision records (ADR-001 to ADR-043), with an index in `docs/adr/README.md`. Start there.
 - `docs/plan/`: the build plan (`report.md`), the decisions as data (`decisions.json`), the owner review and its follow-ups, and the task for the next step (`TASK.md`).
 - Releases R0 to R7 and the work packages are in `docs/plan/report.md`, section 14; tracking is GitHub Issues, a Project and milestones (ADR-041).
 
@@ -17,6 +17,9 @@ pnpm install   # also installs the git hooks (lefthook)
 pnpm dev:up    # Postgres 18 and RabbitMQ 4 on 127.0.0.1, see infra/compose/README.md
 pnpm verify    # lint, architecture check, typecheck and tests on changed packages: run before every commit
 pnpm verify:all  # the same on every package, for main and CI
+pnpm build     # compile every package (dist/)
+pnpm dev       # apps in watch mode (copy apps/<app>/.env.example to .env first)
+pnpm test:int  # integration tests against real containers (needs Docker)
 ```
 
 `AGENTS.md` lists every command. The first `pnpm dev:up` on a machine also proves the database-per-service setup: see `infra/compose/README.md`.
@@ -36,4 +39,4 @@ Hands-on guide for a local machine: `docs/local-playbook.md`. Tooling and the fl
 
 ## Status
 
-Release R0 (walking skeleton) in progress. Done: the plan, the ADRs, GitHub tracking, the agent tooling and the repo foundation (WP-1). Next: the service platform and the API skeleton (WP-3).
+Release R0 (walking skeleton) in progress. Done: the plan, the ADRs, GitHub tracking, the agent tooling, the repo foundation (WP-1) and the service platform with the API skeleton (WP-3). Next: messaging and the agent skeleton (WP-5); the web skeleton (WP-4) can run alongside. The map of the code is `docs/architecture/code-map.html`.
