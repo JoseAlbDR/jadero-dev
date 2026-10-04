@@ -1,21 +1,24 @@
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { Logger } from "@nestjs/common";
+import { Test } from "@nestjs/testing";
 import { context, trace } from "@opentelemetry/api";
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
 import { NodeSDK } from "@opentelemetry/sdk-node";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ConfigError, parseConfig } from "../src/config/load-config.js";
 import { ProblemDetailsFilter } from "../src/errors/problem-details.filter.js";
 import { createTelemetrySdk } from "../src/telemetry/create-sdk.js";
+import { TelemetryModule } from "../src/telemetry/telemetry.module.js";
 import { telemetryEnv } from "../src/telemetry/telemetry-env.js";
+import { setTelemetrySdk } from "../src/telemetry/telemetry-state.js";
 import { currentTraceId } from "../src/telemetry/trace-id.js";
 
 describe("telemetryEnv", () => {
-  it("defaults to the console exporter", () => {
+  it("defaults to no exporter", () => {
     expect(parseConfig(telemetryEnv, { OTEL_SERVICE_NAME: "api" })).toEqual({
       OTEL_SERVICE_NAME: "api",
-      OTEL_TRACES_EXPORTER: "console",
+      OTEL_TRACES_EXPORTER: "none",
     });
   });
 
@@ -97,6 +100,8 @@ describe("instrumentation entry (built dist, real node --import)", () => {
     expect(logLine.trace_id).toMatch(/^[0-9a-f]{32}$/);
     expect(output).toContain(`traceId: '${logLine.trace_id}'`);
     expect(output).toContain("name: 'GET'");
+    expect(output).toContain("'client.address': 'redacted'");
+    expect(output).not.toMatch(/'(client|network\.peer)\.address': '\d/);
   });
 
   it("refuses to start with an invalid telemetry config, naming the variable", () => {
@@ -108,5 +113,16 @@ describe("instrumentation entry (built dist, real node --import)", () => {
         stdio: "pipe",
       });
     expect(run).toThrow(/OTEL_EXPORTER_OTLP_ENDPOINT: required when OTEL_TRACES_EXPORTER is otlp/);
+  });
+});
+
+describe("TelemetryModule", () => {
+  it("flushes the SDK when the app closes", async () => {
+    const shutdown = vi.fn(async () => {});
+    setTelemetrySdk({ shutdown } as unknown as NodeSDK);
+    const moduleRef = await Test.createTestingModule({ imports: [TelemetryModule] }).compile();
+    await moduleRef.init();
+    await moduleRef.close();
+    expect(shutdown).toHaveBeenCalledOnce();
   });
 });

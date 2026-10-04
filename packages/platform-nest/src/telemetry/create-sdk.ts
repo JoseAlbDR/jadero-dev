@@ -6,6 +6,14 @@ import { PinoInstrumentation } from "@opentelemetry/instrumentation-pino";
 import { NodeSDK, tracing } from "@opentelemetry/sdk-node";
 import type { TelemetryEnv } from "./telemetry-env.js";
 
+/** Span attributes that would identify a visitor, replaced on every incoming request span. */
+export const REDACTED_CLIENT_ATTRIBUTES = {
+  "client.address": "redacted",
+  "network.peer.address": "redacted",
+  "network.peer.port": 0,
+  "user_agent.original": "redacted",
+} as const;
+
 /**
  * Builds the OpenTelemetry SDK (WP-3 decision F1): an explicit list of instrumentations (http,
  * express, pg, pino; amqplib joins in WP-5), traces only. Nest controller spans are left out
@@ -28,7 +36,9 @@ export function createTelemetrySdk(env: TelemetryEnv): NodeSDK | undefined {
     metricReaders: [],
     logRecordProcessors: [],
     instrumentations: [
-      new HttpInstrumentation(),
+      // Visitor data stays out of spans (AGENTS.md section 7): the client address (from
+      // X-Forwarded-For behind nginx), the peer address and the user agent are overwritten.
+      new HttpInstrumentation({ startIncomingSpanHook: () => REDACTED_CLIENT_ATTRIBUTES }),
       new ExpressInstrumentation(),
       new PgInstrumentation(),
       // Adds trace_id, span_id and trace_flags to every pino line; logs stay with pino.
