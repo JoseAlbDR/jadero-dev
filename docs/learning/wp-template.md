@@ -54,6 +54,14 @@ Tier: Own.
 
 Already decided by ADR-NNN: <what>.
 
+Forces: <what pulls in which direction>.
+
+- *A1. <option>.* Pros: ... Cons: ... Matches the ADR, or departs from it (superseding ADR). Wins when ...
+- *A2. <option>.* ...
+- *A3. <option, not recommended>.* ...
+
+What would make this wrong: ...
+
 <!-- Per decision, one heading like the one above: forces; at least three options (one not recommended), each with when it would win; what would make this wrong. No recommendations here. -->
 
 ## The question for the owner
