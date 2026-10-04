@@ -51,7 +51,7 @@ body:
     attributes:
       label: Learning gate (tag:learning only; see report.md 12.3)
       options:
-        - label: Explainer written in docs/learning/wp-NN.md (or the step is marked `known`, D-38 fast path)
+        - label: Explainer written in docs/learning/wp-N.md (or the step is marked `known`, D-38 fast path)
         - label: Decision recorded (ADR link in the explainer front matter)
         - label: Explained back by the owner
   - type: checkboxes

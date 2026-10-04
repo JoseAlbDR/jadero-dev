@@ -39,7 +39,7 @@ Also waiting, no code: the Project views (`scripts/github/README.md`).
 
 ## Branch names and versions
 
-Versions never come from branch names. With squash merges the PR title is the one commit on `main`; release-please reads its type (`feat` minor, `fix` patch, `!` major) per service. `wp/NN-slug` ties the branch to its issue and lets the learning gate find `docs/learning/wp-NN.md`. Work outside a WP uses `chore/`, `fix/` or `docs/`.
+Versions never come from branch names. With squash merges the PR title is the one commit on `main`; release-please reads its type (`feat` minor, `fix` patch, `!` major) per service. `wp/NN-slug` ties the branch to its issue and lets the learning gate find `docs/learning/wp-N.md`. Work outside a WP uses `chore/`, `fix/` or `docs/`.
 
 ## What a session looks like
 
@@ -65,7 +65,7 @@ Never typed: a push to `main`, a deploy, `pnpm eval` without `EVAL_CONFIRMED=1`.
 |---|---|---|---|
 | Start | `git switch main && git pull`; pick the Ready card | | Ready |
 | Open | `/wp NN`; read the step list; go or edit | dependencies, gate, branch `wp/NN-slug`, steps; stops | In progress (owner moves it) |
-| Learn | read `docs/learning/wp-NN.md`; ask; answer | `/learn-step NN` writes and stops; records the decision | |
+| Learn | read `docs/learning/wp-N.md`; ask; answer | `/learn-step NN` writes and stops; records the decision | |
 | Build | one step at a time; answer the check question; stop and ask | names files and ADR lines, writes, `pnpm verify`, privacy check, step log from the diff, one check question, one scoped commit; mid-WP review for M or larger | |
 | Review | explain the design back; review on GitHub | PR with `Closes #`; `@agent-reviewer`; fixes; Recap gaps | In review (automatic) |
 | Close | squash merge; later deploy and journal | | Done (automatic) |

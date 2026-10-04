@@ -75,7 +75,7 @@ a { color: var(--accent); }
 <li><code>docs/plan/report.md</code> section 14 and <code>docs/plan/decisions.json</code>: the work packages, releases R0 to R7, and the 76 owner decisions as data.</li>
 <li>GitHub: epic <code>jadero.dev v2</code>, one issue per WP (#8 to #64), milestones R0 to R7, the Project board. The issue is the task; the PR closes it.</li>
 <li><code>AGENTS.md</code> (imported by <code>CLAUDE.md</code>): the rules every agent reads. <code>.claude/rules/*.md</code> add path-scoped detail.</li>
-<li><code>docs/learning/wp-NN.md</code>: the explainer and the recorded decision for each learning WP.</li>
+<li><code>docs/learning/wp-N.md</code>: the explainer and the recorded decision for each learning WP.</li>
 </ol>
 
 <h2 id="stages">The ten stages of one work package</h2>
@@ -189,7 +189,7 @@ a { color: var(--accent); }
 <div class="tablewrap"><table>
 <tr><th>Firstmate concept</th><th>In this repo</th><th>Keep or replace</th></tr>
 <tr><td>Plan</td><td><code>/wp NN</code> step list, plus the issue's acceptance criteria</td><td>Either; the step list must end in commits with green <code>pnpm verify</code></td></tr>
-<tr><td>Approve</td><td>The owner's recorded decision in <code>docs/learning/wp-NN.md</code></td><td>Keep: the hook reads this file</td></tr>
+<tr><td>Approve</td><td>The owner's recorded decision in <code>docs/learning/wp-N.md</code></td><td>Keep: the hook reads this file</td></tr>
 <tr><td>Implement (per task)</td><td>One step of the list; the step log in the explainer</td><td>Firstmate implementers can run it; they read <code>AGENTS.md</code> and the rules files</td></tr>
 <tr><td>Review gate</td><td><code>@agent-reviewer</code> checklist in <code>.claude/agents/reviewer.md</code></td><td>Either; the checklist is plain Markdown and can be fed to the framework's reviewer</td></tr>
 <tr><td>MR</td><td>GitHub PR with <code>Closes #</code>, squash merge, release-please</td><td>Keep: GitHub, not GitLab, for this repo</td></tr>

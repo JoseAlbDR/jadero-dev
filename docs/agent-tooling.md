@@ -11,7 +11,7 @@ What Claude Code (or any agent that reads `AGENTS.md`) finds here, why each piec
 | `CLAUDE.local.md`, `.claude/settings.local.json` | Personal overrides, gitignored. | Always, by the person who has them |
 | `.claude/rules/*.md` | Path-scoped rules with a `paths:` front matter: services, Nest, AI and agent, testing, infra, frontend, docs. Each restates the ADRs that apply to those files. | Only when the agent reads or edits a matching file |
 | `.claude/settings.json` | Permissions (the usual dev commands pre-approved; `.env` files denied), fake providers as default env, three hooks. | Session start |
-| `.claude/hooks/learning-gate.sh` | PreToolUse on Edit/Write: on a `wp/NN-*` branch, a file under a learning path may change only when `docs/learning/wp-NN.md` says `decision: recorded` (or `fast_path: known`, D-38). Exit 2 denies with the reason. The one mechanism that enforces the learning requirement. | Every edit |
+| `.claude/hooks/learning-gate.sh` | PreToolUse on Edit/Write: on a `wp/NN-*` branch, a file under a learning path may change only when `docs/learning/wp-N.md` says `decision: recorded` (or `fast_path: known`, D-38). Exit 2 denies with the reason. The one mechanism that enforces the learning requirement. | Every edit |
 | `.claude/hooks/format.sh` | PostToolUse on Edit/Write: Biome format of the touched file once the repo has Biome (WP-1). Never fails. | Every edit |
 | `.claude/hooks/session-start.sh` | SessionStart: prints branch, where the decisions are, and the WP's gate status. | Session start |
 | `.claude/skills/adr` | `/adr <title>`: new ADR from the template, or supersede one; regenerates the index. | On demand |
@@ -48,7 +48,7 @@ One work package moves through ten stages. The owner moves cards to Ready and In
 |---|---|---|---|
 | 1 | Ready on the board: dependencies closed, acceptance written, ADRs accepted | Owner | Card in Ready |
 | 2 | `/wp NN` | Agent | Branch `wp/NN-slug`, step list, definition of done; stops for the go |
-| 3 | `/learn-step NN` (learning WPs) | Agent writes, owner reads | `docs/learning/wp-NN.md`, self-contained, all questions in one message, `decision: pending`; the gate is closed |
+| 3 | `/learn-step NN` (learning WPs) | Agent writes, owner reads | `docs/learning/wp-N.md`, self-contained, all questions in one message, `decision: pending`; the gate is closed |
 | 4 | Decision | Owner | `decision: recorded` with the ADR link; `/adr` first if an ADR changes |
 | 5 | Implement one step at a time (step contract, `AGENTS.md` section 5) | Agent in the main session | Per step: ADR lines named first, green `pnpm verify`, privacy check, step log from the diff, one check question on learning steps, one scoped commit; a mid-WP review for size M or larger |
 | 6 | Map and docs (last step) | Agent | `docs/architecture/code-map.html` data and the docs the WP changed; artifacts republished when the session can |

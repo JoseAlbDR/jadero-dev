@@ -85,7 +85,7 @@ input[type="checkbox"] { accent-color: var(--accent); margin-right: 6px; }
 <h3>Gates in order, and why the learning comes before the merge</h3>
 <p>The decision gate is before any code: the hook refuses edits under a learning path until the explainer says <code>decision: recorded</code>. The explain-back gate is before the merge: the issue's acceptance list has "Explained back by the owner", and the Recap lands in the same PR, so the merged history shows the code and what you understood of it together. If a Recap is ever missed, it lands after the merge as a <code>docs(learning)</code> commit.</p>
 <h3>Why branches are called <code>wp/</code></h3>
-<p>Versions never come from branch names. With squash merges, the PR title becomes the one commit on <code>main</code>; release-please reads its type (<code>feat</code> minor, <code>fix</code> patch, <code>!</code> major) to version each service. The <code>wp/NN-slug</code> name ties the branch to its issue and lets the learning gate hook find <code>docs/learning/wp-NN.md</code>. Work outside a WP uses <code>chore/</code>, <code>fix/</code> or <code>docs/</code>.</p>
+<p>Versions never come from branch names. With squash merges, the PR title becomes the one commit on <code>main</code>; release-please reads its type (<code>feat</code> minor, <code>fix</code> patch, <code>!</code> major) to version each service. The <code>wp/NN-slug</code> name ties the branch to its issue and lets the learning gate hook find <code>docs/learning/wp-N.md</code>. Work outside a WP uses <code>chore/</code>, <code>fix/</code> or <code>docs/</code>.</p>
 
 <h2 id="session">What a session looks like</h2>
 <p>A WP is a conversation in Claude Code inside the repo; the files are what the conversation leaves behind. The shape, with WP-3 as the example:</p>
@@ -115,7 +115,7 @@ WP-3 explainer: docs/learning/wp-3.md (decision: pending).</span>
 <tr><th>When</th><th>You</th><th>Agent</th><th>Board</th></tr>
 <tr><td>Start</td><td><code>git switch main &amp;&amp; git pull</code>; pick the Ready card or move one there</td><td></td><td>Ready</td></tr>
 <tr><td>Open the WP</td><td><code>/wp NN</code>; read the step list; say go or edit it</td><td>Checks dependencies and the gate, creates <code>wp/NN-slug</code>, proposes steps, stops</td><td>In progress (you move it)</td></tr>
-<tr><td>Learn</td><td>Read <code>docs/learning/wp-NN.md</code>; ask; answer the question</td><td><code>/learn-step NN</code> writes it and stops; records your decision</td><td></td></tr>
+<tr><td>Learn</td><td>Read <code>docs/learning/wp-N.md</code>; ask; answer the question</td><td><code>/learn-step NN</code> writes it and stops; records your decision</td><td></td></tr>
 <tr><td>Build</td><td>One step at a time; answer the one-line check question; stop and ask whenever something is not mechanical yet</td><td>Names files and ADR lines first, writes, <code>pnpm verify</code>, privacy check, two step-log lines from the diff, one check question, one scoped commit; a mid-WP review for M or larger</td><td></td></tr>
 <tr><td>Review</td><td>Explain the design back; review the PR on GitHub</td><td>Opens the PR with <code>Closes #</code>; runs <code>@agent-reviewer</code>; fixes; records Recap gaps</td><td>In review (automatic)</td></tr>
 <tr><td>Close</td><td>Squash merge; later deploy and journal</td><td></td><td>Done (automatic)</td></tr>
