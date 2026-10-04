@@ -10,6 +10,7 @@ Personal site of the owner: a multilingual (es, en, de) portfolio with an ask-me
 - `docs/learning/`: one explainer per learning WP (the learning gate, section 5).
 - `docs/sessions.md`: how a Claude Code session (cloud or local) runs a work package, and the prompts to start the next WP (backend or frontend), resume one or do a chore.
 - `docs/architecture/code-map.html`: the interactive map of the code (apps, packages, modules, what is injected where, boot and request paths). Updated by every WP that changes them, and by every new event (event catalog and flow graph in its messaging section); also published as an artifact.
+- `docs/artifacts.md`: every published artifact, its source file and when it is republished; a session that changes a source republishes its artifact.
 - GitHub Issues: the epic `jadero.dev v2`, one sub-issue per WP, milestones R0 to R7, Project board (ADR-041). The issue is the task; the PR closes it.
 
 Status today: the repo foundation (WP-1), the service platform (WP-3: `packages/platform-nest`, the `apps/api` skeleton, the module template in `templates/nest-module/`) the web skeleton (WP-4: `apps/web` with next-intl and the theme toggle, `packages/ui` with the tokens and the shadcn base) and the messaging foundation (WP-5: `packages/contracts`, `packages/messaging` with the outbox, relay, inbox and RabbitMQ topology, `api-worker`, the `apps/agent` skeleton; a `system.ping.v1` event crosses the broker with one trace) are in place. Each app may carry its own `AGENTS.md` (`apps/api/AGENTS.md`, `apps/agent/AGENTS.md`, `apps/web/AGENTS.md`).
@@ -90,7 +91,7 @@ Frontend WPs (`apps/web`, `apps/admin`, `packages/ui`) skip the gate: build to t
 - Never point dev or tests at a real AI or mail provider unless the owner asks; `AI_*_PROVIDER=fake` is the default.
 - Every agent tool is read-only and ships with adversarial eval cases; a prompt change requires an eval run (ADR-019, ADR-020).
 - Agents never push to `main`, never run deploy scripts, never ssh to the server, never touch production data.
-- Content rules (ADR-031): nothing about the owner's employer beyond approved, public-level text; no client names, internal systems, ticket keys, hashes or uncleared numbers, in code, fixtures, issues or PRs. The repo becomes public.
+- Content rules (ADR-031): naming the owner's employer and the owner's work there is fine; never its proprietary code or configuration, client names, internal system names beyond what is public, ticket keys, hashes, uncleared numbers, personal data or secrets, in code, fixtures, docs, issues or PRs. The repo becomes public.
 
 ## 8. How-tos
 

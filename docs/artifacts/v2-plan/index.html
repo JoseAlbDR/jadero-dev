@@ -1,0 +1,323 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>jadero.dev v2 Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single reading column of decision cards, a sticky progress bar, area chips as filters. */
+:root {
+  --bg: #f6f7f4; --surface: #ffffff; --fg: #1d2420; --muted: #5d6862; --line: #dfe3dd;
+  --accent: #2f6f5e; --accent-soft: #e3efe9; --rec: #8a5a12; --rec-soft: #f6ecd9;
+  --flag: #a3322b; --flag-soft: #f7e3e1; --chosen: #2f6f5e;
+  --display: "Fraunces", Georgia, serif; --body: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141917; --surface: #1c2320; --fg: #e4ebe6; --muted: #9aa8a0; --line: #2e3833;
+  --accent: #7cc4ad; --accent-soft: #203a32; --rec: #e3b465; --rec-soft: #3a2f1c;
+  --flag: #f0918a; --flag-soft: #3d2120; --chosen: #7cc4ad; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #141917; --surface: #1c2320; --fg: #e4ebe6; --muted: #9aa8a0; --line: #2e3833;
+  --accent: #7cc4ad; --accent-soft: #203a32; --rec: #e3b465; --rec-soft: #3a2f1c;
+  --flag: #f0918a; --flag-soft: #3d2120; --chosen: #7cc4ad; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--body); padding: 0 16px; }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 28px 80px; display: grid; gap: 22px; }
+h1 { font: 650 clamp(28px, 5vw, 40px)/1.1 var(--display); margin: 0; text-wrap: balance; }
+h2 { font: 600 22px/1.25 var(--display); margin: 0; text-wrap: balance; }
+h3 { font: 600 17px/1.35 var(--body); margin: 0; text-wrap: balance; }
+p { margin: 0; }
+.lede { color: var(--muted); max-width: 68ch; }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 10px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 18px; font: 500 13px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.stats b { color: var(--fg); }
+.meter { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 500 12.5px var(--body); border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 999px; padding: 4px 11px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.notice { font-size: 13px; color: var(--muted); border-left: 3px solid var(--rec); padding: 6px 10px; background: var(--rec-soft); }
+.area { display: grid; gap: 14px; scroll-margin-top: 120px; }
+.area > .intro { color: var(--muted); max-width: 70ch; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 12px; min-width: 0; }
+.card.flagged { border-color: var(--flag); }
+.head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.id { font: 500 12px var(--mono); color: var(--muted); }
+.tag { font: 500 11.5px var(--mono); padding: 1px 7px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); }
+.q { font-weight: 500; }
+.ctx { color: var(--fg); max-width: 72ch; }
+.opts { display: grid; gap: 8px; }
+.opt { text-align: left; font: inherit; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; cursor: pointer; display: grid; gap: 4px; min-width: 0; }
+.opt:hover { border-color: var(--muted); }
+.opt[aria-pressed="true"] { border-color: var(--chosen); box-shadow: inset 0 0 0 1px var(--chosen); background: var(--accent-soft); }
+.opt .l { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-weight: 600; }
+.opt .rec { font: 500 11px var(--mono); color: var(--rec); background: var(--rec-soft); padding: 1px 6px; border-radius: 4px; }
+.opt .d { color: var(--muted); font-size: 14px; }
+.pc { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; font-size: 13.5px; }
+.pc ul { margin: 0; padding-left: 16px; } .pc .h { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+@media (max-width: 560px) { .pc { grid-template-columns: 1fr; } }
+details { border-top: 1px dashed var(--line); padding-top: 8px; }
+summary { cursor: pointer; font-weight: 500; color: var(--accent); }
+details p { margin-top: 6px; max-width: 72ch; }
+.learn { font-size: 13.5px; color: var(--muted); }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.flagbtn { font: 500 13px var(--body); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; background: transparent; color: var(--fg); cursor: pointer; }
+.flagbtn[aria-pressed="true"] { border-color: var(--flag); color: var(--flag); background: var(--flag-soft); }
+textarea { width: 100%; font: 14px/1.5 var(--body); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; resize: vertical; min-height: 44px; }
+textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.saved { font: 12px var(--mono); color: var(--muted); }
+.quote { border-left: 3px solid var(--line); padding: 4px 12px; white-space: pre-wrap; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 11.5px var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.empty { color: var(--muted); }
+.st { display: grid; gap: 4px; border-left: 3px solid var(--rec); background: var(--rec-soft); padding: 8px 12px; border-radius: 0 6px 6px 0; font-size: 14px; max-width: 72ch; }
+.st.open { border-color: var(--flag); background: var(--flag-soft); }
+.md { max-width: 76ch; font-size: 14.5px; } .md p, .md ul, .md ol { margin: 6px 0; } .md ul, .md ol { padding-left: 20px; } .md code { font: 13px var(--mono); background: var(--accent-soft); padding: 0 4px; border-radius: 3px; } .md h3 { font-size: 16px; margin: 4px 0; } .md table { margin: 6px 0; }
+.rv { display: grid; gap: 14px; } .rv .item { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 6px; }
+.rv .item.open { border-left: 3px solid var(--flag); } .arrow { font: 500 13px var(--mono); }
+.jump { font: 500 12.5px var(--mono); color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; justify-self: start; }
+.mine { border-left: 3px solid var(--chosen); padding: 4px 10px; white-space: pre-wrap; font-size: 14px; }
+.st .h { font: 500 11.5px var(--mono); text-transform: uppercase; letter-spacing: .05em; }
+@media (prefers-reduced-motion: reduce) { .meter i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <h1 id="title">Loading review</h1>
+    <p class="lede" id="summary">The review items load from this page's data file.</p>
+  </header>
+  <div class="bar">
+    <div class="stats" id="stats"></div>
+    <div class="meter"><i id="meter"></i></div>
+    <div class="chips" id="chips" role="toolbar" aria-label="Filter"></div>
+  </div>
+  <p class="notice" id="notice" hidden></p>
+  <main id="list" style="display:grid;gap:34px"></main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.4/purify.min.js"></script>
+<script>
+(function () {
+  const state = { data: null, marks: {}, filter: 'all', db: null };
+  const LS = 'review-marks';
+  const $ = (s) => document.querySelector(s);
+  const el = (t, a = {}, ...kids) => { const n = document.createElement(t); for (const [k, v] of Object.entries(a)) { if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else n.setAttribute(k, v); } for (const c of kids) if (c != null) n.append(c); return n; };
+
+  function lsLoad() { try { return JSON.parse(localStorage.getItem(LS) || '{}'); } catch (e) { return {}; } }
+  function lsSave() { try { localStorage.setItem(LS, JSON.stringify(state.marks)); } catch (e) {} }
+
+  const pending = {};
+  async function save(id, patch) {
+    const next = Object.assign({}, state.marks[id] || {}, patch, { at: new Date().toISOString() });
+    state.marks[id] = next; lsSave(); stats();
+    if (!state.db) return;
+    if (pending[id]) { pending[id].next = next; return; }
+    pending[id] = { next };
+    try {
+      while (pending[id].next) { const body = pending[id].next; pending[id].next = null; await state.db.collection('marks').doc(id).set(body); }
+      const s = document.getElementById('saved-' + id); if (s) s.textContent = 'saved';
+    } catch (e) { $('#notice').hidden = false; $('#notice').textContent = 'Saving failed (' + (e && e.code || 'error') + '). Your marks are kept in this browser; try again later.'; }
+    finally { delete pending[id]; }
+  }
+
+  function items() { return state.data.decisions || []; }
+  function stats() {
+    const all = items(); const decided = all.filter(d => state.marks[d.id] && state.marks[d.id].choice).length;
+    const flagged = Object.entries(state.marks).filter(([, m]) => m.detail).length;
+    const noted = Object.values(state.marks).filter(m => m.note && m.note.trim()).length;
+    $('#stats').replaceChildren(
+      el('span', {}, el('b', { text: decided + '/' + all.length }), ' decided'),
+      el('span', {}, el('b', { text: String(flagged) }), ' need more detail'),
+      el('span', {}, el('b', { text: String(noted) }), ' with notes'));
+    $('#meter').style.width = all.length ? (100 * decided / all.length) + '%' : '0';
+  }
+
+  function chips() {
+    const areas = state.data.areas || [];
+    const list = [...(state.data.review ? [{ id: 'review', name: 'Review result' }] : []), { id: 'all', name: 'All' }, ...areas, { id: 'flagged', name: 'Need detail' }, { id: 'open', name: 'Undecided' }];
+    if (items().some(d => d.status)) list.push({ id: 'still-open', name: 'Still open after review' });
+    if (state.data.review && state.data.review.fullMd) list.push({ id: 'fudoc', name: 'Follow-ups document' });
+    if ((state.data.workPackages || []).length) list.push({ id: 'wps', name: 'Work packages' });
+    if ((state.data.manualActions || []).length) list.push({ id: 'manual', name: 'Your manual tasks' });
+    $('#chips').replaceChildren(...list.map(a => { const b = el('button', { class: 'chip', type: 'button', 'aria-pressed': String(state.filter === a.id), text: a.name }); b.onclick = () => { state.filter = a.id; chips(); render(); }; return b; }));
+  }
+
+  function flagBtn(id) {
+    const m = state.marks[id] || {};
+    const b = el('button', { class: 'flagbtn', type: 'button', 'aria-pressed': String(!!m.detail), text: m.detail ? 'Marked: need more detail' : 'Need more detail' });
+    b.onclick = () => { save(id, { detail: !(state.marks[id] || {}).detail }); render(); };
+    return b;
+  }
+  function noteBox(id, placeholder) {
+    const m = state.marks[id] || {};
+    const t = el('textarea', { id: 'note-' + id, rows: '2', placeholder });
+    t.value = m.note || '';
+    let timer; t.oninput = () => { clearTimeout(timer); timer = setTimeout(() => save(id, { note: t.value }), 700); };
+    t.onblur = () => { clearTimeout(timer); if ((state.marks[id] || {}).note !== t.value) save(id, { note: t.value }); };
+    return t;
+  }
+
+  function decisionCard(d) {
+    const m = state.marks[d.id] || {};
+    const card = el('article', { class: 'card' + (m.detail ? ' flagged' : ''), id: 'item-' + d.id });
+    card.append(el('div', { class: 'head' }, el('span', { class: 'id', text: d.id }), el('h3', { text: d.title }), d.adr ? el('span', { class: 'tag', text: d.adr }) : null));
+    if (d.question) card.append(el('p', { class: 'q', text: d.question }));
+    if (d.status) {
+      const labels = { 'decided': 'Decided', 'decided-with-change': 'Decided, with a change from your note', 'open': 'Still open' + (d.followup ? ' (' + d.followup + ' in the follow-ups)' : '') };
+      const st = el('div', { class: 'st' + (d.status === 'open' ? ' open' : '') }, el('span', { class: 'h', text: labels[d.status] || d.status }));
+      if (d.decidedOption) st.append(el('span', { text: 'Outcome: option (' + d.decidedOption + ')' }));
+      if (d.change) st.append(el('span', {}, el('b', { text: 'Change: ' }), d.change));
+      if (d.openQuestion) st.append(el('span', {}, el('b', { text: 'Pending question: ' }), d.openQuestion));
+      if (d.previousRecommendation && d.previousRecommendation !== d.recommendation) st.append(el('span', { text: 'The recommendation moved from (' + d.previousRecommendation + ') to (' + d.recommendation + ') after your note.' }));
+      card.append(st);
+    }
+    if (d.quote) card.append(el('p', { class: 'quote', text: d.quote }));
+    if (d.context) card.append(el('p', { class: 'ctx', text: d.context }));
+    const opts = el('div', { class: 'opts' });
+    for (const o of d.options || []) {
+      const b = el('button', { class: 'opt', type: 'button', 'aria-pressed': String(m.choice === o.id) });
+      b.append(el('span', { class: 'l' }, el('span', { text: '(' + o.id + ') ' + o.label }), d.recommendation === o.id ? el('span', { class: 'rec', text: 'recommended' }) : null));
+      if (o.description) b.append(el('span', { class: 'd', text: o.description }));
+      if ((o.pros || []).length || (o.cons || []).length) {
+        const pc = el('span', { class: 'pc' });
+        pc.append(el('span', {}, el('span', { class: 'h', text: 'Pros' }), el('ul', {}, ...(o.pros || []).map(x => el('li', { text: x })))));
+        pc.append(el('span', {}, el('span', { class: 'h', text: 'Cons' }), el('ul', {}, ...(o.cons || []).map(x => el('li', { text: x })))));
+        b.append(pc);
+      }
+      b.onclick = () => { save(d.id, { choice: (state.marks[d.id] || {}).choice === o.id ? null : o.id }); render(); };
+      opts.append(b);
+    }
+    card.append(opts);
+    if (d.editable && m.choice === 'edit') {
+      const t = el('textarea', { id: 'edit-' + d.id, rows: '3', placeholder: 'Your corrected wording' });
+      t.value = m.edit != null ? m.edit : (d.quote || '');
+      t.onblur = () => { if ((state.marks[d.id] || {}).edit !== t.value) save(d.id, { edit: t.value }); };
+      card.append(t);
+    }
+    { const R = state.data.review || {}; const a = (R.answers || {})[d.id] || (R.changes || {})[d.id] || (R.recorded || {})[d.id];
+      const fu = d.followup && (R.followupItems || {})[d.followup];
+      if (fu) card.append(el('details', {}, el('summary', { text: 'Follow-up ' + d.followup + ': the conflict and the recommendation' }), mdNode(fu.md)));
+      else if (a) card.append(el('details', {}, el('summary', { text: 'Answer to your note' }), mdNode(a))); }
+    if (d.why) card.append(el('details', {}, el('summary', { text: 'Why this recommendation, and what was discarded' }), el('p', { text: d.why })));
+    if (d.learn) card.append(el('p', { class: 'learn' }, el('b', { text: 'You learn: ' }), d.learn));
+    card.append(el('div', { class: 'ctl' }, flagBtn(d.id), el('span', { class: 'saved', id: 'saved-' + d.id })));
+    card.append(noteBox(d.id, 'Notes or questions for this item (what is unclear, what you want explained)'));
+    return card;
+  }
+
+
+  function mdNode(text) {
+    const n = el('div', { class: 'md' });
+    if (window.marked && window.DOMPurify) n.innerHTML = DOMPurify.sanitize(marked.parse(text || ''));
+    else n.append(el('p', { class: 'quote', text: text || '' }));
+    return n;
+  }
+  function byId(id) { return items().find(x => x.id === id); }
+  function optName(d, id) { if (!id) return 'none'; const o = (d.options || []).find(x => x.id === id); return '(' + id + ') ' + (o ? o.label : ''); }
+  function jump(id) { const b = el('button', { class: 'jump', type: 'button', text: 'Open ' + id + ' card' }); b.onclick = () => { state.filter = 'all'; chips(); render(); const t = document.getElementById('item-' + id); if (t) t.scrollIntoView({ block: 'start' }); }; return b; }
+  function sec(title, intro) { const s = el('section', { class: 'area rv' }, el('h2', { text: title })); if (intro) s.append(el('p', { class: 'intro', text: intro })); return s; }
+  function reviewView(list) {
+    const R = state.data.review; const all = items(); const c = R.counts || {};
+    const top = sec('Review result (' + R.date + ')', c.decided + ' decided as you marked them, ' + c['decided-with-change'] + ' decided with a change from your note, ' + c.open + ' still open. Each section below links to the full decision card.');
+    list.append(top);
+    const deps = sec('Blockers and order');
+    deps.append(el('ul', {}, ...(R.dependencies || []).map(x => el('li', { text: x })))); list.append(deps);
+    const open = all.filter(d => d.status === 'open');
+    const s1 = sec('1. Waiting on you (' + open.length + ')', 'Your pick, the question still open, and the recommendation. Expand an item for the full analysis.');
+    const fuOrder = Object.keys(R.followupItems || {}).sort((a, b) => +a.slice(2) - +b.slice(2));
+    for (const f of fuOrder) {
+      const it = R.followupItems[f]; const d = byId(it.decision); if (!d) continue; const m = state.marks[d.id] || {};
+      const box = el('div', { class: 'item open' }, el('div', { class: 'head' }, el('span', { class: 'id', text: f + ' · ' + d.id }), el('h3', { text: d.title })));
+      box.append(el('span', { class: 'arrow', text: 'You picked ' + optName(d, m.choice || d.ownerPick) + '  ·  recommended now ' + optName(d, d.recommendation) }));
+      if (d.openQuestion) box.append(el('p', { class: 'q', text: d.openQuestion }));
+      box.append(el('details', {}, el('summary', { text: 'Full analysis and your note' }), mdNode(it.md)));
+      box.append(jump(d.id)); s1.append(box);
+    }
+    list.append(s1);
+    const ch = all.filter(d => d.status === 'decided-with-change');
+    const s2 = sec('2. Changed by your note (' + ch.length + ')', 'Your pick stands; your note added something to it. Please check each one.');
+    for (const d of ch) {
+      const m = state.marks[d.id] || {};
+      const box = el('div', { class: 'item' }, el('div', { class: 'head' }, el('span', { class: 'id', text: d.id }), el('h3', { text: d.title })));
+      box.append(el('span', { class: 'arrow', text: 'You picked ' + optName(d, m.choice) + '  →  outcome ' + optName(d, d.decidedOption) + ' plus the change below' }));
+      if (d.change) box.append(el('p', {}, el('b', { text: 'Change: ' }), d.change));
+      const a = (R.changes || {})[d.id]; if (a) box.append(el('details', {}, el('summary', { text: 'Full explanation' }), mdNode(a)));
+      box.append(jump(d.id)); s2.append(box);
+    }
+    list.append(s2);
+    const mv = all.filter(d => d.previousRecommendation && d.previousRecommendation !== d.recommendation);
+    const s3 = sec('3. Recommendation moved because of your note (' + mv.length + ')', 'All of these are in section 1; this is the from-to view.');
+    const tb = el('tbody');
+    for (const d of mv) { const m = state.marks[d.id] || {}; const tr = el('tr', {}, el('td', { text: d.id + ' ' + d.title }), el('td', { text: optName(d, m.choice) }), el('td', { text: optName(d, d.previousRecommendation) + '  →  ' + optName(d, d.recommendation) })); const td = el('td'); td.append(jump(d.id)); tr.append(td); tb.append(tr); }
+    s3.append(el('div', { class: 'tablewrap' }, el('table', {}, el('thead', {}, el('tr', {}, el('th', { text: 'Decision' }), el('th', { text: 'Your pick' }), el('th', { text: 'Recommendation was → now' }), el('th', { text: '' }))), tb)));
+    list.append(s3);
+    const noted = all.filter(d => (state.marks[d.id] || {}).note && state.marks[d.id].note.trim());
+    const s4 = sec('4. Your notes and their answers (' + noted.length + ')', 'Every note you wrote, with where it was answered.');
+    for (const d of noted) {
+      const a = (R.answers || {})[d.id] || (R.changes || {})[d.id] || (R.recorded || {})[d.id] || (d.followup && (R.followupItems || {})[d.followup] || {}).md;
+      const where = (R.answers || {})[d.id] ? 'Answered' : (R.changes || {})[d.id] ? 'Applied as a change' : (R.recorded || {})[d.id] ? 'Recorded, no action needed' : d.followup ? 'Open, see ' + d.followup : 'Recorded with the decision';
+      const box = el('div', { class: 'item' + (d.status === 'open' ? ' open' : '') }, el('div', { class: 'head' }, el('span', { class: 'id', text: d.id }), el('h3', { text: d.title }), el('span', { class: 'tag', text: where })));
+      box.append(el('p', { class: 'mine', text: state.marks[d.id].note }));
+      if (a) box.append(el('details', {}, el('summary', { text: 'Answer' }), mdNode(a)));
+      box.append(jump(d.id)); s4.append(box);
+    }
+    list.append(s4);
+    const s5 = sec('5. Plan changes from the review'); s5.append(el('ul', {}, ...(R.planChanges || []).map(x => el('li', { text: x })))); list.append(s5);
+    if (R.firstmate) { const s6 = sec('6. Requests for firstmate'); s6.append(mdNode(R.firstmate)); list.append(s6); }
+  }
+
+  function tableSection(title, rows, cols, idKey) {
+    const sec = el('section', { class: 'area' }, el('h2', { text: title }));
+    const tb = el('tbody');
+    for (const r of rows) {
+      const tr = el('tr');
+      for (const c of cols) { const v = r[c.k]; tr.append(el('td', { text: Array.isArray(v) ? v.join(', ') : (v == null ? '' : String(v)) })); }
+      const td = el('td'); td.append(flagBtn(r[idKey])); tr.append(td); tb.append(tr);
+    }
+    sec.append(el('div', { class: 'tablewrap' }, el('table', {}, el('thead', {}, el('tr', {}, ...cols.map(c => el('th', { text: c.h })), el('th', { text: '' }))), tb)));
+    return sec;
+  }
+
+  function render() {
+    const list = $('#list'); list.replaceChildren();
+    const f = state.filter; const areas = state.data.areas || [];
+    if (f === 'review') { reviewView(list); return; }
+    if (f === 'fudoc') { const s = sec('Follow-ups document'); s.append(mdNode(state.data.review.fullMd)); list.append(s); return; }
+    if (f === 'wps') { list.append(tableSection('Work packages', state.data.workPackages, [{ k: 'id', h: 'WP' }, { k: 'milestone', h: 'Milestone' }, { k: 'title', h: 'Title' }, { k: 'tag', h: 'Tag' }, { k: 'size', h: 'Size' }, { k: 'dependsOn', h: 'After' }, { k: 'deliverable', h: 'Deliverable' }, { k: 'learns', h: 'You learn' }], 'id')); return; }
+    if (f === 'manual') { list.append(tableSection('Your manual tasks', state.data.manualActions, [{ k: 'what', h: 'What' }, { k: 'when', h: 'When' }, { k: 'why', h: 'Why' }], 'id')); return; }
+    const pick = (d) => f === 'all' || d.area === f || (f === 'flagged' && (state.marks[d.id] || {}).detail) || (f === 'open' && !(state.marks[d.id] || {}).choice) || (f === 'still-open' && d.status === 'open');
+    let shown = 0;
+    for (const a of areas) {
+      const ds = items().filter(d => d.area === a.id && pick(d)); if (!ds.length) continue; shown += ds.length;
+      const sec = el('section', { class: 'area', id: 'area-' + a.id }, el('h2', { text: a.name }));
+      if (a.intro) sec.append(el('p', { class: 'intro', text: a.intro }));
+      for (const d of ds) sec.append(decisionCard(d));
+      sec.append(el('div', { class: 'ctl' }, flagBtn('area:' + a.id), el('span', { class: 'saved', text: 'for the whole section' })));
+      list.append(sec);
+    }
+    if (!shown) list.append(el('p', { class: 'empty', text: f === 'flagged' ? 'Nothing marked for more detail yet. Use "Need more detail" on any item.' : 'Nothing here: every item in this view is decided.' }));
+  }
+
+  async function boot() {
+    try { const r = await fetch('data.json'); state.data = await r.json(); }
+    catch (e) { $('#summary').textContent = 'The review data could not load. Reload the page.'; return; }
+    document.title = state.data.title || document.title;
+    $('#title').textContent = state.data.title; $('#summary').textContent = state.data.summary || '';
+    if (state.data.review) state.filter = 'review';
+    state.marks = lsLoad(); chips(); stats(); render();
+    const db = window.claude && window.claude.use ? await window.claude.use('db') : null;
+    if (!db) { $('#notice').hidden = false; $('#notice').textContent = 'Shared saving is unavailable in this view, so your marks stay in this browser only.'; return; }
+    state.db = db;
+    db.collection('marks').onSnapshot((qs) => {
+      const fresh = {}; for (const d of qs.docs) fresh[d.id] = d.data();
+      const focused = document.activeElement && document.activeElement.tagName === 'TEXTAREA';
+      state.marks = Object.assign({}, state.marks, fresh); lsSave(); stats();
+      if (!focused) render();
+    }, (e) => { $('#notice').hidden = false; $('#notice').textContent = 'Live sync stopped (' + (e && e.code || 'error') + '). Reload to reconnect.'; });
+  }
+  boot();
+})();
+</script>
+
+</body></html>

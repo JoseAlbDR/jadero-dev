@@ -1,0 +1,179 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>jadero.dev Design Directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: a contact sheet. One band per direction, desktop frame beside a phone frame, a light/dark switch per band. */
+  :root {
+    --bg: oklch(0.975 0.004 250);
+    --fg: oklch(0.22 0.01 250);
+    --muted: oklch(0.47 0.012 250);
+    --line: oklch(0.88 0.006 250);
+    --frame: oklch(1 0 0);
+    --accent: oklch(0.48 0.12 250);
+    --font-body: "Geist", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "Geist Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: oklch(0.17 0.008 250); --fg: oklch(0.94 0.006 250); --muted: oklch(0.72 0.01 250);
+      --line: oklch(1 0 0 / 12%); --frame: oklch(0.21 0.01 250); --accent: oklch(0.78 0.1 250);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: oklch(0.17 0.008 250); --fg: oklch(0.94 0.006 250); --muted: oklch(0.72 0.01 250);
+    --line: oklch(1 0 0 / 12%); --frame: oklch(0.21 0.01 250); --accent: oklch(0.78 0.1 250);
+    color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--font-body); }
+  .wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 64px; }
+  .eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.1; letter-spacing: -0.02em; margin: 10px 0 12px; text-wrap: balance; }
+  .lead { max-width: 68ch; color: var(--muted); margin: 0; }
+  .lead strong { color: var(--fg); font-weight: 500; }
+  section { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 24px; }
+  .head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px 24px; }
+  h2 { font-size: 22px; letter-spacing: -0.01em; margin: 6px 0 4px; }
+  .head p { margin: 0; max-width: 70ch; color: var(--muted); min-width: 0; }
+  .tag { display: inline-block; margin-left: 8px; font: 500 11px/1 var(--font-mono); padding: 4px 6px; border: 1px solid var(--accent); color: var(--accent); border-radius: 4px; vertical-align: middle; letter-spacing: 0.04em; }
+  .switch { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .switch button { font: 500 12px/1 var(--font-mono); padding: 8px 12px; background: transparent; color: var(--muted); border: 0; cursor: pointer; }
+  .switch button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+  .switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .shots { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 20px; margin-top: 20px; align-items: start; }
+  figure { margin: 0; min-width: 0; }
+  figure img { display: block; width: 100%; border: 1px solid var(--line); border-radius: 8px; background: var(--frame); }
+  .phone img { max-height: 760px; object-fit: cover; object-position: top; }
+  figcaption { font: 12px/1.4 var(--font-mono); color: var(--muted); margin-top: 8px; }
+  .extra { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 20px; }
+  .ask { margin-top: 56px; border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; background: var(--frame); }
+  .ask h2 { margin-top: 0; }
+  .ask ol { margin: 10px 0 0; padding-left: 20px; }
+  .ask li + li { margin-top: 6px; }
+  @media (max-width: 760px) {
+    .shots, .extra { grid-template-columns: minmax(0, 1fr); }
+    .phone { max-width: 300px; }
+  }
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">WP-15 · issue #23 · PR #84</p>
+  <h1>Three hero directions for jadero.dev</h1>
+  <p class="lead">Throwaway mockups of the home hero, one per direction in ADR-023, with the placeholder lines from report section 2A, the eight proof pillars and the agent shown at rest. <strong>Pick one</strong> and the other two get deleted; the chosen tokens and fonts move into <code>packages/ui</code> in WP-16. All six variants pass axe (WCAG 2.2 AA) in light and dark, with contrast checked on every text node. The header keeps the default fonts in all three; only its colors follow the direction.</p>
+
+  <section data-dir="bento-agent">
+    <div class="head">
+      <div>
+        <p class="eyebrow">Option 5 <span class="tag">chosen · ADR-045</span></p>
+        <h2>Bento glass + agent terminal</h2>
+        <p>The direction picked: glass cards over a soft aurora, with the agent as a dark terminal card as large as the hero and right next to it, framed by a glowing accent, with the pillar strip right below. On phones the terminal comes right after the hero.</p>
+      </div>
+      <div class="switch" role="group" aria-label="Theme of the screenshots">
+        <button type="button" aria-pressed="true" data-mode="light">light</button><button type="button" aria-pressed="false" data-mode="dark">dark</button>
+      </div>
+    </div>
+    <div class="shots">
+      <figure><img alt="Bento with agent terminal, desktop" data-base="5-bento-agent-desktop" src="shots/5-bento-agent-desktop-light.png"><figcaption>desktop · 1440 px</figcaption></figure>
+      <figure class="phone"><img alt="Bento with agent terminal, phone" data-base="5-bento-agent-mobile" src="shots/5-bento-agent-mobile-light.png"><figcaption>phone · 390 px, top of the page</figcaption></figure>
+    </div>
+  </section>
+
+  <section data-dir="hybrid">
+    <div class="head">
+      <div>
+        <p class="eyebrow">Option 4 <span class="tag">superseded</span></p>
+        <h2>Swiss editorial + terminal block</h2>
+        <p>Your pick after the first round: Direction 2's serif headline, grid and terracotta accent, with Direction 1's full prompt card (input, suggested questions, resting note) beside the lead.</p>
+      </div>
+      <div class="switch" role="group" aria-label="Theme of the screenshots">
+        <button type="button" aria-pressed="true" data-mode="light">light</button><button type="button" aria-pressed="false" data-mode="dark">dark</button>
+      </div>
+    </div>
+    <div class="shots">
+      <figure><img alt="Hybrid, desktop" data-base="4-hybrid-desktop" src="shots/4-hybrid-desktop-light.png"><figcaption>desktop · 1440 px</figcaption></figure>
+      <figure class="phone"><img alt="Hybrid, phone" data-base="4-hybrid-mobile" src="shots/4-hybrid-mobile-light.png"><figcaption>phone · 390 px, top of the page</figcaption></figure>
+    </div>
+  </section>
+
+  <section data-dir="terminal">
+    <div class="head">
+      <div>
+        <p class="eyebrow">Direction 1</p>
+        <h2>Terminal editorial</h2>
+        <p>Geist with Geist Mono for labels and the prompt. Warm paper or near-black, one phosphor green accent, a faint dot grid. The command-palette prompt is the hero.</p>
+      </div>
+      <div class="switch" role="group" aria-label="Theme of the screenshots">
+        <button type="button" aria-pressed="true" data-mode="light">light</button><button type="button" aria-pressed="false" data-mode="dark">dark</button>
+      </div>
+    </div>
+    <div class="shots">
+      <figure><img alt="Terminal editorial, desktop" data-base="1-terminal-desktop" src="shots/1-terminal-desktop-light.png"><figcaption>desktop · 1440 px</figcaption></figure>
+      <figure class="phone"><img alt="Terminal editorial, phone" data-base="1-terminal-mobile" src="shots/1-terminal-mobile-light.png"><figcaption>phone · 390 px, top of the page</figcaption></figure>
+    </div>
+  </section>
+
+  <section data-dir="editorial">
+    <div class="head">
+      <div>
+        <p class="eyebrow">Direction 2</p>
+        <h2>Swiss editorial + terminal prompt</h2>
+        <p>Fraunces headline, Inter body, a 12-column grid, one muted terracotta accent. Direction 1's prompt sits beside the lead as the one signature element, which is what D-23 asks this WP to confirm. Pure Direction 2, with the agent in a side panel opened from the hero, is not drawn.</p>
+      </div>
+      <div class="switch" role="group" aria-label="Theme of the screenshots">
+        <button type="button" aria-pressed="true" data-mode="light">light</button><button type="button" aria-pressed="false" data-mode="dark">dark</button>
+      </div>
+    </div>
+    <div class="shots">
+      <figure><img alt="Swiss editorial, desktop" data-base="2-editorial-desktop" src="shots/2-editorial-desktop-light.png"><figcaption>desktop · 1440 px</figcaption></figure>
+      <figure class="phone"><img alt="Swiss editorial, phone" data-base="2-editorial-mobile" src="shots/2-editorial-mobile-light.png"><figcaption>phone · 390 px, top of the page</figcaption></figure>
+    </div>
+    <div class="extra">
+      <figure><img alt="Swiss editorial in Spanish" src="shots/2-editorial-desktop-light-es.png"><figcaption>/es, light</figcaption></figure>
+      <figure><img alt="Swiss editorial in German" src="shots/2-editorial-desktop-light-de.png"><figcaption>/de, light: the longest headline</figcaption></figure>
+    </div>
+  </section>
+
+  <section data-dir="bento">
+    <div class="head">
+      <div>
+        <p class="eyebrow">Direction 3</p>
+        <h2>Bento glass</h2>
+        <p>Glass cards over a soft aurora: hero, now, stack, the agent, a featured case study and the pillars. Large radii and a hover lift that only runs when motion is allowed. ADR-023 describes the aurora for dark mode; the light version is an addition.</p>
+      </div>
+      <div class="switch" role="group" aria-label="Theme of the screenshots">
+        <button type="button" aria-pressed="true" data-mode="light">light</button><button type="button" aria-pressed="false" data-mode="dark">dark</button>
+      </div>
+    </div>
+    <div class="shots">
+      <figure><img alt="Bento glass, desktop" data-base="3-bento-desktop" src="shots/3-bento-desktop-light.png"><figcaption>desktop · 1440 px</figcaption></figure>
+      <figure class="phone"><img alt="Bento glass, phone" data-base="3-bento-mobile" src="shots/3-bento-mobile-light.png"><figcaption>phone · 390 px, top of the page</figcaption></figure>
+    </div>
+  </section>
+
+  <div class="ask">
+    <h2>Your call</h2>
+    <ol>
+      <li>Which direction: 1, 2 or 3? A mix is fine too (for example 2 with Direction 1's dot grid).</li>
+      <li>The accent: keep it, or swap it (terracotta or ink blue for 2, green or amber for 1).</li>
+      <li>If 2: the prompt inline as drawn, or pure Direction 2 with the agent in a side panel.</li>
+    </ol>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll("section[data-dir]").forEach((section) => {
+    const buttons = section.querySelectorAll(".switch button");
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const mode = button.dataset.mode;
+        buttons.forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+        section.querySelectorAll("img[data-base]").forEach((img) => {
+          img.src = "shots/" + img.dataset.base + "-" + mode + ".png";
+        });
+      });
+    });
+  });
+</script>
+
+</body></html>
