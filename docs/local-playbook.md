@@ -101,7 +101,17 @@ The file is the textbook for this WP; the session is the teacher. You never read
 
 ## With firstmate
 
-Point the implementers at `AGENTS.md`. The mapping (plan, approve, implement, review, MR) is in `docs/agent-tooling.md`. Firstmate must honor the learning gate (read the explainer front matter before touching a learning path) and the ADR files (supersede, never edit). Security guardrails are firstmate's. Cloud sessions suit explainers, ADR drafts, tooling fixes and reviews; implementation of a learning WP belongs in the local session, with the owner present and Docker running.
+`docs/firstmate.md` has the mapping, the collision table and two prompts: one to check the fit before changing anything, one to start the next WP. Firstmate must honor the learning gate (read the explainer's front matter before touching a learning path), the ADR files (supersede, never edit) and GitHub delivery. Security guardrails are firstmate's.
+
+## Pages to keep current
+
+| Page | Source in the repo | Published copy | Update when |
+|---|---|---|---|
+| Code map | `docs/architecture/code-map.html` (JSON data block) | claude.ai artifact | every WP that adds an app, package, module, provider or changes the request path (last step of `/wp`) |
+| Delivery flow | `docs/process/delivery-flow.html` (mirrors `docs/agent-tooling.md`) | claude.ai artifact | the flow changes |
+| Local guide | `docs/process/local-guide.html` (mirrors this playbook) | claude.ai artifact | this playbook changes |
+
+A session that can publish artifacts republishes them; one that cannot edits the repo files, and the next session that can publishes them.
 
 ## Cheat sheet
 
