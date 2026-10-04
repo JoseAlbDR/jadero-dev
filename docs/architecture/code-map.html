@@ -1,0 +1,1529 @@
+<title>jadero.dev Code Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a drafting sheet. Five stacked sections, each one figure of the system; a detail panel slides in from the right (bottom sheet on phones). */
+:root {
+  --paper: #f2f4f3;
+  --sheet: #ffffff;
+  --ink: #17222a;
+  --muted: #56656e;
+  --line: #c4cfd4;
+  --grid: #e3e8ea;
+  --accent: #1b6784;
+  --accent-soft: #dcebf1;
+  --consume: #a8521c;
+  --consume-soft: #f6e6da;
+  --stop: #a83232;
+  --planned: #8b989f;
+  --fill-app: #dcebf1;
+  --fill-pkg: #e7ece0;
+  --fill-mod: #ffffff;
+  --fill-ext: #eef0f1;
+  --fill-glob: #f6e6da;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f161a; --sheet: #172127; --ink: #e2e9ec; --muted: #95a5ad; --line: #34444d; --grid: #1c272d;
+    --accent: #62b4d3; --accent-soft: #173a48; --consume: #e38f58; --consume-soft: #3d2618; --stop: #e77b7b;
+    --planned: #6f7f87; --fill-app: #173a48; --fill-pkg: #283222; --fill-mod: #172127; --fill-ext: #1f2a30; --fill-glob: #3d2618;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f161a; --sheet: #172127; --ink: #e2e9ec; --muted: #95a5ad; --line: #34444d; --grid: #1c272d;
+  --accent: #62b4d3; --accent-soft: #173a48; --consume: #e38f58; --consume-soft: #3d2618; --stop: #e77b7b;
+  --planned: #6f7f87; --fill-app: #173a48; --fill-pkg: #283222; --fill-mod: #172127; --fill-ext: #1f2a30; --fill-glob: #3d2618;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 15px/1.55 var(--font-body);
+  padding-inline: 16px;
+  padding-block: 0 48px;
+}
+code, .mono { font-family: var(--font-mono); font-size: 0.9em; }
+code { background: var(--grid); padding: 0.05em 0.35em; border-radius: 3px; overflow-wrap: anywhere; }
+.wrap { max-width: 1120px; margin: 0 auto; }
+header.top {
+  padding-block: 40px 20px;
+  display: grid; gap: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 700 clamp(30px, 5vw, 46px)/1.05 var(--font-display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h2 { font: 700 26px/1.15 var(--font-display); margin: 0; text-wrap: balance; }
+h3 { font: 600 15px/1.3 var(--font-body); margin: 0; }
+.lede { max-width: 68ch; color: var(--muted); margin: 0; }
+nav.toc {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--paper); border-bottom: 1px solid var(--line);
+  display: flex; gap: 4px 18px; flex-wrap: wrap; padding-block: 10px;
+}
+nav.toc a { color: var(--ink); text-decoration: none; font: 500 13px/1.4 var(--font-mono); }
+nav.toc a span { color: var(--muted); margin-right: 6px; }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); }
+section.map { padding-block: 40px 8px; display: grid; gap: 18px; scroll-margin-top: 56px; }
+section.map > header { display: grid; gap: 8px; }
+section.map > header p { margin: 0; max-width: 72ch; color: var(--muted); }
+figure { margin: 0; display: grid; gap: 10px; min-width: 0; }
+figcaption { color: var(--muted); font-size: 13.5px; max-width: 80ch; }
+.fig-title { font: 600 13px/1.3 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.canvas {
+  overflow-x: auto; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.canvas svg { display: block; width: 100%; min-width: 760px; height: auto; }
+/* SVG parts */
+.lane-bg { fill: var(--paper); fill-opacity: 0.55; stroke: var(--line); stroke-dasharray: 2 4; }
+.lane-label { fill: var(--muted); font: 500 11px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; }
+.node { cursor: pointer; }
+.node rect { stroke: var(--ink); stroke-width: 1.2; }
+.node .lbl { fill: var(--ink); font: 500 13px var(--font-mono); }
+.node .sub { fill: var(--muted); font: 400 10.5px var(--font-body); }
+.node.k-app rect { fill: var(--fill-app); }
+.node.k-pkg rect { fill: var(--fill-pkg); }
+.node.k-module rect { fill: var(--fill-mod); stroke-width: 1.8; }
+.node.k-provider rect { fill: var(--fill-mod); }
+.node.k-token rect { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.8; }
+.node.k-ext rect { fill: var(--fill-ext); stroke: var(--muted); }
+.node.k-global rect { fill: var(--fill-glob); stroke: var(--consume); }
+.node.k-env rect { fill: var(--fill-ext); stroke: var(--muted); }
+.node.k-step rect { fill: var(--sheet); }
+.node.k-template rect { fill: var(--fill-ext); stroke: var(--ink); stroke-width: 1.2; }
+.node.k-domain rect { fill: var(--fill-pkg); stroke-width: 1.8; }
+.node.k-file rect { fill: var(--sheet); stroke: var(--muted); }
+.node.planned rect { fill: var(--sheet); stroke: var(--planned); stroke-dasharray: 5 4; stroke-width: 1.2; }
+.node.planned .lbl { fill: var(--planned); }
+.node.planned .sub { fill: var(--planned); }
+.node:hover rect, .node:focus-visible rect { stroke: var(--accent); stroke-width: 2.4; }
+.node:focus { outline: none; }
+.node.active rect { stroke: var(--accent); stroke-width: 3; }
+.edge path { fill: none; stroke-width: 1.6; }
+.e-dep path { stroke: var(--accent); }
+.e-dev path { stroke: var(--accent); stroke-dasharray: 6 4; }
+.e-imports path { stroke: var(--ink); }
+.e-provides path { stroke: var(--accent); }
+.e-injects path { stroke: var(--muted); stroke-dasharray: 3 3; }
+.e-consumes path { stroke: var(--consume); stroke-width: 2.4; }
+.e-throws path { stroke: var(--consume); stroke-dasharray: 6 4; }
+.e-flow path { stroke: var(--ink); }
+.e-planned path { stroke: var(--planned); stroke-dasharray: 5 4; }
+.e-forbidden path { stroke: var(--stop); stroke-dasharray: 2 4; stroke-width: 2; }
+.e-extends path { stroke: var(--ink); stroke-dasharray: 8 3; }
+.e-lifecycle path { stroke: var(--consume); stroke-dasharray: 2 3; stroke-width: 1.8; }
+.mk-dep, .mk-dev, .mk-provides { fill: var(--accent); }
+.mk-imports, .mk-flow, .mk-extends { fill: var(--ink); }
+.mk-injects { fill: var(--muted); }
+.mk-consumes, .mk-throws, .mk-lifecycle { fill: var(--consume); }
+.mk-planned { fill: var(--planned); }
+.mk-forbidden { fill: var(--stop); }
+.elabel rect { fill: var(--sheet); stroke: none; }
+.elabel text { font: 400 10.5px var(--font-mono); fill: var(--muted); }
+.elabel.e-consumes text, .elabel.e-throws text, .elabel.e-lifecycle text { fill: var(--consume); }
+.elabel.e-forbidden text { fill: var(--stop); }
+.elabel.ref { cursor: pointer; }
+.elabel.ref text { text-decoration: underline; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font: 400 12px var(--font-mono); color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { width: 30px; height: 10px; }
+/* steps and cards */
+ol.steps, .cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); }
+.cards { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+ol.steps > li, .cards > li { min-width: 0; }
+.step, .card {
+  all: unset; box-sizing: border-box; cursor: pointer; display: grid; gap: 4px; align-content: start; height: 100%; width: 100%;
+  background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 12px 12px 12px 14px; min-width: 0;
+}
+.step:hover, .card:hover, .step:focus-visible, .card:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.step.active, .card.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.step .n { font: 700 22px/1 var(--font-display); color: var(--accent); }
+.step .t, .card .t { font: 500 13px/1.35 var(--font-mono); color: var(--ink); overflow-wrap: anywhere; min-width: 0; }
+.step .d, .card .d { overflow-wrap: anywhere; min-width: 0; }
+.step .d, .card .d { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+.step.branch { border-style: dashed; border-color: var(--consume); }
+.step.branch .n { color: var(--consume); }
+.step.planned, .card.planned { border-style: dashed; }
+.step.planned .t, .card.planned .t { color: var(--planned); }
+.card.k-rule { border-left: 3px solid var(--stop); }
+.card.k-rule.warn { border-left-color: var(--consume); }
+.step.dim { opacity: 0.35; }
+.step.hit { border-color: var(--accent); }
+.step.hit.branch { border-color: var(--consume); box-shadow: 0 0 0 1px var(--consume); }
+.examples { display: grid; gap: 10px; }
+.ex-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.ex-tabs button {
+  font: 500 12.5px var(--font-mono); padding: 6px 10px; border-radius: 4px; cursor: pointer;
+  background: var(--sheet); color: var(--ink); border: 1px solid var(--line);
+}
+.ex-tabs button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.ex-tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ex-body { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.ex-body > div { min-width: 0; display: grid; gap: 4px; }
+pre {
+  margin: 0; overflow-x: auto; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px;
+  padding: 10px 12px; font: 12px/1.5 var(--font-mono); color: var(--ink);
+}
+.ex-note { font-size: 13.5px; color: var(--muted); margin: 0; max-width: 80ch; }
+/* panel */
+#panel {
+  position: fixed; z-index: 20; background: var(--sheet); color: var(--ink);
+  border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgb(0 0 0 / 0.12);
+  top: 0; right: 0; bottom: 0; width: min(420px, 100vw);
+  padding: calc(env(safe-area-inset-top, 0px) + 20px) 22px calc(env(safe-area-inset-bottom, 0px) + 24px);
+  overflow-y: auto; display: grid; gap: 14px; align-content: start;
+}
+#panel[hidden] { display: none; }
+#panel .close {
+  justify-self: end; font: 500 12px var(--font-mono); background: none; border: 1px solid var(--line);
+  color: var(--ink); padding: 5px 10px; border-radius: 4px; cursor: pointer;
+}
+#panel .close:focus-visible { outline: 2px solid var(--accent); }
+#panel h2 { font-size: 22px; font-family: var(--font-mono); font-weight: 500; overflow-wrap: anywhere; }
+#panel .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font: 500 11px/1 var(--font-mono); padding: 5px 7px; border-radius: 3px; border: 1px solid var(--line); color: var(--muted); }
+.tag.wp { border-color: var(--accent); color: var(--accent); }
+.tag.planned { border-style: dashed; }
+#panel section { display: grid; gap: 4px; }
+#panel h3 { font: 600 11px/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+#panel p { margin: 0; font-size: 14px; }
+#panel ul { margin: 0; padding-left: 18px; font-size: 13.5px; display: grid; gap: 3px; }
+#panel .files li { font-family: var(--font-mono); font-size: 12.5px; overflow-wrap: anywhere; }
+#panel .links button {
+  all: unset; cursor: pointer; color: var(--accent); font-family: var(--font-mono); font-size: 12.5px; text-decoration: underline;
+}
+#panel .links button:focus-visible { outline: 2px solid var(--accent); }
+#panel .links .rel { color: var(--muted); font-size: 12.5px; }
+@media (max-width: 760px) {
+  nav.toc { flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; }
+  #panel {
+    top: auto; left: 0; width: 100%; max-height: 72vh; border-left: 0; border-top: 1px solid var(--line);
+    border-radius: 12px 12px 0 0; box-shadow: 0 -8px 24px rgb(0 0 0 / 0.18);
+  }
+}
+footer.foot { margin-top: 48px; padding-block: 24px 0; border-top: 1px solid var(--line); display: grid; gap: 14px; }
+footer.foot p, footer.foot li { color: var(--muted); font-size: 13.5px; max-width: 80ch; }
+footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.stamp { font: 500 13px var(--font-mono); color: var(--ink); }
+@media (prefers-reduced-motion: no-preference) {
+  #panel { transition: transform 0.18s ease-out; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">jadero.dev v2 · monorepo · NestJS 12 on Node 24</div>
+    <h1>Code map</h1>
+    <p class="lede">How the repo fits together today: which package depends on which, what the <code>api</code> container injects at runtime, the two module shapes new code copies, how <code>api</code> boots, what a request passes through and how one trace id follows it, and how the build, <code>pnpm dev</code> and the checks run. Click or tap any box for what it is, how it works, why it was built this way, and where the code lives.</p>
+  </header>
+  <nav class="toc" id="toc" aria-label="Sections"></nav>
+  <main id="sections"></main>
+  <footer class="foot">
+    <div class="stamp" id="stamp"></div>
+    <div>
+      <h3>How to update this map</h3>
+      <ol>
+        <li>All content lives in the JSON block <code>&lt;script id="map-data"&gt;</code> near the end of this file. The rendering code below it should not need changes.</li>
+        <li>Add a box: add an entry to <code>nodes</code> (label, sub, kind, status, wp, what, how, why, files), then place it in a figure: <code>place</code> for a graph (x, y, width, height in the figure's viewBox), or add its id to <code>steps</code> or <code>cards</code>. A steps figure counts from 1 unless it sets <code>"start"</code>.</li>
+        <li>Add an arrow: add <code>{ "from", "to", "label", "kind" }</code> to the figure's <code>edges</code>. Kinds: dep, dev, imports, provides, injects, consumes, throws, extends, lifecycle, flow, planned, forbidden. Add <code>"hideLabel": true</code> when a gap is too small for the label. Use <code>via</code> points to route around a box.</li>
+        <li>When a planned box becomes real, change its <code>status</code> to <code>real</code> and its edges from <code>planned</code> to their real kind.</li>
+        <li>Bump <code>meta.lastUpdated</code>, save in <code>docs/architecture/code-map.html</code>, and republish the artifact from the same file.</li>
+      </ol>
+    </div>
+  </footer>
+</div>
+
+<aside id="panel" hidden aria-live="polite" aria-label="Details"></aside>
+
+<script type="application/json" id="map-data">
+{
+  "meta": {
+    "lastUpdated": "after WP-3 step 8",
+    "kinds": {
+      "app": "deployable app", "pkg": "library package", "module": "Nest module", "provider": "provider",
+      "token": "DI token", "ext": "external library", "global": "app-level wiring", "env": "environment",
+      "step": "step", "rule": "architecture rule", "check": "check",
+      "template": "template package · not deployed", "domain": "domain code", "file": "file"
+    }
+  },
+  "sections": [
+    {
+      "id": "workspace", "eyebrow": "1 · Workspace", "title": "What lives where",
+      "intro": "pnpm workspace with deployables under apps/, libraries under packages/ and copyable code under templates/. Solid boxes exist on disk; dashed boxes are planned and carry the work package that brings them. Arrows are real workspace:* dependencies.",
+      "figures": [
+        {
+          "type": "graph", "title": "Workspace packages and their workspace:* dependencies", "viewBox": [1000, 720],
+          "caption": "api depends on platform-nest at runtime and on config for its tsconfig and Vitest base; platform-nest and the module template depend on config the same way. The template is a workspace package so pnpm verify checks it, but nothing deploys it. Red dotted arrows are imports that dependency-cruiser forbids.",
+          "lanes": [
+            { "x": 8, "y": 30, "w": 984, "h": 150, "label": "apps/ · deployables" },
+            { "x": 8, "y": 262, "w": 984, "h": 250, "label": "packages/ · libraries" },
+            { "x": 8, "y": 604, "w": 984, "h": 108, "label": "templates/ · checked, never deployed" }
+          ],
+          "place": {
+            "ws-api": [20, 90, 140, 62], "ws-agent-app": [180, 90, 140, 62], "ws-contact": [340, 90, 140, 62],
+            "ws-mcp": [500, 90, 140, 62], "ws-web": [660, 90, 140, 62], "ws-admin": [820, 90, 140, 62],
+            "ws-platform": [20, 310, 150, 62], "ws-config": [190, 420, 140, 62],
+            "ws-contracts": [350, 310, 140, 62], "ws-messaging": [510, 310, 140, 62], "ws-ai": [670, 310, 140, 62], "ws-agent-pkg": [830, 310, 140, 62],
+            "ws-ui": [350, 420, 140, 62], "ws-cv": [510, 420, 140, 62],
+            "ext-nest-db": [720, 536, 250, 48],
+            "ws-template": [20, 638, 220, 58]
+          },
+          "edges": [
+            { "from": "ws-api", "to": "ws-platform", "label": "workspace:*", "kind": "dep", "labelAt": [92, 200] },
+            { "from": "ws-api", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "labelAt": [156, 250] },
+            { "from": "ws-platform", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev" },
+            { "from": "ws-template", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "labelAt": [222, 560] },
+            { "points": [[590, 256], [590, 186]], "label": "packages never import apps", "kind": "forbidden", "ref": "rule-shared-no-apps", "labelAt": [590, 222] },
+            { "from": "ws-ai", "to": "ext-nest-db", "label": "never", "kind": "forbidden", "ref": "rule-ai-agent-no-nest" },
+            { "from": "ws-agent-pkg", "to": "ext-nest-db", "label": "never", "kind": "forbidden", "ref": "rule-ai-agent-no-nest" }
+          ]
+        },
+        {
+          "type": "cards", "title": "Rules dependency-cruiser enforces (pnpm depcruise)",
+          "caption": "Every import under apps/, packages/ and templates/ is checked against these rules in pnpm verify. Red edge: error. Amber edge: warning.",
+          "cards": ["rule-shared-no-apps", "rule-no-cross-service", "rule-ai-agent-no-nest", "rule-no-domain-in-packages", "rule-no-circular", "rule-domain-only-domain", "rule-app-not-infra", "rule-through-index", "rule-no-orphans"]
+        }
+      ]
+    },
+    {
+      "id": "di", "eyebrow": "2 · Runtime", "title": "Inside api: modules and injection",
+      "intro": "What Nest builds from AppModule.forRoot(config): the modules it imports, the providers they offer, who injects what, and the app-level wiring configureApp adds outside any module. Left column: logging. Middle: health from platform-nest. Right: config and api's own Postgres pool.",
+      "figures": [
+        {
+          "type": "graph", "title": "Nest module and DI graph of api", "viewBox": [1000, 780],
+          "caption": "LoggingModule provides the nestjs-pino Logger (through LoggerModule); configureApp consumes it with app.get(Logger) and hands it to app.useLogger. ApiConfig and ReadinessCheck are abstract classes used as DI tokens; PG_POOL and READINESS_CHECKS are symbol tokens. HealthModule comes from platform-nest; api plugs its Postgres check into it. TelemetryModule, also from platform-nest, flushes the spans of the last requests when the app closes. Dashed boxes are planned.",
+          "lanes": [
+            { "x": 8, "y": 10, "w": 984, "h": 606, "label": "DI container · built by NestFactory.create" },
+            { "x": 8, "y": 640, "w": 984, "h": 130, "label": "configureApp(app) · app-level, outside any module" }
+          ],
+          "place": {
+            "di-appmodule": [300, 40, 320, 56], "apiconfig": [680, 40, 300, 56], "di-telemetry": [680, 150, 300, 56],
+            "di-logging": [20, 150, 250, 56], "di-health": [300, 150, 320, 56],
+            "di-loggermodule": [20, 260, 250, 56], "di-terminus": [300, 260, 150, 56], "di-shutdownstate": [480, 260, 140, 56], "di-postgresmodule": [680, 260, 300, 56],
+            "di-logger": [20, 370, 120, 56], "di-pinologger": [150, 370, 120, 56], "di-healthcontroller": [300, 370, 320, 56], "di-pgpool": [680, 370, 300, 56],
+            "di-feature": [150, 480, 145, 56], "di-healthbodyfilter": [300, 480, 150, 56], "di-readinesschecks": [460, 480, 160, 56], "di-prc": [660, 480, 190, 56], "di-poolcloser": [860, 480, 120, 56],
+            "di-readinesscheck": [460, 556, 160, 46],
+            "g-uselogger": [20, 688, 210, 60], "g-pipe": [250, 688, 230, 60], "g-filter": [540, 688, 200, 60], "g-shutdown": [770, 688, 210, 60]
+          },
+          "edges": [
+            { "from": "di-appmodule", "to": "apiconfig", "label": "provides", "kind": "provides" },
+            { "from": "di-appmodule", "to": "di-logging", "label": "imports forRoot(...)", "kind": "imports", "labelAt": [317, 118] },
+            { "from": "di-appmodule", "to": "di-health", "label": "imports", "kind": "imports" },
+            { "from": "di-appmodule", "to": "di-telemetry", "label": "imports", "kind": "imports", "labelAt": [652, 124] },
+            { "from": "di-logging", "to": "di-loggermodule", "label": "imports, re-exports", "kind": "imports" },
+            { "from": "di-loggermodule", "to": "di-logger", "label": "provides", "kind": "provides" },
+            { "from": "di-loggermodule", "to": "di-pinologger", "label": "provides", "kind": "provides" },
+            { "from": "di-health", "to": "di-terminus", "label": "imports", "kind": "imports" },
+            { "from": "di-health", "to": "di-shutdownstate", "label": "provides", "kind": "provides" },
+            { "from": "di-health", "to": "di-postgresmodule", "label": "imports (options)", "kind": "imports" },
+            { "from": "di-health", "to": "di-healthcontroller", "label": "controller", "kind": "provides", "hideLabel": true },
+            { "from": "di-healthcontroller", "to": "di-terminus", "label": "injects", "kind": "injects" },
+            { "from": "di-healthcontroller", "to": "di-shutdownstate", "label": "injects", "kind": "injects" },
+            { "from": "di-healthcontroller", "to": "di-healthbodyfilter", "label": "@UseFilters", "kind": "imports" },
+            { "from": "di-healthcontroller", "to": "di-readinesschecks", "label": "injects", "kind": "injects" },
+            { "from": "di-readinesschecks", "to": "di-prc", "label": "lists", "kind": "provides", "hideLabel": true },
+            { "from": "di-prc", "to": "di-readinesscheck", "label": "extends", "kind": "extends" },
+            { "from": "di-postgresmodule", "to": "di-pgpool", "label": "provides", "kind": "provides" },
+            { "from": "di-pgpool", "to": "apiconfig", "label": "injects", "kind": "injects", "via": [[992, 398], [992, 68]], "labelAt": [962, 232] },
+            { "from": "di-prc", "to": "di-pgpool", "label": "injects", "kind": "injects" },
+            { "from": "di-poolcloser", "to": "di-pgpool", "label": "injects", "kind": "injects" },
+            { "from": "di-feature", "to": "di-pinologger", "label": "injects", "kind": "injects" },
+            { "from": "di-logger", "to": "g-uselogger", "label": "app.get(Logger)", "kind": "consumes", "labelAt": [112, 628] },
+            { "from": "g-pipe", "to": "g-filter", "label": "throws", "kind": "throws" },
+            { "from": "g-shutdown", "to": "di-poolcloser", "label": "onApplicationShutdown", "kind": "lifecycle", "labelAt": [894, 628] },
+            { "from": "g-shutdown", "to": "di-shutdownstate", "label": "beforeApplicationShutdown", "kind": "lifecycle", "via": [[760, 652], [650, 652], [650, 288]], "labelAt": [740, 652] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "modules", "eyebrow": "3 · Modules", "title": "Two module shapes to copy",
+      "intro": "templates/nest-module holds one module of each shape ADR-003 allows. Copy the layered one where there are no rules worth protecting, the hexagonal one where there are. Both are type-checked, tested and held to the rules in pnpm verify, so the shape you copy is one the tools accept.",
+      "figures": [
+        {
+          "type": "graph", "title": "notes (layered) and widgets (hexagonal) in templates/nest-module/src/modules", "viewBox": [1000, 600],
+          "caption": "Left: three classes in one folder, no ports. Right: the use case depends on two ports (abstract classes, which are also the DI tokens), the module file binds an adapter to each, and the domain is plain TypeScript. Red dotted arrows are imports dependency-cruiser rejects; click their labels for the rule.",
+          "lanes": [
+            { "x": 8, "y": 10, "w": 334, "h": 580, "label": "layered · notes/" },
+            { "x": 352, "y": 10, "w": 640, "h": 580, "label": "hexagonal · widgets/" }
+          ],
+          "place": {
+            "m-notes-index": [30, 44, 290, 50], "m-notes-module": [30, 144, 290, 56], "m-notes-controller": [30, 250, 290, 56],
+            "m-notes-service": [30, 356, 290, 56], "m-notes-repo": [30, 462, 290, 56],
+            "m-w-index": [370, 44, 200, 50], "m-w-module": [600, 44, 380, 56],
+            "m-w-controller": [370, 140, 200, 56],
+            "m-w-usecase": [370, 240, 200, 56], "m-w-repo-port": [600, 240, 180, 56], "m-w-id-port": [800, 240, 180, 56],
+            "m-w-inmem": [586, 350, 208, 56], "m-w-randomid": [805, 350, 170, 56],
+            "m-w-widget": [370, 440, 200, 56], "m-w-error": [600, 440, 180, 56],
+            "m-ext-npm": [370, 530, 200, 48]
+          },
+          "edges": [
+            { "from": "m-notes-index", "to": "m-notes-module", "label": "re-exports", "kind": "imports" },
+            { "from": "m-notes-module", "to": "m-notes-controller", "label": "declares", "kind": "provides" },
+            { "from": "m-notes-controller", "to": "m-notes-service", "label": "injects", "kind": "injects" },
+            { "from": "m-notes-service", "to": "m-notes-repo", "label": "injects", "kind": "injects" },
+            { "from": "m-w-index", "to": "m-w-module", "label": "re-exports", "kind": "imports", "hideLabel": true },
+            { "from": "m-w-module", "to": "m-w-controller", "label": "declares", "kind": "provides", "labelAt": [630, 120] },
+            { "from": "m-w-module", "to": "m-w-repo-port", "label": "binds", "kind": "provides", "labelAt": [740, 170] },
+            { "from": "m-w-module", "to": "m-w-id-port", "label": "binds", "kind": "provides", "labelAt": [840, 170] },
+            { "from": "m-w-controller", "to": "m-w-usecase", "label": "injects", "kind": "injects" },
+            { "from": "m-w-usecase", "to": "m-w-repo-port", "label": "injects", "kind": "injects", "hideLabel": true },
+            { "from": "m-w-usecase", "to": "m-w-id-port", "label": "injects", "kind": "injects", "via": [[470, 318], [890, 318]], "hideLabel": true },
+            { "from": "m-w-inmem", "to": "m-w-repo-port", "label": "extends", "kind": "extends" },
+            { "from": "m-w-randomid", "to": "m-w-id-port", "label": "extends", "kind": "extends" },
+            { "from": "m-w-usecase", "to": "m-w-widget", "label": "Widget.create", "kind": "imports", "labelAt": [470, 412] },
+            { "from": "m-w-widget", "to": "m-w-error", "label": "throws", "kind": "throws", "hideLabel": true },
+            { "from": "m-w-usecase", "to": "m-w-inmem", "label": "never", "kind": "forbidden", "ref": "rule-app-not-infra", "labelAt": [600, 333] },
+            { "from": "m-w-widget", "to": "m-ext-npm", "label": "never", "kind": "forbidden", "ref": "rule-domain-only-domain" }
+          ]
+        },
+        {
+          "type": "cards", "title": "Rules that hold the shapes in place",
+          "caption": "Breaking any of these fails pnpm verify, in apps/, packages/ and templates/ alike.",
+          "cards": ["rule-domain-only-domain", "rule-app-not-infra", "rule-through-index", "rule-no-circular"]
+        }
+      ]
+    },
+    {
+      "id": "boot", "eyebrow": "4 · Boot", "title": "How api starts",
+      "intro": "Telemetry starts before main.js, then the environment is validated before any Nest module exists, so a bad deploy exits at container start instead of failing on a request an hour later.",
+      "figures": [
+        {
+          "type": "steps", "title": "Boot sequence: node --import, then apps/api/src/main.ts", "start": 0,
+          "steps": ["b-otel", "b-node", "loadconfig", "toapiconfig", "b-create", "b-configure", "b-listen"]
+        },
+        {
+          "type": "graph", "title": "Where the config comes from", "viewBox": [1000, 260],
+          "caption": "Both readers of process.env go through loadConfig (ADR-043). Top row: platformEnv is the shared schema in platform-nest, apiEnv extends it in api, and the result reaches providers only as ApiConfig. Bottom row: the instrumentation entry validates the OTEL_* variables the same way before Nest exists and starts the SDK.",
+          "place": {
+            "platformenv": [4, 20, 146, 56], "apienv": [216, 20, 146, 56],
+            "loadconfig": [428, 20, 146, 56], "toapiconfig": [640, 20, 146, 56], "apiconfig": [852, 20, 146, 56],
+            "b-env": [216, 106, 146, 46],
+            "telemetryenv": [4, 190, 146, 56], "otel-loadconfig": [428, 190, 146, 56], "otel-sdk": [640, 190, 146, 56], "otel-state": [852, 190, 146, 56]
+          },
+          "edges": [
+            { "from": "platformenv", "to": "apienv", "label": "extend", "kind": "flow" },
+            { "from": "apienv", "to": "loadconfig", "label": "schema", "kind": "flow" },
+            { "from": "b-env", "to": "loadconfig", "label": "read", "kind": "flow" },
+            { "from": "b-env", "to": "otel-loadconfig", "label": "read", "kind": "flow" },
+            { "from": "loadconfig", "to": "toapiconfig", "label": "ApiEnv", "kind": "flow" },
+            { "from": "toapiconfig", "to": "apiconfig", "label": "useValue", "kind": "provides" },
+            { "from": "telemetryenv", "to": "otel-loadconfig", "label": "schema", "kind": "flow", "labelAt": [189, 218] },
+            { "from": "otel-loadconfig", "to": "otel-sdk", "label": "parsed", "kind": "flow" },
+            { "from": "otel-sdk", "to": "otel-state", "label": "start()", "kind": "flow" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "request", "eyebrow": "5 · Request", "title": "What a request passes through",
+      "intro": "One lane from the socket to the log line. The amber step only runs when something throws. Pick an example to see which steps it touches. With telemetry on, the whole lane runs inside one HTTP span, and its trace id shows up in three places.",
+      "figures": [
+        {
+          "type": "steps", "title": "Request pipeline",
+          "steps": ["r-express", "r-pinohttp", "r-router", "r-pipe", "r-handler", "r-filter", "r-log"],
+          "examples": [
+            {
+              "id": "ex-400", "label": "Validation 400",
+              "path": ["r-express", "r-pinohttp", "r-router", "r-pipe", "r-filter", "r-log"],
+              "request": "POST /__fixtures/echo\ncontent-type: application/json\nx-request-id: trace-two-0001\n\n{\"email\":\"not-an-email\",\"locale\":\"fr\"}",
+              "response": "HTTP/1.1 400 Bad Request\ncontent-type: application/problem+json\nx-request-id: trace-two-0001\n\n{\n  \"type\": \"https://jadero.dev/problems/validation-failed\",\n  \"title\": \"Request validation failed\",\n  \"status\": 400,\n  \"detail\": \"2 fields are invalid.\",\n  \"instance\": \"/__fixtures/echo\",\n  \"errors\": [\n    { \"pointer\": \"#/email\", \"detail\": \"Invalid email address\" },\n    { \"pointer\": \"#/locale\", \"detail\": \"Invalid option: expected one of \\\"es\\\"|\\\"en\\\"|\\\"de\\\"\" }\n  ],\n  \"requestId\": \"trace-two-0001\"\n}",
+              "note": "The pipe finds the schema on @Body(), Zod returns two issues, the exceptionFactory wraps them in RequestValidationException, and the handler never runs. The request line is logged at warn (level 40). Source: packages/platform-nest/test/problem-details.e2e.test.ts against the fixture controller."
+            },
+            {
+              "id": "ex-404", "label": "Unknown route 404",
+              "path": ["r-express", "r-pinohttp", "r-router", "r-filter", "r-log"],
+              "request": "GET /nope",
+              "response": "HTTP/1.1 404 Not Found\ncontent-type: application/problem+json\n\n{\n  \"type\": \"about:blank\",\n  \"title\": \"Not Found\",\n  \"status\": 404,\n  \"detail\": \"Cannot GET /nope\",\n  \"instance\": \"/nope\",\n  \"requestId\": \"<generated UUID>\"\n}",
+              "note": "No route matches, so Nest throws NotFoundException. It is a 4xx HttpException, so the filter keeps the status and message with type about:blank. The test asserts type, title and instance; detail is Nest's own message. Source: the same e2e test."
+            },
+            {
+              "id": "ex-201", "label": "Valid body 201",
+              "path": ["r-express", "r-pinohttp", "r-router", "r-pipe", "r-handler", "r-log"],
+              "request": "POST /__fixtures/echo\ncontent-type: application/json\n\n{\"email\":\"ada@example.com\",\"locale\":\"es\"}",
+              "response": "HTTP/1.1 201 Created\ncontent-type: application/json\n\n{\"email\":\"ada@example.com\",\"locale\":\"es\"}",
+              "note": "For contrast: validation passes, the handler gets a typed body, and the filter is never involved. The request line is logged at info."
+            },
+            {
+              "id": "ex-503", "label": "Readiness 503",
+              "path": ["r-express", "r-pinohttp", "r-router", "r-handler", "r-log"],
+              "request": "GET /health/ready",
+              "response": "HTTP/1.1 503 Service Unavailable\ncontent-type: application/json\n\n{\n  \"status\": \"error\",\n  \"info\": { \"shutdown\": { \"status\": \"up\" } },\n  \"error\": { \"database\": { \"status\": \"down\", \"message\": \"unavailable\" } },\n  \"details\": { ... both checks ... }\n}",
+              "note": "Postgres is down (the unit test points DATABASE_URL at port 1). HealthController runs the checks, Terminus throws a 503, and the controller-scoped HealthBodyFilter writes the Terminus body instead of problem+json, so the global filter step is skipped. The cause (ECONNREFUSED and the address) goes only to a warn line, \"readiness check failed\". Sources: apps/api/test/health.test.ts and packages/platform-nest/test/health.test.ts."
+            },
+            {
+              "id": "ex-trace", "label": "404 with trace id",
+              "path": ["r-express", "r-pinohttp", "r-router", "r-filter", "r-log"],
+              "request": "GET /nope\nx-request-id: trace-three-0001",
+              "response": "HTTP/1.1 404 Not Found\ncontent-type: application/problem+json\nx-request-id: trace-three-0001\n\n{\n  \"type\": \"about:blank\",\n  \"title\": \"Not Found\",\n  \"status\": 404,\n  \"detail\": \"Cannot GET /nope\",\n  \"instance\": \"/nope\",\n  \"requestId\": \"trace-three-0001\",\n  \"traceId\": \"4bf92f3577b34da6a3ce929d0e0e4736\"\n}\n\nlog line:\n{\"level\":40,\"service\":\"api\",\"req_id\":\"trace-three-0001\",\n \"trace_id\":\"4bf92f3577b34da6a3ce929d0e0e4736\",\"span_id\":\"00f067aa0ba902b7\",\n \"res\":{\"statusCode\":404},\"msg\":\"request completed\"}\n\nconsole span:\n{ traceId: '4bf92f3577b34da6a3ce929d0e0e4736', name: 'GET', kind: 1, ... }",
+              "note": "The same 404 as before, started with `pnpm start` and `OTEL_TRACES_EXPORTER=console` (the dev `.env`), so the instrumentation entry is loaded and prints spans. ProblemDetailsFilter adds `traceId` from `currentTraceId()`, the pino instrumentation adds `trace_id` and `span_id` to the line, and the console exporter prints the `GET` span (plus the Express middleware spans) with the same id. The ids here are examples in the right format; the shape is what step 7 showed on `api` and what `packages/platform-nest/test/telemetry.test.ts` asserts with a real `node --import`."
+            }
+          ]
+        },
+        {
+          "type": "graph", "title": "One trace id, three places", "viewBox": [1000, 250],
+          "caption": "HttpInstrumentation opens a SERVER span when the request arrives and keeps it as the active context for the rest of the request (AsyncLocalStorage, like the request id). Anything that asks for the active span gets the same trace id. Give a client's traceId to the logs or the trace viewer and both lead to the same request.",
+          "place": {
+            "t-span": [20, 96, 230, 60], "t-ctx": [300, 96, 200, 60],
+            "t-body": [560, 14, 420, 56], "t-log": [560, 98, 420, 56], "t-export": [560, 182, 420, 56]
+          },
+          "edges": [
+            { "from": "t-span", "to": "t-ctx", "label": "sets", "kind": "flow" },
+            { "from": "t-ctx", "to": "t-body", "label": "currentTraceId()", "kind": "flow", "hideLabel": true },
+            { "from": "t-ctx", "to": "t-log", "label": "PinoInstrumentation", "kind": "flow", "hideLabel": true },
+            { "from": "t-span", "to": "t-export", "label": "on end", "kind": "flow", "via": [[135, 210]], "labelAt": [330, 210] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "build", "eyebrow": "6 · Build and tooling", "title": "From source to a checked commit",
+      "intro": "platform-nest is a real compiled package, not a path alias. Turborepo builds it before anything that depends on it, pnpm dev keeps both dist folders fresh while you edit, and the same checks run in pnpm verify and in the git hooks.",
+      "figures": [
+        {
+          "type": "steps", "title": "How api gets platform-nest",
+          "steps": ["k-src", "k-tsc", "k-exports", "k-symlink", "k-turbo"]
+        },
+        {
+          "type": "steps", "title": "What pnpm dev runs (decision J)",
+          "steps": ["d-turbo", "d-pn-watch", "d-api-watch", "d-node-watch"]
+        },
+        {
+          "type": "cards", "title": "Checks and when they run",
+          "caption": "pnpm verify is the single \"am I done\" command; lefthook runs Biome and commitlint at commit time.",
+          "cards": ["c-verify", "c-build", "c-biome", "c-depcruise", "c-typecheck", "c-vitest", "c-testint", "c-precommit", "c-commitlint", "c-compose"]
+        }
+      ]
+    }
+  ],
+  "nodes": {
+    "ws-api": {
+      "label": "api", "sub": "@jadero/api", "kind": "app", "status": "real", "wp": "WP-3",
+      "what": "The content, auth, media and CV service. Today it is the boot skeleton: validated config, logging, problem+json errors with request and trace ids, health endpoints, OpenTelemetry traces and a Postgres pool for readiness. No feature modules yet.",
+      "how": "`start` and `dev` run `node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js`, so tracing starts before any import of `main.js`. `main.ts` then validates the environment, builds `AppModule.forRoot(config)`, applies `configureApp` from platform-nest and listens on `PORT`. Runtime dependency on `@jadero/platform-nest`; dev dependency on `@jadero/config` for its tsconfig and Vitest base. Its own runtime dependencies are Nest, Express, `pg`, rxjs, reflect-metadata and zod; Testcontainers is a dev dependency for `pnpm test:int`.",
+      "why": "ADR-001 splits the backend into services, and ADR-029 says each one owns its database and talks to the others only through events. api comes first because the site's content lives there. Feature modules join from WP-10 (database) and WP-12 (content).",
+      "files": ["apps/api/package.json", "apps/api/AGENTS.md", "apps/api/src/main.ts", "apps/api/src/app.module.ts", "apps/api/src/config/api-config.ts", "apps/api/src/modules/platform/"]
+    },
+    "ws-platform": {
+      "label": "platform-nest", "sub": "@jadero/platform-nest", "kind": "pkg", "status": "real", "wp": "WP-3",
+      "what": "The bootstrap every NestJS service shares: fail-fast config, structured logging, RFC 9457 errors, the health module, the OpenTelemetry entry and one `configureApp`. Infrastructure only, no domain code.",
+      "how": "Compiled with tsc to `dist/` and exposed through two `exports` entries: `.` for everything Nest uses, and `./instrumentation` for the file `node --import` loads before the app. Nest packages, rxjs and zod are peer dependencies, so the app supplies the single copy of `@nestjs/core`. `@nestjs/terminus`, nestjs-pino, pino, pino-http, pino-pretty and the OpenTelemetry SDK, OTLP exporter and four instrumentations are its own dependencies, which is why api never lists them.",
+      "why": "AGENTS.md rule 5: shared packages hold infrastructure, never domain code. One boot path means api, agent and contact log, validate and fail the same way. WP-3 decision C (default kept) puts the health module here too, with checks registered per service.",
+      "files": ["packages/platform-nest/package.json", "packages/platform-nest/src/index.ts", "packages/platform-nest/src/telemetry/"]
+    },
+    "ws-template": {
+      "label": "nest-module", "sub": "@jadero/template-nest-module", "kind": "template", "status": "real", "wp": "WP-3 step 8",
+      "what": "Copyable module shapes for the Nest services: a layered `notes` module and a hexagonal `widgets` module. A workspace package that nothing imports and nothing deploys.",
+      "how": "Real TypeScript with its own `typecheck` and `test` scripts, so `pnpm verify` type-checks it, runs its tests and checks it against the dependency-cruiser rules. It has no `build`. Nest, rxjs and zod are normal dependencies here because no app consumes it. Section 3 shows both shapes.",
+      "why": "WP-3 decision G3: a checked folder instead of documentation or a generator. The cheapest shape to copy should be the right one, and a template the tools check cannot drift from what the rules accept. Widening the rules to `templates/` is what found the gap in `domain-imports-only-domain`.",
+      "files": ["templates/nest-module/package.json", "templates/nest-module/README.md", "templates/nest-module/src/modules/", "pnpm-workspace.yaml"]
+    },
+    "ws-config": {
+      "label": "config", "sub": "@jadero/config", "kind": "pkg", "status": "real", "wp": "WP-1",
+      "what": "Shared tsconfig bases and the Vitest base config. Only JSON and plain JavaScript, so it has no build step.",
+      "how": "Exports `tsconfig/base.json` (strict ESM, NodeNext, verbatimModuleSyntax), `node-service.json` (adds decorator metadata), `node-library.json` (adds declarations) and `./vitest` (`baseConfig`, `workersFromLoad`). The Vitest base sizes workers from machine load and sets coverage gates of 80% lines and 70% branches.",
+      "why": "One compiler and test setup for every package: ADR-004 and ADR-042 (Nest on ESM, Node 24), ADR-009 (coverage targets). Having no build keeps it out of the `^build` chain.",
+      "files": ["packages/config/package.json", "packages/config/tsconfig/base.json", "packages/config/tsconfig/node-service.json", "packages/config/tsconfig/node-library.json", "packages/config/vitest/base.js"]
+    },
+    "ws-agent-app": {
+      "label": "agent", "sub": "planned · WP-5", "kind": "app", "status": "planned", "wp": "WP-5",
+      "what": "The ask-me agent service: knowledge, chat, guards and usage, plus an `agent-ingest` worker.",
+      "how": "Will boot through platform-nest like api, keep its own read model of content fed by events, and wrap the LangGraph graph from `packages/agent`.",
+      "why": "AGENTS.md rule 3: the agent never calls api; it keeps its own read model fed by events (ADR-029).",
+      "files": ["apps/agent (not created yet)"]
+    },
+    "ws-contact": {
+      "label": "contact", "sub": "planned · WP-11", "kind": "app", "status": "planned", "wp": "WP-11",
+      "what": "The contact form and mail service.",
+      "how": "Receives the form, stores it in its own database and sends mail through a provider port, with `fake` as the default in dev and tests.",
+      "why": "ADR-030 keeps contact as its own small service so mail and abuse controls do not live inside api.",
+      "files": ["apps/contact (not created yet)"]
+    },
+    "ws-mcp": {
+      "label": "mcp", "sub": "planned · WP-36", "kind": "app", "status": "planned", "wp": "WP-36",
+      "what": "A stateless MCP edge service, arriving in R4.",
+      "how": "Exposes read-only tools over MCP at the edge, where synchronous HTTP is allowed.",
+      "why": "ADR-018 and ADR-035 decide where MCP adds real value; AGENTS.md rule 2 allows synchronous calls only at the edge.",
+      "files": ["apps/mcp (not created yet)"]
+    },
+    "ws-web": {
+      "label": "web", "sub": "planned · R1", "kind": "app", "status": "planned", "wp": "R1",
+      "what": "The public multilingual site (es, en, de) on Next.js 16.",
+      "how": "Result-only frontend built to the design system; no learning gate.",
+      "why": "ADR-022 (internationalization) and ADR-023 (design system).",
+      "files": ["apps/web (not created yet)"]
+    },
+    "ws-admin": {
+      "label": "admin", "sub": "planned · R1", "kind": "app", "status": "planned", "wp": "R1",
+      "what": "The static admin SPA for content.",
+      "how": "Talks to api through the edge; shares Zod schemas from contracts for its forms.",
+      "why": "ADR-008 (admin authentication) and ADR-011 (content management approach).",
+      "files": ["apps/admin (not created yet)"]
+    },
+    "ws-contracts": {
+      "label": "contracts", "sub": "planned · WP-12", "kind": "pkg", "status": "planned", "wp": "WP-12",
+      "what": "Zod DTOs and event schemas shared by services and the admin.",
+      "how": "Events use a CloudEvents envelope and versioned names like `content.post-published.v1`, changed expand and contract.",
+      "why": "AGENTS.md rule 5 and ADR-006: one schema validates the admin form, the API body and an agent tool input.",
+      "files": ["packages/contracts (not created yet)"]
+    },
+    "ws-messaging": {
+      "label": "messaging", "sub": "planned · WP-5", "kind": "pkg", "status": "planned", "wp": "WP-5",
+      "what": "The bus port with RabbitMQ and in-memory adapters, plus the outbox and inbox.",
+      "how": "Services write events to an outbox table in the same transaction; a relay publishes them to RabbitMQ; consumers dedupe through an inbox.",
+      "why": "ADR-029 and AGENTS.md rule 2: between api, agent and contact only asynchronous messages.",
+      "files": ["packages/messaging (not created yet)"]
+    },
+    "ws-ai": {
+      "label": "ai", "sub": "planned · WP-19", "kind": "pkg", "status": "planned", "wp": "WP-19",
+      "what": "AI ports and provider adapters, with a `fake` for every port.",
+      "how": "Each port is an abstract class; adapters register in a factory and pass a shared contract suite.",
+      "why": "ADR-013 (provider-agnostic AI layer). AGENTS.md rule 6: never imports Nest or a database driver.",
+      "files": ["packages/ai (not created yet)"]
+    },
+    "ws-agent-pkg": {
+      "label": "agent (pkg)", "sub": "planned · WP-22", "kind": "pkg", "status": "planned", "wp": "WP-22",
+      "what": "The LangGraph graph of the ask-me agent, with no Nest.",
+      "how": "Plain TypeScript graph that runs in a script or a test; apps/agent wraps it with DI and persistence.",
+      "why": "ADR-015 (agent graph shape). AGENTS.md rule 6 keeps it framework and storage free so it tests in isolation.",
+      "files": ["packages/agent (not created yet)"]
+    },
+    "ws-ui": {
+      "label": "ui", "sub": "planned", "kind": "pkg", "status": "planned", "wp": "planned, WP not set",
+      "what": "Shared UI components for web and admin.",
+      "how": "Built to the design system; frontend, so it skips the learning gate.",
+      "why": "ADR-023 (design system and visual direction).",
+      "files": ["packages/ui (not created yet)"]
+    },
+    "ws-cv": {
+      "label": "cv", "sub": "planned", "kind": "pkg", "status": "planned", "wp": "planned, WP not set",
+      "what": "CV rendering shared by the site and the cv module of api.",
+      "how": "Not designed yet.",
+      "why": "Listed in the target layout of ADR-001 (AGENTS.md section 2).",
+      "files": ["packages/cv (not created yet)"]
+    },
+    "ext-nest-db": {
+      "label": "@nestjs/* · pg · drizzle", "sub": "npm: framework and DB drivers", "kind": "ext", "status": "real", "wp": "WP-1 (rule)",
+      "what": "The framework and storage packages that `packages/ai` and `packages/agent` must never import.",
+      "how": "The rule lists `@nestjs/*`, `pg`, `postgres`, `drizzle-orm`, `kysely`, the LangGraph Postgres checkpointer and other drivers, matched both as bare imports and as resolved node_modules paths.",
+      "why": "So the graph and the AI ports run and test without Nest or a database; persistence and DI live in apps/agent (ADR-024, AGENTS.md rule 6).",
+      "files": [".dependency-cruiser.cjs"]
+    },
+    "rule-shared-no-apps": {
+      "label": "packages never import apps", "sub": "shared-packages-hold-no-domain · error", "kind": "rule", "status": "real", "wp": "WP-1",
+      "what": "A file under `packages/` may not import anything under `apps/`.",
+      "how": "dependency-cruiser rule `shared-packages-hold-no-domain`: from `^packages/` to `^apps/` is an error.",
+      "why": "AGENTS.md rule 5: a package that imports from an app is pulling a service's code, and its domain, into shared code. Dependencies point from apps down to packages only.",
+      "files": [".dependency-cruiser.cjs"]
+    },
+    "rule-no-cross-service": {
+      "label": "apps never import other apps", "sub": "no-cross-service-imports · error", "kind": "rule", "status": "real", "wp": "WP-1",
+      "what": "A file in `apps/X/` may not import from any other app.",
+      "how": "From `^apps/([^/]+)/` to `^apps/` unless it is the same app (`$1`).",
+      "why": "ADR-029 rules 1 to 3 and AGENTS.md rule 2: services talk through events, never through each other's code.",
+      "files": [".dependency-cruiser.cjs"]
+    },
+    "rule-ai-agent-no-nest": {
+      "label": "ai and agent never import Nest or a DB", "sub": "agent-and-ai-packages-never-import-nest-or-db · error", "kind": "rule", "status": "real", "wp": "WP-1",
+      "what": "`packages/ai` and `packages/agent` may not import Nest or any database driver.",
+      "how": "From `^packages/(agent|ai)/` to a list of framework and driver package names.",
+      "why": "ADR-024 and AGENTS.md rule 6: the graph and the AI ports stay framework and storage free.",
+      "files": [".dependency-cruiser.cjs"]
+    },
+    "rule-no-domain-in-packages": {
+      "label": "no domain/ folder in packages", "sub": "no-domain-in-shared-packages · error", "kind": "rule", "status": "real", "wp": "WP-1",
+      "what": "A `domain/` folder anywhere under `packages/*/src/` is an error.",
+      "how": "Two path patterns instead of one optional group, because dependency-cruiser rejects the shorter regex as unsafe.",
+      "why": "AGENTS.md rule 5: domain code belongs to the service that owns it.",
+      "files": [".dependency-cruiser.cjs"]
+    },
+    "rule-no-circular": {
+      "label": "no import cycles", "sub": "no-circular · error", "kind": "rule", "status": "real", "wp": "WP-1",
+      "what": "No dependency cycle anywhere.",
+      "how": "Any edge that closes a cycle fails the check.",
+      "why": "ADR-024: a cycle makes load order matter. Under ESM a cycle fails louder (`Cannot access 'X' before initialization`), as the WP-3 explainer notes.",
+      "files": [".dependency-cruiser.cjs"]
+    },
+    "rule-domain-only-domain": {
+      "label": "domain imports only domain", "sub": "domain-imports-only-domain · error", "kind": "rule", "status": "real", "wp": "WP-1, fixed in WP-3 step 8",
+      "what": "A file in `src/modules/<m>/domain/` may import only the same module's domain folder and Node built-ins: no other layer, no other module, no npm package.",
+      "how": "`from` matches `^(apps|packages|templates)/<pkg>/src/modules/<m>/domain/`; `to` flags anything whose path is not `$1/$2/src/modules/$3/domain/` and is not a Node built-in (`dependencyTypesNot: [core]`). `*.test.ts` files next to domain code are exempt, so they may import the test runner. Before step 8 the rule only looked at imports into `apps/`, so a domain file could import `@nestjs/common` and pass. Now an npm import fails too, including packages that ship from their own `dist/`: the global exclude is narrowed to the workspace's build folders (`^(apps|packages|templates)/<pkg>/(dist|coverage|.turbo|.next)/`). Known gap: a domain file importing a workspace package (`@jadero/*`) resolves into that package's `dist/`, which the exclude still drops.",
+      "why": "ADR-003: the domain layer is plain TypeScript, so its rules run and test without Nest or a database. The template's `Widget` is the first domain code it guards; api's hexagonal modules arrive with WP-12.",
+      "files": [".dependency-cruiser.cjs"]
+    },
+    "rule-app-not-infra": {
+      "label": "application never imports infrastructure", "sub": "application-never-imports-infrastructure · error", "kind": "rule", "status": "real", "wp": "WP-1",
+      "what": "Use cases depend on ports, never on adapters.",
+      "how": "From `src/modules/*/application/` to `src/modules/*/infrastructure/` is an error, in apps/, packages/ and templates/; module wiring binds adapter to port. Tests count too: a template use-case test that imported the in-memory adapter was caught in step 8 and now uses a fake of the port declared in the test file.",
+      "why": "ADR-003: ports are abstract classes and DI tokens, the same idea `ApiConfig` already uses.",
+      "files": [".dependency-cruiser.cjs"]
+    },
+    "rule-through-index": {
+      "label": "modules import through index.ts", "sub": "modules-import-through-index · error", "kind": "rule", "status": "real", "wp": "WP-1",
+      "what": "A module may reach another module only through its `index.ts`.",
+      "how": "From `src/modules/A/` to `src/modules/B/<anything but index.ts>` is an error.",
+      "why": "ADR-003: `index.ts` is a module's public surface.",
+      "files": [".dependency-cruiser.cjs"]
+    },
+    "rule-no-orphans": {
+      "label": "no orphan files", "sub": "no-orphans · warning", "kind": "rule", "status": "real", "wp": "WP-1", "warn": true,
+      "what": "A file nothing imports and that imports nothing is probably dead.",
+      "how": "Warning only; config files and declarations are exempt through `KNOWN_CONFIG_FILES`.",
+      "why": "Keeps dead code visible without blocking a commit.",
+      "files": [".dependency-cruiser.cjs"]
+    },
+    "di-appmodule": {
+      "label": "AppModule.forRoot(config)", "sub": "root dynamic module · global", "kind": "module", "status": "real", "wp": "WP-3 step 3",
+      "what": "The root module of api, built around an already validated configuration.",
+      "how": "A static `forRoot(config)` returns a `DynamicModule` with `global: true`. It imports `LoggingModule.forRoot({ serviceName, level, pretty })` from the config (pretty only when `nodeEnv` is development), `HealthModule.forRoot({ imports: [PostgresModule], checks: [PostgresReadinessCheck] })` and `TelemetryModule`, provides `ApiConfig` with `useValue: config` and exports it, so any module (PostgresModule included) can inject it without importing AppModule.",
+      "why": "Because the config is parsed before the module is built, a bad environment never reaches a module (WP-3 decision B2). `forRoot` takes the config as an argument instead of reading `process.env`, which keeps the environment read in one place (ADR-043).",
+      "files": ["apps/api/src/app.module.ts", "apps/api/test/app.module.test.ts", "apps/api/test/setup/boot.ts"]
+    },
+    "apiconfig": {
+      "label": "ApiConfig", "sub": "abstract class · DI token · useValue", "kind": "token", "status": "real", "wp": "WP-3 step 3",
+      "what": "The typed configuration providers inject: `nodeEnv`, `port`, `logLevel`, `serviceName`, `databaseUrl`.",
+      "how": "An abstract class is both the TypeScript type and the runtime DI token. AppModule provides it with `{ provide: ApiConfig, useValue: config }`. A provider writes `constructor(readonly config: ApiConfig)` and Nest resolves it from `design:paramtypes`. It must be imported as a value, never with `import type`, or the metadata becomes `Object` and DI fails.",
+      "why": "WP-3 decision B2: matches the \"ports are abstract classes and DI tokens\" convention of ADR-003 and keeps string keys like `config.get(\"PORT\")` out of code. The DI test proves the token resolves under Vitest.",
+      "files": ["apps/api/src/config/api-config.ts", "apps/api/test/app.module.test.ts"]
+    },
+    "di-logging": {
+      "label": "LoggingModule.forRoot(opts)", "sub": "platform-nest", "kind": "module", "status": "real", "wp": "WP-3 step 4",
+      "what": "Structured JSON logging with a request id on every line, wrapped from nestjs-pino.",
+      "how": "`forRoot(options)` imports `LoggerModule.forRoot(loggerParams(options))` and re-exports `LoggerModule`. `loggerParams` sets the level, `base: { service }`, `genReqId: requestId`, `customLogLevel: requestLogLevel` (health probes at debug when they pass and warn when they fail), minimal req and res serializers, redaction of auth headers, and pino-pretty only in development. Tests pass an in-memory `destination`.",
+      "why": "WP-3 spike row 2 passed, so nestjs-pino is used directly. A request id reaches lines from singleton providers through AsyncLocalStorage, with no request-scoped providers. Headers, bodies and the client IP are not logged (AGENTS.md section 7; the hashed IP comes with WP-11). ADR-010 wants `service` on every line.",
+      "files": ["packages/platform-nest/src/logging/logging.module.ts", "packages/platform-nest/src/logging/logger-params.ts", "packages/platform-nest/test/logging.test.ts"]
+    },
+    "di-health": {
+      "label": "HealthModule.forRoot({ imports, checks })", "sub": "platform-nest · Terminus", "kind": "module", "status": "real", "wp": "WP-3 step 6",
+      "what": "`/health/live` and `/health/ready`, the same in every service, with each service bringing its own readiness checks.",
+      "how": "`forRoot(options)` imports `TerminusModule.forRoot({ logger: false })` plus the modules in `options.imports`, declares `HealthController`, provides `ShutdownState` (with the optional `drainMs`, default 0, as `SHUTDOWN_DRAIN_MS`) and every class in `options.checks`, and builds `READINESS_CHECKS` with a factory that collects the check instances into an array. api calls it as `HealthModule.forRoot({ imports: [PostgresModule], checks: [PostgresReadinessCheck] })`.",
+      "why": "WP-3 decision C: endpoints and status codes must be identical for Docker Compose and Uptime Kuma, while the checks are service specific. Terminus does the response shape (ADR-010).",
+      "files": ["packages/platform-nest/src/health/health.module.ts", "packages/platform-nest/test/health.test.ts", "apps/api/src/app.module.ts"]
+    },
+    "di-terminus": {
+      "label": "TerminusModule", "sub": "@nestjs/terminus", "kind": "ext", "status": "real", "wp": "WP-3 step 6",
+      "what": "Nest's health check library. It provides `HealthCheckService` and `HealthIndicatorService`.",
+      "how": "`HealthCheckService.check([...])` runs the indicator functions and answers 200 with `status: ok`, or throws a 503 `ServiceUnavailableException` carrying `{ status: error, info, error, details }`. Its own logger is off; failures are logged by the controller instead.",
+      "why": "A known body that ops tools already read (WP-3 decision E1). It is a dependency of platform-nest, so services never list it.",
+      "files": ["packages/platform-nest/src/health/health.module.ts", "packages/platform-nest/package.json"]
+    },
+    "di-shutdownstate": {
+      "label": "ShutdownState", "sub": "readiness flag", "kind": "provider", "status": "real", "wp": "WP-3 step 6",
+      "what": "A flag that turns true when shutdown starts.",
+      "how": "Implements `beforeApplicationShutdown`, which Nest calls after `onModuleDestroy` and before the HTTP server closes. The readiness endpoint reports a `shutdown` indicator as down once it is set. With `HealthModule.forRoot({ drainMs })` the hook then waits that many milliseconds before returning, so the server stays open while readiness answers 503. The default is 0: no wait.",
+      "why": "With `drainMs` 0, Nest closes the server right after the flag flips, so the flag only protects requests already in flight; a probe will usually not see the 503. Behind a load balancer that polls readiness, set `drainMs` to a few probe intervals so it stops sending traffic before the listener closes (WP-3 first principles, lifecycle).",
+      "files": ["packages/platform-nest/src/health/shutdown-state.ts"]
+    },
+    "di-healthcontroller": {
+      "label": "HealthController", "sub": "GET /health/live · GET /health/ready", "kind": "provider", "status": "real", "wp": "WP-3 step 6",
+      "what": "The two health routes.",
+      "how": "`live` runs no checks and answers 200 while the process can respond. `ready` runs the shutdown indicator plus every `ReadinessCheck` from `READINESS_CHECKS`, each raced against a 1000 ms timeout (`CHECK_TIMEOUT_MS`). A failing check logs its cause at warn and shows only `message: unavailable` in the body.",
+      "why": "Liveness answers \"restart me?\" and must never depend on the database; readiness answers \"send me traffic?\" and must. The cause stays out of the body because the endpoint may be reachable from outside.",
+      "files": ["packages/platform-nest/src/health/health.controller.ts"]
+    },
+    "di-healthbodyfilter": {
+      "label": "HealthBodyFilter", "sub": "controller-scoped filter", "kind": "provider", "status": "real", "wp": "WP-3 step 6",
+      "what": "Keeps the Terminus body on a failed health check instead of problem+json.",
+      "how": "`@Catch(ServiceUnavailableException)` bound with `@UseFilters` on `HealthController`. Nest picks the most specific filter first, so on `/health/*` this one wins over the global `ProblemDetailsFilter`, and writes status 503 with `exception.getResponse()`.",
+      "why": "WP-3 decision E1: health is an operations contract, not an API error. Every other route keeps RFC 9457.",
+      "files": ["packages/platform-nest/src/health/health-body.filter.ts"]
+    },
+    "di-readinesschecks": {
+      "label": "READINESS_CHECKS", "sub": "symbol token · useFactory", "kind": "token", "status": "real", "wp": "WP-3 step 6",
+      "what": "The array of readiness checks the controller runs.",
+      "how": "`{ provide: READINESS_CHECKS, useFactory: (...checks) => checks, inject: [...options.checks] }`. Nest builds each check class, then the factory returns them as one array.",
+      "why": "Nest has no built-in multi-provider, so a factory over the listed classes gives the controller one injectable list while each check keeps its own dependencies.",
+      "files": ["packages/platform-nest/src/health/health.module.ts", "packages/platform-nest/src/health/health.controller.ts"]
+    },
+    "di-readinesscheck": {
+      "label": "ReadinessCheck", "sub": "abstract class · port", "kind": "token", "status": "real", "wp": "WP-3 step 6",
+      "what": "The shape of one dependency check: a `name` and an async `check()` that throws when the dependency is down.",
+      "how": "platform-nest defines it; each service implements it as an `@Injectable()` provider.",
+      "why": "A port as an abstract class (ADR-003): the platform knows the shape, the service knows the details. Later the broker check for api-worker plugs in the same way.",
+      "files": ["packages/platform-nest/src/health/readiness-check.ts"]
+    },
+    "di-postgresmodule": {
+      "label": "PostgresModule", "sub": "api · src/modules/platform", "kind": "module", "status": "real", "wp": "WP-3 step 6",
+      "what": "api's connection to its own Postgres database.",
+      "how": "Provides `PG_POOL` and the private `PoolCloser`, exports `PG_POOL`. It is passed to `HealthModule` through `options.imports` so the readiness check can inject the pool. Exposed through the module's `index.ts`.",
+      "why": "WP-3 decision D1: the `pg` driver, which WP-10 inherits when Drizzle arrives. A layered module under `src/modules/platform/` as ADR-003 lists for platform concerns. ADR-029: api reads only its own database (`content_dev` in dev).",
+      "files": ["apps/api/src/modules/platform/postgres.module.ts", "apps/api/src/modules/platform/index.ts"]
+    },
+    "di-pgpool": {
+      "label": "PG_POOL", "sub": "symbol token · useFactory(ApiConfig)", "kind": "token", "status": "real", "wp": "WP-3 step 6",
+      "what": "The `pg` connection pool.",
+      "how": "`useFactory: (config: ApiConfig) => new Pool({ connectionString: config.databaseUrl, max: 2, connectionTimeoutMillis: 1000, query_timeout: 1000 })` with `inject: [ApiConfig]`. `query_timeout` frees the connection when a readiness check times out. The pool connects lazily, so api boots while the database is down and readiness reports it. Consumers use `@Inject(PG_POOL)` because `Pool` is a class from a library, not our token.",
+      "why": "A symbol token keeps the pool out of string keys and makes the binding explicit. A small pool of 2 is enough for a readiness probe until WP-10 sizes it for real queries.",
+      "files": ["apps/api/src/modules/platform/postgres.module.ts", "apps/api/src/modules/platform/postgres.tokens.ts"]
+    },
+    "di-prc": {
+      "label": "PostgresReadinessCheck", "sub": "SELECT 1 · name: database", "kind": "provider", "status": "real", "wp": "WP-3 step 6",
+      "what": "api's readiness check for its database.",
+      "how": "Extends `ReadinessCheck`, injects `PG_POOL` and runs `SELECT 1`. The controller applies the timeout. With Postgres down, `/health/ready` answers 503 with `database: { status: down, message: unavailable }`.",
+      "why": "Readiness covers the database (ADR-010). The check lives in api because only api knows which database it owns.",
+      "files": ["apps/api/src/modules/platform/postgres.readiness-check.ts", "apps/api/test/health.test.ts", "apps/api/test/health.int.test.ts"]
+    },
+    "di-poolcloser": {
+      "label": "PoolCloser", "sub": "closes the pool", "kind": "provider", "status": "real", "wp": "WP-3 step 6",
+      "what": "Closes the pool when the app shuts down.",
+      "how": "A private provider of PostgresModule that implements `onApplicationShutdown` and calls `pool.end()`. That hook runs after the HTTP server has closed.",
+      "why": "Closing in `onModuleDestroy` would break queries of requests still in flight. The integration test checks the app closes cleanly.",
+      "files": ["apps/api/src/modules/platform/postgres.module.ts"]
+    },
+    "di-loggermodule": {
+      "label": "LoggerModule", "sub": "nestjs-pino · global", "kind": "ext", "status": "real", "wp": "WP-3 step 4",
+      "what": "nestjs-pino's own module. It installs the pino-http middleware and provides `Logger` and `PinoLogger`.",
+      "how": "Registered by LoggingModule. nestjs-pino marks it global, so its providers can be injected anywhere once it is imported.",
+      "why": "Reusing the library instead of a hand-written pino-http module (the spike's fallback) keeps the code small; the spike confirmed it works on Nest 12.",
+      "files": ["packages/platform-nest/src/logging/logging.module.ts"]
+    },
+    "di-logger": {
+      "label": "Logger", "sub": "nestjs-pino", "kind": "provider", "status": "real", "wp": "WP-3 step 4",
+      "what": "nestjs-pino's implementation of Nest's `LoggerService` interface.",
+      "how": "Provided by LoggerModule. `configureApp` fetches it with `app.get(Logger)` and passes it to `app.useLogger`, so every `new Logger(...)` from `@nestjs/common` (for example inside ProblemDetailsFilter) writes through pino.",
+      "why": "One logger for Nest's own lines and the app's lines. The two classes share a name: this is `Logger` from nestjs-pino, not from @nestjs/common.",
+      "files": ["packages/platform-nest/src/bootstrap/configure-app.ts"]
+    },
+    "di-pinologger": {
+      "label": "PinoLogger", "sub": "re-exported", "kind": "provider", "status": "real", "wp": "WP-3 step 4",
+      "what": "The logger feature providers inject to write structured lines.",
+      "how": "Provided by LoggerModule and re-exported from `@jadero/platform-nest`, so services import it from the platform package. It reads the current request's child logger from AsyncLocalStorage, so a singleton's line carries `req_id`.",
+      "why": "Request ids without request-scoped providers, which would rebuild the provider graph on every request. The logging test proves a singleton's line carries the caller's id.",
+      "files": ["packages/platform-nest/src/index.ts", "packages/platform-nest/test/logging.test.ts"]
+    },
+    "di-telemetry": {
+      "label": "TelemetryModule", "sub": "platform-nest · flushes spans", "kind": "module", "status": "real", "wp": "WP-3 step 7",
+      "what": "Ties the SDK started by the instrumentation entry to the app's shutdown, so the last requests' spans are exported.",
+      "how": "Provides a private `TelemetryFlusher` whose `onApplicationShutdown` calls `shutdownTelemetry()`. That hook runs after the HTTP server has closed, like PoolCloser. `AppModule.forRoot` imports it next to LoggingModule and HealthModule. A test closes a module that imports it and checks the SDK's `shutdown` ran once.",
+      "why": "The SDK lives outside Nest (it starts before Nest exists), so a small module is the bridge to Nest's lifecycle. Batched OTLP export needs the flush, otherwise spans still in the buffer are dropped on SIGTERM.",
+      "files": ["packages/platform-nest/src/telemetry/telemetry.module.ts", "packages/platform-nest/src/telemetry/telemetry-state.ts", "apps/api/src/app.module.ts", "packages/platform-nest/test/telemetry.test.ts"]
+    },
+    "di-feature": {
+      "label": "feature providers", "sub": "planned · WP-10 on", "kind": "provider", "status": "planned", "wp": "WP-10 on",
+      "what": "The services, repositories and use cases that feature modules will add.",
+      "how": "They inject `ApiConfig` and `PinoLogger` by constructor type, and `PG_POOL` with `@Inject` after importing PostgresModule (WP-10 puts Drizzle on top). The test already injects `ApiConfig` this way with `NeedsConfig` inside a separate `FeatureModule`. The arrow to ApiConfig is left out of the drawing to keep it readable.",
+      "why": "Shows the two tokens any feature can rely on today.",
+      "files": ["apps/api/test/app.module.test.ts"]
+    },
+    "g-uselogger": {
+      "label": "app.useLogger(...)", "sub": "consumes nestjs-pino Logger", "kind": "global", "status": "real", "wp": "WP-3 step 4",
+      "what": "Routes Nest's own log lines (boot, route mapping, filter errors) through pino.",
+      "how": "`app.useLogger(app.get(Logger))`. The app is created with `bufferLogs: true`, so boot lines wait until this call and then come out as JSON. This is why configureApp requires LoggingModule: without it `app.get(Logger)` throws.",
+      "why": "One log format for every line, including Nest's (ADR-010). The logging test checks a line with `context: \"NestApplication\"`.",
+      "files": ["packages/platform-nest/src/bootstrap/configure-app.ts"]
+    },
+    "g-pipe": {
+      "label": "StandardSchemaValidationPipe", "sub": "global pipe + exceptionFactory", "kind": "global", "status": "real", "wp": "WP-3 step 5",
+      "what": "Validates every `@Body({ schema })`, `@Query({ schema })` and `@Param({ schema })` with the schema's Standard Schema interface.",
+      "how": "`app.useGlobalPipes(new StandardSchemaValidationPipe({ exceptionFactory: (issues) => new RequestValidationException(issues) }))`. The factory keeps Zod's structured issues and turns each path into a JSON Pointer such as `#/email`.",
+      "why": "ADR-006 and Nest 12's Standard Schema support: no DTO classes, the schema gives the type. The default message lost the field path, which is why the factory hands the filter the raw issues (step 5 log).",
+      "files": ["packages/platform-nest/src/bootstrap/configure-app.ts", "packages/platform-nest/src/errors/request-validation.exception.ts"]
+    },
+    "g-filter": {
+      "label": "ProblemDetailsFilter", "sub": "global @Catch() filter", "kind": "global", "status": "real", "wp": "WP-3 step 5",
+      "what": "The one exception filter: every error leaves as `application/problem+json` (RFC 9457).",
+      "how": "`RequestValidationException` becomes 400 `validation-failed` with an `errors` array; any other HttpException under 500 keeps its status and message as `about:blank`; an Express middleware error with a 4xx `status` and `expose: true` (body-parser's 413 payload too large, 415 unsupported media type) keeps its status the same way instead of becoming a 500; anything else is a generic 500 whose stack goes only to the error log. `instance` is the path only, without the query string, and Nest's 404 message is cut the same way, because a query may carry an email or a token. Every body carries `requestId` from pino-http and, when telemetry is on, `traceId` from `currentTraceId()`.",
+      "why": "ADR-006: one error shape for every route and service. Exception shielding keeps internals out of responses. Health routes keep their own body (WP-3 decision E1).",
+      "files": ["packages/platform-nest/src/errors/problem-details.filter.ts", "packages/platform-nest/src/errors/problem-details.ts", "packages/platform-nest/test/problem-details.e2e.test.ts"]
+    },
+    "g-shutdown": {
+      "label": "enableShutdownHooks()", "sub": "SIGTERM runs app.close()", "kind": "global", "status": "real", "wp": "WP-3 step 3",
+      "what": "Makes SIGTERM and SIGINT run `app.close()` and the lifecycle hooks.",
+      "how": "Nest listens for the signals and calls `onModuleDestroy`, then `beforeApplicationShutdown` (ShutdownState flips readiness to 503), closes the HTTP server, then `onApplicationShutdown` (PoolCloser ends the Postgres pool, TelemetryModule flushes the spans). The configure-app test checks a probe's `onApplicationShutdown` runs.",
+      "why": "Graceful shutdown for containers: requests in flight finish before the pool closes and the spans are flushed. Whether probes see the 503 before the listener closes depends on `drainMs` (see ShutdownState): with the default 0, Nest closes the server right after the flag flips (WP-3 first principles, lifecycle).",
+      "files": ["packages/platform-nest/src/bootstrap/configure-app.ts", "packages/platform-nest/test/configure-app.test.ts"]
+    },
+    "b-node": {
+      "label": "dist/main.js imports", "sub": "Nest, Express, pg, pino load", "kind": "step", "status": "real", "wp": "WP-3 steps 3 and 7",
+      "what": "Node evaluates `main.js` and, before its first line, every module it imports.",
+      "how": "The `start` script is `node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js`; `dev` uses the same flags plus `--watch`. Node loads `.env` into `process.env` when the file exists, runs the `--import` entry (step 0), then loads `main.js`. ESM evaluates every import of `main.js` before its body runs, so http, Express, pg and pino are loaded here, already patched.",
+      "why": "Node's built-in env file instead of dotenv, so the same file feeds the instrumentation entry and the app (WP-3 options B and F, ADR-043).",
+      "files": ["apps/api/package.json"]
+    },
+    "b-otel": {
+      "label": "--import instrumentation", "sub": "before main.js", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "The OpenTelemetry entry, `@jadero/platform-nest/instrumentation`, which Node runs before it loads `main.js`.",
+      "how": "It registers the ESM loader hook (`register(\"@opentelemetry/instrumentation/hook.mjs\", import.meta.url)`), validates `telemetryEnv` with `loadConfig` (a bad value exits 1 and names the variable), builds `NodeSDK` with http, express, pg and pino instrumentations, starts it and keeps it for shutdown. With `OTEL_TRACES_EXPORTER=none`, the default, it starts nothing; dev sets `console` in `.env`.",
+      "why": "In ESM every import of `main.js` loads before its first line, so patching from inside `main.ts` would be too late and would silently produce no spans. A separate file loaded with `--import` is the only place early enough (WP-3 decision F1).",
+      "files": ["packages/platform-nest/src/telemetry/instrumentation.ts", "packages/platform-nest/src/telemetry/create-sdk.ts", "packages/platform-nest/test/telemetry.test.ts", "packages/platform-nest/test/fixtures/otel-smoke.mjs"]
+    },
+    "telemetryenv": {
+      "label": "telemetryEnv", "sub": "OTEL_* in platform-nest", "kind": "env", "status": "real", "wp": "WP-3 step 7",
+      "what": "The OpenTelemetry variables under their standard names: `OTEL_SERVICE_NAME` (required), `OTEL_TRACES_EXPORTER` (`console`, `otlp` or `none`, default `none`; `apps/api/.env.example` sets `console` for dev) and `OTEL_EXPORTER_OTLP_ENDPOINT`.",
+      "how": "A `z.object` with a `superRefine`: the endpoint is required when the exporter is `otlp`, and the error names `OTEL_EXPORTER_OTLP_ENDPOINT`.",
+      "why": "Validated like every other config (ADR-043), so a typo in a deploy fails at start instead of quietly exporting nothing.",
+      "files": ["packages/platform-nest/src/telemetry/telemetry-env.ts", "packages/platform-nest/test/telemetry.test.ts"]
+    },
+    "otel-loadconfig": {
+      "label": "loadConfig(telemetryEnv)", "sub": "in the --import entry", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "The same fail-fast loader as `main.ts`, called with the telemetry schema.",
+      "how": "Parses `process.env`; on failure prints one line per bad variable to stderr and exits 1. The test runs the built entry with `OTEL_TRACES_EXPORTER=otlp` and no endpoint and checks the message.",
+      "why": "One way to read config for the app and the entry, which is one of the reasons for ADR-043.",
+      "files": ["packages/platform-nest/src/telemetry/instrumentation.ts", "packages/platform-nest/src/config/load-config.ts"]
+    },
+    "otel-sdk": {
+      "label": "NodeSDK", "sub": "http, express, pg, pino", "kind": "ext", "status": "real", "wp": "WP-3 step 7",
+      "what": "The OpenTelemetry Node SDK, built by `createTelemetrySdk(env)`.",
+      "how": "An explicit instrumentation list: `HttpInstrumentation`, `ExpressInstrumentation`, `PgInstrumentation` and `PinoInstrumentation({ disableLogSending: true })`. `HttpInstrumentation` gets a hook that redacts the client address, peer address and user agent on incoming spans. Traces only: `metricReaders: []` and `logRecordProcessors: []`, because sdk-node otherwise starts OTLP metric and log exporters to `:4318` by itself (spike row 6). Spans go to the console (`SimpleSpanProcessor`) or to OTLP over protobuf (`BatchSpanProcessor`). amqplib joins in WP-5.",
+      "why": "WP-3 decision F1: an explicit list, not the auto-instrumentation bundle, so the project knows what is patched. Decision S2: no Nest controller spans, because `instrumentation-nestjs-core` does not declare Nest 12 yet; HTTP and Express spans already carry `http.route`.",
+      "files": ["packages/platform-nest/src/telemetry/create-sdk.ts"]
+    },
+    "otel-state": {
+      "label": "setTelemetrySdk(sdk)", "sub": "kept for shutdown", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "Keeps the started SDK in module state so the app can flush it later.",
+      "how": "`telemetry-state.ts` holds the SDK. `shutdownTelemetry()` takes it, clears the slot and awaits `sdk.shutdown()`, which exports pending spans. A no-op when telemetry is off.",
+      "why": "The entry runs before Nest exists, so the SDK cannot be a provider. TelemetryModule reaches it through this module at shutdown.",
+      "files": ["packages/platform-nest/src/telemetry/telemetry-state.ts"]
+    },
+    "loadconfig": {
+      "label": "loadConfig(apiEnv)", "sub": "exits 1 on a bad env", "kind": "step", "status": "real", "wp": "WP-3 step 3",
+      "what": "Parses the environment against a Zod schema, or prints one line per bad variable and exits with code 1.",
+      "how": "`parseConfig` runs `schema.safeParse(process.env)`; on failure it throws `ConfigError` with variable names and messages only. `loadConfig` writes them to stderr and calls `process.exit(1)`. Tests replace output and exit through `LoadConfigIo`.",
+      "why": "Fail fast: a missing variable stops the container in about 290 ms instead of breaking the first request. ADR-043 records why this is our own loader and not `@nestjs/config`, superseding ADR-007 on the library: validation must finish before `NestFactory.create` (the library validates inside it), the OpenTelemetry entry needs the same loader before Nest exists, and `ApiConfig` gives typed injection instead of string keys. The secrets rules of ADR-007 stay unchanged. Values are never printed because they may be secrets (AGENTS.md section 7).",
+      "files": ["packages/platform-nest/src/config/load-config.ts", "packages/platform-nest/test/load-config.test.ts"]
+    },
+    "toapiconfig": {
+      "label": "toApiConfig(env)", "sub": "to camelCase", "kind": "step", "status": "real", "wp": "WP-3 step 3",
+      "what": "Maps the parsed environment to the object provided as `ApiConfig`.",
+      "how": "A pure function: `NODE_ENV` to `nodeEnv`, `PORT` to `port` and so on.",
+      "why": "Providers see names that read like code and never the raw environment (decision B2).",
+      "files": ["apps/api/src/config/api-config.ts"]
+    },
+    "b-create": {
+      "label": "NestFactory.create(AppModule.forRoot(config), { bufferLogs: true })", "sub": "builds the DI container", "kind": "step", "status": "real", "wp": "WP-3 step 3",
+      "what": "Builds the module graph and the Express app.",
+      "how": "Nest resolves the imports and providers shown in section 2. The `pg` pool is created but connects lazily, so a database that is down does not stop the boot. `bufferLogs: true` holds Nest's boot lines until a logger is set.",
+      "why": "Express 5 is the adapter (WP-3 decision A1). Buffering lets the very first lines come out as pino JSON.",
+      "files": ["apps/api/src/main.ts"]
+    },
+    "b-configure": {
+      "label": "configureApp(app)", "sub": "logger, pipe, filter, hooks", "kind": "step", "status": "real", "wp": "WP-3 steps 3 to 5",
+      "what": "The one place that wires an app the same way for `main.ts` and for end-to-end tests.",
+      "how": "Calls `useLogger(app.get(Logger))`, `useGlobalPipes(...)`, `useGlobalFilters(new ProblemDetailsFilter())` and `enableShutdownHooks()`, then returns the same app.",
+      "why": "Tests must apply exactly the wiring production does, or a green test proves nothing (WP-3 first principles, Testcontainers harness).",
+      "files": ["packages/platform-nest/src/bootstrap/configure-app.ts"]
+    },
+    "b-listen": {
+      "label": "app.listen(config.port)", "sub": "3001 in dev", "kind": "step", "status": "real", "wp": "WP-3 step 3",
+      "what": "Opens the HTTP port.",
+      "how": "Uses the validated `port` from ApiConfig, never `process.env.PORT` directly.",
+      "why": "api runs on 3001 (WP-3 defaults kept).",
+      "files": ["apps/api/src/main.ts"]
+    },
+    "platformenv": {
+      "label": "platformEnv", "sub": "in platform-nest", "kind": "env", "status": "real", "wp": "WP-3 step 3",
+      "what": "The variables every Nest service reads: `NODE_ENV`, `PORT`, `LOG_LEVEL`, `SERVICE_NAME`.",
+      "how": "A `z.object`. `PORT` is a string piped into a coerced integer from 1 to 65535, so a missing value reads \"received undefined\". Booleans, when they arrive, use `z.stringbool()` because `z.coerce.boolean()` turns \"false\" into true.",
+      "why": "Each module contributes a slice and the service merges them (ADR-043, which kept this rule from ADR-007).",
+      "files": ["packages/platform-nest/src/config/platform-env.ts"]
+    },
+    "apienv": {
+      "label": "apiEnv", "sub": "in api", "kind": "env", "status": "real", "wp": "WP-3 step 3",
+      "what": "api's environment schema: the platform variables, `SERVICE_NAME` defaulting to `api`, and `DATABASE_URL` for its own database.",
+      "how": "`platformEnv.extend({ SERVICE_NAME: z.string().min(1).default(\"api\"), DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }) })`. A missing or non-Postgres URL stops the boot.",
+      "why": "Service-specific variables stay in the service; the shared ones stay identical everywhere.",
+      "files": ["apps/api/src/config/api-config.ts"]
+    },
+    "b-env": {
+      "label": "process.env", "sub": "+ .env file if present", "kind": "env", "status": "real", "wp": "WP-3 step 3",
+      "what": "The raw environment of the process.",
+      "how": "Read only through `loadConfig`, where it is the default argument: once by the instrumentation entry with `telemetryEnv`, once by `main.ts` with `apiEnv`. Node fills it from `.env` first when the file exists (`--env-file-if-exists`).",
+      "why": "ADR-043: no `process.env` reads outside the config loader. The only exception is test setup, such as the Docker host lookup for Testcontainers.",
+      "files": ["packages/platform-nest/src/config/load-config.ts"]
+    },
+    "r-express": {
+      "label": "Express 5", "sub": "HTTP server, JSON body parser", "kind": "step", "status": "real", "wp": "WP-3 step 3",
+      "what": "Accepts the connection and parses the JSON body.",
+      "how": "`@nestjs/platform-express` installs Express as Nest's HTTP adapter.",
+      "why": "WP-3 decision A1: Nest's default, the one the auth and MCP libraries assume first, and the owner knows it best.",
+      "files": ["apps/api/package.json"]
+    },
+    "r-pinohttp": {
+      "label": "pino-http middleware", "sub": "request id · AsyncLocalStorage", "kind": "step", "status": "real", "wp": "WP-3 step 4",
+      "what": "Gives the request an id and a child logger, and stores both for the rest of the request.",
+      "how": "`requestId` reuses `x-request-id` when it matches `^[A-Za-z0-9-]{8,128}$`, else generates a UUID, and echoes it in the response header. nestjs-pino keeps the child logger in AsyncLocalStorage.",
+      "why": "A client cannot inject newlines or huge strings into logs, and every line of the request shares one id (step 4 log).",
+      "files": ["packages/platform-nest/src/logging/logger-params.ts"]
+    },
+    "r-router": {
+      "label": "router", "sub": "Nest route match", "kind": "step", "status": "real", "wp": "WP-3",
+      "what": "Finds the controller method for method and path.",
+      "how": "No match means Nest throws `NotFoundException`, which still goes through the global filter. There are no guards or interceptors yet; they would run between here and the pipe.",
+      "why": "Even a 404 must leave as problem+json.",
+      "files": ["apps/api/src/app.module.ts"]
+    },
+    "r-pipe": {
+      "label": "global pipe", "sub": "Standard Schema validation", "kind": "step", "status": "real", "wp": "WP-3 step 5",
+      "what": "Validates the parameters that declare a `schema`.",
+      "how": "On failure the `exceptionFactory` throws `RequestValidationException` with one JSON Pointer per field; the handler never runs.",
+      "why": "See the pipe box in section 2 (ADR-006).",
+      "files": ["packages/platform-nest/src/bootstrap/configure-app.ts", "packages/platform-nest/src/errors/request-validation.exception.ts"]
+    },
+    "r-handler": {
+      "label": "handler", "sub": "controller method", "kind": "step", "status": "real", "wp": "WP-12 on",
+      "what": "The controller method with a typed, validated input.",
+      "how": "api's only controller so far is `HealthController` from platform-nest. The validation end-to-end tests use `EchoController`, a fixture under platform-nest's tests.",
+      "why": "Real endpoints with bodies arrive with WP-11 and WP-12.",
+      "files": ["packages/platform-nest/src/health/health.controller.ts", "packages/platform-nest/test/fixtures/echo.controller.ts"]
+    },
+    "r-filter": {
+      "label": "ProblemDetailsFilter", "sub": "on error · application/problem+json", "kind": "step", "status": "real", "wp": "WP-3 step 5", "branch": true,
+      "what": "Turns whatever was thrown into an RFC 9457 body.",
+      "how": "Validation: 400 with `errors`. Other 4xx, including body-parser's 413 and 415: status and message kept. `instance` is the path without the query string. Anything else: generic 500, stack only in the error log with the request id. On `/health/*` the controller-scoped `HealthBodyFilter` catches the 503 first and keeps the Terminus body.",
+      "why": "One error format for clients and the admin; internals never leak (ADR-006).",
+      "files": ["packages/platform-nest/src/errors/problem-details.filter.ts"]
+    },
+    "r-log": {
+      "label": "request log line", "sub": "\"request completed\"", "kind": "step", "status": "real", "wp": "WP-3 step 4",
+      "what": "One JSON line per request when the response finishes.",
+      "how": "Carries `service`, `req_id`, `req: { method, url }` (the URL as a path, without the query string), `res: { statusCode }` and the response time, plus `trace_id` and `span_id` when telemetry is on (added by the pino instrumentation). Level from `requestLogLevel`: `/health/*` debug when it passes and warn when it fails, other 5xx error, other 4xx warn, else info.",
+      "why": "Lines are easy to grep by request id, and no headers, body or client IP are written (AGENTS.md section 7).",
+      "files": ["packages/platform-nest/src/logging/logger-params.ts"]
+    },
+    "k-src": {
+      "label": "platform-nest/src/*.ts", "sub": "TypeScript source", "kind": "step", "status": "real", "wp": "WP-3 step 3",
+      "what": "The package's source, exported through `src/index.ts`.",
+      "how": "Decorators need `experimentalDecorators` and `emitDecoratorMetadata`, set in the package tsconfig on top of the library base.",
+      "why": "Node will not strip types inside node_modules and cannot strip decorators at all, so the package must ship JavaScript (WP-3 first principles).",
+      "files": ["packages/platform-nest/src/index.ts", "packages/platform-nest/tsconfig.json"]
+    },
+    "k-tsc": {
+      "label": "tsc -p tsconfig.build.json", "sub": "writes dist/", "kind": "step", "status": "real", "wp": "WP-3 step 3",
+      "what": "Compiles the package to `dist/` with `.js`, `.d.ts` and source maps.",
+      "how": "The `build` script. `rootDir: src`, `outDir: dist`, declarations from the node-library base.",
+      "why": "A workspace package must be real JavaScript; a tsconfig path alias would compile but fail at runtime with `ERR_MODULE_NOT_FOUND`.",
+      "files": ["packages/platform-nest/tsconfig.build.json", "packages/config/tsconfig/node-library.json"]
+    },
+    "k-exports": {
+      "label": "exports map", "sub": ". and ./instrumentation → dist/", "kind": "step", "status": "real", "wp": "WP-3 steps 3 and 7",
+      "what": "Tells Node and TypeScript which files `@jadero/platform-nest` and `@jadero/platform-nest/instrumentation` mean.",
+      "how": "`.` points at `dist/index.d.ts` and `dist/index.js`; `./instrumentation` at `dist/telemetry/instrumentation.d.ts` and `.js`, which is what `node --import` resolves. The editor reads the `.d.ts` from dist, not src.",
+      "why": "This is why the editor shows stale errors in api (\"has no exported member\") after a change in platform-nest or a pull, until `pnpm build` (`turbo run build`) rebuilds dist.",
+      "files": ["packages/platform-nest/package.json"]
+    },
+    "k-symlink": {
+      "label": "node_modules symlink", "sub": "apps/api/node_modules/@jadero/platform-nest", "kind": "step", "status": "real", "wp": "WP-3 step 3",
+      "what": "How api finds the package at all.",
+      "how": "`pnpm install` links `apps/api/node_modules/@jadero/platform-nest` to `packages/platform-nest`; Node then reads its `package.json` exports.",
+      "why": "The same resolution works in a container and on a laptop, unlike a path alias.",
+      "files": ["pnpm-workspace.yaml", "apps/api/package.json"]
+    },
+    "k-turbo": {
+      "label": "turbo ^build", "sub": "build deps first, cache dist/**", "kind": "step", "status": "real", "wp": "WP-1, WP-3",
+      "what": "Builds every dependency before a package's build, typecheck or test.",
+      "how": "In `turbo.json`, `build`, `typecheck`, `test` and `test:int` all have `dependsOn: [\"^build\"]`; `build` caches `dist/**`, `test:int` is never cached. config has no build, so it is skipped.",
+      "why": "api's typecheck and tests always see a fresh platform-nest dist, and cached builds keep `pnpm verify` fast (ADR-001).",
+      "files": ["turbo.json"]
+    },
+    "c-verify": {
+      "label": "pnpm verify", "sub": "turbo run lint depcruise typecheck test test:scripts --affected", "kind": "check", "status": "real", "wp": "WP-1",
+      "what": "The single \"am I done\" command, run before every commit and again after merging main.",
+      "how": "Turborepo runs Biome, dependency-cruiser, typecheck and unit tests for affected packages only, cached. `pnpm verify:all` runs everything (on main and, from WP-6, in CI).",
+      "why": "One command, one answer (AGENTS.md section 3).",
+      "files": ["package.json", "turbo.json"]
+    },
+    "c-biome": {
+      "label": "Biome", "sub": "biome ci . · format and lint", "kind": "check", "status": "real", "wp": "WP-1",
+      "what": "Formatting and single-file lint.",
+      "how": "Recommended rules, 100 columns, double quotes. An override for the Nest paths enables parameter decorators and turns off `useImportType` and `noStaticOnlyClass`.",
+      "why": "WP-3 amendment S1: Biome's `import type` fix would erase DI tokens and break injection.",
+      "files": ["biome.json"]
+    },
+    "c-depcruise": {
+      "label": "dependency-cruiser", "sub": "pnpm depcruise", "kind": "check", "status": "real", "wp": "WP-1",
+      "what": "Checks which file may import which (section 1 rules).",
+      "how": "Reads the import graph of apps/, packages/ and templates/, counting `import type` too, and resolves through `exports`. Only the workspace's own build folders are excluded, so npm packages that ship from `dist/` stay visible to the rules.",
+      "why": "Architecture fitness functions (ADR-024).",
+      "files": [".dependency-cruiser.cjs", "tsconfig.depcruise.json"]
+    },
+    "c-typecheck": {
+      "label": "typecheck", "sub": "tsc --noEmit per package", "kind": "check", "status": "real", "wp": "WP-1",
+      "what": "Types across files, src and test.",
+      "how": "Each package's `tsconfig.json` includes src and test with `noEmit`; it depends on `^build` so imported packages have dist.",
+      "why": "Catches what one-file lint cannot.",
+      "files": ["apps/api/tsconfig.json", "packages/platform-nest/tsconfig.json"]
+    },
+    "c-vitest": {
+      "label": "Vitest", "sub": "vitest run · unit and e2e", "kind": "check", "status": "real", "wp": "WP-1, WP-3",
+      "what": "Unit tests and in-process end-to-end tests.",
+      "how": "Each package uses `baseConfig()` from config: workers sized from load (at most 6), coverage gates 80% lines and 70% branches, and `*.int.test.ts` excluded. Vitest compiles with Oxc and reads decorator metadata from tsconfig, so no SWC plugin. api's unit tests boot the real app with `bootApi()`, the same module and `configureApp` as `main.ts`.",
+      "why": "ADR-009 testing strategy; spike row 1 confirmed DI under Vitest.",
+      "files": ["packages/config/vitest/base.js", "apps/api/vitest.config.ts", "packages/platform-nest/vitest.config.ts"]
+    },
+    "c-testint": {
+      "label": "pnpm test:int", "sub": "Testcontainers · needs Docker", "kind": "check", "status": "real", "wp": "WP-3 step 6",
+      "what": "Integration tests against real containers, kept out of `pnpm verify`.",
+      "how": "`turbo run test:int` runs each package's `vitest.int.config.ts`, built from `integrationConfig()`: only `test/**/*.int.test.ts`, longer timeouts, and a global setup. api's global setup first calls `useDockerContextHost()`, then starts one `pgvector/pgvector:0.8.7-pg18` container per run and provides its URL; each test file creates and drops its own database. A unit test keeps that tag equal to `compose.dev.yml`.",
+      "why": "WP-3 decision H: one container per run, one database per file, so files run in parallel without sharing rows. `pnpm verify` stays fast and Docker-free; CI runs these from WP-6. Testcontainers looks only at `DOCKER_HOST`, `~/.testcontainers.properties` and `/var/run/docker.sock`, not at the Docker CLI context that OrbStack, Colima and Docker Desktop use on macOS. `useDockerContextHost()` asks `docker context inspect` and sets `DOCKER_HOST` when none is set, so `pnpm test:int` works wherever `pnpm dev:up` works.",
+      "files": ["apps/api/vitest.int.config.ts", "apps/api/test/setup/postgres.global-setup.ts", "apps/api/test/setup/docker-host.ts", "apps/api/test/docker-host.test.ts", "apps/api/test/setup/test-database.ts", "apps/api/test/images.test.ts", "packages/config/vitest/base.js"]
+    },
+    "c-precommit": {
+      "label": "lefthook pre-commit", "sub": "biome check --write on staged files", "kind": "check", "status": "real", "wp": "WP-1",
+      "what": "Formats and safely fixes staged files, then stages them again.",
+      "how": "Installed by `pnpm install` through the root `prepare` script. Skip once with `LEFTHOOK=0`.",
+      "why": "Formatting never reaches review (ADR-024).",
+      "files": ["lefthook.yml"]
+    },
+    "c-commitlint": {
+      "label": "commitlint", "sub": "commit-msg hook", "kind": "check", "status": "real", "wp": "WP-1",
+      "what": "Enforces `type(scope): subject` with a scope from a fixed list.",
+      "how": "Conventional config plus `scope-enum` (api, platform-nest, config, ...) and a 100 character header limit.",
+      "why": "release-please reads the type for versions (ADR-025).",
+      "files": ["commitlint.config.mjs", "lefthook.yml"]
+    },
+    "c-compose": {
+      "label": "pnpm dev:up", "sub": "Postgres 18 + pgvector, RabbitMQ 4", "kind": "check", "status": "real", "wp": "WP-1",
+      "what": "Local dependencies in Docker; the apps run on the host.",
+      "how": "`infra/compose/compose.dev.yml`: pgvector on Postgres 18 and RabbitMQ with the management UI, ports bound to 127.0.0.1, healthchecks so `--wait` returns when ready.",
+      "why": "ADR-027 and ADR-029. api's readiness check connects to Postgres (`content_dev`); RabbitMQ waits for WP-5. The Postgres image tag is shared with the integration tests.",
+      "files": ["infra/compose/compose.dev.yml"]
+    },
+    "c-build": {
+      "label": "pnpm build", "sub": "turbo run build · every dist/", "kind": "check", "status": "real", "wp": "WP-3",
+      "what": "Compiles every package that has a `build` script, in dependency order.",
+      "how": "`turbo run build`: platform-nest, then api. Cached on `dist/**`, so an unchanged package is restored, not rebuilt.",
+      "why": "Run it after a pull or a branch switch when the editor shows errors such as `has no exported member` in api: the editor reads platform-nest's types from `dist/`, which goes stale until it is rebuilt. `pnpm dev` keeps dist fresh while it runs.",
+      "files": ["package.json", "turbo.json"]
+    },
+    "d-turbo": {
+      "label": "turbo run dev", "sub": "build once, then watch", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "Starts every package's `dev` task, after one full build.",
+      "how": "In `turbo.json`, `dev` has `dependsOn: [\"^build\", \"build\"]` so every dist exists before anything watches, `with: [\"dev:build\"]` so a package's `dev:build` runs next to its `dev`, and `cache: false` with `persistent: true` because both never end.",
+      "why": "Decision J: `tsc --watch` plus `node --watch`, no extra tool. Copy `apps/api/.env.example` to `.env` first, since `dev` boots the real app.",
+      "files": ["turbo.json", "package.json"]
+    },
+    "d-pn-watch": {
+      "label": "platform-nest dev", "sub": "tsc --watch → dist/", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "Recompiles platform-nest on every save.",
+      "how": "Its `dev` script is `tsc -p tsconfig.build.json --watch --preserveWatchOutput`.",
+      "why": "api reads platform-nest from `dist/`, so dist must follow the source while you edit both.",
+      "files": ["packages/platform-nest/package.json"]
+    },
+    "d-api-watch": {
+      "label": "api dev:build", "sub": "tsc --watch → dist/", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "Recompiles api on every save.",
+      "how": "Started next to api's `dev` by `with`; the same `tsc --watch --preserveWatchOutput` on api's build config.",
+      "why": "Node runs JavaScript from `dist/`, not TypeScript from `src/`: decorators need the compiler (WP-3 first principles).",
+      "files": ["apps/api/package.json"]
+    },
+    "d-node-watch": {
+      "label": "api dev", "sub": "node --watch on both dist/", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "Runs api and restarts it when either dist folder changes.",
+      "how": "`node --watch-path=dist --watch-path=../../packages/platform-nest/dist --watch-preserve-output --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js`: the same start line as `start`, so dev also has traces.",
+      "why": "Watching compiled output keeps one compiler (tsc) and one runtime (node) in the loop, the same pair production uses.",
+      "files": ["apps/api/package.json"]
+    },
+    "t-span": {
+      "label": "HTTP SERVER span", "sub": "HttpInstrumentation", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "The span the http instrumentation opens for each incoming request. It carries the trace id.",
+      "how": "The patched `http` module starts a span named `GET` (or the method) when a request arrives; Express spans become its children and set `http.route`. pg query spans join the same trace. A `startIncomingSpanHook` overwrites `client.address`, `network.peer.address`, `network.peer.port` and `user_agent.original` with redacted values on every incoming span.",
+      "why": "One trace per request, without touching controller code. Nest controller spans are off (decision S2). Visitor data stays out of spans as it stays out of logs (AGENTS.md section 7); the client address would come from `X-Forwarded-For` behind nginx. The test checks a real span shows `client.address: redacted`.",
+      "files": ["packages/platform-nest/src/telemetry/create-sdk.ts"]
+    },
+    "t-ctx": {
+      "label": "active context", "sub": "AsyncLocalStorage", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "Where the current span lives while the request runs.",
+      "how": "The SDK's context manager keeps the span in AsyncLocalStorage, so code anywhere in the request (a filter, a logger call) finds it with `trace.getActiveSpan()`.",
+      "why": "The same idea nestjs-pino uses for the request id: no request-scoped providers.",
+      "files": ["packages/platform-nest/src/telemetry/trace-id.ts"]
+    },
+    "t-body": {
+      "label": "problem body", "sub": "traceId · from currentTraceId()", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "`traceId` in every problem+json body when telemetry is on.",
+      "how": "`currentTraceId()` reads the active span's context and returns the 32-hex-digit id when it is valid, else undefined. ProblemDetailsFilter spreads it into the body next to `requestId`.",
+      "why": "A client that reports an error quotes one id, and that id finds both the log lines and the trace.",
+      "files": ["packages/platform-nest/src/telemetry/trace-id.ts", "packages/platform-nest/src/errors/problem-details.filter.ts", "packages/platform-nest/test/telemetry.test.ts"]
+    },
+    "t-log": {
+      "label": "pino line", "sub": "trace_id, span_id · PinoInstrumentation", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "`trace_id`, `span_id` and `trace_flags` on every pino line written inside a span.",
+      "how": "`PinoInstrumentation({ disableLogSending: true })` adds the fields; log records are not forwarded to an OpenTelemetry log pipeline, they stay with pino on stdout.",
+      "why": "Logs and traces join on one id without a second log path. The test runs a real `node --import` and checks that the logged `trace_id` matches a printed span.",
+      "files": ["packages/platform-nest/src/telemetry/create-sdk.ts", "packages/platform-nest/test/telemetry.test.ts"]
+    },
+    "t-export": {
+      "label": "span exporter", "sub": "none by default · console in dev", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "Where finished spans go.",
+      "how": "`OTEL_TRACES_EXPORTER` picks it. `none`, the default, starts no SDK at all; `console` (set in `apps/api/.env.example` for dev) prints each span as it ends; `otlp` batches them to `OTEL_EXPORTER_OTLP_ENDPOINT/v1/traces`.",
+      "why": "`none` by default so production never prints spans by accident. Console is enough to see traces locally; the OTLP collector and trace viewer come with the observability WPs (ADR-010).",
+      "files": ["packages/platform-nest/src/telemetry/create-sdk.ts", "packages/platform-nest/src/telemetry/telemetry-env.ts"]
+    },
+    "m-notes-index": {
+      "label": "notes/index.ts", "sub": "public surface", "kind": "file", "status": "real", "wp": "WP-3 step 8",
+      "what": "The only file other modules may import from this module.",
+      "how": "Exports `NotesModule` and the `Note` type.",
+      "why": "Rule `modules-import-through-index` (ADR-003).",
+      "files": ["templates/nest-module/src/modules/notes/index.ts"]
+    },
+    "m-notes-module": {
+      "label": "NotesModule", "sub": "layered · ADR-003", "kind": "module", "status": "real", "wp": "WP-3 step 8",
+      "what": "The layered shape: controller, application service and repository in one folder.",
+      "how": "`@Module({ controllers: [NotesController], providers: [NotesService, NotesRepository] })`. No ports and no domain folder.",
+      "why": "For modules with no rules worth protecting (health, revalidation, cv). A port with one implementation and nothing to protect would be ceremony.",
+      "files": ["templates/nest-module/src/modules/notes/notes.module.ts", "templates/nest-module/README.md"]
+    },
+    "m-notes-controller": {
+      "label": "NotesController", "sub": "POST /notes · GET /notes", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
+      "what": "The HTTP edge of the layered module.",
+      "how": "`@Body({ schema: AddNoteBody })` validates `{ text }` (1 to 500 characters) through the global pipe, so a bad body is a 400 problem. It delegates to `NotesService`.",
+      "why": "Validation at the boundary with Zod (ADR-006). In a service the schema moves to `packages/contracts`.",
+      "files": ["templates/nest-module/src/modules/notes/notes.controller.ts"]
+    },
+    "m-notes-service": {
+      "label": "NotesService", "sub": "application service", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
+      "what": "The one class the controller calls. It trims and stores.",
+      "how": "Injects `NotesRepository` by class. Tested with the real in-memory repository, since there is no port to fake.",
+      "why": "Keeps the controller thin even in a simple module.",
+      "files": ["templates/nest-module/src/modules/notes/notes.service.ts", "templates/nest-module/src/modules/notes/notes.service.test.ts"]
+    },
+    "m-notes-repo": {
+      "label": "NotesRepository", "sub": "in-memory map · Drizzle from WP-10", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
+      "what": "Storage for notes.",
+      "how": "A `Map` keeps the template runnable. In a real module this is the Drizzle repository.",
+      "why": "One implementation, injected directly by class.",
+      "files": ["templates/nest-module/src/modules/notes/notes.repository.ts"]
+    },
+    "m-w-index": {
+      "label": "widgets/index.ts", "sub": "public surface", "kind": "file", "status": "real", "wp": "WP-3 step 8",
+      "what": "The only file other modules may import from this module.",
+      "how": "Exports `WidgetsModule` only. Domain classes, ports and adapters stay private.",
+      "why": "Rule `modules-import-through-index` (ADR-003).",
+      "files": ["templates/nest-module/src/modules/widgets/index.ts"]
+    },
+    "m-w-module": {
+      "label": "WidgetsModule", "sub": "hexagonal · binds adapters to ports", "kind": "module", "status": "real", "wp": "WP-3 step 8",
+      "what": "The wiring: the only place that knows which adapter backs each port.",
+      "how": "Declares `WidgetsController`, provides `CreateWidget`, `{ provide: WidgetRepository, useClass: InMemoryWidgetRepository }` and `{ provide: IdGenerator, useClass: RandomIdGenerator }`. A wiring test boots it.",
+      "why": "Swap the in-memory adapter for a Drizzle one here and nothing else changes (composition root).",
+      "files": ["templates/nest-module/src/modules/widgets/widgets.module.ts", "templates/nest-module/test/wiring.test.ts"]
+    },
+    "m-w-controller": {
+      "label": "WidgetsController", "sub": "presentation/ · POST /widgets", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
+      "what": "The HTTP edge: validates the shape, calls one use case, maps domain errors to HTTP.",
+      "how": "`@Body({ schema })` checks `{ name: string }` (400 on a bad shape). It calls `CreateWidget.execute` and turns `WidgetNameInvalid` into `UnprocessableEntityException`, which ProblemDetailsFilter renders as a 422 problem.",
+      "why": "Shape errors (400) and rule errors (422) stay distinct: the shape is the boundary's job, the rule is the domain's.",
+      "files": ["templates/nest-module/src/modules/widgets/presentation/widgets.controller.ts"]
+    },
+    "m-w-usecase": {
+      "label": "CreateWidget", "sub": "application/ · use case", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
+      "what": "One use case per class: it orchestrates the domain and the ports and holds no rules of its own.",
+      "how": "Injects `WidgetRepository` and `IdGenerator` by their abstract classes, calls `Widget.create(ids.next(), name)` and saves it. Its test declares its own fakes of both ports.",
+      "why": "Depends on ports only (rule `application-never-imports-infrastructure`), so it tests with fakes and no database (ADR-009).",
+      "files": ["templates/nest-module/src/modules/widgets/application/create-widget.use-case.ts", "templates/nest-module/src/modules/widgets/application/create-widget.use-case.test.ts"]
+    },
+    "m-w-repo-port": {
+      "label": "WidgetRepository", "sub": "port · abstract class", "kind": "token", "status": "real", "wp": "WP-3 step 8",
+      "what": "What the use cases need from storage: `findById` and `save`.",
+      "how": "An abstract class in `application/`. It is the TypeScript type and the DI token at once, like `ApiConfig`.",
+      "why": "Ports are abstract classes (ADR-003, AGENTS.md rule 4).",
+      "files": ["templates/nest-module/src/modules/widgets/application/widget.repository.ts"]
+    },
+    "m-w-id-port": {
+      "label": "IdGenerator", "sub": "port · abstract class", "kind": "token", "status": "real", "wp": "WP-3 step 8",
+      "what": "A port for new ids.",
+      "how": "One abstract method, `next()`. The test fake returns a fixed id.",
+      "why": "Keeps use cases deterministic in tests.",
+      "files": ["templates/nest-module/src/modules/widgets/application/id-generator.ts"]
+    },
+    "m-w-inmem": {
+      "label": "InMemoryWidgetRepository", "sub": "infrastructure/ · adapter", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
+      "what": "An adapter for the repository port that keeps the template runnable.",
+      "how": "Extends `WidgetRepository` with a `Map`. In a service a Drizzle adapter replaces it and gets a Testcontainers test.",
+      "why": "Adapters live in `infrastructure/` and are bound only in the module file.",
+      "files": ["templates/nest-module/src/modules/widgets/infrastructure/in-memory-widget.repository.ts"]
+    },
+    "m-w-randomid": {
+      "label": "RandomIdGenerator", "sub": "infrastructure/ · adapter", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
+      "what": "Production ids.",
+      "how": "Extends `IdGenerator` and returns `randomUUID()` from `node:crypto`.",
+      "why": "Randomness stays at the edge, behind a port.",
+      "files": ["templates/nest-module/src/modules/widgets/infrastructure/random-id-generator.ts"]
+    },
+    "m-w-widget": {
+      "label": "Widget", "sub": "domain/ · aggregate", "kind": "domain", "status": "real", "wp": "WP-3 step 8",
+      "what": "The aggregate. It guards its own rule: a name has 1 to 60 characters after trimming.",
+      "how": "A private constructor, `Widget.create(id, name)` and `rename(name)` both check the rule and throw `WidgetNameInvalid`. Plain TypeScript: no Nest, no database, no npm package.",
+      "why": "Nothing outside can put it in a bad state, and its test needs no framework. Rule `domain-imports-only-domain` keeps it that way.",
+      "files": ["templates/nest-module/src/modules/widgets/domain/widget.ts", "templates/nest-module/src/modules/widgets/domain/widget.test.ts"]
+    },
+    "m-w-error": {
+      "label": "WidgetNameInvalid", "sub": "domain/ · error", "kind": "domain", "status": "real", "wp": "WP-3 step 8",
+      "what": "The error the domain throws when the name rule is broken.",
+      "how": "Extends `Error` and keeps the attempted name. The controller maps it to 422.",
+      "why": "The domain names its failures; the presentation layer decides the HTTP status.",
+      "files": ["templates/nest-module/src/modules/widgets/domain/widget.errors.ts"]
+    },
+    "m-ext-npm": {
+      "label": "@nestjs/common, zod", "sub": "any npm package", "kind": "ext", "status": "real", "wp": "WP-3 step 8 (rule fix)",
+      "what": "What a domain file may never import.",
+      "how": "Since step 8, `domain-imports-only-domain` flags every import outside the module's `domain/` folder except Node built-ins, npm packages included.",
+      "why": "Before the fix a domain file could import `@nestjs/common` and pass; widening the rules to `templates/` found it.",
+      "files": [".dependency-cruiser.cjs"]
+    }
+  }
+}
+</script>
+
+<script>
+(() => {
+  "use strict";
+  var DATA = JSON.parse(document.getElementById("map-data").textContent);
+  var NODES = DATA.nodes;
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var EDGE_NAMES = { dep: "depends on", dev: "dev dependency", imports: "imports", provides: "provides", injects: "injects", consumes: "consumes", throws: "throws to", flow: "feeds", planned: "planned", forbidden: "forbidden", extends: "extends", lifecycle: "lifecycle hook" };
+  var refs = {};   // node id -> list of DOM elements
+  var links = {};  // node id -> list of {dir, kind, label, other}
+  var activeId = null;
+
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  function fmt(s) { return esc(s).replace(/`([^`]+)`/g, "<code>$1</code>"); }
+  function el(tag, attrs, parent) {
+    var e = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function h(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+  function register(id, node) { (refs[id] = refs[id] || []).push(node); }
+  function link(a, b, kind, label) {
+    (links[a] = links[a] || []).push({ dir: "out", kind: kind, label: label, other: b });
+    (links[b] = links[b] || []).push({ dir: "in", kind: kind, label: label, other: a });
+  }
+  function makeClickable(node, id) {
+    node.setAttribute("tabindex", "0");
+    node.setAttribute("role", "button");
+    node.setAttribute("aria-label", (NODES[id] ? NODES[id].label : id) + ": show details");
+    node.addEventListener("click", () => { openPanel(id); });
+    node.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); openPanel(id); } });
+  }
+
+  // Clip a line from rect center toward (tx, ty) at the rect border.
+  function clip(r, tx, ty) {
+    var cx = r[0] + r[2] / 2, cy = r[1] + r[3] / 2, dx = tx - cx, dy = ty - cy;
+    if (dx === 0 && dy === 0) return [cx, cy];
+    var sx = dx !== 0 ? (r[2] / 2 + 3) / Math.abs(dx) : Infinity;
+    var sy = dy !== 0 ? (r[3] / 2 + 3) / Math.abs(dy) : Infinity;
+    var s = Math.min(sx, sy);
+    return [cx + dx * s, cy + dy * s];
+  }
+  function center(r) { return [r[0] + r[2] / 2, r[1] + r[3] / 2]; }
+
+  function wrapText(text, maxChars) {
+    if (text.length <= maxChars) return [text];
+    var parts = text.split(/(?<=[\s(,·])/), lines = [""];
+    parts.forEach((p) => {
+      if ((lines[lines.length - 1] + p).length > maxChars && lines[lines.length - 1]) lines.push(p.trimStart());
+      else lines[lines.length - 1] += p;
+    });
+    return lines.slice(0, 2);
+  }
+
+  function renderGraph(fig, figEl, idx) {
+    var W = fig.viewBox[0], H = fig.viewBox[1];
+    var canvas = h("div", "canvas");
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img", "aria-label": fig.caption || fig.title });
+    canvas.appendChild(svg);
+    var defs = el("defs", {}, svg);
+    var used = {};
+    (fig.edges || []).forEach((e) => { used[e.kind] = true; });
+    Object.keys(used).forEach((k) => {
+      var m = el("marker", { id: "mk-" + idx + "-" + k, viewBox: "0 0 10 10", refX: "9", refY: "5", markerWidth: "7", markerHeight: "7", orient: "auto-start-reverse" }, defs);
+      el("path", { d: "M0,0 L10,5 L0,10 z", "class": "mk-" + k }, m);
+    });
+    (fig.lanes || []).forEach((l) => {
+      el("rect", { x: l.x, y: l.y, width: l.w, height: l.h, rx: 8, "class": "lane-bg" }, svg);
+      var t = el("text", { x: l.x + 12, y: l.y + 18, "class": "lane-label" }, svg);
+      t.textContent = l.label;
+    });
+    var edgeLayer = el("g", {}, svg);
+    var labelLayer = el("g", {}, svg);
+    var nodeLayer = el("g", {}, svg);
+    var place = fig.place || {};
+    (fig.edges || []).forEach((e) => {
+      var pts;
+      if (e.points) pts = e.points.slice();
+      else {
+        var a = place[e.from], b = place[e.to];
+        if (!a || !b) return;
+        var via = e.via || [];
+        var first = via.length ? via[0] : center(b);
+        var last = via.length ? via[via.length - 1] : center(a);
+        pts = [clip(a, first[0], first[1])].concat(via, [clip(b, last[0], last[1])]);
+        link(e.from, e.to, e.kind, e.label);
+      }
+      if (e.ref) { link(e.ref, e.ref, "forbidden", e.label); }
+      var g = el("g", { "class": "edge e-" + e.kind }, edgeLayer);
+      var d = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
+      el("path", { d: d, "marker-end": "url(#mk-" + idx + "-" + e.kind + ")" }, g);
+      if (e.label && !e.hideLabel) {
+        var mid;
+        if (e.labelAt) mid = e.labelAt;
+        else { var i = Math.floor((pts.length - 1) / 2); mid = [(pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2]; }
+        var lg = el("g", { "class": "elabel e-" + e.kind + (e.ref ? " ref" : "") }, labelLayer);
+        var w = e.label.length * 6.4 + 10;
+        el("rect", { x: mid[0] - w / 2, y: mid[1] - 9, width: w, height: 17, rx: 3 }, lg);
+        var t = el("text", { x: mid[0], y: mid[1] + 3.5, "text-anchor": "middle" }, lg);
+        t.textContent = e.label;
+        if (e.ref) { makeClickable(lg, e.ref); register(e.ref, lg); }
+      }
+    });
+    Object.keys(place).forEach((id) => {
+      var r = place[id], n = NODES[id];
+      if (!n) return;
+      var g = el("g", { "class": "node k-" + n.kind + (n.status === "planned" ? " planned" : "") }, nodeLayer);
+      el("rect", { x: r[0], y: r[1], width: r[2], height: r[3], rx: n.kind === "module" ? 4 : 6 }, g);
+      var maxC = Math.floor((r[2] - 16) / 7.8);
+      var lines = wrapText(n.label, maxC);
+      var subY = r[1] + r[3] / 2 + (lines.length > 1 ? 16 : 13);
+      var top = r[1] + r[3] / 2 - (lines.length > 1 ? 10 : 2);
+      lines.forEach((ln, i) => {
+        var t = el("text", { x: r[0] + r[2] / 2, y: top + i * 15, "text-anchor": "middle", "class": "lbl" }, g);
+        t.textContent = ln;
+      });
+      if (n.sub && r[3] >= 44) {
+        var s = el("text", { x: r[0] + r[2] / 2, y: Math.min(subY, r[1] + r[3] - 6), "text-anchor": "middle", "class": "sub" }, g);
+        var sub = n.sub, maxS = Math.floor((r[2] - 12) / 5.6);
+        s.textContent = sub.length > maxS ? sub.slice(0, maxS - 1) + "…" : sub;
+      }
+      makeClickable(g, id);
+      register(id, g);
+    });
+    figEl.appendChild(canvas);
+    // legend
+    var lg = h("div", "legend");
+    Object.keys(used).forEach((k) => {
+      var span = h("span");
+      span.innerHTML = '<svg viewBox="0 0 30 10" aria-hidden="true"><g class="edge e-' + k + '"><path d="M1,5 L29,5"/></g></svg>' + esc(EDGE_NAMES[k] || k);
+      lg.appendChild(span);
+    });
+    figEl.appendChild(lg);
+  }
+
+  function renderSteps(fig, figEl) {
+    var ol = h("ol", "steps");
+    var byId = {};
+    fig.steps.forEach((id, i) => {
+      var n = NODES[id]; if (!n) return;
+      var li = h("li");
+      var b = h("button", "step" + (n.branch ? " branch" : "") + (n.status === "planned" ? " planned" : ""));
+      b.type = "button";
+      b.innerHTML = '<span class="n">' + (i + (fig.start != null ? fig.start : 1)) + '</span><span class="t">' + esc(n.label) + '</span><span class="d">' + esc(n.sub || "") + "</span>";
+      b.addEventListener("click", () => { openPanel(id); });
+      if (i > 0) link(fig.steps[i - 1], id, "flow", "then");
+      li.appendChild(b); ol.appendChild(li);
+      register(id, b); byId[id] = b;
+    });
+    figEl.appendChild(ol);
+    if (fig.examples) {
+      var box = h("div", "examples");
+      var tabs = h("div", "ex-tabs"); tabs.setAttribute("role", "group"); tabs.setAttribute("aria-label", "Examples");
+      var body = h("div");
+      box.appendChild(tabs); box.appendChild(body);
+      function show(ex, btn) {
+        Array.prototype.forEach.call(tabs.children, (c) => { c.setAttribute("aria-pressed", String(c === btn)); });
+        Object.keys(byId).forEach((id) => {
+          var hit = ex.path.indexOf(id) >= 0;
+          byId[id].classList.toggle("hit", hit);
+          byId[id].classList.toggle("dim", !hit);
+        });
+        body.innerHTML = '<div class="ex-body"><div><div class="fig-title">Request</div><pre>' + esc(ex.request) + '</pre></div><div><div class="fig-title">Response</div><pre>' + esc(ex.response) + '</pre></div></div><p class="ex-note">' + fmt(ex.note) + "</p>";
+      }
+      fig.examples.forEach((ex, i) => {
+        var b = h("button", null, esc(ex.label)); b.type = "button";
+        b.addEventListener("click", () => { show(ex, b); });
+        tabs.appendChild(b);
+        if (i === 0) setTimeout(() => { show(ex, b); }, 0);
+      });
+      figEl.appendChild(box);
+    }
+  }
+
+  function renderCards(fig, figEl) {
+    var ul = h("ul", "cards");
+    fig.cards.forEach((id) => {
+      var n = NODES[id]; if (!n) return;
+      var li = h("li");
+      var b = h("button", "card k-" + n.kind + (n.warn ? " warn" : "") + (n.status === "planned" ? " planned" : ""));
+      b.type = "button";
+      b.innerHTML = '<span class="t">' + esc(n.label) + '</span><span class="d">' + esc(n.sub || "") + "</span>";
+      b.addEventListener("click", () => { openPanel(id); });
+      li.appendChild(b); ul.appendChild(li); register(id, b);
+    });
+    figEl.appendChild(ul);
+  }
+
+  var toc = document.getElementById("toc"), main = document.getElementById("sections");
+  DATA.sections.forEach((sec) => {
+    var a = h("a", null, "<span>" + esc(sec.eyebrow.split(" ")[0]) + "</span>" + esc(sec.title));
+    a.href = "#" + sec.id; toc.appendChild(a);
+    var s = h("section", "map"); s.id = sec.id;
+    var head = h("header");
+    head.appendChild(h("div", "eyebrow", esc(sec.eyebrow)));
+    head.appendChild(h("h2", null, esc(sec.title)));
+    head.appendChild(h("p", null, fmt(sec.intro)));
+    s.appendChild(head);
+    sec.figures.forEach((fig, i) => {
+      var f = h("figure");
+      f.appendChild(h("div", "fig-title", esc(fig.title)));
+      if (fig.type === "graph") renderGraph(fig, f, sec.id + i);
+      else if (fig.type === "steps") renderSteps(fig, f);
+      else if (fig.type === "cards") renderCards(fig, f);
+      if (fig.caption) f.appendChild(h("figcaption", null, fmt(fig.caption)));
+      s.appendChild(f);
+    });
+    main.appendChild(s);
+  });
+  document.getElementById("stamp").textContent = "Last updated: " + DATA.meta.lastUpdated;
+
+  var panel = document.getElementById("panel");
+  function setActive(id) {
+    if (activeId && refs[activeId]) refs[activeId].forEach((n) => { n.classList.remove("active"); });
+    activeId = id;
+    if (id && refs[id]) refs[id].forEach((n) => { n.classList.add("active"); });
+  }
+  function openPanel(id) {
+    var n = NODES[id]; if (!n) return;
+    setActive(id);
+    var kind = DATA.meta.kinds[n.kind] || n.kind;
+    var html = '<button type="button" class="close" id="panel-close">Close</button>';
+    html += '<div class="tags"><span class="tag">' + esc(kind) + '</span><span class="tag wp">' + esc(n.wp) + "</span>" + (n.status === "planned" ? '<span class="tag planned">planned</span>' : "") + "</div>";
+    html += "<h2>" + esc(n.label) + "</h2>";
+    if (n.sub) html += '<p class="mono" style="color:var(--muted)">' + esc(n.sub) + "</p>";
+    html += "<section><h3>What it is</h3><p>" + fmt(n.what) + "</p></section>";
+    html += "<section><h3>How it works</h3><p>" + fmt(n.how) + "</p></section>";
+    html += "<section><h3>Why this way</h3><p>" + fmt(n.why) + "</p></section>";
+    html += '<section><h3>Files</h3><ul class="files">' + n.files.map((f) => "<li>" + esc(f) + "</li>").join("") + "</ul></section>";
+    var seen = {}, rel = (links[id] || []).filter((l) => {
+      if (l.other === id) return false;
+      var key = l.dir + l.other + l.label; if (seen[key]) return false; seen[key] = true; return !!NODES[l.other];
+    });
+    if (rel.length) {
+      html += '<section class="links"><h3>Connected</h3><ul>' + rel.map((l) => {
+        var verb = l.dir === "out" ? (l.label || EDGE_NAMES[l.kind]) : "← " + (l.label || EDGE_NAMES[l.kind]);
+        return '<li><span class="rel">' + esc(verb) + '</span> <button type="button" data-go="' + esc(l.other) + '">' + esc(NODES[l.other].label) + "</button></li>";
+      }).join("") + "</ul></section>";
+    }
+    panel.innerHTML = html;
+    panel.hidden = false;
+    panel.scrollTop = 0;
+    document.getElementById("panel-close").addEventListener("click", closePanel);
+    panel.querySelectorAll("[data-go]").forEach((b) => { b.addEventListener("click", () => { openPanel(b.getAttribute("data-go")); }); });
+    document.getElementById("panel-close").focus({ preventScroll: true });
+  }
+  function closePanel() {
+    var back = activeId && refs[activeId] && refs[activeId][0];
+    panel.hidden = true; setActive(null);
+    if (back && back.focus) back.focus({ preventScroll: true });
+  }
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !panel.hidden) closePanel(); });
+  var hash = location.hash.slice(1);
+  if (hash && NODES[hash]) openPanel(hash);
+})();
+</script>

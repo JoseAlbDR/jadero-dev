@@ -1,0 +1,26 @@
+{
+  "name": "@jadero/template-nest-module",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Copyable module shapes for the Nest services (ADR-003, WP-3 decision G3): layered and hexagonal. Type-checked, tested and covered by the architecture rules; never deployed.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nestjs/common": "catalog:",
+    "@nestjs/core": "catalog:",
+    "reflect-metadata": "catalog:",
+    "rxjs": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@jadero/config": "workspace:*",
+    "@nestjs/platform-express": "catalog:",
+    "@nestjs/testing": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

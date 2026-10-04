@@ -1,0 +1,222 @@
+<title>jadero.dev Local Playbook</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
+<style>
+/* Layout: one reading column; numbered sessions as the spine; terminal blocks show what the owner types and what comes back. */
+:root {
+  --bg: #f7f6f2; --surface: #ffffff; --fg: #1d1f1a; --muted: #5f635a; --line: #d9d8cf;
+  --accent: #1f5f3b; --accent-soft: #e4efe7; --warn: #8a5a00; --warn-soft: #f6ecd6; --code-bg: #eeede7; --term-bg: #1b1d1f; --term-fg: #e6e4dc; --term-you: #9fd8b4; --term-dim: #8e9088;
+  --display: "Fraunces", Georgia, serif; --body: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15171a; --surface: #1d2024; --fg: #e8e7e1; --muted: #a2a59c; --line: #33373c;
+  --accent: #7fc69a; --accent-soft: #1e2f25; --warn: #e2b05a; --warn-soft: #332a18; --code-bg: #24282c; --term-bg: #0f1112; --term-fg: #e6e4dc; --term-you: #9fd8b4; --term-dim: #8e9088; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #15171a; --surface: #1d2024; --fg: #e8e7e1; --muted: #a2a59c; --line: #33373c;
+  --accent: #7fc69a; --accent-soft: #1e2f25; --warn: #e2b05a; --warn-soft: #332a18; --code-bg: #24282c; --term-bg: #0f1112; --term-fg: #e6e4dc; --term-you: #9fd8b4; --term-dim: #8e9088; color-scheme: dark; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.55; padding-inline: 16px; padding-block: 0; }
+main { max-width: 78ch; margin: 0 auto; padding-block: 40px 80px; }
+h1 { font-family: var(--display); font-weight: 600; font-size: clamp(30px, 5vw, 42px); line-height: 1.1; margin: 0 0 8px; text-wrap: balance; }
+.lede { color: var(--muted); font-size: 17px; margin: 0 0 24px; max-width: 65ch; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 24px; margin: 44px 0 12px; text-wrap: balance; }
+h3 { font-size: 16px; font-weight: 600; margin: 22px 0 6px; }
+p, li { max-width: 70ch; }
+p { margin: 0 0 12px; }
+ul, ol { padding-left: 22px; margin: 0 0 12px; }
+li { margin-bottom: 5px; }
+code { font-family: var(--mono); font-size: 0.9em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+pre { font-family: var(--mono); font-size: 13.5px; background: var(--code-bg); padding: 12px 14px; border-radius: 6px; overflow-x: auto; margin: 0 0 14px; line-height: 1.5; }
+pre code { background: none; padding: 0; }
+pre.term { background: var(--term-bg); color: var(--term-fg); }
+pre.term .you { color: var(--term-you); }
+pre.term .dim { color: var(--term-dim); }
+.eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin: 0 0 6px; }
+.tablewrap { overflow-x: auto; margin: 0 0 16px; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; color: var(--muted); font-size: 13px; letter-spacing: 0.03em; }
+.note { background: var(--warn-soft); border-left: 3px solid var(--warn); padding: 10px 14px; margin: 0 0 14px; border-radius: 0 6px 6px 0; }
+.note p { margin: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin: 0 0 14px; }
+.card p:last-child, .card ol:last-child, .card ul:last-child { margin-bottom: 0; }
+nav.toc { font-size: 14px; margin: 0 0 8px; }
+nav.toc a { color: var(--accent); text-decoration: none; margin-right: 14px; display: inline-block; }
+a { color: var(--accent); }
+.status { font-family: var(--mono); font-size: 12px; color: var(--muted); margin: 0 0 20px; }
+input[type="checkbox"] { accent-color: var(--accent); margin-right: 6px; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<main>
+<p class="eyebrow">jadero.dev v2 · playbook for the owner's machine</p>
+<h1>Working the repo from your laptop, step by step</h1>
+<p class="lede">How to run the same flow the cloud session ran, on your machine with Claude Code (Opus 5.5) and firstmate. Setup once, what to do after a merge, the daily loop, and what to do when something blocks. Every rule here has its source file in the repo.</p>
+<p class="status">Version 7, 2026-10-04: WP-3 built (steps 1 to 8); pnpm build, pnpm dev and pnpm test:int; the stale dist and Testcontainers-on-OrbStack fixes; pages to keep current; continue tomorrow with firstmate. Companion page: the delivery flow (ten stages, roles, gates).</p>
+
+<nav class="toc"><a href="#once">Setup once</a><a href="#first">After a merge to main</a><a href="#session">What a session looks like</a><a href="#daily">Daily loop</a><a href="#learning">How you learn</a><a href="#blocked">When something blocks</a><a href="#firstmate">With firstmate</a><a href="#pages">Pages to keep current</a><a href="#tomorrow">Continue tomorrow</a><a href="#cheatsheet">Cheat sheet</a></nav>
+
+<h2 id="once">Setup once</h2>
+<div class="tablewrap"><table>
+<tr><th>Tool</th><th>Version</th><th>How</th><th>Why that version</th></tr>
+<tr><td>Node</td><td>24.21.0 (any 24.12+)</td><td>Your version manager reads <code>.nvmrc</code>: <code>nvm install</code> or <code>fnm use</code> in the repo</td><td>ADR-042. <code>engineStrict: true</code> makes <code>pnpm install</code> refuse Node 22 or 25</td></tr>
+<tr><td>pnpm</td><td>11.28.2 (any 11.x)</td><td><code>corepack enable &amp;&amp; corepack prepare pnpm@11.28.2 --activate</code>, or <code>npm i -g pnpm@11</code></td><td>Pinned in <code>package.json</code> <code>packageManager</code>. pnpm 11 refuses packages younger than 24 hours (<code>minimumReleaseAge</code>), a supply-chain guard you will meet</td></tr>
+<tr><td>Docker</td><td>Desktop or Engine with Compose v2+</td><td>Already installed</td><td><code>pnpm dev:up</code> runs Postgres 18 and RabbitMQ 4 bound to 127.0.0.1. Port 5432 must be free</td></tr>
+<tr><td>gh</td><td>2.60+</td><td><code>gh auth status</code>; scopes repo and project</td><td>The <code>/wp</code> skill reads issues through it; the seed script needs the project scope</td></tr>
+<tr><td>Claude Code</td><td>current</td><td>Model Opus 5.5 in your user settings (<code>/model</code>); the repo pins none</td><td>High effort for learning WPs; the reviewer agent inherits the model</td></tr>
+</table></div>
+<pre class="term"><span class="you">$ cd jadero-dev &amp;&amp; git switch main &amp;&amp; git pull</span>
+<span class="you">$ nvm use &amp;&amp; corepack enable</span>
+<span class="you">$ pnpm install</span>
+<span class="dim">Packages: +41 ... Done in 4s using pnpm v11.28.2</span>
+<span class="dim">> prepare: lefthook install   (writes .git/hooks/pre-commit and commit-msg)</span>
+<span class="you">$ pnpm verify:all</span>
+<span class="dim">Tasks: 5 successful, 5 total   Cached: 0 cached, 5 total   Time: 2.8s</span>
+<span class="you">$ pnpm verify:all</span>
+<span class="dim">Tasks: 5 successful, 5 total   Cached: 5 cached, 5 total   Time: 35ms >>> FULL TURBO</span></pre>
+<p>Git identity: commits on your machine carry your name. The cloud session commits as "Claude" and the branch authors were reset before the PR; locally this never comes up.</p>
+
+<h2 id="first">After a merge to main</h2>
+<p>WP-1 closed on 2026-10-03: trace 3 checked with Docker on your machine (the agent role denied on <code>content_dev</code>, <code>vector</code> 0.8.7 in <code>agent_dev</code>), the explain-back recorded in the Recap, PR <a href="https://github.com/JoseAlbDR/jadero-dev/pull/66">#66</a> squash merged, and the card moved to Done on its own.</p>
+<div class="card"><ol>
+<li><code>git switch main &amp;&amp; git pull &amp;&amp; pnpm install &amp;&amp; pnpm verify:all</code>. Chain with <code>&amp;&amp;</code>: if one step fails, nothing else runs.</li>
+<li>Why <code>verify:all</code>: <code>pnpm verify</code> uses <code>--affected</code>, which compares with <code>main</code>. On <code>main</code> nothing is affected, so it prints "No tasks were executed". On a branch, plain <code>verify</code> is the right command.</li>
+<li>On a branch, after merging <code>main</code> into it: run <code>pnpm verify</code> again before pushing. A merge brings files that never went through your hooks (WP-1 pushed a merge with an unformatted file from another PR).</li>
+</ol></div>
+<p>Also waiting for you, no code: the Project views (<code>scripts/github/README.md</code>).</p>
+<h3>Gates in order, and why the learning comes before the merge</h3>
+<p>The decision gate is before any code: the hook refuses edits under a learning path until the explainer says <code>decision: recorded</code>. The explain-back gate is before the merge: the issue's acceptance list has "Explained back by the owner", and the Recap lands in the same PR, so the merged history shows the code and what you understood of it together. If a Recap is ever missed, it lands after the merge as a <code>docs(learning)</code> commit.</p>
+<h3>Why branches are called <code>wp/</code></h3>
+<p>Versions never come from branch names. With squash merges, the PR title becomes the one commit on <code>main</code>; release-please reads its type (<code>feat</code> minor, <code>fix</code> patch, <code>!</code> major) to version each service. The <code>wp/NN-slug</code> name ties the branch to its issue and lets the learning gate hook find <code>docs/learning/wp-NN.md</code>. Work outside a WP uses <code>chore/</code>, <code>fix/</code> or <code>docs/</code>.</p>
+
+<h2 id="session">What a session looks like</h2>
+<p>A WP is a conversation in Claude Code inside the repo; the files are what the conversation leaves behind. The shape, with WP-3 as the example:</p>
+<pre class="term"><span class="you">$ claude</span>
+<span class="dim">jadero.dev v2. Branch: wp/3-service-platform. Decisions: docs/adr/README.md. ...
+WP-3 explainer: docs/learning/wp-3.md (decision: pending).</span>
+
+<span class="you">&gt; Show me the trace of GET /health/ready in the explainer, and explain why readiness checks the database but liveness does not.</span>
+<span class="dim">(the agent answers in chat; nothing is written)</span>
+
+<span class="you">&gt; /explain fail-fast configuration</span>
+
+<span class="you">&gt; My answers: 1 Express, 2 ApiConfig class, 3 pg, ... Record the decision.</span>
+<span class="dim">docs/learning/wp-3.md: decision: recorded, adr: [...]. The gate is open.</span>
+
+<span class="you">&gt; Step 2. Explain each file before you write it.</span>
+<span class="dim">(writes packages/platform-nest/..., runs pnpm verify, commits feat(platform-nest): ..., appends two lines to the step log)</span>
+
+<span class="you">&gt; Open the PR and run @agent-reviewer.</span>
+<span class="dim">PR #NN "feat(api): ..." with Closes #11. Reviewer: verdict, findings with file:line.</span>
+
+<span class="you">&gt; Fix the high and medium findings, then ask me the explain-back questions.</span></pre>
+<p>What you never type: a push to main, a deploy, an eval without <code>EVAL_CONFIRMED=1</code>. What the hooks do for you: a denied edit under a learning path while the decision is pending (that is the process, not a bug), Biome on every edit and on staged files, commitlint on every commit.</p>
+
+<h2 id="daily">Daily loop</h2>
+<div class="tablewrap"><table>
+<tr><th>When</th><th>You</th><th>Agent</th><th>Board</th></tr>
+<tr><td>Start</td><td><code>git switch main &amp;&amp; git pull</code>; pick the Ready card or move one there</td><td></td><td>Ready</td></tr>
+<tr><td>Open the WP</td><td><code>/wp NN</code>; read the step list; say go or edit it</td><td>Checks dependencies and the gate, creates <code>wp/NN-slug</code>, proposes steps, stops</td><td>In progress (you move it)</td></tr>
+<tr><td>Learn</td><td>Read <code>docs/learning/wp-NN.md</code>; ask; answer the question</td><td><code>/learn-step NN</code> writes it and stops; records your decision</td><td></td></tr>
+<tr><td>Build</td><td>One step at a time; stop and ask whenever something is not mechanical yet</td><td>Explains, writes, <code>pnpm verify</code>, one scoped commit, two lines in the step log</td><td></td></tr>
+<tr><td>Review</td><td>Explain the design back; review the PR on GitHub</td><td>Opens the PR with <code>Closes #</code>; runs <code>@agent-reviewer</code>; fixes; records Recap gaps</td><td>In review (automatic)</td></tr>
+<tr><td>Close</td><td>Squash merge; later deploy and journal</td><td></td><td>Done (automatic)</td></tr>
+</table></div>
+<p>Compact (<code>/compact</code>) after the decision is recorded and after the reviewer has reported. Keep: branch, WP id, the explainer path, the step list with done marks, open findings. Drop everything the explainer already holds.</p>
+
+<h2 id="learning">How you learn, concretely</h2>
+<p>Two halves. The file is the textbook written for this WP: first principles, one trace with real payloads, named patterns, options. The session is the teacher: you ask about any paragraph or file, and the agent answers right there; at the end it asks you three or four questions and you answer in your own words (the explain-back). The gaps go to the Recap section of the file and become the raw material of the journal post.</p>
+<ul>
+<li>The explainer is self-contained: you never open an ADR, another WP or the plan to answer. Its "How to read this file" table says exactly what to read before each question (5 to 10 minutes), and its "Named here" table says in one line what every WP or ADR it names is.</li>
+<li>The session asks all the questions in one message, each with its reading pointer, the options, the recommendation and what changes later depending on your answer. A question that depends on another gets a recommendation per possible answer of the first, so you answer everything in one reply.</li>
+<li>Nothing is to memorize. An explain-back you cannot answer means the explainer missed something: it gets taught, added to the file and noted in the Recap, not asked again as a test.</li>
+<li>A step you already know: say "known". It gets <code>fast_path: known</code>, no explanation, no explain-back for that step.</li>
+<li>A fact marked <strong>verify</strong> in an explainer is something the agent could not confirm from a primary source. Ask it to verify at implementation time, or verify it yourself.</li>
+<li>Learning survives the PR: the Recap can be written after the merge in a docs commit. Once a learning WP has run without you (as WP-1 did), do the explain-back on the next session before moving on.</li>
+</ul>
+
+<h2 id="blocked">When something blocks</h2>
+<div class="tablewrap"><table>
+<tr><th>Symptom</th><th>Cause</th><th>Do</th></tr>
+<tr><td>"learning-gate: ... decision: recorded ... not yet"</td><td>Edit under a learning path on a <code>wp/NN</code> branch before you decided</td><td>Read the explainer, answer, let the agent record the decision. Do not route around the hook</td></tr>
+<tr><td><code>ERR_PNPM_UNSUPPORTED_ENGINE</code></td><td>Node outside 24.12 to 24.x</td><td><code>nvm use</code> (reads <code>.nvmrc</code>)</td></tr>
+<tr><td>pnpm picks an older version than the one in the catalog, or refuses one</td><td><code>minimumReleaseAge</code>: the version is younger than 24 hours</td><td>Wait a day or pin the previous version in the catalog; say so in the step log</td></tr>
+<tr><td>Commit rejected: "scope may not be empty" or "scope must be one of"</td><td>commitlint</td><td>Use <code>type(scope): subject</code> with a scope from <code>commitlint.config.mjs</code>; add a scope there when you add a package</td></tr>
+<tr><td>Commit rejected by Biome</td><td>Unsafe fix or syntax error in a staged file</td><td><code>pnpm lint:fix</code>, read what is left, fix by hand</td></tr>
+<tr><td><code>pnpm verify</code> never hits the cache</td><td>An input that changes on every run (as <code>.turbo/</code> did on day one)</td><td>Check the task's <code>inputs</code> in <code>turbo.json</code>; <code>turbo run test --summarize</code> shows the hashed inputs</td></tr>
+<tr><td><code>pnpm dev:up</code> fails on port 5432</td><td>A local Postgres already listens there</td><td>Stop it, or change the host port in <code>compose.dev.yml</code> and in <code>.env.example</code></td></tr>
+<tr><td>Changed <code>01-databases.sql</code> and nothing happened</td><td>Init scripts run only on an empty volume</td><td><code>docker compose -f infra/compose/compose.dev.yml down -v</code> then <code>pnpm dev:up</code></td></tr>
+<tr><td>The board card did not move</td><td>The PR body lacks <code>Closes #N</code>, or a workflow is off</td><td>Edit the PR body; check Project workflows (<code>scripts/github/README.md</code>)</td></tr>
+<tr><td>A review bot or reviewer wants a design change</td><td>Larger than a nit</td><td>Decide yourself; if it changes an ADR, <code>/adr</code> first</td></tr>
+<tr><td><code>git switch</code> aborts: untracked <code>package.json</code> or <code>pnpm-lock.yaml</code> would be overwritten</td><td>A <code>pnpm</code> or <code>npx</code> run on <code>main</code> before WP-1 merged left them behind</td><td>Look at them (<code>git status</code>, <code>cat package.json</code>), then <code>rm package.json pnpm-lock.yaml &amp;&amp; rm -rf node_modules</code> and switch again</td></tr>
+<tr><td><code>pnpm verify</code> on <code>main</code>: "No tasks were executed"</td><td><code>--affected</code> has no diff against <code>main</code></td><td><code>pnpm verify:all</code></td></tr>
+<tr><td>RabbitMQ exits with <code>.erlang.cookie: eacces</code></td><td>An old volume where a root process wrote the cookie before the server</td><td>The compose file now runs it as <code>user: rabbitmq</code>; run <code>docker compose -f infra/compose/compose.dev.yml down -v</code> once</td></tr>
+<tr><td>Biome warns that <code>recommended</code> is deprecated</td><td>Biome 2.5 renamed the option</td><td><code>pnpm exec biome migrate --write</code> (it becomes <code>"preset": "recommended"</code>)</td></tr>
+<tr><td><code>nvm use</code>: no .nvmrc found</td><td>The branch predates WP-1</td><td>Switch to a branch that has <code>.nvmrc</code>; <code>nvm install</code> installs and selects 24.x</td></tr>
+<tr><td>Testcontainers: <code>Could not find a working container runtime strategy</code>, while <code>pnpm dev:up</code> works</td><td>The socket is not at <code>/var/run/docker.sock</code> (OrbStack, Colima, Docker Desktop on macOS). Compose reads the Docker context; Testcontainers does not</td><td>The harness now reads the context itself (<code>apps/api/test/setup/docker-host.ts</code>). If it still fails, check <code>docker context ls</code> and <code>docker info</code>, or set <code>docker.host</code> in <code>~/.testcontainers.properties</code>. A "No test files found" line next to it is a side effect of the failed global setup</td></tr>
+<tr><td>Editor: <code>Module '"@jadero/platform-nest"' has no exported member 'X'</code> while <code>pnpm verify</code> is green</td><td>The editor reads the package's compiled <code>dist/index.d.ts</code>, which is older than the source after a pull</td><td><code>pnpm build</code> (Turborepo builds packages in dependency order); <code>pnpm verify</code> builds them too, and <code>pnpm dev</code> keeps them fresh while it runs</td></tr>
+<tr><td>A PR body opened from a cloud session ends with "Generated by Claude Code" and a session link</td><td>The cloud GitHub tool appends it on every post</td><td>Delete it in the PR description (or the squash dialog) before merging; <code>AGENTS.md</code> section 6 forbids it on <code>main</code></td></tr>
+<tr><td>Claude cannot read <code>.env.example</code></td><td><code>.claude/settings.json</code> denies <code>Read(.env.*)</code></td><td>Expected; it can <code>cat</code> it. Real values live in 1Password, never in files</td></tr>
+</table></div>
+
+<h2 id="firstmate">With firstmate</h2>
+<p>The full guide is <code>docs/firstmate.md</code>: what firstmate reads and in which order, the flow mapped to its concepts, the collision table with a rule per row, and the two prompts in <a href="#tomorrow">Continue tomorrow</a>. In short: point firstmate's implementers at <code>AGENTS.md</code>; it is tool-neutral and the rules under <code>.claude/rules/</code> are plain Markdown. The mapping (plan = <code>/wp</code> step list, approve = recorded decision, implement = one step with its log line, review = the reviewer checklist, MR = PR with <code>Closes #</code>) is in <code>docs/agent-tooling.md</code>. Two things firstmate must honor and cannot replace: the learning gate (read the explainer front matter before touching a learning path) and the ADR files (supersede, never edit). Security guardrails stay firstmate's job; the repo does not duplicate them.</p>
+<p>Cloud sessions are fine for anything that needs no Docker and no owner presence: explainers, ADR drafts, tooling fixes, reviews. Implementation of a learning WP belongs in your local session, where you are present and Docker runs.</p>
+
+<h2 id="pages">Pages to keep current</h2>
+<div class="tablewrap"><table>
+<tr><th>Page</th><th>Source in the repo</th><th>Published copy</th><th>Update when</th></tr>
+<tr><td>Code map</td><td><code>docs/architecture/code-map.html</code> (JSON data block)</td><td>claude.ai artifact</td><td>Every WP that adds an app, package, module, provider or changes the request path (last step of <code>/wp</code>)</td></tr>
+<tr><td>Delivery flow</td><td><code>docs/process/delivery-flow.html</code> (mirrors <code>docs/agent-tooling.md</code>)</td><td>claude.ai artifact</td><td>The flow changes</td></tr>
+<tr><td>Local guide</td><td><code>docs/process/local-guide.html</code> (mirrors <code>docs/local-playbook.md</code>)</td><td>claude.ai artifact</td><td>The playbook changes</td></tr>
+</table></div>
+<p>A session that can publish artifacts republishes them; one that cannot edits the repo files, and the next session that can publishes them. The repo files are the source; the artifacts are copies.</p>
+
+<h2 id="tomorrow">Continue tomorrow</h2>
+<p>Two prompts from <code>docs/firstmate.md</code>, copied as they are. Run the first once, in your first local session with firstmate, before anything changes. Run the second to start the next work package.</p>
+<h3>Prompt: first local session (check the fit, change nothing)</h3>
+<pre><code>Read AGENTS.md, CLAUDE.md, .claude/ (rules, skills, agents, hooks, settings.json), docs/agent-tooling.md,
+docs/local-playbook.md and docs/firstmate.md in the jadero-dev repo. Then compare them with your own
+framework rules and hooks. Report, without changing any file:
+1. every place where your defaults would break this repo's flow (decision gate, one step per commit,
+   GitHub instead of GitLab, commit format and identity, branch names, ADRs in the repo, hooks that
+   would run twice or fight);
+2. what you would change on your side for this repo (config, skills to turn off);
+3. anything in the repo that looks wrong or stale.
+Answer in Spanish; the files stay in English.</code></pre>
+<h3>Prompt: start a work package (WP-5 next)</h3>
+<pre><code>Next work package in jadero-dev: WP-5 (messaging foundation and the agent skeleton), a learning WP.
+Follow the repo's flow exactly (AGENTS.md section 5, docs/agent-tooling.md, docs/firstmate.md):
+1. git switch main &amp;&amp; git pull &amp;&amp; pnpm install &amp;&amp; pnpm verify:all.
+2. /wp 5: check that WP-3 is merged, create wp/5-&lt;slug&gt; from origin/main, propose 4 to 8 steps and the
+   definition of done from the issue, then stop.
+3. After my go: /learn-step 5. The explainer must be self-contained (How to read this file, Named here,
+   two traces for a service WP, facts checked against the npm registry, all questions in one message,
+   dependent questions with a recommendation per answer). Stop. Do not write code under learning paths.
+4. When I answer: record the decision (decision: recorded), then build one step at a time: tell me which
+   files and why before writing, pnpm verify, one scoped commit, two lines in the step log, show it
+   running. Steps that need Docker run here (pnpm dev:up, pnpm test:int).
+5. Last step: update docs/architecture/code-map.html (its JSON data) and the docs the WP changed.
+6. Open the PR with Closes #13, run @agent-reviewer, fix its findings, then ask me the
+   explain-back questions (only about what the explainer taught) and write my answers and the gaps in
+   the Recap. I merge.
+Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.</code></pre>
+<p>To start any other WP, change the number and the title; the rest stays.</p>
+
+<h2 id="cheatsheet">Cheat sheet</h2>
+<div class="tablewrap"><table>
+<tr><th>Command</th><th>Does</th></tr>
+<tr><td><code>pnpm verify</code></td><td>Lint, architecture rules, typecheck, unit tests, affected only, cached. The one "am I done" command, before every commit and after merging <code>main</code></td></tr>
+<tr><td><code>pnpm verify:all</code></td><td>The same on every package: on <code>main</code> and in CI</td></tr>
+<tr><td><code>pnpm lint</code> / <code>pnpm lint:fix</code></td><td>Biome check / format and safe fixes</td></tr>
+<tr><td><code>pnpm depcruise</code></td><td>Import rules of ADR-003 and AGENTS.md section 4</td></tr>
+<tr><td><code>pnpm dev:up</code> / <code>pnpm dev:down</code></td><td>Postgres 18 (pgvector) and RabbitMQ 4 on 127.0.0.1</td></tr>
+<tr><td><code>pnpm build</code></td><td>Compiles every package to <code>dist/</code> in dependency order, cached. Run it when the editor shows stale errors after a pull</td></tr>
+<tr><td><code>pnpm dev</code></td><td>Builds once, then <code>tsc --watch</code> for <code>platform-nest</code> and <code>api</code> and <code>node --watch</code> on <code>dist/</code>, with the same OpenTelemetry <code>--import</code> line as <code>start</code>. First copy <code>apps/api/.env.example</code> to <code>apps/api/.env</code> and run <code>pnpm dev:up</code>; <code>api</code> listens on 3001</td></tr>
+<tr><td><code>pnpm test:int</code></td><td>Integration tests with Testcontainers: one Postgres container per run, one database per test file. Needs Docker; not part of <code>pnpm verify</code></td></tr>
+<tr><td><code>pnpm adr:new "Title"</code> / <code>pnpm adr:index</code> / <code>--check</code></td><td>Next ADR from the template / regenerate the index / fail when stale</td></tr>
+<tr><td><code>/wp NN</code>, <code>/learn-step NN</code>, <code>/explain X</code>, <code>/adr Title</code></td><td>The four skills</td></tr>
+<tr><td><code>@agent-reviewer</code></td><td>Ten-point review before you look at a PR</td></tr>
+<tr><td><code>LEFTHOOK=0 git commit ...</code></td><td>Skip hooks once (CI runs the same checks; it only delays the failure)</td></tr>
+<tr><td><code>node scripts/github/seed.mjs</code></td><td>Re-seed issues and the Project after adding a WP to <code>decisions.json</code></td></tr>
+</table></div>
+<div class="note"><p>Now: WP-3 (service platform and API skeleton) has all eight steps on branch <code>wp/3-service-platform</code>. Next: the PR with <code>Closes #11</code>, <code>@agent-reviewer</code>, your review, then the explain-back into the Recap, and the merge. After that, WP-5 with the second prompt above. Steps with Testcontainers or <code>pnpm dev:up</code> run on your machine (the cloud has no Docker).</p></div>
+</main>

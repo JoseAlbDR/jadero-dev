@@ -4,25 +4,30 @@ Personal site of the owner: a multilingual (es, en, de) portfolio with an ask-me
 
 ## 1. Where the truth lives
 
-- `docs/adr/`: the decision records (ADR-001 to ADR-042). Read `docs/adr/README.md` first. An accepted ADR is never edited; a change is a new ADR that supersedes it (`/adr`).
+- `docs/adr/`: the decision records (ADR-001 to ADR-043). Read `docs/adr/README.md` first. An accepted ADR is never edited; a change is a new ADR that supersedes it (`/adr`).
 - `docs/plan/report.md`: the narrative plan (architecture, traces, work packages, releases R0 to R7). On a conflict, the ADR file wins.
 - `docs/plan/decisions.json`: the 76 owner decisions as data; ids never change.
 - `docs/learning/`: one explainer per learning WP (the learning gate, section 5).
+- `docs/firstmate.md`: how the owner's framework runs this flow, where it may collide, and the prompts to start a WP.
+- `docs/architecture/code-map.html`: the interactive map of the code (apps, packages, modules, what is injected where, boot and request paths). Updated by every WP that changes them; also published as an artifact.
 - GitHub Issues: the epic `jadero.dev v2`, one sub-issue per WP, milestones R0 to R7, Project board (ADR-041). The issue is the task; the PR closes it.
 
-Status today: the repo foundation (workspace, lint, architecture rules, git hooks, dev containers, ADR scripts) is in place; services land from WP-3 on.
+Status today: the repo foundation (WP-1) and the service platform (WP-3: `packages/platform-nest`, the `apps/api` skeleton, the module template in `templates/nest-module/`) are in place. Each app may carry its own `AGENTS.md` (`apps/api/AGENTS.md`).
 
 ## 2. Map (target layout, ADR-001)
 
-`apps/web` Next.js 16 public site · `apps/admin` static SPA · `apps/api` NestJS content, auth, media, cv (+ `api-worker`) · `apps/agent` NestJS knowledge, chat, guards, usage (+ `agent-ingest`) · `apps/contact` NestJS form and mail · `apps/mcp` stateless MCP edge (R4) · `packages/contracts` Zod DTOs and events · `packages/messaging` bus port, RabbitMQ and in-memory adapters, outbox, inbox · `packages/platform-nest` bootstrap only · `packages/ai` AI ports and adapters · `packages/agent` LangGraph graph, no Nest · `packages/ui`, `packages/cv`, `packages/config` · `infra/` compose, nginx, rabbitmq, scripts · `.github/workflows/`.
+`apps/web` Next.js 16 public site · `apps/admin` static SPA · `apps/api` NestJS content, auth, media, cv (+ `api-worker`) · `apps/agent` NestJS knowledge, chat, guards, usage (+ `agent-ingest`) · `apps/contact` NestJS form and mail · `apps/mcp` stateless MCP edge (R4) · `packages/contracts` Zod DTOs and events · `packages/messaging` bus port, RabbitMQ and in-memory adapters, outbox, inbox · `packages/platform-nest` service bootstrap only (config, logging, errors, health, telemetry; no domain code) · `packages/ai` AI ports and adapters · `packages/agent` LangGraph graph, no Nest · `packages/ui`, `packages/cv`, `packages/config` · `infra/` compose, nginx, rabbitmq, scripts · `.github/workflows/`.
 
 ## 3. Commands
 
 - `pnpm verify` lint, architecture check, typecheck, unit tests, affected only and cached by Turborepo: the single "am I done" command. Run it before every commit and again after merging `main`, before pushing. `pnpm verify:all` runs the same on every package (on `main`, where nothing is affected, and in CI).
+- `pnpm build` compiles every package (`dist/`); run it after a pull when the editor says a workspace package "has no exported member": editors read the compiled `.d.ts`
 - `pnpm lint` Biome check, never writes · `pnpm lint:fix` format and safe fixes · `pnpm depcruise` architecture rules · `pnpm test` all unit tests
-- `pnpm dev:up` / `pnpm dev:down` Postgres and RabbitMQ in Docker (`infra/compose/`, connection strings in `.env.example`) · `pnpm dev` apps in watch mode, once apps exist
+- `pnpm dev:up` / `pnpm dev:down` Postgres and RabbitMQ in Docker (`infra/compose/`, connection strings in `.env.example`) · `pnpm dev` the apps in watch mode (`tsc --watch` plus `node --watch`; each app needs its `.env`, copied from its `.env.example`)
 - `pnpm adr:new "Title"` next ADR from the template · `pnpm adr:index` regenerate the index in `docs/adr/README.md` · `pnpm adr:index --check` fail when it is stale
-- Arrive with their WP: `pnpm test:int` (Testcontainers, needs Docker), `pnpm db:generate` and `pnpm db:migrate` per service, `pnpm eval` (spends money: never without `EVAL_CONFIRMED=1` and the owner's yes).
+- `pnpm test:int` integration tests (`*.int.test.ts`) against real containers through Testcontainers; needs Docker, not part of `pnpm verify`
+- New module: copy a shape from `templates/nest-module/` (layered or hexagonal, see its README)
+- Arrive with their WP: `pnpm db:generate` and `pnpm db:migrate` per service, `pnpm eval` (spends money: never without `EVAL_CONFIRMED=1` and the owner's yes).
 - Size test workers from load: `VITEST_MAX_WORKERS` = 12 minus the 1-minute load average minus 3, at least 1, at most 6.
 
 ## 4. Architecture rules (import rules enforced by dependency-cruiser; `.claude/rules/` carries the detail)

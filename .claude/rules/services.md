@@ -10,6 +10,7 @@ paths:
 # Service rules (ADR-003, ADR-012, ADR-029)
 
 - Hexagonal module layout where there are rules: `domain/` (no Nest, no Drizzle imports), `application/` (use cases, ports as abstract classes), `infrastructure/` (Drizzle repositories, provider adapters), `presentation/` (controllers, SSE, MCP tools). Trivial modules (health, revalidation, cv) stay layered: controller, application service, repository.
+- New modules start as a copy of `templates/nest-module/` (layered or hexagonal); `apps/<service>/AGENTS.md` describes the service.
 - A module talks to another module only through its `index.ts`. A service never reads another service's tables.
 - Every state change that must be seen by another service writes an outbox row in the same transaction; a relay publishes it with confirms. Every consumer records the event id in its `inbox` table in the same transaction as its effects, and tolerates duplicates.
 - Events: CloudEvents envelope, type `dev.jadero.<context>.<event>.v<N>`, Zod schema in `packages/contracts`, example fixture next to it, backward-compatible changes only (expand/contract). A breaking change is a new version published alongside the old one.

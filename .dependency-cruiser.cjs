@@ -1,6 +1,6 @@
 /**
- * Architecture fitness functions (ADR-024). `pnpm depcruise` checks every import under `apps/` and
- * `packages/` against these rules; `pnpm verify` runs it through Turborepo (`//#depcruise`).
+ * Architecture fitness functions (ADR-024). `pnpm depcruise` checks every import under `apps/`,
+ * `packages/` and `templates/` against these rules; `pnpm verify` runs it through Turborepo (`//#depcruise`).
  *
  * Paths are regular expressions matched against paths relative to the repo root, for example
  * `apps/api/src/modules/content/domain/post.ts`. In a `to` pattern, `$1`, `$2`, ... stand for the
@@ -37,9 +37,13 @@ module.exports = {
         "import only from the same module's domain/ folder and Node built-ins: no other layer, " +
         "no other module, no npm package.",
       severity: "error",
-      from: { path: "^(apps|packages)/([^/]+)/src/modules/([^/]+)/domain/" },
+      // Tests next to domain code may import the test runner. Known gap: a domain file importing a
+      // workspace package (`@jadero/*`) resolves into its dist/, which the exclude below drops.
+      from: {
+        path: "^(apps|packages|templates)/([^/]+)/src/modules/([^/]+)/domain/",
+        pathNot: "\\.test\\.ts$",
+      },
       to: {
-        path: "^apps/",
         pathNot: "^$1/$2/src/modules/$3/domain/",
         dependencyTypesNot: ["core"],
       },
@@ -50,8 +54,8 @@ module.exports = {
         "ADR-003: use cases depend on ports (abstract classes in application/ or domain/), never " +
         "on the adapters in infrastructure/. The module's wiring binds the adapter to the port.",
       severity: "error",
-      from: { path: "^(apps|packages)/[^/]+/src/modules/[^/]+/application/" },
-      to: { path: "^(apps|packages)/[^/]+/src/modules/[^/]+/infrastructure/" },
+      from: { path: "^(apps|packages|templates)/[^/]+/src/modules/[^/]+/application/" },
+      to: { path: "^(apps|packages|templates)/[^/]+/src/modules/[^/]+/infrastructure/" },
     },
     {
       name: "modules-import-through-index",
@@ -59,7 +63,7 @@ module.exports = {
         "ADR-003: a module's index.ts is its public surface. A file in src/modules/A/ may import " +
         "src/modules/B/ only through src/modules/B/index.ts, never a file inside it.",
       severity: "error",
-      from: { path: "^(apps|packages)/([^/]+)/src/modules/([^/]+)/" },
+      from: { path: "^(apps|packages|templates)/([^/]+)/src/modules/([^/]+)/" },
       to: {
         path: "^$1/$2/src/modules/[^/]+/",
         pathNot: ["^$1/$2/src/modules/$3/", "^$1/$2/src/modules/[^/]+/index\\.ts$"],
@@ -120,7 +124,8 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: "node_modules" },
-    exclude: { path: "(^|/)(dist|coverage|\\.turbo|\\.next)/" },
+    // Only the workspace's own build folders: npm packages that ship from dist/ stay visible.
+    exclude: { path: "^(apps|packages|templates)/[^/]+/(dist|coverage|\\.turbo|\\.next)/" },
     moduleSystems: ["es6", "cjs"],
     // Count `import type` too: a type-only import from infrastructure/ is still a layer violation.
     tsPreCompilationDeps: true,

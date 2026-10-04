@@ -1,18 +1,18 @@
 ---
 id: ADR-007
 title: "Configuration and secrets"
-status: accepted
+status: superseded
 date: 2026-10-03
 deciders: [owner]
 decisions: [D-7]
 supersedes: []
-superseded_by: null
+superseded_by: ADR-043
 source: docs/plan/report.md ("ADR-007: Configuration and secrets")
 ---
 
 # ADR-007: Configuration and secrets
 
-**Status:** Accepted with a change (second pass 2026-10-03, D-7 option D): secrets stay only on the server, sourced from a personal 1Password vault through `op inject` at deploy (WP-8 installs the CLI and the service-account token, WP-9 renders the `.env` files from `infra/env/<service>.env.tpl`; manual action M-38). SOPS (WP-34) is superseded.
+**Status:** Superseded by ADR-043 (config loaded by an own Zod loader before Nest, not `@nestjs/config`; the secrets decision is restated there unchanged). Previously: accepted with a change (second pass 2026-10-03, D-7 option D): secrets stay only on the server, sourced from a personal 1Password vault through `op inject` at deploy (WP-8 installs the CLI and the service-account token, WP-9 renders the `.env` files from `infra/env/<service>.env.tpl`; manual action M-38). SOPS (WP-34) is superseded.
 
 Decided by the owner in the plan review of 2026-10-02 and 2026-10-03 (decisions D-7). This record was extracted verbatim from `docs/plan/report.md`; the narrative, traces and sources stay there. From now on this file is the canonical record: a new decision is a new ADR that supersedes this one, never an edit.
 

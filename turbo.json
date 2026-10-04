@@ -15,6 +15,10 @@
       "env": ["AI_*_PROVIDER", "MAIL_PROVIDER"],
       "passThroughEnv": ["VITEST_MAX_WORKERS"]
     },
+    "test:int": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
     "//#lint": {
       "inputs": [
         "**/*.{ts,tsx,js,mjs,cjs,json,jsonc}",
@@ -32,6 +36,7 @@
       "inputs": [
         "apps/**",
         "packages/**",
+        "templates/**",
         ".dependency-cruiser.cjs",
         "tsconfig.depcruise.json",
         "!**/node_modules/**",
@@ -41,6 +46,12 @@
       ]
     },
     "dev": {
+      "dependsOn": ["^build", "build"],
+      "with": ["dev:build"],
+      "cache": false,
+      "persistent": true
+    },
+    "dev:build": {
       "cache": false,
       "persistent": true
     }

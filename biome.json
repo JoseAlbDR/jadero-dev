@@ -15,7 +15,8 @@
       "!!**/dist",
       "!!**/.turbo",
       "!!**/coverage",
-      "!!docs/plan"
+      "!!docs/plan",
+      "!!docs/**/*.html"
     ]
   },
   "formatter": {
@@ -45,5 +46,32 @@
         "organizeImports": "on"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "apps/api/**",
+        "apps/agent/**",
+        "apps/contact/**",
+        "apps/mcp/**",
+        "packages/platform-nest/**",
+        "templates/**"
+      ],
+      "javascript": {
+        "parser": {
+          "unsafeParameterDecoratorsEnabled": true
+        }
+      },
+      "linter": {
+        "rules": {
+          "style": {
+            "useImportType": "off"
+          },
+          "complexity": {
+            "noStaticOnlyClass": "off"
+          }
+        }
+      }
+    }
+  ]
 }

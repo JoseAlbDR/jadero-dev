@@ -338,3 +338,5 @@ Explain-back on 2026-10-03, in the cloud session, before the merge. The owner's 
 
 Gaps to revisit: 2 and 3 (where a check runs and which tool owns it). Re-ask both at the start of WP-3, where the first compiled package and the first service imports appear.
 
+
+Re-asked at the start of WP-3 (2026-10-03): the owner did not know either answer, and pointed out why. The WP-1 explainer never taught them; the gaps came from questions about things it did not explain, and the questions named later WPs without saying what they are. Both are now taught in the WP-3 explainer, where they are first used ("Workspace packages: compiled code, not path aliases" and "Which tool checks what, and when"), and the learning protocol changed: every explainer is self-contained, has a "Named here" table and a reading pointer per question, and explain-back questions only cover what it taught.

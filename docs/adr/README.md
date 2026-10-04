@@ -19,7 +19,7 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-004 | NestJS major version and module system | superseded by ADR-042 | D-4 | [0004-nestjs-major-version-and-module-system.md](0004-nestjs-major-version-and-module-system.md) |
 | ADR-005 | Data access (ORM) | accepted | D-5 | [0005-data-access.md](0005-data-access.md) |
 | ADR-006 | Validation, contracts and API documentation | accepted | D-6 | [0006-validation-contracts-and-api-documentation.md](0006-validation-contracts-and-api-documentation.md) |
-| ADR-007 | Configuration and secrets | accepted | D-7 | [0007-configuration-and-secrets.md](0007-configuration-and-secrets.md) |
+| ADR-007 | Configuration and secrets | superseded by ADR-043 | D-7 | [0007-configuration-and-secrets.md](0007-configuration-and-secrets.md) |
 | ADR-008 | Admin authentication | accepted | D-8, D-47 | [0008-admin-authentication.md](0008-admin-authentication.md) |
 | ADR-009 | Testing strategy and coverage targets | accepted | D-9 | [0009-testing-strategy-and-coverage-targets.md](0009-testing-strategy-and-coverage-targets.md) |
 | ADR-010 | Observability | accepted | D-10 | [0010-observability.md](0010-observability.md) |
@@ -55,6 +55,7 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-040 | Chaos test | accepted | D-71 | [0040-chaos-test.md](0040-chaos-test.md) |
 | ADR-041 | Work tracking from roadmap to tickets | accepted | D-72 | [0041-work-tracking-from-roadmap-to-tickets.md](0041-work-tracking-from-roadmap-to-tickets.md) |
 | ADR-042 | NestJS 12 on Node 24 LTS | accepted | D-4 | [0042-node-24-lts-runtime.md](0042-node-24-lts-runtime.md) |
+| ADR-043 | Configuration loaded before Nest, and secrets | accepted | D-7 | [0043-configuration-loaded-before-nest-and-secrets.md](0043-configuration-loaded-before-nest-and-secrets.md) |
 <!-- adr-index:end -->
 
 Read in this order for a first pass: 029 (service boundaries), 002 (topology and edge), 003 (inside a service), 012 (async work), 031 (content layers), 013 to 016 (AI layer and RAG), 020 and 021 (security), 025 to 027 (delivery and hosting), 041 (work tracking).
