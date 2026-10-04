@@ -32,13 +32,15 @@
       "terminal": "Terminal-Editorial",
       "editorial": "Schweizer Editorial",
       "bento": "Bento aus Glas",
-      "hybrid": "Schweizer Editorial + Terminal-Block"
+      "hybrid": "Schweizer Editorial + Terminal-Block",
+      "bento-agent": "Bento aus Glas + Agent-Terminal"
     },
     "summaries": {
       "terminal": "Für Entwickler: eine Sans mit Monospace-Akzent, fast schwarz mit einem kräftigen Akzent, der Prompt als Hero.",
       "editorial": "Ruhig und erfahren: eine Serifen-Überschrift im 12-Spalten-Raster, ein gedämpfter Akzent, der Prompt als ein stilles Element.",
       "bento": "Zeitgemäß: ein Raster aus Glaskarten über einem weichen Verlauf, große Radien, kleine Hover-Bewegungen.",
-      "hybrid": "Richtung 2 mit dem ganzen Prompt-Block aus Richtung 1: Serifen-Überschrift und Raster, dazu die Terminal-Karte."
+      "hybrid": "Richtung 2 mit dem ganzen Prompt-Block aus Richtung 1: Serifen-Überschrift und Raster, dazu die Terminal-Karte.",
+      "bento-agent": "Bento aus Glas mit dem Agenten als dunkler Terminal-Karte, so groß wie der Hero und direkt daneben."
     },
     "role": "Backend-Entwickler",
     "headline": "Ich entwerfe, teste, liefere und betreibe Backend-Systeme, vom Datenmodell bis zum Server, auf dem sie laufen.",

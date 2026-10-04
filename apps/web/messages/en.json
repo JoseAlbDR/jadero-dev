@@ -32,13 +32,15 @@
       "terminal": "Terminal editorial",
       "editorial": "Swiss editorial",
       "bento": "Bento glass",
-      "hybrid": "Swiss editorial + terminal block"
+      "hybrid": "Swiss editorial + terminal block",
+      "bento-agent": "Bento glass + agent terminal"
     },
     "summaries": {
       "terminal": "Developer-native: a sans with a monospace accent, near-black with one vivid accent, the prompt as the hero.",
       "editorial": "Calm and senior: a serif headline on a 12-column grid, one muted accent, the prompt as one quiet element.",
       "bento": "Contemporary: a grid of glass cards over a soft gradient, large radii, small hover moves.",
-      "hybrid": "Direction 2 with the full prompt block of Direction 1: the serif headline and grid, plus the terminal card."
+      "hybrid": "Direction 2 with the full prompt block of Direction 1: the serif headline and grid, plus the terminal card.",
+      "bento-agent": "Bento glass with the agent as a dark terminal card, as large as the hero and next to it."
     },
     "role": "Backend engineer",
     "headline": "I design, test, ship and run backend systems, from the data model to the server they run on.",
