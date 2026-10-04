@@ -6,35 +6,42 @@ adr: []
 
 # WP-N: <title>
 
-## How to read this file
+Issue #<n>, branch `wp/N-slug`, release RN, size S/M/L. Deliverable in one paragraph. What the owner learns in one sentence.
 
-This file is the only thing you need to read. ADR and WP numbers are summarized in "Named here".
+## Decisions explained
 
-**How the file is built.** Concepts `C1` to `Cn` (under First principles), traces with numbered steps (under One concrete trace), and one option block per question (under Options and trade-offs, headed by a letter).
+<!-- One block per decision this WP implements, phrased as a question. A Mermaid diagram only when it helps. Decisions explained in an earlier WP: one sentence and a pointer, unless used differently here. -->
 
-**Reading route.** One row at a time: read the concepts, then the trace steps, then the option block, then answer that question before the next row. A concept already read is not read again. About 5 to 10 minutes per row.
+### D1. Why <X> and not <Y>?
 
-| Row | Question | 1. Concepts | 2. Trace steps | 3. Option block, then answer |
-|---|---|---|---|---|
-| 1 | <question> | [C1](#c1-name) | Trace 1, steps 1 to 3 | [A](#a-short-name) |
+**Problem.** <what goes wrong without a decision>
 
-## Named here
+**Example.** <one concrete case from this project, with names and numbers>
 
-| Name | What it is, in one line | When |
-|---|---|---|
+**Decision (ADR-NNN).** <what and why>
 
-## Facts checked
+**Alternatives.**
+- *<alternative>.* Discarded because ... Wins when ...
+- *<alternative>.* Discarded because ... Wins when ...
+- *<alternative>.* Discarded because ... Wins when ...
 
-| Tool | Version on YYYY-MM-DD | Source | Note |
-|---|---|---|---|
+**Patterns:** <names>.
 
-## First principles
+## Open questions
 
-<!-- One heading per concept: ### C1. <name>, then a line Tier: Own|Recognize|Delegate., then one paragraph. -->
+<!-- Usually 0 to 2: only architecture that no ADR decides. Same shape as a decision block, then the question. Write "None: the ADRs decide everything; say go." when empty. -->
 
-### C1. <name>
+### Q1. <question>
 
-Tier: Own.
+### Recommendations
+
+<!-- Read after answering. -->
+
+## Implementation choices
+
+<!-- One line each with a short why; the owner objects only if something looks wrong. -->
+
+- <choice>: <why>.
 
 ## One concrete trace
 
@@ -48,29 +55,8 @@ Tier: Own.
 
 ## Patterns
 
-## Options and trade-offs
-
-### A. <short name>
-
-Already decided by ADR-NNN: <what>.
-
-Forces: <what pulls in which direction>.
-
-- *A1. <option>.* Pros: ... Cons: ... Matches the ADR, or departs from it (superseding ADR). Wins when ...
-- *A2. <option>.* ...
-- *A3. <option, not recommended>.* ...
-
-What would make this wrong: ...
-
-<!-- Per decision, one heading like the one above: forces; at least three options (one not recommended), each with when it would win; what would make this wrong. No recommendations here. -->
-
-## The question for the owner
-
-<!-- The owner answers first: pick, one risk of it, or another option. -->
-
-### Recommendations
-
-<!-- Read after answering. -->
+| Pattern | Where it appears |
+|---|---|
 
 ## Proposed steps
 
@@ -81,6 +67,16 @@ What would make this wrong: ...
 ## Recap
 
 <!-- Interview form: why, alternatives, when to change, failure; the main trace drawn from memory. -->
+
+## Named here
+
+| Name | What it is, in one line | When |
+|---|---|---|
+
+## Facts checked
+
+| Tool | Version on YYYY-MM-DD | Source | Note |
+|---|---|---|---|
 
 ## Delegated details
 
