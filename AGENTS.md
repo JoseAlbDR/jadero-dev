@@ -8,6 +8,7 @@ Personal site of the owner: a multilingual (es, en, de) portfolio with an ask-me
 - `docs/plan/report.md`: the narrative plan (architecture, traces, work packages, releases R0 to R7). On a conflict, the ADR file wins.
 - `docs/plan/decisions.json`: the 76 owner decisions as data; ids never change.
 - `docs/learning/`: one explainer per learning WP (the learning gate, section 5).
+- `docs/journal/`: the agent-drafted journal post of each learning WP, corrected by the owner (ADR-034), until the content module imports them.
 - `docs/sessions.md`: how a Claude Code session (cloud or local) runs a work package, and the prompts to start the next WP (backend or frontend), resume one or do a chore.
 - `docs/architecture/code-map.html`: the interactive map of the code (apps, packages, modules, what is injected where, boot and request paths). Updated by every WP that changes them, and by every new event (event catalog and flow graph in its messaging section); also published as an artifact.
 - `docs/artifacts.md`: every published artifact, its source file and when it is republished; a session that changes a source republishes its artifact.
@@ -70,7 +71,7 @@ Refined with the owner on 2026-10-04 (WP-5); every agent follows it, and this fi
 - **Connect to what the owner knows.** The owner works with NestJS, Drizzle and messaging at work; when a pattern matches that experience (expand/contract, new versions published alongside old ones), say so and build on it.
 - **Repetition across WPs.** A pattern seen in an earlier WP is named and compared ("the same idempotency as WP-N, here ..."), not re-taught from zero.
 - **Few, real questions.** Implementation details are listed as choices, one line each; questions are only for architecture no ADR decides.
-- **Persist the process.** Feedback that changes how sessions work goes into this repo (AGENTS.md, `.claude/skills/`, `docs/`) in its own `chore/` PR, never only in a conversation. Before pushing to a branch, check that its PR is not already merged; follow-up work after a merge goes to a new branch from `main`.
+- **Persist the process.** Feedback that changes how sessions work goes into this repo (AGENTS.md, `.claude/skills/`, `docs/`) in its own `chore/` PR, never only in a conversation. When that PR changes a generic process file, the change is also ported to `project-kit` or noted in `docs/process/kit-backlog.md` (`docs/process/project-kit.md`, "How it stays in sync"). Before pushing to a branch, check that its PR is not already merged; follow-up work after a merge goes to a new branch from `main`.
 ### Orchestrator pattern (approved 2026-10-04, after WP-5)
 
 The main session keeps only what needs its context (teaching, decisions, challenging answers, check questions, explain-back, recap) and delegates context-heavy work to subagents: `explainer-writer`, `implementer`, `cartographer`, `researcher` and `reviewer`, through `/learn-step`, `/step`, `/map` and `/wrap-wp`. WP-5's single session reached about 700k tokens of context doing it all itself. Which agent or skill fits each situation, the context rule and the rules for parallel agents (worktree isolation for any that touch git) are in `.claude/rules/orchestration.md`, which loads in every session.

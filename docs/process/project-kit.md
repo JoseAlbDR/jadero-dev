@@ -31,6 +31,14 @@ Approved by the owner on 2026-10-04. A template repository, `project-kit`, that 
 
 Process changes land in jadero-dev first, where they are tried on a real work package. Once they work, a `chore/` PR in `project-kit` ports them, with project specifics replaced by placeholders. jadero-dev stays the reference; the kit never leads.
 
+Generic process files are the ones the kit copies: `AGENTS.md` sections 5 to 8, `CLAUDE.md`, `.claude/` (agents, skills, rules, hooks, settings), `docs/sessions.md`, `docs/agent-tooling.md`, `docs/local-playbook.md`, `docs/learning/wp-template.md`, `docs/adr/0000-template.md`, `docs/process/`, `scripts/github/` and the repo tooling configs. Project content (ADRs, the plan, explainers, code) is never ported.
+
+The rule, so the two never drift silently:
+- The session that merges a `chore/` PR touching a generic file ports it to `project-kit` in the same session when that repository is attached, one `chore/` PR there that names the jadero-dev PR.
+- When `project-kit` is not attached, the session adds one line to `docs/process/kit-backlog.md` in the same jadero-dev PR: the PR, the files, what to port.
+- `/wrap-wp` checks the backlog at the end of every WP and ports what is waiting when `project-kit` is attached.
+- A change made in `project-kit` first (from a new project) comes back to jadero-dev the same way, through a `chore/` PR, and is listed in the backlog until it lands.
+
 ## History
 
 How jadero-dev itself went through phase 0 (the decisions, the plan review, the first work packages) will be written down in `docs/process/genesis.md`, as the worked example `/kickoff` follows.

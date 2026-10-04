@@ -41,7 +41,8 @@ docs/sessions.md) for that WP, called WP-N below:
    one check question. Reviewer after about half the steps. Docker in a cloud session: give me the
    commands and wait for my output.
 5. Then /map and /wrap-wp N: docs, artifacts, PR with Closes #<its issue>, reviewer and fixes, my
-   explain-back in interview form written in the Recap. I write the journal post. I merge.
+   explain-back in interview form written in the Recap, the journal post drafted in docs/journal/wp-N.md
+   for me to correct. I merge.
 Stay lean per .claude/rules/orchestration.md: delegate to the agents without me asking.
 Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.
 ```

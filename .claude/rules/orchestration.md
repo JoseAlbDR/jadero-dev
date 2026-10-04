@@ -19,6 +19,8 @@ The main session keeps only what needs its context: teaching, decisions, challen
 | The last step of a WP is committed | `/wrap-wp N` |
 | The owner asks why or how something works | `/explain <topic>` in the main session |
 | A design choice is made or changed | `/adr <title>` |
+| A `chore/` PR changes a generic process file (`docs/process/project-kit.md`, "How it stays in sync") | port it to `project-kit`, or add a line to `docs/process/kit-backlog.md` |
+| The last step of a learning WP | the journal draft in `/wrap-wp` (an agent writes `docs/journal/wp-N.md`, the owner corrects) |
 
 Context rule: the main session does not read library sources, files over about 300 lines (the code map, the process pages, `docs/plan/report.md` whole) or generated artifacts (`dist/`, lockfiles, `infra/rabbitmq/definitions.json`, the AsyncAPI output). It asks an agent and reads the report. Reading one ADR, one explainer section or a short source file to check a claim is fine.
 
