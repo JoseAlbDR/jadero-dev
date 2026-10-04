@@ -123,3 +123,25 @@ test.describe("theme (ADR-023)", () => {
     await expect(page.locator("html")).toHaveClass(/\bdark\b/);
   });
 });
+
+// WP-15 throwaway mockups: each direction must meet the same bar before the owner picks one.
+test.describe("design direction mockups (ADR-023)", () => {
+  for (const direction of ["terminal", "editorial", "bento"] as const) {
+    for (const colorScheme of ["light", "dark"] as const) {
+      test(`${direction} has no WCAG 2.2 AA violations in ${colorScheme} mode`, async ({
+        page,
+      }) => {
+        await page.emulateMedia({ colorScheme });
+        await page.goto(`/en/mockups/${direction}`);
+        await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+          "content",
+          "noindex, nofollow",
+        );
+        const results = await new AxeBuilder({ page })
+          .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+          .analyze();
+        expect(results.violations).toEqual([]);
+      });
+    }
+  }
+});
