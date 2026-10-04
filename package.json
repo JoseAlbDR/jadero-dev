@@ -20,6 +20,8 @@
     "test:e2e": "turbo run test:e2e",
     "test:scripts": "node --test \"scripts/**/*.test.mjs\"",
     "build": "turbo run build",
+    "db:generate": "turbo run db:generate",
+    "db:migrate": "turbo run db:migrate",
     "dev": "turbo run dev dev:worker --concurrency=20",
     "dev:up": "docker compose -f infra/compose/compose.dev.yml up -d --wait",
     "dev:down": "docker compose -f infra/compose/compose.dev.yml down",

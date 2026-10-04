@@ -41,6 +41,7 @@ catalog:
   amqp-connection-manager: 5.0.0
   amqplib: 0.10.9
   dependency-cruiser: 18.5.0
+  drizzle-kit: 0.31.11
   drizzle-orm: 0.45.3
   jsdom: 30.1.1
   lefthook: 2.1.16
@@ -78,6 +79,9 @@ allowBuilds:
   "@swc/core": false
   # testcontainers -> ssh2 -> cpu-features: optional native bindings for Docker over SSH; ssh2 works without them.
   cpu-features: false
+  # drizzle-kit (dev only, ADR-005) -> esbuild: its postinstall only checks the platform binary that pnpm already
+  # installs as an optional dependency (@esbuild/<platform>), and downloads one when it is missing.
+  esbuild: false
   lefthook: false
   # dockerode and @nestjs/terminus (through @grpc/proto-loader): its postinstall only prints a version notice.
   protobufjs: false

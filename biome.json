@@ -15,6 +15,7 @@
       "!!**/dist",
       "!!**/.turbo",
       "!!**/coverage",
+      "!!apps/*/drizzle",
       "!!docs/plan",
       "!!docs/artifacts",
       "!!docs/**/*.html"

@@ -1,16 +1,21 @@
-import { migrateMessagingSchema } from "@jadero/messaging";
-import { loadConfig } from "@jadero/platform-nest";
-import pg from "pg";
+import { fileURLToPath } from "node:url";
+import { loadConfig, MigrationError, runMigrations } from "@jadero/platform-nest";
 import { apiEnv } from "./config/api-config.js";
 
-// Creates the outbox and inbox tables in `api`'s own database (WP-5 decision S1). Idempotent.
-// WP-10 replaces this with Drizzle migrations, the messaging SQL as the first one.
-const { DATABASE_URL } = loadConfig(apiEnv);
-const client = new pg.Client({ connectionString: DATABASE_URL });
-await client.connect();
+// The one-off migrate step (WP-10 D2): applies `drizzle/` to api's own database (`content_dev` in
+// development) and exits; the deploy (WP-9) runs it once, before the service starts, never at boot.
+// Exit code 1 on any failure, so the deploy stops and the old version keeps serving.
+// Only the database URL: the one-off container needs no port, log level or broker.
+const { DATABASE_URL } = loadConfig(apiEnv.pick({ DATABASE_URL: true }));
 try {
-  await migrateMessagingSchema(client);
-  console.log("api: messaging schema ready");
-} finally {
-  await client.end();
+  await runMigrations({
+    service: "api",
+    url: DATABASE_URL,
+    migrationsFolder: fileURLToPath(new URL("../drizzle", import.meta.url)),
+  });
+  console.log("api: migrations applied");
+} catch (error) {
+  if (!(error instanceof MigrationError)) throw error;
+  console.error(error.message);
+  process.exitCode = 1;
 }

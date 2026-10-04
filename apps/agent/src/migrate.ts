@@ -1,20 +1,21 @@
-import { readFileSync } from "node:fs";
-import { migrateMessagingSchema } from "@jadero/messaging";
-import { loadConfig } from "@jadero/platform-nest";
-import pg from "pg";
+import { fileURLToPath } from "node:url";
+import { loadConfig, MigrationError, runMigrations } from "@jadero/platform-nest";
 import { agentEnv } from "./config/agent-config.js";
 
-// Creates the inbox (messaging schema) and agent's own tables in `agent_dev` (WP-5 decision S1).
-// Idempotent. WP-10 replaces this with Drizzle migrations.
-const { DATABASE_URL } = loadConfig(agentEnv);
-const client = new pg.Client({ connectionString: DATABASE_URL });
-await client.connect();
+// The one-off migrate step (WP-10 D2): applies `drizzle/` to agent's own database (`agent_dev` in
+// development) and exits; the deploy (WP-9) runs it once, before the service starts, never at boot.
+// Exit code 1 on any failure, so the deploy stops and the old version keeps serving.
+// Only the database URL: the one-off container needs no port, log level or broker.
+const { DATABASE_URL } = loadConfig(agentEnv.pick({ DATABASE_URL: true }));
 try {
-  await migrateMessagingSchema(client);
-  await client.query(
-    readFileSync(new URL("../sql/0001_broker_heartbeat.sql", import.meta.url), "utf8"),
-  );
-  console.log("agent: schema ready");
-} finally {
-  await client.end();
+  await runMigrations({
+    service: "agent",
+    url: DATABASE_URL,
+    migrationsFolder: fileURLToPath(new URL("../drizzle", import.meta.url)),
+  });
+  console.log("agent: migrations applied");
+} catch (error) {
+  if (!(error instanceof MigrationError)) throw error;
+  console.error(error.message);
+  process.exitCode = 1;
 }

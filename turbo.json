@@ -19,6 +19,15 @@
       "dependsOn": ["^build"],
       "cache": false
     },
+    "db:generate": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "db:migrate": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "passThroughEnv": ["DATABASE_URL"]
+    },
     "//#lint": {
       "inputs": [
         "**/*.{ts,tsx,js,mjs,cjs,json,jsonc,css}",

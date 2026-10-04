@@ -16,6 +16,16 @@ export {
   QUERY_TIMEOUT_MS,
 } from "./database/database.module.js";
 export { type Database, DRIZZLE, PG_POOL } from "./database/database.tokens.js";
+export {
+  journalOrderProblems,
+  MIGRATION_CONNECT_TIMEOUT_MS,
+  MigrationError,
+  type MigrationJournal,
+  migrationFolderProblems,
+  migrationJournal,
+  type RunMigrationsOptions,
+  runMigrations,
+} from "./database/migrations.js";
 export { PostgresReadinessCheck } from "./database/postgres.readiness-check.js";
 export { ProblemDetailsFilter } from "./errors/problem-details.filter.js";
 export {
