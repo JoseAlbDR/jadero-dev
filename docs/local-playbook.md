@@ -114,7 +114,7 @@ Learning happens during the build too: every learning step ends with one one-lin
 
 ## Starting a session
 
-`docs/sessions.md` has the prompts (start a WP, resume one, a chore) and what differs between a cloud and a local session. Docker steps run locally; a cloud session gives you the exact commands and waits for your output.
+`docs/sessions.md` has the prompts (start the next WP, a frontend WP, resume one, a chore) and what differs between a cloud and a local session. Docker steps run locally; a cloud session gives you the exact commands and waits for your output.
 
 ## Pages to keep current
 
