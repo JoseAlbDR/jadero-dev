@@ -23,3 +23,4 @@ export {
   retry,
 } from "./outcome.js";
 export { topicMatches } from "./topic.js";
+export * from "./topology/index.js";

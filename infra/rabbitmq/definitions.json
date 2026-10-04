@@ -1,0 +1,187 @@
+{
+  "rabbit_version": "4.3.6",
+  "users": [
+    {
+      "name": "dev",
+      "password_hash": "dgw55CJFRGGxT2VOjvLp6FZCpjjnvTLoQ3zHC8ZboO5SdDoJ",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": ["administrator"]
+    },
+    {
+      "name": "api",
+      "password_hash": "pJgp4/L2XS/imE1w3fLXzbQzPSF+/lVjQu3vk3LRJcZBcPY3",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": []
+    },
+    {
+      "name": "agent",
+      "password_hash": "HgIfbp0edBrrnFpNf4LD7n0BmLhD54mg12NbSdSDrGQYD4aJ",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": []
+    }
+  ],
+  "vhosts": [
+    {
+      "name": "dev"
+    }
+  ],
+  "permissions": [
+    {
+      "user": "dev",
+      "vhost": "dev",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    },
+    {
+      "user": "api",
+      "vhost": "dev",
+      "configure": "^$",
+      "write": "^(jadero\\.events)$",
+      "read": "^$"
+    },
+    {
+      "user": "agent",
+      "vhost": "dev",
+      "configure": "^$",
+      "write": "^(amq\\.default)$",
+      "read": "^(agent\\.system\\.ping)$"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "jadero.events",
+      "vhost": "dev",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {
+        "alternate-exchange": "jadero.unrouted"
+      }
+    },
+    {
+      "name": "jadero.unrouted",
+      "vhost": "dev",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "jadero.dlx",
+      "vhost": "dev",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "jadero.unrouted",
+      "vhost": "dev",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    },
+    {
+      "name": "agent.system.ping",
+      "vhost": "dev",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-strategy": "at-least-once",
+        "x-overflow": "reject-publish",
+        "x-dead-letter-exchange": "jadero.dlx",
+        "x-dead-letter-routing-key": "agent.system.ping"
+      }
+    },
+    {
+      "name": "agent.system.ping.retry.10s",
+      "vhost": "dev",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-strategy": "at-least-once",
+        "x-overflow": "reject-publish",
+        "x-message-ttl": 10000,
+        "x-dead-letter-exchange": "",
+        "x-dead-letter-routing-key": "agent.system.ping"
+      }
+    },
+    {
+      "name": "agent.system.ping.retry.1m",
+      "vhost": "dev",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-strategy": "at-least-once",
+        "x-overflow": "reject-publish",
+        "x-message-ttl": 60000,
+        "x-dead-letter-exchange": "",
+        "x-dead-letter-routing-key": "agent.system.ping"
+      }
+    },
+    {
+      "name": "agent.system.ping.retry.10m",
+      "vhost": "dev",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-strategy": "at-least-once",
+        "x-overflow": "reject-publish",
+        "x-message-ttl": 600000,
+        "x-dead-letter-exchange": "",
+        "x-dead-letter-routing-key": "agent.system.ping"
+      }
+    },
+    {
+      "name": "agent.system.ping.dlq",
+      "vhost": "dev",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    }
+  ],
+  "bindings": [
+    {
+      "source": "jadero.unrouted",
+      "vhost": "dev",
+      "destination": "jadero.unrouted",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "jadero.events",
+      "vhost": "dev",
+      "destination": "agent.system.ping",
+      "destination_type": "queue",
+      "routing_key": "system.ping.v1",
+      "arguments": {}
+    },
+    {
+      "source": "jadero.dlx",
+      "vhost": "dev",
+      "destination": "agent.system.ping.dlq",
+      "destination_type": "queue",
+      "routing_key": "agent.system.ping",
+      "arguments": {}
+    }
+  ],
+  "policies": [],
+  "parameters": [],
+  "global_parameters": [],
+  "topic_permissions": []
+}

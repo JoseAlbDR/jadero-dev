@@ -27,15 +27,16 @@ services:
     mem_limit: 1024m
 
   rabbitmq:
-    # Plain broker with the management UI (WP-1 decision H1); vhosts, users and definitions come in WP-5.
+    # Broker with the management UI (WP-1 decision H1). Vhost `dev`, its users, exchanges and queues
+    # come from infra/rabbitmq/definitions.json, generated from packages/messaging (WP-5).
     image: rabbitmq:4.3.6-management-alpine
     # Run as the image's rabbitmq user. The image starts as root and drops to rabbitmq only for the server;
     # the healthcheck (docker exec) would run as root with HOME=/var/lib/rabbitmq and, on a slow first boot,
     # create .erlang.cookie as root before the server does, which then fails with eacces. One user for both.
     user: rabbitmq
-    environment:
-      RABBITMQ_DEFAULT_USER: dev
-      RABBITMQ_DEFAULT_PASS: dev
+    volumes:
+      - ../rabbitmq/rabbitmq.conf:/etc/rabbitmq/conf.d/20-jadero.conf:ro
+      - ../rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
     ports:
       - "127.0.0.1:5672:5672"
       - "127.0.0.1:15672:15672"
