@@ -1,6 +1,6 @@
 # Local playbook
 
-How to run the delivery flow on the owner's machine with Claude Code and firstmate. Written after the WP-1 end-to-end trial of 2026-10-03. The nine stages, roles and gates are in `docs/agent-tooling.md`; this file is the hands-on version.
+How to run the delivery flow on the owner's machine with Claude Code and firstmate. Written after the WP-1 end-to-end trial of 2026-10-03. The ten stages, roles and gates are in `docs/agent-tooling.md`; this file is the hands-on version.
 
 ## Setup once
 

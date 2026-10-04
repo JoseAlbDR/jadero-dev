@@ -6,7 +6,7 @@ How the owner's framework (firstmate) runs this repo's delivery flow on the owne
 
 1. `AGENTS.md`: map, commands, architecture rules, the learning protocol (section 5), conventions, hard rules.
 2. `CLAUDE.md` and `.claude/` (`rules/`, `skills/`, `agents/reviewer.md`, `hooks/learning-gate.sh`, `settings.json`).
-3. `docs/agent-tooling.md`: the nine stages, who does what, the gates.
+3. `docs/agent-tooling.md`: the ten stages, who does what, the gates.
 4. `docs/local-playbook.md`: setup, daily loop, the "When something blocks" table.
 5. For the WP at hand: its row in `docs/plan/decisions.json` and `docs/plan/report.md` section 14, its GitHub issue, the ADRs it names, and `docs/learning/wp-NN.md` once written.
 6. To see the code at a glance: `docs/architecture/code-map.html` (open it in a browser).
