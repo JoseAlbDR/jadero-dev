@@ -66,7 +66,7 @@ Never typed: a push to `main`, a deploy, `pnpm eval` without `EVAL_CONFIRMED=1`.
 | Start | `git switch main && git pull`; pick the Ready card | | Ready |
 | Open | `/wp NN`; read the step list; go or edit | dependencies, gate, branch `wp/NN-slug`, steps; stops | In progress (owner moves it) |
 | Learn | read `docs/learning/wp-NN.md`; ask; answer | `/learn-step NN` writes and stops; records the decision | |
-| Build | one step at a time; stop and ask | explains, writes, `pnpm verify`, one scoped commit, two log lines | |
+| Build | one step at a time; answer the check question; stop and ask | names files and ADR lines, writes, `pnpm verify`, privacy check, step log from the diff, one check question, one scoped commit; mid-WP review for M or larger | |
 | Review | explain the design back; review on GitHub | PR with `Closes #`; `@agent-reviewer`; fixes; Recap gaps | In review (automatic) |
 | Close | squash merge; later deploy and journal | | Done (automatic) |
 
@@ -76,6 +76,18 @@ Compact after the decision is recorded and after the reviewer has reported. Keep
 
 The file is the textbook for this WP; the session is the teacher. You never read ADRs or other WPs to answer: the file has a "How to read this file" table (what to read before each question) and a "Named here" table (one line per WP or ADR it names). The session asks all the questions in one message, each with that pointer; a question that depends on another carries a recommendation per possible answer of the first. Nothing is to memorize; an explain-back you cannot answer means the explainer missed something, and it gets taught and added, not re-tested. Ask about any paragraph or file. A step you already know: say "known" (`fast_path: known`). A fact marked **verify** was not confirmed from a primary source; verify it at implementation time. Learning survives the PR: the Recap can land after the merge in a docs commit. A learning WP run without the owner (as WP-1 was) gets its explain-back on the next session before moving on.
 
+
+What the owner learns (2026-10-04): the owner orchestrates agents and must be able to challenge them, so the explainer separates what to **own** (boundaries, consistency, failure modes, data flow and privacy, observability, data modeling, cost of change), what to **recognize** (named patterns) and what to **delegate** (library APIs, config, versions, in an appendix that is never asked). For every decision the owner answers first, with a pick and one risk, and only then reads the recommendation; options include one the agent would not choose and when it would win, plus "what would make this wrong". The explain-back is interview practice: why, what else, when to change, what happens when it fails, and the main trace drawn from memory. The owner's PR review is a design review on the code map, not a code read. The journal post of each WP is written by the owner.
+
+Learning happens during the build too: every learning step ends with one one-line check question on what was just built (for example "Postgres is down: what does `/health/live` answer?"). A wrong answer is explained on the spot, so the explain-back at the end confirms instead of discovering. WP-3 showed why: two gaps (live versus ready, why a package is compiled) surfaced only in the Recap.
+
+## Lessons from WP-3 (2026-10-04)
+
+- An implementation departed from an accepted ADR without anyone saying so (own config loader instead of `@nestjs/config`); it became ADR-043 after the fact. Rule: name the ADR lines before each step.
+- A `git checkout` used to undo a test edit also removed an uncommitted change, and the step log described code that was not there. Rule: commit or stash before reverting; write the step log from the diff.
+- Privacy issues (visitor IP in OpenTelemetry spans, query strings in error bodies) were found only in the PR review. Rule: a privacy check at the end of every step.
+- Commits were pushed to a PR after it was said to be ready, and the merge took only part of them. Rule: a ready PR gets no new commits without telling the owner.
+- The reviewer found one high and five medium issues; a mid-WP review would have found most of them earlier.
 ## When something blocks
 
 | Symptom | Cause | Do |

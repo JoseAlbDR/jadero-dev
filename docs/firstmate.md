@@ -32,7 +32,7 @@ It never needs to read the whole plan or every ADR: the explainer of the WP is w
 |---|---|---|---|
 | Decisions before code | `learning-gate.sh` denies edits under learning paths until `decision: recorded` | an autonomous implementer that plans and codes in one pass | firstmate must stop after the plan and after the explainer; a denied edit is the process, never something to route around |
 | Who decides | the owner answers every backend and agent pattern question | firstmate picking defaults to keep moving | firstmate recommends; only the owner records the decision. "Take the recommendation" is allowed only when the owner says it |
-| Step size | one step, one commit, the owner sees it run | batching a WP into one diff | keep the step list from `/wp`; one commit per step |
+| Step size | one step, one commit, the owner sees it run (step contract, `AGENTS.md` section 5) | batching a WP into one diff | keep the step list from `/wp`; one commit per step; the check question waits for the owner's answer |
 | Decision records | ADRs tracked in `docs/adr/`, superseded never edited, `/adr` | the framework keeps decisions untracked | decisions that change an ADR become a new ADR in the repo; the framework's own notes stay outside it |
 | Hosting | GitHub: issues, Project board, PRs, `Closes #N`, squash merge | the framework assumes GitLab and MRs | use `gh` (or GitHub tools); PR, not MR; the PR title is the squash commit |
 | Commits | conventional, scoped (`feat(api): ...`), scopes in `commitlint.config.mjs`; the owner's identity; no attribution trailers, model names or session links | a commit skill that adds trailers or other formats | commitlint rejects bad shapes; turn off any trailer in the framework's commit skill for this repo |
@@ -68,14 +68,21 @@ Follow the repo's flow exactly (AGENTS.md section 5, docs/agent-tooling.md, docs
    definition of done from the issue, then stop.
 3. After my go: /learn-step 5. The explainer must be self-contained (How to read this file, Named here,
    two traces for a service WP, facts checked against the npm registry, all questions in one message,
-   dependent questions with a recommendation per answer). Stop. Do not write code under learning paths.
-4. When I answer: record the decision (decision: recorded), then build one step at a time: tell me which
-   files and why before writing, pnpm verify, one scoped commit, two lines in the step log, show it
-   running. Steps that need Docker run here (pnpm dev:up, pnpm test:int).
+   dependent questions with a recommendation per answer). Teach design, architecture and patterns:
+   label concepts Own / Recognize / Delegate, put library details in a delegated appendix, give for each
+   decision the forces, at least three options (one you would not pick, and when it would win) and what
+   would make it wrong. Put the recommendations in a separate block after the questions: I answer first
+   with my pick and one risk, then we compare. Stop. Do not write code under learning paths.
+4. When I answer: record the decision (decision: recorded), then build one step at a time under the step
+   contract (AGENTS.md section 5): tell me which files, which explainer paragraph and which ADR lines
+   before writing (stop if the code would depart from an ADR), pnpm verify, show it running, privacy
+   check, two step-log lines from the diff, one check question for me, one scoped commit. Run
+   @agent-reviewer after about half the steps. Steps that need Docker run here (pnpm dev:up, pnpm test:int).
 5. Last step: update docs/architecture/code-map.html (its JSON data) and the docs the WP changed.
 6. Open the PR with Closes #13, run @agent-reviewer, fix its findings, then ask me the
-   explain-back questions (only about what the explainer taught) and write my answers and the gaps in
-   the Recap. I merge.
+   explain-back in interview form (why this way, what else, when to change it, what happens when it
+   fails; I draw the main trace from memory) and write my answers and the gaps in the Recap. I write the
+   journal post myself. I merge.
 Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.
 ```
 

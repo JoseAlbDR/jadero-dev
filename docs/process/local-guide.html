@@ -50,7 +50,7 @@ input[type="checkbox"] { accent-color: var(--accent); margin-right: 6px; }
 <p class="eyebrow">jadero.dev v2 · playbook for the owner's machine</p>
 <h1>Working the repo from your laptop, step by step</h1>
 <p class="lede">How to run the same flow the cloud session ran, on your machine with Claude Code (Opus 5.5) and firstmate. Setup once, what to do after a merge, the daily loop, and what to do when something blocks. Every rule here has its source file in the repo.</p>
-<p class="status">Version 7, 2026-10-04: WP-3 built (steps 1 to 8); pnpm build, pnpm dev and pnpm test:int; the stale dist and Testcontainers-on-OrbStack fixes; pages to keep current; continue tomorrow with firstmate. Companion page: the delivery flow (ten stages, roles, gates).</p>
+<p class="status">Version 9, 2026-10-04: learning aimed at orchestrating agents (Own, Recognize, Delegate; answer before the recommendation; interview-style explain-back). Version 8: the step contract (ADR lines first, privacy check, step log from the diff, one check question per learning step, mid-WP review). Version 7: WP-3 built (steps 1 to 8); pnpm build, pnpm dev and pnpm test:int; the stale dist and Testcontainers-on-OrbStack fixes; pages to keep current; continue tomorrow with firstmate. Companion page: the delivery flow (ten stages, roles, gates).</p>
 
 <nav class="toc"><a href="#once">Setup once</a><a href="#first">After a merge to main</a><a href="#session">What a session looks like</a><a href="#daily">Daily loop</a><a href="#learning">How you learn</a><a href="#blocked">When something blocks</a><a href="#firstmate">With firstmate</a><a href="#pages">Pages to keep current</a><a href="#tomorrow">Continue tomorrow</a><a href="#cheatsheet">Cheat sheet</a></nav>
 
@@ -116,13 +116,14 @@ WP-3 explainer: docs/learning/wp-3.md (decision: pending).</span>
 <tr><td>Start</td><td><code>git switch main &amp;&amp; git pull</code>; pick the Ready card or move one there</td><td></td><td>Ready</td></tr>
 <tr><td>Open the WP</td><td><code>/wp NN</code>; read the step list; say go or edit it</td><td>Checks dependencies and the gate, creates <code>wp/NN-slug</code>, proposes steps, stops</td><td>In progress (you move it)</td></tr>
 <tr><td>Learn</td><td>Read <code>docs/learning/wp-NN.md</code>; ask; answer the question</td><td><code>/learn-step NN</code> writes it and stops; records your decision</td><td></td></tr>
-<tr><td>Build</td><td>One step at a time; stop and ask whenever something is not mechanical yet</td><td>Explains, writes, <code>pnpm verify</code>, one scoped commit, two lines in the step log</td><td></td></tr>
+<tr><td>Build</td><td>One step at a time; answer the one-line check question; stop and ask whenever something is not mechanical yet</td><td>Names files and ADR lines first, writes, <code>pnpm verify</code>, privacy check, two step-log lines from the diff, one check question, one scoped commit; a mid-WP review for M or larger</td><td></td></tr>
 <tr><td>Review</td><td>Explain the design back; review the PR on GitHub</td><td>Opens the PR with <code>Closes #</code>; runs <code>@agent-reviewer</code>; fixes; records Recap gaps</td><td>In review (automatic)</td></tr>
 <tr><td>Close</td><td>Squash merge; later deploy and journal</td><td></td><td>Done (automatic)</td></tr>
 </table></div>
 <p>Compact (<code>/compact</code>) after the decision is recorded and after the reviewer has reported. Keep: branch, WP id, the explainer path, the step list with done marks, open findings. Drop everything the explainer already holds.</p>
 
 <h2 id="learning">How you learn, concretely</h2>
+<div class="note"><p><strong>What you learn, and why.</strong> Your job is to orchestrate agents and challenge their proposals, so the explainer sorts every concept: <strong>own</strong> it (boundaries, consistency, failure modes, data flow and privacy, observability, data modeling, the cost of changing a decision), <strong>recognize</strong> it (named patterns), or <strong>delegate</strong> it (library APIs, config, versions, in an appendix nobody asks about). For each decision you answer first, with your pick and one risk, and only then read the recommendation. Options always include one the agent would not choose and when it would win, plus what would make the decision wrong. The explain-back is interview practice: why, what else, when to change it, what happens when it fails, and the main trace drawn from memory. Your PR review is a design review on the code map. You write the journal post.</p></div>
 <p>Two halves. The file is the textbook written for this WP: first principles, one trace with real payloads, named patterns, options. The session is the teacher: you ask about any paragraph or file, and the agent answers right there; at the end it asks you three or four questions and you answer in your own words (the explain-back). The gaps go to the Recap section of the file and become the raw material of the journal post.</p>
 <ul>
 <li>The explainer is self-contained: you never open an ADR, another WP or the plan to answer. Its "How to read this file" table says exactly what to read before each question (5 to 10 minutes), and its "Named here" table says in one line what every WP or ADR it names is.</li>
@@ -190,14 +191,21 @@ Follow the repo's flow exactly (AGENTS.md section 5, docs/agent-tooling.md, docs
    definition of done from the issue, then stop.
 3. After my go: /learn-step 5. The explainer must be self-contained (How to read this file, Named here,
    two traces for a service WP, facts checked against the npm registry, all questions in one message,
-   dependent questions with a recommendation per answer). Stop. Do not write code under learning paths.
-4. When I answer: record the decision (decision: recorded), then build one step at a time: tell me which
-   files and why before writing, pnpm verify, one scoped commit, two lines in the step log, show it
-   running. Steps that need Docker run here (pnpm dev:up, pnpm test:int).
+   dependent questions with a recommendation per answer). Teach design, architecture and patterns:
+   label concepts Own / Recognize / Delegate, put library details in a delegated appendix, give for each
+   decision the forces, at least three options (one you would not pick, and when it would win) and what
+   would make it wrong. Put the recommendations in a separate block after the questions: I answer first
+   with my pick and one risk, then we compare. Stop. Do not write code under learning paths.
+4. When I answer: record the decision (decision: recorded), then build one step at a time under the step
+   contract (AGENTS.md section 5): tell me which files, which explainer paragraph and which ADR lines
+   before writing (stop if the code would depart from an ADR), pnpm verify, show it running, privacy
+   check, two step-log lines from the diff, one check question for me, one scoped commit. Run
+   @agent-reviewer after about half the steps. Steps that need Docker run here (pnpm dev:up, pnpm test:int).
 5. Last step: update docs/architecture/code-map.html (its JSON data) and the docs the WP changed.
 6. Open the PR with Closes #13, run @agent-reviewer, fix its findings, then ask me the
-   explain-back questions (only about what the explainer taught) and write my answers and the gaps in
-   the Recap. I merge.
+   explain-back in interview form (why this way, what else, when to change it, what happens when it
+   fails; I draw the main trace from memory) and write my answers and the gaps in the Recap. I write the
+   journal post myself. I merge.
 Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.</code></pre>
 <p>To start any other WP, change the number and the title; the rest stays.</p>
 

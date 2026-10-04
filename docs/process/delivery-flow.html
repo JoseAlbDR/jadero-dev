@@ -109,7 +109,7 @@ a { color: var(--accent); }
 <div class="stage"><div class="n">5</div><div>
 <h3>Implement in small visible steps</h3>
 <p class="who">Agent in the main session, owner watching</p>
-<p>One step at a time: write, <code>pnpm verify</code> green, one conventional commit scoped to the service (<code>feat(contact): add outbox relay</code>), two lines in the explainer's step log (what changed, why). Zod at every boundary, fakes and contract suites first, Testcontainers for SQL or the broker. The owner can stop at any step and ask <code>/explain</code>.</p>
+<p>One step at a time, under the step contract (<code>AGENTS.md</code> section 5): name the files, the explainer paragraph and the ADR lines first, and stop if the code would depart from an ADR; write; <code>pnpm verify</code> green; show it running; a privacy check (logs, spans, error bodies, headers); two lines in the explainer's step log written from the diff; one check question for the owner on learning steps; one conventional commit scoped to the service (<code>feat(contact): add outbox relay</code>). A WP of size M or larger gets a mid-WP <code>@agent-reviewer</code> run. Zod at every boundary, fakes and contract suites first, Testcontainers for SQL or the broker. The owner can stop at any step and ask <code>/explain</code>.</p>
 </div></div>
 
 <div class="stage"><div class="n">6</div><div>
@@ -144,6 +144,8 @@ a { color: var(--accent); }
 
 <h2 id="explainback">What the explain-back is, and what it is not</h2>
 <div class="note"><p>The explain-back is the owner explaining the design back, in their own words, after the PR review (stage 8). The agent asks only about what the explainer taught, and writes the answers and any gaps in the explainer's Recap section. It is not the decision questions of stages 3 and 4: those are choices the owner makes before any code exists. An "I don't know" in the explain-back means the explainer missed something, and the explainer gets fixed. A step marked <code>fast_path: known</code> has no explain-back.</p></div>
+
+<div class="note"><p><strong>Interview form, and what the learning aims at.</strong> The owner orchestrates agents and challenges them, so explainers label concepts <strong>Own</strong> (boundaries, consistency, failure modes, data flow and privacy, observability, data modeling, cost of change), <strong>Recognize</strong> (named patterns) or <strong>Delegate</strong> (library APIs and config, in an appendix that is never asked). For each decision the owner answers first, with a pick and one risk, before reading the recommendation; options include one the agent would not choose and when it would win, plus what would make the decision wrong. The explain-back asks, for each major piece: why this way, what else, when to change it, what happens when it fails, and the owner draws the main trace from memory before comparing with the code map.</p></div>
 
 <h2 id="gates">The gates, and what enforces each</h2>
 <div class="tablewrap"><table>
