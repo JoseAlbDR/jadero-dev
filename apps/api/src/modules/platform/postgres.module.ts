@@ -27,7 +27,13 @@ class PoolCloser implements OnApplicationShutdown {
     {
       provide: PG_POOL,
       useFactory: (config: ApiConfig) =>
-        new Pool({ connectionString: config.databaseUrl, max: 2, connectionTimeoutMillis: 1000 }),
+        // query_timeout frees the connection when a readiness check times out.
+        new Pool({
+          connectionString: config.databaseUrl,
+          max: 2,
+          connectionTimeoutMillis: 1000,
+          query_timeout: 1000,
+        }),
       inject: [ApiConfig],
     },
     PoolCloser,

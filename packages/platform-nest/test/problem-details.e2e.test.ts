@@ -84,10 +84,33 @@ describe("problem details (RFC 9457)", () => {
     });
   });
 
+  it("answers an oversized body with 413, not a 500, and never echoes the query string", async () => {
+    const { res, body } = await call("/__fixtures/echo?email=ada@example.com", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: "x".repeat(200_000), locale: "es" }),
+    });
+    expect(res.status).toBe(413);
+    expect(body).toMatchObject({
+      type: "about:blank",
+      title: "Payload Too Large",
+      status: 413,
+      instance: "/__fixtures/echo",
+    });
+    expect(JSON.stringify(stream.lines)).not.toContain("ada@example.com");
+    expect(stream.lines.some((line) => line.msg === "unhandled exception")).toBe(false);
+  });
+
   it("turns an unknown route into a 404 problem", async () => {
-    const { res, body } = await call("/nope");
+    const { res, body } = await call("/nope?token=secret-value");
     expect(res.status).toBe(404);
-    expect(body).toMatchObject({ type: "about:blank", title: "Not Found", instance: "/nope" });
+    expect(body).toMatchObject({
+      type: "about:blank",
+      title: "Not Found",
+      instance: "/nope",
+      detail: "Cannot GET /nope",
+    });
+    expect(JSON.stringify(body)).not.toContain("secret-value");
   });
 
   it("shields an unexpected error: generic 500 to the client, the stack in the error log", async () => {

@@ -14,6 +14,26 @@ import { RequestValidationException } from "./request-validation.exception.js";
 const UNEXPECTED = "An unexpected error occurred.";
 
 /**
+ * Express middleware errors that are the client's fault (body-parser's 413 payload too large,
+ * 415 unsupported media type, 400 request aborted) are `http-errors` instances, not Nest
+ * exceptions: they carry a 4xx `status` and `expose: true` when their message is safe to show.
+ */
+function asExposedClientError(exception: unknown): { status: number; message: string } | undefined {
+  if (typeof exception !== "object" || exception === null) return undefined;
+  const { status, expose, message } = exception as {
+    status?: unknown;
+    expose?: unknown;
+    message?: unknown;
+  };
+  if (typeof status !== "number" || status < 400 || status > 499 || expose !== true)
+    return undefined;
+  return {
+    status,
+    message: typeof message === "string" ? message : (STATUS_CODES[status] ?? "Error"),
+  };
+}
+
+/**
  * The one exception filter of a service (ADR-006): every error leaves as
  * `application/problem+json` (RFC 9457). Validation failures list each invalid field; other
  * HTTP exceptions keep their status; anything else is a 500 whose message and stack go to the
@@ -32,7 +52,12 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     const http = host.switchToHttp();
     const request = http.getRequest<Request & { id?: unknown }>();
     const response = http.getResponse<Response>();
-    const problem = this.toProblem(exception, request.originalUrl ?? request.url);
+    // Path only: a query string may carry an email or a token.
+    const url = request.originalUrl ?? request.url;
+    const path = url.split("?")[0] ?? "/";
+    const found = this.toProblem(exception, path);
+    // Nest's own 404 message repeats the full URL ("Cannot GET /x?email=..."): keep the path only.
+    const problem = url === path ? found : { ...found, detail: found.detail.replaceAll(url, path) };
     const requestId = typeof request.id === "string" ? request.id : undefined;
     const traceId = currentTraceId();
     response
@@ -60,6 +85,17 @@ export class ProblemDetailsFilter implements ExceptionFilter {
         title: STATUS_CODES[status] ?? "Error",
         status,
         detail: exception.message,
+        instance,
+      };
+    }
+    const clientError = asExposedClientError(exception);
+    if (clientError) {
+      const { status, message } = clientError;
+      return {
+        type: "about:blank",
+        title: STATUS_CODES[status] ?? "Error",
+        status,
+        detail: message,
         instance,
       };
     }

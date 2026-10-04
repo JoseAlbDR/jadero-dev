@@ -72,7 +72,11 @@ export function loggerParams(options: LoggingOptions): Params {
     customLogLevel: requestLogLevel,
     customProps: (req: IncomingMessage) => ({ req_id: (req as RequestWithId).id }),
     serializers: {
-      req: (req: { method: string; url: string }) => ({ method: req.method, url: req.url }),
+      // Path only: a query string may carry an email or a token.
+      req: (req: { method: string; url: string }) => ({
+        method: req.method,
+        url: req.url.split("?")[0],
+      }),
       res: (res: { statusCode: number }) => ({ statusCode: res.statusCode }),
     },
     redact: ["req.headers.authorization", "req.headers.cookie", 'res.headers["set-cookie"]'],

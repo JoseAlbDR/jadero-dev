@@ -2,12 +2,14 @@ import { type DynamicModule, Module, type ModuleMetadata, type Type } from "@nes
 import { TerminusModule } from "@nestjs/terminus";
 import { HealthController, READINESS_CHECKS } from "./health.controller.js";
 import type { ReadinessCheck } from "./readiness-check.js";
-import { ShutdownState } from "./shutdown-state.js";
+import { SHUTDOWN_DRAIN_MS, ShutdownState } from "./shutdown-state.js";
 
 /** What a service registers: its checks, and the modules that provide what they inject. */
 export interface HealthModuleOptions {
   readonly checks: readonly Type<ReadinessCheck>[];
   readonly imports?: ModuleMetadata["imports"];
+  /** Milliseconds readiness answers 503 before the server closes on shutdown; default 0. */
+  readonly drainMs?: number;
 }
 
 /**
@@ -27,6 +29,7 @@ export class HealthModule {
       controllers: [HealthController],
       providers: [
         ShutdownState,
+        { provide: SHUTDOWN_DRAIN_MS, useValue: options.drainMs ?? 0 },
         ...options.checks,
         {
           provide: READINESS_CHECKS,

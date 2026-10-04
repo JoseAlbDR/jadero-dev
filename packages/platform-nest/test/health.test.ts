@@ -102,7 +102,7 @@ describe("HealthModule", () => {
   });
 
   it("answers ready with 503 once shutdown has started, while live stays 200", async () => {
-    app.get(ShutdownState).beforeApplicationShutdown();
+    await app.get(ShutdownState).beforeApplicationShutdown();
     expect((await get("/health/ready")).res.status).toBe(503);
     expect((await get("/health/live")).res.status).toBe(200);
   });
