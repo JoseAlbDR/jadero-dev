@@ -81,18 +81,27 @@ Profile `settings.json`:
 }
 ```
 
-- `attribution` with empty strings stops the `Co-Authored-By` trailer on commits and the "Generated with Claude Code" line on PRs (AGENTS.md section 6).
+- `attribution` with empty strings stops the `Co-Authored-By` trailer on commits and the "Generated with Claude Code" line on PRs (AGENTS.md section 6). It replaces the older `includeCoAuthoredBy: false`, which covered commits only; remove that key.
 - Permission `deny` rules and hooks merge across scopes; a profile cannot weaken the project's `.env` deny. Other keys in the project settings win over the profile.
 - The sandbox is off by default locally (`sandbox.enabled`). Without it, the protection is the `.env` deny, the learning gate and the owner reviewing each step; turn it on if wanted, and make sure it can reach the Docker socket.
 - No other plugins, hooks or MCP servers are needed; anything left over from another framework (guard hooks, a commit skill, its own `CLAUDE.md` rules) should be off in this profile.
 
-Profile `CLAUDE.md` (personal preferences that do not belong in the public repo):
+Profile `CLAUDE.md` (personal preferences that do not belong in the public repo). A plain file, not a symlink to another profile's `CLAUDE.md`: it can import a shared "about me" file and add only what this repo needs, so nothing leaks into other setups:
 
 ```
+@~/.claude/CLAUDE.md
+
 Chat with me in Spanish; everything written to files stays in English.
 ```
 
-Machine tools: Node 24 through the version manager (`.nvmrc`), `corepack enable` (pnpm 11), `git` with the owner's name and email, `gh auth login` with the `repo` and `project` scopes, `jq` (the learning gate hook uses it), Docker or OrbStack running.
+Read the imported file once: anything specific to another job or framework in it reaches every session of this repo too.
+
+Machine tools:
+- Node 24. Claude Code runs each Bash command in a fresh shell, so `nvm use` in one command does not carry over to the next: if the machine's default Node is another major, `pnpm` fails on `engineStrict`. Launch the session from a shell where `node -v` is 24 and check it in the smoke test; if it still falls back, make 24 the default (`nvm alias default 24`) or switch automatically on `.nvmrc`.
+- `corepack enable` (pnpm 11), `jq` (the learning gate hook uses it), Docker or OrbStack running.
+- Git identity for this repo only, when the global one belongs to another account: `git config user.name` and `git config user.email` inside the checkout.
+- `gh auth login` with the `repo` and `project` scopes on the account that owns the repo (`gh auth switch` when several accounts are logged in).
+- The first launch of a new profile asks to log in to Claude; use the account meant for this project.
 
 ## Smoke test for a new profile or machine
 
