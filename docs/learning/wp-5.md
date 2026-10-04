@@ -16,28 +16,117 @@ What the owner learns (decisions.json): exchanges, bindings, queues, acks and pr
 
 ## How to read this file
 
-This file is the only thing you need to read. ADR and WP numbers are summarized in one line each in "Named here", so you never have to open them. Nothing here is to memorize: each question asks you to choose.
+Start with **Decisions explained**: the four decisions this WP implements, each as problem, example, decision, alternatives and patterns. Then **Implementation choices**, one line each. Everything after that is reference: the concepts in depth (C1 to C14), the traces, and the option blocks that were answered on 2026-10-04 (the file was written before the explainer format changed, see PR #82).
 
-**How the file is built.** Three kinds of sections, each with numbered headings you can find in the outline or with a search:
+## Decisions explained
 
-- **Concepts** `C1` to `C14` (under "First principles"): one idea each, from zero.
-- **Traces** (under "One concrete trace"): Trace 1 is the ping that works; Trace 2a and Trace 2b are two failures. Their steps are numbered.
-- **Option blocks** `P`, `T`, `R`, `S`, `L`, `I`, `E`, `W` (under "Options and trade-offs"): one per question, with the forces, the options and what would make the choice wrong.
+### D1. Why asynchronous messages and not an HTTP call between services?
 
-**Reading route.** Go down the table one row at a time: read the concepts, then the trace steps, then the option block, then write your answer to that question (in "The question for the owner") before moving to the next row. A concept already read in an earlier row is not read again. About 5 to 10 minutes per row; rows 1 and 3 are the longest.
+**Problem.** When a project is published in `api`, the chat in `agent` must learn about it. If `api` calls `agent` directly, the two services are tied together.
 
-| Row | Question | 1. Concepts | 2. Trace steps | 3. Option block, then answer |
-|---|---|---|---|---|
-| 1 | Port shape | [C1](#c1-exchanges-bindings-queues), [C4](#c4-acknowledgements-and-prefetch), [C12](#c12-ports-and-adapters-for-a-broker) | Trace 1, steps 4 and 5 | [P](#p-port-shape) |
-| 2 | Who declares the topology | [C2](#c2-durable-persistent-quorum), [C3](#c3-unroutable-messages) | Trace 1, step 4 | [T](#t-who-declares-the-topology) |
-| 3 | Retry routing | [C9](#c9-retries-dead-letters-and-poison-messages) | Trace 2a, steps 1 to 7 | [R](#r-retry-routing) |
-| 4 | Outbox and inbox storage | [C7](#c7-the-dual-write-problem-and-the-transactional-outbox) | Trace 1, step 2 | [S](#s-outbox-and-inbox-storage-before-wp-10) |
-| 5 | Relay trigger and claim | [C8](#c8-the-relay-and-the-atomic-claim) | Trace 1, step 3; Trace 2b, steps 1 to 4 | [L](#l-relay-trigger-and-claim) |
-| 6 | Inbox key | [C5](#c5-at-least-once-delivery-and-the-idempotent-consumer), [C6](#c6-ordering) | Trace 1, steps 5 and 7 | [I](#i-inbox-key-and-retention) |
-| 7 | Envelope and trace | [C10](#c10-the-cloudevents-envelope), [C11](#c11-one-trace-across-an-asynchronous-hop) | Trace 1, steps 2, 3, 5 and 6 | [E](#e-envelope-and-the-trace-across-the-outbox) |
-| 8 | Process types and the ping | [C13](#c13-process-types), [C14](#c14-readiness-with-a-broker) | Trace 2b, steps 1 and 2 | [W](#w-process-types-readiness-and-the-ping) |
+**Example.** `api` sends `POST http://agent/index` while `agent` is restarting. The publish either fails or hangs until a timeout, and the owner sees an error for something that worked. If `agent` is slow, every publish is slow.
 
-After row 8, read "Defaults that need no question" (end of "Options and trade-offs"), then the Recommendations block, and compare with your answers. Ask about anything at any point; "I don't know" on an explain-back means the explainer missed something, and it gets fixed here.
+**Decision (ADR-029).** `api` leaves a message on RabbitMQ and carries on. Each consumer has its own durable queue; if `agent` is down, the message waits and is processed when it is back. `api` does not know who listens (publish-subscribe), so a new consumer joins later without touching `api`.
+
+```mermaid
+flowchart LR
+  api[api] -->|publish system.ping.v1| ex{{exchange jadero.events}}
+  ex -->|binding system.ping.*| q1[(queue agent.system.ping)]
+  ex -->|binding content.#| q2[(queue agent.ingest.content)]
+  q1 --> agent[agent consumer]
+  q2 --> ingest[agent-ingest, WP-20]
+```
+
+**Alternatives.**
+- *Synchronous HTTP.* Discarded: one service down breaks the other (the distributed monolith). Wins when the caller needs the answer now, like checking a payment or a login.
+- *Redis pub/sub or core NATS.* Discarded: a consumer that is not connected loses the message; retries and dead letters are your code. Wins for live notifications where losing one is fine (a "someone is typing" signal).
+- *Kafka or Redpanda.* Discarded: about 1 GB of memory for a few events a day. Wins with high volume or when consumers must re-read history from the start.
+
+**Patterns:** publish-subscribe, topic routing, competing consumers, distributed monolith (anti-pattern).
+
+### D2. Why a transactional outbox and not publishing right after saving?
+
+**Problem.** Saving to Postgres and publishing to RabbitMQ are two writes into two systems, and there is no transaction that covers both (the dual-write problem).
+
+**Example.** `api` commits revision 7 of a project, then the process is killed before it publishes. The chat never learns about revision 7, and nothing retries. A try/catch does not help: a killed process runs no catch block.
+
+**Decision (ADR-012).** The event is saved as a row in an `outbox` table **in the same transaction** as the revision: both or neither. A separate process (`api-worker`, the relay) reads unsent rows, publishes them, waits for the broker's confirm, and marks them sent. Bonus: when RabbitMQ is down, `api` keeps working and events wait in the table.
+
+```mermaid
+sequenceDiagram
+  participant API as api
+  participant DB as Postgres (content)
+  participant W as api-worker (relay)
+  participant MQ as RabbitMQ
+  API->>DB: BEGIN; save revision 7; INSERT outbox row; COMMIT
+  loop every 1 s
+    W->>DB: claim unsent rows (FOR UPDATE SKIP LOCKED)
+    W->>MQ: publish
+    MQ-->>W: confirm
+    W->>DB: mark sent; COMMIT
+  end
+```
+
+**Alternatives.**
+- *Publish after commit, in the request.* Discarded: a crash in between loses the event, and a broker outage fails user requests. Wins when losing an occasional event is acceptable (analytics counters).
+- *A job queue inside Postgres (pg-boss).* Discarded: producer and consumers would share one database, which breaks "each service owns its database". Wins inside a single service (a monolith's background jobs).
+- *Change data capture (Debezium reads the database log).* Discarded: a JVM service and more infrastructure for one small server. Wins in a large platform with many producers and a team to run it.
+
+**Patterns:** dual-write problem, transactional outbox, message relay, publisher confirms, atomic claim.
+
+### D3. Why at-least-once delivery with an inbox, and not exactly once?
+
+**Problem.** Between two commits there is always a gap. The relay publishes, RabbitMQ confirms, and the relay dies before marking the row sent: on restart it publishes again. The same gap exists on the consumer side, between its commit and its ack.
+
+**Example.** The message says "send the owner a contact mail" (WP-11). Delivered twice without protection, the owner gets two mails.
+
+**Decision (ADR-012).** Duplicates are accepted as a fact and caught by the consumer. It records the event id in an `inbox` table **in the same transaction** as its work, with a unique key. On the second delivery the insert finds the id, so the consumer skips the work, acks and stops. Result: at-least-once delivery, exactly-once effects.
+
+**Alternatives.**
+- *"Exactly once" from the broker.* Discarded: between a broker and a database it does not exist; the gap between two commits is always there. Wins only inside one system that owns both sides (Kafka transactions between Kafka topics).
+- *At-most-once (ack on receipt, before the work).* Discarded: a crash during the work loses the message. Wins for data that is useless when late (live metrics).
+- *Handlers that are idempotent by nature (an upsert by revision number).* Kept as a second line of defense, not a replacement: "send a mail" cannot be written that way. Wins when every handler is a pure state overwrite.
+
+**Patterns:** at-least-once delivery, idempotent consumer (inbox), exactly-once effects.
+
+### D4. Why retries with growing delays and a dead-letter queue?
+
+**Problem.** A handler fails. Sometimes it is temporary (the database restarts for 30 seconds), sometimes permanent (a bug, a payload that does not parse). Putting the message straight back makes both worse.
+
+**Example.** `agent`'s database is down for 30 s. Requeued at once, the message fails thousands of times a minute and floods the logs. On RabbitMQ 4.3 with the library's defaults nothing stops that loop, because a `nack` does not count toward the delivery limit.
+
+**Decision (ADR-029).** Retry after 10 s, then 1 min, then 10 min, using wait queues with a TTL and no consumer (the TTL is the timer). Each retry goes back only to the queue that failed. After the last attempt the message goes to a dead-letter queue (DLQ), where a person looks at it (WP-50). A payload that does not parse goes to the DLQ at once: retrying cannot fix it.
+
+```mermaid
+flowchart LR
+  q[(agent.system.ping)] -->|handler fails, attempt 1| w1[(retry.10s)]
+  w1 -->|after 10 s| q
+  q -->|attempt 2| w2[(retry.1m)]
+  w2 -->|after 1 min| q
+  q -->|attempt 3| w3[(retry.10m)]
+  w3 -->|after 10 min| q
+  q -->|attempt 4 or bad payload| dlq[(agent.system.ping.dlq)]
+```
+
+**Alternatives.**
+- *Requeue at once.* Discarded: a hot loop on anything longer than a blip. Wins for failures that last milliseconds (a lock conflict), usually as a quick in-process retry.
+- *One fixed delay.* Discarded: too short for a long outage or too long for a short one. Wins when every failure has the same shape.
+- *The delayed message plugin.* Discarded: its own README warns of serious limitations, and it is built on a store RabbitMQ 4.3 removed. Wins on older RabbitMQ when per-message delays are needed.
+
+**Patterns:** retry with backoff, dead-letter queue, poison message.
+
+## Implementation choices
+
+What WP-5 builds, from the answers recorded under Decision. Object to any line.
+
+- Handlers return `done`, `retry` or `dead`; one adapter does the ack, the retry routing and the dead-lettering, so no handler can fall into the hot loop.
+- The topology (exchange, queues, wait queues, DLQs, users) is a TypeScript module that generates `infra/rabbitmq/definitions.json`; services cannot create or delete queues.
+- An alternate exchange keeps unroutable messages in `jadero.unrouted` instead of losing them silently.
+- Outbox and inbox use `pg` behind a small `SqlExecutor` seam until Drizzle arrives in WP-10.
+- The relay polls every second: a few events a day, one second of delay is invisible.
+- The inbox key is `(consumer, event_id)`, so two consumers in one database never block each other.
+- The relay restores the request's trace context, so one trace runs from the HTTP request to the consumer.
+- `api-worker` and `agent`'s consumer are their own processes; a heartbeat every 5 minutes plus `POST /dev/ping` in development.
 
 ## Named here
 
