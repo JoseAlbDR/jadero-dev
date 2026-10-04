@@ -23,7 +23,8 @@
   },
   "dependencies": {
     "@golevelup/nestjs-rabbitmq": "catalog:",
-    "@jadero/contracts": "workspace:*"
+    "@jadero/contracts": "workspace:*",
+    "amqp-connection-manager": "catalog:"
   },
   "peerDependencies": {
     "@nestjs/common": "catalog:",

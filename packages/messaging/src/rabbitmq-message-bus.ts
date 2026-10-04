@@ -1,6 +1,7 @@
-import { AmqpConnection, MessageHandlerErrorBehavior, Nack } from "@golevelup/nestjs-rabbitmq";
+import { AmqpConnection } from "@golevelup/nestjs-rabbitmq";
 import type { EventContract } from "@jadero/contracts";
 import type { LoggerService } from "@nestjs/common";
+import type { ChannelWrapper } from "amqp-connection-manager";
 import type { ConsumeMessage } from "amqplib";
 import type { z } from "zod";
 import { dispatch } from "./dispatch.js";
@@ -10,11 +11,16 @@ import {
   ATTEMPT_HEADER,
   deadLetterQueueName,
   EVENTS_EXCHANGE,
+  retryExchangeName,
   retryQueueName,
+  serviceOfQueue,
 } from "./topology/names.js";
 
 /** Header with the reason a message was dead-lettered by its consumer (for WP-50's archive). */
 export const DEAD_REASON_HEADER = "x-jadero-dead-reason";
+
+/** Headers RabbitMQ adds when it dead-letters; a fresh copy starts without them. */
+const BROKER_DEATH_HEADERS = /^x-(death|first-death-|last-death-)/;
 
 /** Options of the RabbitMQ adapter. */
 export interface RabbitMqMessageBusOptions {
@@ -26,50 +32,57 @@ export interface RabbitMqMessageBusOptions {
   readonly publishTimeoutMs?: number;
   /** Retry delays; must match the wait queues in the topology. Defaults to 10 s, 1 min, 10 min. */
   readonly retryTiersMs?: readonly number[];
-  /** Where golevelup and the adapter log; Nest's logger shape, so `PinoLogger` fits. */
+  /** How long a delivery is held before it is put back when its copy fails (default 1 s). */
+  readonly redeliverDelayMs?: number;
+  /** Where golevelup logs; Nest's logger shape, so `PinoLogger` fits. */
   readonly logger?: LoggerService;
 }
 
 type AnySubscription = Subscription<EventContract<string, z.ZodType>>;
 
 /**
- * The RabbitMQ adapter of `MessageBus`, over `@golevelup/nestjs-rabbitmq` (ADR-029). It declares
- * nothing: exchanges and queues come from `definitions.json` and the service user has no
- * `configure` right, so it only checks that its queues exist (WP-5 decision T4). Every publish
- * waits for the publisher confirm with a timeout. Consumers never use golevelup's error behavior:
- * the body is read as text and parsed here, the shared `dispatch` and `dispose` decide, and a retry
- * is a copy published to the queue's own wait queue followed by an ack (decision R1), so a failure
- * can never become a requeue loop. A dead outcome is a copy to the queue's DLQ with the reason in
- * a header, then an ack. Connecting does not block `start`: consumers attach when the broker is up.
+ * The RabbitMQ adapter of `MessageBus` (ADR-029). golevelup's `AmqpConnection` keeps the
+ * connection and publishes with publisher confirms and a timeout; consumers run on their own
+ * channel of the same connection, whose consumer tags survive reconnects. It declares nothing:
+ * the topology comes from `definitions.json` and the service user has no `configure` right.
+ *
+ * Every delivery goes through the shared `dispatch` and `dispose` (WP-5 decisions P1, R1). A retry
+ * is a copy, confirmed, through the service's retry exchange to the queue's wait queue, then an ack;
+ * a dead outcome is a copy to the DLQ with the reason in a header, then an ack. Both copies go
+ * through an exchange whose alternate exchange is `jadero.unrouted`, so a copy that matches no
+ * queue is kept there, never lost. If a copy is not confirmed, the delivery is held for a moment
+ * and put back: never acked without its copy, never requeued in a tight loop.
+ * Connecting never blocks `start`: consumers attach when the broker is up.
  */
 export class RabbitMqMessageBus extends MessageBus {
   private readonly connection: AmqpConnection;
   private readonly connected: Promise<void>;
+  private readonly consumerChannel: ChannelWrapper;
   private readonly subscriptions = new Map<string, AnySubscription[]>();
-  private readonly consumers = new Map<string, Promise<string>>();
+  private readonly inFlight = new Set<Promise<void>>();
   private readonly retryTiersMs: readonly number[];
   private readonly publishTimeoutMs: number;
-  private stopped = false;
+  private readonly redeliverDelayMs: number;
+  private readonly prefetch: number;
+  private consuming: Promise<unknown> | undefined;
 
   /** @param options the broker URI and the policy settings. */
   constructor(options: RabbitMqMessageBusOptions) {
     super();
     this.retryTiersMs = options.retryTiersMs ?? DEFAULT_RETRY_TIERS_MS;
     this.publishTimeoutMs = options.publishTimeoutMs ?? 5000;
+    this.redeliverDelayMs = options.redeliverDelayMs ?? 1000;
+    this.prefetch = options.prefetch ?? 10;
     this.connection = new AmqpConnection({
       uri: options.uri,
-      prefetchCount: options.prefetch ?? 10,
       enableDirectReplyTo: false,
       registerHandlers: false,
-      // Only reached if our handler itself fails, which `dispatch` prevents; never requeue.
-      defaultSubscribeErrorBehavior: MessageHandlerErrorBehavior.NACK,
-      // The body stays text: a malformed one becomes a dead letter, not a deserializer crash.
-      deserializer: (content: Buffer) => content.toString("utf8"),
       connectionInitOptions: { wait: false },
       ...(options.logger ? { logger: options.logger } : {}),
     });
-    // init() resolves only once connected; the channels exist as soon as it is called.
+    // init() resolves only once connected; the managed connection exists as soon as it is called.
     this.connected = this.connection.init();
+    this.consumerChannel = this.connection.managedConnection.createChannel({ name: "consumers" });
   }
 
   /** @inheritdoc */
@@ -94,32 +107,16 @@ export class RabbitMqMessageBus extends MessageBus {
     this.subscriptions.set(subscription.queue, list);
   }
 
-  /** @inheritdoc */
+  /** @inheritdoc Calling it while already consuming does nothing. */
   override async start(): Promise<void> {
-    this.stopped = false;
-    for (const queue of this.subscriptions.keys()) {
-      const existing = this.consumers.get(queue);
-      if (existing) {
-        const resumed = existing.then(
-          async (tag) => (await this.connection.resumeConsumer(tag)) ?? tag,
-        );
-        this.consumers.set(queue, resumed);
-        continue;
-      }
-      this.consumers.set(
-        queue,
-        this.connection
-          .createSubscriber<string>(
-            (body, raw) => this.consume(queue, body, raw),
-            {
-              queue,
-              createQueueIfNotExists: false,
-            },
-            queue,
-          )
-          .then(({ consumerTag }) => consumerTag),
-      );
-    }
+    if (this.consuming) return;
+    this.consuming = Promise.all(
+      [...this.subscriptions.keys()].map((queue) =>
+        this.consumerChannel.consume(queue, (raw) => this.track(this.consume(queue, raw)), {
+          prefetch: this.prefetch,
+        }),
+      ),
+    );
   }
 
   /**
@@ -128,7 +125,8 @@ export class RabbitMqMessageBus extends MessageBus {
    */
   async ready(): Promise<void> {
     await this.connected;
-    await Promise.all(this.consumers.values());
+    await this.consumerChannel.waitForConnect();
+    await this.consuming;
   }
 
   /** @returns whether the connection to the broker is up right now (for readiness). */
@@ -136,56 +134,61 @@ export class RabbitMqMessageBus extends MessageBus {
     return this.connection.connected;
   }
 
-  /** @inheritdoc */
+  /** @inheritdoc Cancels the consumers, then waits for the deliveries in progress. */
   override async stop(): Promise<void> {
-    this.stopped = true;
-    for (const consumer of this.consumers.values()) {
-      await this.connection.cancelConsumer(await consumer);
-    }
+    if (!this.consuming) return;
+    this.consuming = undefined;
+    await this.consumerChannel.cancelAll();
+    await Promise.allSettled([...this.inFlight]);
   }
 
   /** @inheritdoc */
   override async close(): Promise<void> {
-    this.stopped = true;
+    await this.stop();
+    await this.consumerChannel.close();
     await this.connection.close();
   }
 
-  private async consume(
-    queue: string,
-    text: string | undefined,
-    raw?: ConsumeMessage,
-  ): Promise<Nack | undefined> {
-    if (!raw) return new Nack(false);
+  private track(work: Promise<void>): void {
+    this.inFlight.add(work);
+    void work.finally(() => this.inFlight.delete(work));
+  }
+
+  private async consume(queue: string, raw: ConsumeMessage): Promise<void> {
     const attempt = Number(raw.properties.headers?.[ATTEMPT_HEADER] ?? 1);
     let body: unknown;
     try {
-      body = JSON.parse(text ?? "");
+      body = JSON.parse(raw.content.toString("utf8"));
     } catch {
       body = undefined;
     }
     const outcome = await dispatch(this.subscriptions.get(queue) ?? [], body, attempt, queue);
     const disposition = dispose(outcome, attempt, this.retryTiersMs);
+    const retryExchange = retryExchangeName(serviceOfQueue(queue));
+    const headers = copyHeaders(raw);
     try {
       if (disposition.action === "retry") {
-        await this.send("", retryQueueName(queue, disposition.delayMs), raw.content, {
+        await this.send(retryExchange, retryQueueName(queue, disposition.delayMs), raw.content, {
           messageId: raw.properties.messageId,
-          headers: { ...raw.properties.headers, [ATTEMPT_HEADER]: disposition.nextAttempt },
+          headers: { ...headers, [ATTEMPT_HEADER]: disposition.nextAttempt },
         });
       } else if (disposition.action === "dead-letter") {
-        await this.send("", deadLetterQueueName(queue), raw.content, {
+        await this.send(retryExchange, deadLetterQueueName(queue), raw.content, {
           messageId: raw.properties.messageId,
           headers: {
-            ...raw.properties.headers,
+            ...headers,
             [ATTEMPT_HEADER]: attempt,
             [DEAD_REASON_HEADER]: disposition.reason,
           },
         });
       }
-      return undefined;
+      this.consumerChannel.ack(raw);
     } catch {
-      // The copy was not confirmed (broker trouble): put the original back rather than lose it.
-      // It is redelivered at once; the inbox makes a second run of the handler harmless.
-      return this.stopped ? undefined : new Nack(true);
+      // The copy was not confirmed (broker trouble). Hold the delivery, then put it back: a nack
+      // does not count toward the quorum delivery limit on RabbitMQ 4.3, so without the pause this
+      // would loop. The inbox makes the handler's second run harmless.
+      await new Promise((resolve) => setTimeout(resolve, this.redeliverDelayMs));
+      this.consumerChannel.nack(raw, false, true);
     }
   }
 
@@ -195,7 +198,7 @@ export class RabbitMqMessageBus extends MessageBus {
     content: Buffer,
     options: { messageId: string | undefined; headers: Record<string, unknown> },
   ): Promise<void> {
-    const confirmed = this.connection.publish(exchange, routingKey, content, {
+    await this.connection.publish(exchange, routingKey, content, {
       contentType: "application/cloudevents+json",
       persistent: true,
       ...(options.messageId ? { messageId: options.messageId } : {}),
@@ -203,6 +206,13 @@ export class RabbitMqMessageBus extends MessageBus {
       // amqp-connection-manager waits forever for a confirm unless given a timeout.
       timeout: this.publishTimeoutMs,
     } as Parameters<AmqpConnection["publish"]>[3]);
-    await confirmed;
   }
+}
+
+function copyHeaders(raw: ConsumeMessage): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(raw.properties.headers ?? {}).filter(
+      ([name]) => !BROKER_DEATH_HEADERS.test(name),
+    ),
+  );
 }

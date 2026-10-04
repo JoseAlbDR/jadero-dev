@@ -11,6 +11,8 @@ export {
   deadLetterQueueName,
   delayLabel,
   EVENTS_EXCHANGE,
+  retryExchangeName,
   retryQueueName,
+  serviceOfQueue,
   UNROUTED,
 } from "./names.js";

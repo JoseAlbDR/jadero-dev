@@ -44,7 +44,7 @@
       "user": "agent",
       "vhost": "dev",
       "configure": "^$",
-      "write": "^(amq\\.default)$",
+      "write": "^(agent\\.retry)$",
       "read": "^(agent\\.system\\.ping)$"
     }
   ],
@@ -68,6 +68,17 @@
       "auto_delete": false,
       "internal": false,
       "arguments": {}
+    },
+    {
+      "name": "agent.retry",
+      "vhost": "dev",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {
+        "alternate-exchange": "jadero.unrouted"
+      }
     },
     {
       "name": "jadero.dlx",
@@ -99,7 +110,8 @@
         "x-dead-letter-strategy": "at-least-once",
         "x-overflow": "reject-publish",
         "x-dead-letter-exchange": "jadero.dlx",
-        "x-dead-letter-routing-key": "agent.system.ping"
+        "x-dead-letter-routing-key": "agent.system.ping",
+        "x-delivery-limit": 20
       }
     },
     {
@@ -172,11 +184,43 @@
       "arguments": {}
     },
     {
+      "source": "agent.retry",
+      "vhost": "dev",
+      "destination": "agent.system.ping.retry.10s",
+      "destination_type": "queue",
+      "routing_key": "agent.system.ping.retry.10s",
+      "arguments": {}
+    },
+    {
+      "source": "agent.retry",
+      "vhost": "dev",
+      "destination": "agent.system.ping.retry.1m",
+      "destination_type": "queue",
+      "routing_key": "agent.system.ping.retry.1m",
+      "arguments": {}
+    },
+    {
+      "source": "agent.retry",
+      "vhost": "dev",
+      "destination": "agent.system.ping.retry.10m",
+      "destination_type": "queue",
+      "routing_key": "agent.system.ping.retry.10m",
+      "arguments": {}
+    },
+    {
       "source": "jadero.dlx",
       "vhost": "dev",
       "destination": "agent.system.ping.dlq",
       "destination_type": "queue",
       "routing_key": "agent.system.ping",
+      "arguments": {}
+    },
+    {
+      "source": "agent.retry",
+      "vhost": "dev",
+      "destination": "agent.system.ping.dlq",
+      "destination_type": "queue",
+      "routing_key": "agent.system.ping.dlq",
       "arguments": {}
     }
   ],

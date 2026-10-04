@@ -4,6 +4,7 @@ import {
   DEAD_LETTER_EXCHANGE,
   deadLetterQueueName,
   EVENTS_EXCHANGE,
+  retryExchangeName,
   retryQueueName,
   UNROUTED,
 } from "./names.js";
@@ -18,7 +19,10 @@ export interface ConsumerQueue {
   readonly bindings: readonly string[];
 }
 
-/** A broker user. `publishes` lets it write to `jadero.events`; it reads only its own queues. */
+/**
+ * A broker user, named after its service. `publishes` lets it write to `jadero.events`; it reads
+ * only its own queues and writes its copies only to its own retry exchange.
+ */
 export interface BrokerUser {
   readonly name: string;
   readonly password: string;
@@ -63,8 +67,9 @@ const quorum = (extra: Record<string, unknown> = {}) => ({
 
 /**
  * Builds the RabbitMQ definitions of one virtual host (WP-5 decisions T4 and R1): the topic
- * exchange with its alternate exchange, the dead-letter exchange, and per consumer queue a quorum
- * queue, one wait queue per retry tier (no consumer; its TTL is the timer, then it dead-letters
+ * exchange with its alternate exchange, the dead-letter exchange, one retry exchange per service
+ * for the consumer's retried and dead-lettered copies, and per consumer queue a quorum queue, one
+ * wait queue per retry tier (no consumer; its TTL is the timer, then the broker dead-letters it
  * back through the default exchange to that queue only) and a dead-letter queue. Service users get
  * no `configure` right: they cannot declare or delete anything, so the topology lives only here.
  * @param input the vhost, its consumer queues and users.
@@ -90,28 +95,36 @@ export function buildDefinitions(input: TopologyInput): Record<string, unknown> 
   queue(UNROUTED, { "x-queue-type": "quorum" });
   bind(UNROUTED, UNROUTED, "");
   for (const consumer of input.queues) {
+    const retryExchange = retryExchangeName(consumer.service);
     queue(
       consumer.name,
       quorum({
         "x-dead-letter-exchange": DEAD_LETTER_EXCHANGE,
         "x-dead-letter-routing-key": consumer.name,
+        // Explicit, not the implicit 4.x default: a consumer that crashes on a message 20 times
+        // (a crash counts, a nack does not) sends it to the DLQ through jadero.dlx.
+        "x-delivery-limit": 20,
       }),
     );
     for (const key of consumer.bindings) bind(EVENTS_EXCHANGE, consumer.name, key);
     for (const delayMs of tiers) {
+      const wait = retryQueueName(consumer.name, delayMs);
       queue(
-        retryQueueName(consumer.name, delayMs),
+        wait,
         quorum({
           "x-message-ttl": delayMs,
           "x-dead-letter-exchange": "",
           "x-dead-letter-routing-key": consumer.name,
         }),
       );
+      bind(retryExchange, wait, wait);
     }
     const dlq = deadLetterQueueName(consumer.name);
     queue(dlq, { "x-queue-type": "quorum" });
     bind(DEAD_LETTER_EXCHANGE, dlq, consumer.name);
+    bind(retryExchange, dlq, dlq);
   }
+  const services = [...new Set(input.queues.map((q) => q.service))];
 
   const permissions = input.users.map((user) => {
     if (user.administrator)
@@ -119,8 +132,8 @@ export function buildDefinitions(input: TopologyInput): Record<string, unknown> 
     const own = input.queues.filter((q) => q.service === user.name).map((q) => escapeRegex(q.name));
     const writes = [
       ...(user.publishes ? [escapeRegex(EVENTS_EXCHANGE)] : []),
-      // Retried copies go to the consumer's own wait queues through the default exchange.
-      ...(own.length > 0 ? ["amq\\.default"] : []),
+      // Retried and dead-lettered copies go only through the service's own retry exchange.
+      ...(own.length > 0 ? [escapeRegex(retryExchangeName(user.name))] : []),
     ];
     return {
       user: user.name,
@@ -160,6 +173,16 @@ export function buildDefinitions(input: TopologyInput): Record<string, unknown> 
         internal: false,
         arguments: {},
       },
+      ...services.map((service) => ({
+        name: retryExchangeName(service),
+        vhost,
+        type: "direct",
+        durable: true,
+        auto_delete: false,
+        internal: false,
+        // A copy whose queue is missing (tiers out of step with the topology) is kept, not lost.
+        arguments: { "alternate-exchange": UNROUTED },
+      })),
       {
         name: DEAD_LETTER_EXCHANGE,
         vhost,

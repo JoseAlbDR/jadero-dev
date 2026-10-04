@@ -29,8 +29,20 @@ export async function dispatch(
   try {
     return await subscription.handle({ envelope: parsed.data, attempt, queue });
   } catch (error) {
-    return retry(error instanceof Error ? `${error.name}: ${error.message}` : "handler threw");
+    return retry(errorKind(error));
   }
+}
+
+/**
+ * The error's class and code only (`Error (ECONNREFUSED)`): a driver's message can carry values
+ * from the query or the payload, and reasons end up in logs and in the DLQ header.
+ */
+function errorKind(error: unknown): string {
+  if (!(error instanceof Error)) return "handler threw";
+  const code = (error as { code?: unknown }).code;
+  return typeof code === "string" || typeof code === "number"
+    ? `${error.name} (${code})`
+    : error.name;
 }
 
 function fields(error: z.ZodError): string {

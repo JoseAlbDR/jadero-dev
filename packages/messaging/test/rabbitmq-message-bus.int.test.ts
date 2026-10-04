@@ -1,10 +1,13 @@
+import { systemPingV1 } from "@jadero/contracts";
 import { connect } from "amqplib";
-import { describe, expect, inject, it } from "vitest";
+import { describe, expect, inject, it, vi } from "vitest";
 import {
   ATTEMPT_HEADER,
   DEAD_REASON_HEADER,
   type DeadLetter,
   deadLetterQueueName,
+  done,
+  EVENTS_EXCHANGE,
   RabbitMqMessageBus,
   retryQueueName,
   UNROUTED,
@@ -53,6 +56,32 @@ messageBusContract("rabbitmq", async ({ retryTiersMs }) => {
       await admin.close();
     },
   };
+});
+
+describe("RabbitMQ adapter edge cases", () => {
+  it("dead-letters a body that is not JSON, with the reason, instead of requeueing it", async () => {
+    const bus = new RabbitMqMessageBus({
+      uri: inject("serviceUri"),
+      retryTiersMs: TEST_RETRY_TIERS_MS,
+      logger: silent,
+    });
+    bus.subscribe({ queue: "test.a", contract: systemPingV1, handle: async () => done() });
+    await bus.start();
+    await bus.ready();
+    const admin = await connect(inject("adminUri"));
+    const channel = await admin.createConfirmChannel();
+    channel.publish(EVENTS_EXCHANGE, systemPingV1.routingKey, Buffer.from("not json"));
+    await channel.waitForConfirms();
+    await vi.waitFor(async () => {
+      const letter = await channel.get(deadLetterQueueName("test.a"), { noAck: true });
+      expect(letter && String(letter.properties.headers?.[DEAD_REASON_HEADER])).toBe(
+        "invalid envelope: (root)",
+      );
+    });
+    await bus.close();
+    for (const queue of [...TEST_QUEUES, UNROUTED]) await channel.purgeQueue(queue);
+    await admin.close();
+  });
 });
 
 describe("RabbitMQ permissions (least privilege)", () => {

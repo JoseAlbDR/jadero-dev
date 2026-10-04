@@ -93,6 +93,9 @@ catalogs:
     '@types/react-dom':
       specifier: 19.3.0
       version: 19.3.0
+    amqp-connection-manager:
+      specifier: 5.0.0
+      version: 5.0.0
     amqplib:
       specifier: 0.10.9
       version: 0.10.9
@@ -358,6 +361,9 @@ importers:
       '@jadero/contracts':
         specifier: workspace:*
         version: link:../contracts
+      amqp-connection-manager:
+        specifier: 'catalog:'
+        version: 5.0.0(amqplib@0.10.9)
     devDependencies:
       '@jadero/config':
         specifier: workspace:*

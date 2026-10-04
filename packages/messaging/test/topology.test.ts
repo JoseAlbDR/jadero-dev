@@ -55,15 +55,32 @@ describe("infra/rabbitmq/definitions.json", () => {
           routing_key: name,
         }),
       );
+      for (const target of [
+        `${name}.retry.10s`,
+        `${name}.retry.1m`,
+        `${name}.retry.10m`,
+        `${name}.dlq`,
+      ]) {
+        expect(committed.bindings).toContainEqual(
+          expect.objectContaining({
+            source: "agent.retry",
+            destination: target,
+            routing_key: target,
+          }),
+        );
+      }
+      expect(main?.arguments["x-delivery-limit"]).toBe(20);
     }
   });
 
-  it("sends unroutable events to jadero.unrouted instead of dropping them", () => {
+  it("sends unroutable events and copies to jadero.unrouted instead of dropping them", () => {
     const exchanges = (committed as unknown as { exchanges: { name: string; arguments: object }[] })
       .exchanges;
-    expect(exchanges.find((e) => e.name === "jadero.events")?.arguments).toEqual({
-      "alternate-exchange": "jadero.unrouted",
-    });
+    for (const name of ["jadero.events", "agent.retry"]) {
+      expect(exchanges.find((e) => e.name === name)?.arguments).toEqual({
+        "alternate-exchange": "jadero.unrouted",
+      });
+    }
   });
 
   it("gives service users no configure right and only their own queues", () => {
@@ -76,6 +93,9 @@ describe("infra/rabbitmq/definitions.json", () => {
     expect(new RegExp(agent?.read ?? "").test("agent.system.ping")).toBe(true);
     expect(new RegExp(agent?.read ?? "").test("agent.system.ping.dlq")).toBe(false);
     expect(new RegExp(agent?.write ?? "").test("jadero.events")).toBe(false);
+    // Retries go through its own exchange, not the default one, which reaches every queue.
+    expect(new RegExp(agent?.write ?? "").test("agent.retry")).toBe(true);
+    expect(new RegExp(agent?.write ?? "").test("amq.default")).toBe(false);
   });
 
   it("stores the dev passwords as RabbitMQ salted sha256 hashes", () => {

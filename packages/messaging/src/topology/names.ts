@@ -4,6 +4,22 @@ export const EVENTS_EXCHANGE = "jadero.events";
 export const DEAD_LETTER_EXCHANGE = "jadero.dlx";
 /** The alternate exchange of `jadero.events`, and its queue: messages no binding matched. */
 export const UNROUTED = "jadero.unrouted";
+/**
+ * @param service the service that owns the queues, e.g. `agent`.
+ * @returns its direct exchange for retried and dead-lettered copies, e.g. `agent.retry`.
+ */
+export function retryExchangeName(service: string): string {
+  return `${service}.retry`;
+}
+
+/**
+ * @param queue a consumer queue, `<service>.<purpose>`.
+ * @returns the service that owns it, the first word.
+ */
+export function serviceOfQueue(queue: string): string {
+  return queue.split(".")[0] ?? queue;
+}
+
 /** The header carrying the delivery attempt on retried copies (`2` on the first retry). */
 export const ATTEMPT_HEADER = "x-jadero-attempt";
 
