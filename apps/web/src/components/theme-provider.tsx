@@ -12,7 +12,8 @@ const SCRIPT_TYPE = typeof window === "undefined" ? "text/javascript" : "applica
  * That script only has to run in the server HTML. When the locale changes, React mounts the layout
  * again on the client, creates the script there (where it never runs) and React 19 logs "Encountered
  * a script tag" in development. Typing the client copy as a data block (`application/json`) keeps
- * React quiet; `suppressHydrationWarning` on the script covers the `type` difference.
+ * React quiet; next-themes sets `suppressHydrationWarning` on the script, which covers the `type`
+ * difference. Remove the workaround when next-themes 1.0 is stable.
  * @param props next-themes provider props.
  */
 export function ThemeProvider(props: ComponentProps<typeof NextThemesProvider>) {
@@ -22,8 +23,8 @@ export function ThemeProvider(props: ComponentProps<typeof NextThemesProvider>) 
       defaultTheme="system"
       enableSystem
       disableTransitionOnChange
-      scriptProps={{ type: SCRIPT_TYPE }}
       {...props}
+      scriptProps={{ ...props.scriptProps, type: SCRIPT_TYPE }}
     />
   );
 }

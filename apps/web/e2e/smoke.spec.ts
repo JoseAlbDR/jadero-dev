@@ -103,8 +103,13 @@ test.describe("theme (ADR-023)", () => {
     await page.goto("/en");
     await page.getByRole("button", { name: en.ThemeToggle.dark }).click();
     // A locale change mounts the [locale] layout again on the client, theme script included.
+    // The marker proves the navigation stayed in the page instead of a full load.
+    await page.evaluate(() => {
+      (window as { __spa?: boolean }).__spa = true;
+    });
     await page.getByRole("link", { name: "Español" }).click();
     await expect(page).toHaveURL(/\/es$/);
+    expect(await page.evaluate(() => (window as { __spa?: boolean }).__spa)).toBe(true);
     await expect(page.locator("html")).toHaveClass(/\bdark\b/);
     await expect(page.getByRole("button", { name: es.ThemeToggle.dark })).toHaveAttribute(
       "aria-pressed",
