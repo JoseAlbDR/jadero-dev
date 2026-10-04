@@ -53,7 +53,9 @@ Learning paths: `apps/api`, `apps/agent`, `apps/contact`, `apps/mcp`, `packages/
    - **Check question** (learning steps): one one-line question on the mechanism just built; a wrong answer is explained on the spot and noted in the step log.
    - **Commit**: one scoped conventional commit.
    For a WP of size M or larger, run `@agent-reviewer` on the branch after about half the steps, not only on the PR.
-5. Recap: the owner explains the design back; record gaps; `pnpm verify` green; commit.
+5. Recap: the owner explains the design back in interview form (why this way, what else, when to change it, what happens when it fails; the main trace drawn from memory); record gaps; `pnpm verify` green; commit.
+
+Aim of the learning: the owner orchestrates agents and challenges their proposals, so explainers teach design, architecture and patterns (tier **Own**), name the patterns to recognize, and move library details to a delegated appendix. The owner answers each decision before reading the recommendation. Review of a PR by the owner is a design review on the code map: what crosses a boundary, where the data goes, what happens when a piece fails.
 Frontend WPs (`apps/web`, `apps/admin`, `packages/ui`) skip the gate: build to the design system, show screenshots.
 
 ## 6. Conventions

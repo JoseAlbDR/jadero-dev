@@ -68,7 +68,11 @@ Follow the repo's flow exactly (AGENTS.md section 5, docs/agent-tooling.md, docs
    definition of done from the issue, then stop.
 3. After my go: /learn-step 5. The explainer must be self-contained (How to read this file, Named here,
    two traces for a service WP, facts checked against the npm registry, all questions in one message,
-   dependent questions with a recommendation per answer). Stop. Do not write code under learning paths.
+   dependent questions with a recommendation per answer). Teach design, architecture and patterns:
+   label concepts Own / Recognize / Delegate, put library details in a delegated appendix, give for each
+   decision the forces, at least three options (one you would not pick, and when it would win) and what
+   would make it wrong. Put the recommendations in a separate block after the questions: I answer first
+   with my pick and one risk, then we compare. Stop. Do not write code under learning paths.
 4. When I answer: record the decision (decision: recorded), then build one step at a time under the step
    contract (AGENTS.md section 5): tell me which files, which explainer paragraph and which ADR lines
    before writing (stop if the code would depart from an ADR), pnpm verify, show it running, privacy
@@ -76,8 +80,9 @@ Follow the repo's flow exactly (AGENTS.md section 5, docs/agent-tooling.md, docs
    @agent-reviewer after about half the steps. Steps that need Docker run here (pnpm dev:up, pnpm test:int).
 5. Last step: update docs/architecture/code-map.html (its JSON data) and the docs the WP changed.
 6. Open the PR with Closes #13, run @agent-reviewer, fix its findings, then ask me the
-   explain-back questions (only about what the explainer taught) and write my answers and the gaps in
-   the Recap. I merge.
+   explain-back in interview form (why this way, what else, when to change it, what happens when it
+   fails; I draw the main trace from memory) and write my answers and the gaps in the Recap. I write the
+   journal post myself. I merge.
 Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.
 ```
 

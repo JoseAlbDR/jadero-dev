@@ -9,14 +9,19 @@ Learning gate for WP-$wp (step: $step, or the whole WP if empty).
 
 Read first: the WP row in `docs/plan/report.md` section 14, its GitHub issue, and the ADRs it implements (`docs/adr/`). Then write or extend `docs/learning/wp-$wp.md` from `docs/learning/wp-template.md` (front matter: `wp: $wp`, `decision: pending`, `adr: [ADR-...]`; add `fast_path: known` only when the owner says they already know this step):
 
-1. **First principles**: the concepts this step needs, explained from zero in plain language, one paragraph each. Assume a strong backend engineer who has not used this specific thing.
+Aim (owner, 2026-10-04): the owner orchestrates agents and must be able to challenge them, so the explainer teaches design, architecture and patterns, not package APIs. Sort every concept into one of three tiers and label it:
+- **Own**: boundaries, consistency and delivery semantics, failure modes, data flow and privacy, observability, data modeling, the cost of changing a decision. Questions and the explain-back come only from this tier.
+- **Recognize**: named patterns, enough to ask for them and spot them.
+- **Delegate**: library APIs, config syntax, versions. Goes to a short appendix at the end ("Delegated details"); never asked.
+
+1. **First principles**: the Own and Recognize concepts this step needs, explained from zero in plain language, one paragraph each. Assume a strong backend engineer who has not used this specific thing.
 2. **One concrete trace**: a real request, event or job through the code that will exist, with real payloads, real SQL, real file paths. Numbers, not adjectives. A service WP gets two: the success path and one failure path (a validation error, a dependency down). A tooling WP's trace is a command run with its real output.
 3. **Patterns**: the named patterns (so the owner can look them up) and where each one appears in the trace.
-4. **Options and trade-offs**: at least two ways to build this step, pros and cons, what the ADR already decided and what is still open at this level.
-5. **The question for the owner**: one precise question (or a short list) that the owner must answer before code is written. If the ADR already decides everything, say so and ask only for the go.
+4. **Options and trade-offs**: per decision, first the **forces** (what pulls in which direction), then at least three options, one of which you would not recommend, each with pros, cons and **when it would win**; what the ADR already decided and what is still open. Then **what would make this wrong**: the conditions under which the decision should be reverted. Recommendations do not go here.
+5. **The question for the owner**: one precise question (or a short list) that the owner must answer before code is written. The owner answers first, with their pick and one risk of it, and may propose an option not listed. The recommendations sit in a separate **Recommendations** block after the questions, read after answering; then the owner's pick and the recommendation are compared and the difference is discussed. If the ADR already decides everything, say so and ask only for the go.
 6. **Decision**: empty until the owner answers.
 7. **Step log**: empty; each implementation step appends two lines (what changed, why).
-8. **Recap**: empty; filled with the owner's explain-back and the gaps found.
+8. **Recap**: empty; filled with the owner's explain-back in interview form (for each major piece: why this way, what else was possible, when it should change, what happens when it fails; plus drawing the main trace from memory, then comparing with the code map) and the gaps found. The owner writes the WP's journal post in their own words (ADR-034).
 Make the file self-contained, so the owner learns from it without reading ADRs, other WPs or the plan:
 - Right after the intro, a **How to read this file** section: one row per question with the exact parts to read first (section and paragraph names, trace step numbers), about 5 to 10 minutes each.
 - A **Named here** table: every WP, ADR or tool named anywhere in the file, with one line saying what it is and when it lands. Never name a later WP without it.
