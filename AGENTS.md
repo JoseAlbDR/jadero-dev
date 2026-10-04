@@ -51,12 +51,24 @@ Learning paths: `apps/api`, `apps/agent`, `apps/contact`, `apps/mcp`, `packages/
    - **Build**: write, `pnpm verify` green, show it running (a boot, a request, a test).
    - **Privacy check**: where does request data go (logs, spans, error bodies, headers)? No IPs in clear, no secrets, no bodies at info, no query strings.
    - **Step log**: two lines ("what just happened", "why") written from the step's `git diff`, not from memory. Never revert a file that holds uncommitted work; commit or stash first.
-   - **Check question** (learning steps): one one-line question on the mechanism just built; a wrong answer is explained on the spot and noted in the step log.
+   - **Check question** (learning steps): one one-line question on the mechanism just built, usually a "what happens when ..." on a failure or a change. A wrong or partial answer is challenged on the spot: say what is right in it, show the real behavior (the test or the code line that proves it), explain why it was designed that way, name the pattern, and note it in the step log. When the answer exposes a real gap in the code (a missing test or gate), say so and propose the fix as the next small step.
    - **Commit**: one scoped conventional commit.
    For a WP of size M or larger, run `@agent-reviewer` on the branch after about half the steps, not only on the PR.
 5. Recap: the owner explains the design back in interview form (why this way, what else, when to change it, what happens when it fails; the main trace drawn from memory); record gaps; `pnpm verify` green; commit.
 
 Aim of the learning: the owner orchestrates agents and challenges their proposals, so explainers teach design, architecture and patterns (tier **Own**), name the patterns to recognize, and move library details to a delegated appendix. The owner answers open questions before reading the recommendation, and the agent challenges the answer when it disagrees: the dialogue is where the learning happens. Diagrams when they help. Learning comes from repetition across WPs: a pattern seen before is named and compared, not re-taught from zero. Review of a PR by the owner is a design review on the code map: what crosses a boundary, where the data goes, what happens when a piece fails.
+
+### How the owner learns (applies to every session, local or cloud)
+
+Refined with the owner on 2026-10-04 (WP-5); every agent follows it, and this file is where it lives, because the owner works from several machines and sessions do not share memory.
+
+- **Decisions, why and alternatives.** For every design choice: the problem, a concrete example from this project, the decision and why, the alternatives with why they were discarded here and when each would win, then the pattern names. Diagrams when they help. The goal is that the owner can make the call alone in another project.
+- **Explain before asking.** Everything needed to answer a question comes right before it, in plain words, in the chat. Never a question that needs reading elsewhere first.
+- **Challenge, do not obey.** The owner's answers are a starting point. When an answer is wrong, partial or differs from your recommendation, say so, explain why with the real behavior, and discuss it. Agreement without reasons teaches nothing.
+- **Connect to what the owner knows.** The owner works with NestJS, Drizzle and messaging at work; when a pattern matches that experience (expand/contract, new versions published alongside old ones), say so and build on it.
+- **Repetition across WPs.** A pattern seen in an earlier WP is named and compared ("the same idempotency as WP-N, here ..."), not re-taught from zero.
+- **Few, real questions.** Implementation details are listed as choices, one line each; questions are only for architecture no ADR decides.
+- **Persist the process.** Feedback that changes how sessions work goes into this repo (AGENTS.md, `.claude/skills/`, `docs/`) in its own `chore/` PR, never only in a conversation. Before pushing to a branch, check that its PR is not already merged; follow-up work after a merge goes to a new branch from `main`.
 Frontend WPs (`apps/web`, `apps/admin`, `packages/ui`) skip the gate: build to the design system, show screenshots. The hook still guards the repo tooling files (catalog in `pnpm-workspace.yaml`, `turbo.json`, `.dependency-cruiser.cjs`): when a frontend WP must change them, ask the owner, then add a short `docs/learning/wp-N.md` with `decision: recorded` and `fast_path: known` that names each tooling change (WP-4 is the example).
 
 ## 6. Conventions

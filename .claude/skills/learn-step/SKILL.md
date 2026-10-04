@@ -44,6 +44,6 @@ Commit the explainer (`docs(learning): ...`) and push the branch (the main sessi
 3. The **open questions**, if any, each with what the owner needs to know right before it, then one **Recommendations** block after the last question (collapsed, read after answering; a question that depends on another gets a recommendation per possible answer).
 4. One line: "Say go, object to any choice, or answer the questions."
 
-The owner's answers are a starting point, not an order: when an answer differs from the recommendation or carries a risk, say so, explain why, and discuss it before recording. The owner learns most from that dialogue. Record the outcome under Decision, set `decision: recorded` and the ADR link, and only then implement in small visible steps under the step contract of `AGENTS.md` section 5.
+Follow "How the owner learns" in `AGENTS.md` section 5. The owner's answers are a starting point, not an order: when an answer differs from the recommendation or carries a risk, say so, explain why, and discuss it before recording. The owner learns most from that dialogue. Record the outcome under Decision, set `decision: recorded` and the ADR link, and only then implement in small visible steps under the step contract of `AGENTS.md` section 5.
 
 An explain-back question only covers what the explainer taught and says where; "I don't know" means the explainer has a gap: teach it in the conversation, add it to the explainer, and note it under Recap, without asking the same question again as a test. Style: plain English, no hype words, no em dashes.
