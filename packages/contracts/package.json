@@ -14,6 +14,7 @@
   "files": [
     "dist",
     "fixtures",
+    "compat",
     "asyncapi.json"
   ],
   "scripts": {
@@ -21,7 +22,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
-    "asyncapi": "tsc -p tsconfig.build.json && node scripts/write-asyncapi.mjs"
+    "asyncapi": "tsc -p tsconfig.build.json && node scripts/write-asyncapi.mjs",
+    "compat:accept": "tsc -p tsconfig.build.json && node scripts/accept-compat.mjs"
   },
   "peerDependencies": {
     "zod": "catalog:"

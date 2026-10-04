@@ -1,4 +1,5 @@
 export { buildAsyncApiDocument } from "./asyncapi.js";
+export { compatibilityProblems, publishedSchema } from "./compat.js";
 export { defineEvent, type EnvelopeOf, type EventContract } from "./define-event.js";
 export {
   type CloudEventEnvelope,
