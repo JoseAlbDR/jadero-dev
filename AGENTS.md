@@ -9,7 +9,7 @@ Personal site of the owner: a multilingual (es, en, de) portfolio with an ask-me
 - `docs/plan/decisions.json`: the 76 owner decisions as data; ids never change.
 - `docs/learning/`: one explainer per learning WP (the learning gate, section 5).
 - `docs/sessions.md`: how a Claude Code session (cloud or local) runs a work package, and the prompts to start the next WP (backend or frontend), resume one or do a chore.
-- `docs/architecture/code-map.html`: the interactive map of the code (apps, packages, modules, what is injected where, boot and request paths). Updated by every WP that changes them; also published as an artifact.
+- `docs/architecture/code-map.html`: the interactive map of the code (apps, packages, modules, what is injected where, boot and request paths). Updated by every WP that changes them, and by every new event (event catalog and flow graph in its messaging section); also published as an artifact.
 - GitHub Issues: the epic `jadero.dev v2`, one sub-issue per WP, milestones R0 to R7, Project board (ADR-041). The issue is the task; the PR closes it.
 
 Status today: the repo foundation (WP-1), the service platform (WP-3: `packages/platform-nest`, the `apps/api` skeleton, the module template in `templates/nest-module/`) the web skeleton (WP-4: `apps/web` with next-intl and the theme toggle, `packages/ui` with the tokens and the shadcn base) and the messaging foundation (WP-5: `packages/contracts`, `packages/messaging` with the outbox, relay, inbox and RabbitMQ topology, `api-worker`, the `apps/agent` skeleton; a `system.ping.v1` event crosses the broker with one trace) are in place. Each app may carry its own `AGENTS.md` (`apps/api/AGENTS.md`, `apps/agent/AGENTS.md`, `apps/web/AGENTS.md`).
