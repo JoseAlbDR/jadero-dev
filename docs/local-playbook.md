@@ -96,6 +96,7 @@ Learning happens during the build too: every learning step ends with one one-lin
 - Two servers listened on the same port and curl reached the stale one. Rule: stop servers by port and check the port before starting (`apps/web/AGENTS.md`).
 - The reviewer found a page-level bug in layout-level metadata (every page inherited the home's canonical) and a build-time variable treated as runtime. Rule: for prerendered pages, ask "is this read at build or at request time?".
 - Screenshots cannot reach a PR from the command line. Rule: the session lists their paths; the owner attaches what matters.
+- A React warning that only development builds print (a script tag rendered on the client) slipped past the e2e suite, which runs the production build, and the first fix shipped without a failing test. Rule: reproduce dev-only warnings in a Vitest component test (`// @vitest-environment jsdom`, which runs React's development build), see it fail, then fix; and click through the site in `next dev` before calling a frontend WP done.
 
 ## When something blocks
 

@@ -1,4 +1,8 @@
 import { baseConfig } from "@jadero/config/vitest";
-import { defineConfig } from "vitest/config";
+import { defineConfig, mergeConfig } from "vitest/config";
 
-export default defineConfig(baseConfig());
+// Component tests are .tsx; they opt into jsdom per file with `// @vitest-environment jsdom`.
+export default mergeConfig(
+  baseConfig(),
+  defineConfig({ test: { include: ["src/**/*.test.{ts,tsx}", "test/**/*.test.{ts,tsx}"] } }),
+);
