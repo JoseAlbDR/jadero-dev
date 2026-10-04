@@ -6,13 +6,13 @@ Archive of the review page at https://claude.ai/artifact/HJZzB1Bkafy3t22kcUnHVA,
 | --- | --- | --- |
 | `index.html` | 25,634 bytes | The page as served, including the document skeleton the artifact service adds at publish time. It loads `data.json` and, inside claude.ai, reads and writes the `marks` collection of the artifact database (capabilities `db` and `user`). |
 | `data.json` | 264,885 bytes | The published data file, byte-identical to the artifact. Generated from `docs/plan/decisions.json`. |
-| `owner-marks.json` | 14,672 bytes | The 76 documents of the `marks` collection (`{ at, choice, note }` per decision id), exported from the artifact database on 2026-10-04. |
+| `owner-marks.json` | 15055 bytes | The 76 documents of the `marks` collection (`{ at, choice, note }` per decision id), exported from the artifact database on 2026-10-04. |
 
 ## Differences from the repo and from the live artifact
 
 - **`data.json` is stale.** D-23 changed after the page was last published: the visual direction moved to Bento glass with the agent terminal (ADR-045, PRs #88 and #90). `docs/plan/decisions.json` has the new D-23 and the review counts; this file still has the old one. The page was not republished, because the owner's marks live in its database and a republish is the owner's call.
-- **`owner-marks.json` is newer than `docs/plan/owner-marks.json`.** The live database has later edits for D-16, D-45, D-49, D-50, D-52, D-59 and D-67 than the export in `docs/plan/`.
-- **Redacted for the content rules (ADR-031).** The notes of D-4, D-6, D-45, D-52 and D-76 named the owner's employer and some of its internals. Those passages read `[redacted: ...]` or `[employer]` here; the live database still has the original text.
+- **`docs/plan/owner-marks.json` is the same export.** Both files were refreshed from the live database on 2026-10-04, so the later edits for D-16, D-45, D-49, D-50, D-52, D-59 and D-67 are in both.
+- **Not redacted.** The notes name the owner's employer and the owner's work there. That passes the content rules (ADR-031): no proprietary code or configuration, no client names, no personal data, no secrets.
 
 ## Republish
 

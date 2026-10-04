@@ -34,7 +34,7 @@ An artifact can be deleted, lose access, or change with the platform. If either 
 
 Option A. Each artifact without a repo source gets a folder under `docs/artifacts/` with its published files as they are served (page as `index.html`, data and images at their published paths), plus the artifact's database rows exported as JSON when it has any. The folder is the source; the artifact is a copy, the same rule as the other entries in `docs/artifacts.md`.
 
-The screenshots are kept as PNG in plain git. 6 MB is a one-time cost: the mockups are deleted in WP-16, so the set will not grow. Archived files pass the content rules (ADR-031) before they land: anything that names the owner's employer or its internals is redacted, which means an archive can differ from the live artifact in those places.
+The screenshots are kept as PNG in plain git. 6 MB is a one-time cost: the mockups are deleted in WP-16, so the set will not grow. Archived files pass the content rules (ADR-031) before they land: no proprietary code or configuration from the employer, no client names, no personal data, no secrets. Naming the employer and the owner's work there is allowed (owner, 2026-10-04), so the owner's marks are archived as written.
 
 Discarded: B for the risk of loss, C because the screenshots are the point of the gallery, D as tooling the size does not justify.
 

@@ -86,7 +86,7 @@ Frontend WPs (`apps/web`, `apps/admin`, `packages/ui`) skip the gate: build to t
 - Never point dev or tests at a real AI or mail provider unless the owner asks; `AI_*_PROVIDER=fake` is the default.
 - Every agent tool is read-only and ships with adversarial eval cases; a prompt change requires an eval run (ADR-019, ADR-020).
 - Agents never push to `main`, never run deploy scripts, never ssh to the server, never touch production data.
-- Content rules (ADR-031): nothing about the owner's employer beyond approved, public-level text; no client names, internal systems, ticket keys, hashes or uncleared numbers, in code, fixtures, issues or PRs. The repo becomes public.
+- Content rules (ADR-031): naming the owner's employer and the owner's work there is fine; never its proprietary code or configuration, client names, internal system names beyond what is public, ticket keys, hashes, uncleared numbers, personal data or secrets, in code, fixtures, docs, issues or PRs. The repo becomes public.
 
 ## 8. How-tos
 
