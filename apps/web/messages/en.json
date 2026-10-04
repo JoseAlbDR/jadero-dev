@@ -1,0 +1,14 @@
+{
+  "Metadata": {
+    "title": "jadero.dev",
+    "description": "Personal site and portfolio of a software engineer."
+  },
+  "HomePage": {
+    "title": "jadero.dev",
+    "lead": "The new version of this site is under construction."
+  },
+  "NotFound": {
+    "title": "Page not found",
+    "description": "The page you are looking for does not exist."
+  }
+}

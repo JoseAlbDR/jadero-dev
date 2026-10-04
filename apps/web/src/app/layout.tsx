@@ -1,18 +1,10 @@
-import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-export const metadata: Metadata = {
-  title: "jadero.dev",
-};
-
 /**
- * Root layout: the html and body shell every page renders inside.
- * @param props.children the page content.
+ * Root layout. The `<html>` element lives in `[locale]/layout.tsx`, which knows the locale;
+ * this one only passes its children through.
+ * @param props.children the locale layout.
  */
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  );
+  return children;
 }

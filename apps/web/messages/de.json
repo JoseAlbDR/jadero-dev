@@ -1,0 +1,14 @@
+{
+  "Metadata": {
+    "title": "jadero.dev",
+    "description": "Persönliche Website und Portfolio eines Softwareentwicklers."
+  },
+  "HomePage": {
+    "title": "jadero.dev",
+    "lead": "Die neue Version dieser Website ist im Aufbau."
+  },
+  "NotFound": {
+    "title": "Seite nicht gefunden",
+    "description": "Die gesuchte Seite existiert nicht."
+  }
+}

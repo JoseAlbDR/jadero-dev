@@ -60,6 +60,10 @@ catalog:
 # Dependency install scripts stay off (pnpm 11 fails the install on an undecided one).
 # lefthook's postinstall only runs `lefthook install`, which the root `prepare` script already does.
 allowBuilds:
+  # next-intl (message extraction tooling): both ship prebuilt binaries as optional dependencies;
+  # their install scripts only build from source or check for a binary when none matches.
+  "@parcel/watcher": false
+  "@swc/core": false
   # testcontainers -> ssh2 -> cpu-features: optional native bindings for Docker over SSH; ssh2 works without them.
   cpu-features: false
   lefthook: false
