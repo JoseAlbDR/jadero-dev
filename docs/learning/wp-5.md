@@ -16,22 +16,28 @@ What the owner learns (decisions.json): exchanges, bindings, queues, acks and pr
 
 ## How to read this file
 
-This file is the only thing you need to read. ADR and WP numbers appear as sources, and every one of them is summarized in one line in the "Named here" table below, so you never have to open them to answer. Nothing here is to memorize: each question asks you to choose, and each explain-back asks you to describe what you saw in the code.
+This file is the only thing you need to read. ADR and WP numbers are summarized in one line each in "Named here", so you never have to open them. Nothing here is to memorize: each question asks you to choose.
 
-Before each question, read only these parts (about 5 to 10 minutes each):
+**How the file is built.** Three kinds of sections, each with numbered headings you can find in the outline or with a search:
 
-| Question | Read first | Then |
-|---|---|---|
-| 1. Port shape | First principles: "Ports and adapters for a broker", "Acknowledgements and prefetch" | Options P |
-| 2. Who declares the topology | First principles: "Exchanges, bindings, queues", "Unroutable messages" | Options T |
-| 3. Retry routing | First principles: "Retries, dead letters and poison messages"; Trace 2, steps 1 to 6 | Options R |
-| 4. Outbox and inbox storage before WP-10 | First principles: "The dual-write problem and the transactional outbox"; Trace 1, step 2 | Options S |
-| 5. Relay trigger and claim | First principles: "The relay and the atomic claim"; Trace 1, step 3; Trace 2, "Broker down" | Options L |
-| 6. Inbox key and retention | First principles: "At-least-once delivery and the idempotent consumer"; Trace 1, steps 5 and 7 | Options I |
-| 7. Envelope and the trace across the broker | First principles: "The CloudEvents envelope", "One trace across an asynchronous hop"; Trace 1, steps 2, 3 and 5 | Options E |
-| 8. Process types, readiness and the ping | First principles: "Process types", "Readiness with a broker" | Options W |
+- **Concepts** `C1` to `C14` (under "First principles"): one idea each, from zero.
+- **Traces** (under "One concrete trace"): Trace 1 is the ping that works; Trace 2a and Trace 2b are two failures. Their steps are numbered.
+- **Option blocks** `P`, `T`, `R`, `S`, `L`, `I`, `E`, `W` (under "Options and trade-offs"): one per question, with the forces, the options and what would make the choice wrong.
 
-The session presents all questions in one message with this pointer; a question that depends on another gets a recommendation per possible answer of the first. Ask about anything before answering; "I don't know" on an explain-back means the explainer missed something, and it gets fixed here.
+**Reading route.** Go down the table one row at a time: read the concepts, then the trace steps, then the option block, then write your answer to that question (in "The question for the owner") before moving to the next row. A concept already read in an earlier row is not read again. About 5 to 10 minutes per row; rows 1 and 3 are the longest.
+
+| Row | Question | 1. Concepts | 2. Trace steps | 3. Option block, then answer |
+|---|---|---|---|---|
+| 1 | Port shape | [C1](#c1-exchanges-bindings-queues), [C4](#c4-acknowledgements-and-prefetch), [C12](#c12-ports-and-adapters-for-a-broker) | Trace 1, steps 4 and 5 | [P](#p-port-shape) |
+| 2 | Who declares the topology | [C2](#c2-durable-persistent-quorum), [C3](#c3-unroutable-messages) | Trace 1, step 4 | [T](#t-who-declares-the-topology) |
+| 3 | Retry routing | [C9](#c9-retries-dead-letters-and-poison-messages) | Trace 2a, steps 1 to 7 | [R](#r-retry-routing) |
+| 4 | Outbox and inbox storage | [C7](#c7-the-dual-write-problem-and-the-transactional-outbox) | Trace 1, step 2 | [S](#s-outbox-and-inbox-storage-before-wp-10) |
+| 5 | Relay trigger and claim | [C8](#c8-the-relay-and-the-atomic-claim) | Trace 1, step 3; Trace 2b, steps 1 to 4 | [L](#l-relay-trigger-and-claim) |
+| 6 | Inbox key | [C5](#c5-at-least-once-delivery-and-the-idempotent-consumer), [C6](#c6-ordering) | Trace 1, steps 5 and 7 | [I](#i-inbox-key-and-retention) |
+| 7 | Envelope and trace | [C10](#c10-the-cloudevents-envelope), [C11](#c11-one-trace-across-an-asynchronous-hop) | Trace 1, steps 2, 3, 5 and 6 | [E](#e-envelope-and-the-trace-across-the-outbox) |
+| 8 | Process types and the ping | [C13](#c13-process-types), [C14](#c14-readiness-with-a-broker) | Trace 2b, steps 1 and 2 | [W](#w-process-types-readiness-and-the-ping) |
+
+After row 8, read "Defaults that need no question" (end of "Options and trade-offs"), then the Recommendations block, and compare with your answers. Ask about anything at any point; "I don't know" on an explain-back means the explainer missed something, and it gets fixed here.
 
 ## Named here
 
@@ -87,33 +93,89 @@ The session presents all questions in one message with this pointer; a question 
 
 ## First principles
 
-**Exchanges, bindings, queues (Own).** In RabbitMQ a producer never writes to a queue. It publishes a message to an *exchange* with a *routing key* (a string like `system.ping.v1`). A *binding* is a rule "queue Q wants messages from exchange X whose key matches pattern P". A *topic* exchange matches dotted keys with wildcards: `*` is exactly one word, `#` is zero or more, so `content.#` catches `content.published.v1` and `content.withdrawn.v1`, and `system.ping.*` catches every version of the ping. A *queue* is where messages wait for a consumer; it is the unit of buffering, ordering and acknowledgement. The consequence that shapes everything: the producer does not know who listens. `api` publishes `system.ping.v1` to `jadero.events`; whether zero, one or five queues receive a copy depends only on bindings. That is publish-subscribe, and it is what lets a new consumer appear later (WP-20) without touching `api`. Each consumer gets its own queue (one per consumer and purpose, ADR-029), so two services each receive their own copy; two instances of the *same* consumer reading one queue share the work instead (competing consumers).
+### C1. Exchanges, bindings, queues
 
-**Durable, persistent, quorum (Own).** Three separate things keep a message alive across a broker restart: the queue must be durable, the message must be published as persistent (`delivery_mode: 2`), and the queue type decides how it is stored. A *quorum queue* replicates through Raft and writes to disk before confirming; on one node it is simply a durable, disk-backed queue with extra features we want: a delivery limit against poison messages and at-least-once dead-lettering. A *classic* queue is lighter but has neither. ADR-029 chose quorum queues for every consumer queue.
+Tier: Own.
 
-**Unroutable messages (Own).** If no binding matches, the exchange drops the message, and with publisher confirms on, the broker still answers `basic.ack` (RabbitMQ docs, "When will published messages be confirmed"). So a typo in a routing key, or a consumer queue that does not exist yet, loses events while the relay believes they were delivered. Two defenses: publish with `mandatory: true`, which makes the broker send a `basic.return` before the ack so the relay can tell; or give the exchange an *alternate exchange*, which receives everything nobody else wanted, bound to a queue `jadero.unrouted` that we can watch. The alternate exchange works for every publisher without code; `mandatory` needs return handling in the client.
+In RabbitMQ a producer never writes to a queue. It publishes a message to an *exchange* with a *routing key* (a string like `system.ping.v1`). A *binding* is a rule "queue Q wants messages from exchange X whose key matches pattern P". A *topic* exchange matches dotted keys with wildcards: `*` is exactly one word, `#` is zero or more, so `content.#` catches `content.published.v1` and `content.withdrawn.v1`, and `system.ping.*` catches every version of the ping. A *queue* is where messages wait for a consumer; it is the unit of buffering, ordering and acknowledgement. The consequence that shapes everything: the producer does not know who listens. `api` publishes `system.ping.v1` to `jadero.events`; whether zero, one or five queues receive a copy depends only on bindings. That is publish-subscribe, and it is what lets a new consumer appear later (WP-20) without touching `api`. Each consumer gets its own queue (one per consumer and purpose, ADR-029), so two services each receive their own copy; two instances of the *same* consumer reading one queue share the work instead (competing consumers).
 
-**Acknowledgements and prefetch (Own).** A consumer gets a delivery and must later say what happened: `ack` (done, delete it), `nack` or `reject` with `requeue=true` (put it back at the head of the queue, usually redelivered at once), or with `requeue=false` (drop it, or dead-letter it if the queue has a dead-letter exchange). Until it answers, the message is *unacknowledged*: invisible to others and redelivered if the consumer's connection dies. *Prefetch* (QoS) caps how many unacknowledged messages one consumer may hold; ADR-029 sets 10. Low prefetch spreads work and limits what is redelivered after a crash; high prefetch hides network latency. The key point for design: the ack is the commit point of the consumer. Ack too early and a crash loses the message; ack after the effects commit and a crash means the message comes again. There is no third option, which is why the next concept exists.
+### C2. Durable, persistent, quorum
 
-**At-least-once delivery and the idempotent consumer (Own).** Between a consumer committing its database transaction and RabbitMQ receiving the ack there is a gap. If the process dies in that gap, the broker redelivers a message whose effects are already committed. The same happens on the producer side (Trace 1, step 3). So every message may arrive more than once: *at-least-once delivery*. "Exactly once" between a broker and a database is not available; what we can build is *exactly-once effects*: the consumer records the event id in an `inbox` table in the same transaction as its effects, with a unique key. The second delivery's insert hits the key, the consumer knows the work is done, acks and stops. The inbox only works if the insert and the effects share one transaction; an inbox row written in a separate transaction brings the gap back. Some effects are idempotent by nature (an upsert of "revision 7 of project X" that ignores older revisions), and that is a second line of defense, not a replacement: not every handler can be written that way.
+Tier: Own.
 
-**Ordering (Own).** One queue with one consumer and prefetch 1 delivers in order. Retries, prefetch above 1, more consumers, and the relay's batches all break that. We do not promise order. Consumers that care compare a version carried in the event (the content revision in WP-14) and ignore older ones. The ping does not care.
+Three separate things keep a message alive across a broker restart: the queue must be durable, the message must be published as persistent (`delivery_mode: 2`), and the queue type decides how it is stored. A *quorum queue* replicates through Raft and writes to disk before confirming; on one node it is simply a durable, disk-backed queue with extra features we want: a delivery limit against poison messages and at-least-once dead-lettering. A *classic* queue is lighter but has neither. ADR-029 chose quorum queues for every consumer queue.
 
-**The dual-write problem and the transactional outbox (Own).** A use case that writes its database and then publishes to the broker does two writes into two systems with no shared transaction. Crash after the commit and before the publish: the state changed and nobody hears about it. Publish first and the commit fails: everyone hears about something that never happened. A try/catch with rollback does not help, because the broker publish cannot be rolled back and the crash may be a killed process (this was the owner's D-12 question). The *transactional outbox* turns two writes into one: the use case inserts the event as a row in an `outbox` table in the same database transaction as the state change. Either both commit or neither does. A separate *relay* later reads the row, publishes it, and marks it sent. The broker leaves the request path entirely: `api` keeps accepting writes while RabbitMQ is down, and the relay catches up (report section 3.5).
+### C3. Unroutable messages
 
-**The relay and the atomic claim (Own).** The relay is a loop: find unsent rows, publish each, wait for the broker's *publisher confirm* (the broker's "I have it, on disk"), mark the row sent. Two relays (or two loop iterations that overlap) must not publish the same row at once. `SELECT ... FOR UPDATE SKIP LOCKED` locks the rows it reads and makes a concurrent reader skip them instead of waiting: an atomic claim. The lock lives until the transaction ends, so the relay keeps the transaction open while it publishes the batch, then marks and commits. If it dies after the confirm and before the commit, the rows unlock unmarked and get published again: at-least-once, handled by the inbox. If RabbitMQ is down, the publish never confirms; the relay must give up after a timeout, record the attempt and back off, or it hangs forever (`amqp-connection-manager` has no publish timeout by default, Facts checked). How the relay learns there is work is a choice (Options L): poll on a timer, or let Postgres wake it with `LISTEN/NOTIFY`.
+Tier: Own.
 
-**Retries, dead letters and poison messages (Own).** A handler can fail for two kinds of reasons: *transient* (database blip, provider timeout: try later) and *permanent* (the payload does not parse, a bug: trying again changes nothing). Requeueing at once turns a transient failure into a hot loop that burns CPU and logs; a permanent failure requeued forever is a *poison message* that blocks nothing in theory but floods everything in practice. RabbitMQ's tools: a *dead-letter exchange* (DLX) per queue receives messages that are rejected without requeue, expire by TTL, or exceed the delivery limit; a *TTL* on a queue makes messages expire after a fixed time. Combined, they give delayed retry without any timer in our code: put the message in a "wait 10 s" queue that has no consumer, a TTL of 10 s, and a DLX that sends it back to the work queue. Three such queues give ADR-029's tiers (10 s, 1 min, 10 min); after the last, the message goes to the *dead-letter queue* (DLQ), where a human (WP-50) decides. Two traps verified for RabbitMQ 4.3: (1) the quorum delivery limit of 20 counts `basic.reject` and consumer crashes, but **not** `basic.nack`, and golevelup's default error behavior is `nack` with requeue, so a failing handler on defaults loops forever and the delivery limit never fires; (2) dead-lettering out of a quorum queue is *at-most-once* by default (a message can be lost in transfer), unless the queue sets `dead-letter-strategy: at-least-once` and `overflow: reject-publish`. A third trap, structural: a wait queue that dead-letters back to `jadero.events` with the original routing key re-publishes to *every* bound queue, so one consumer's retry becomes a duplicate for all the others. A retry must return to the one queue that failed (Options R).
+If no binding matches, the exchange drops the message, and with publisher confirms on, the broker still answers `basic.ack` (RabbitMQ docs, "When will published messages be confirmed"). So a typo in a routing key, or a consumer queue that does not exist yet, loses events while the relay believes they were delivered. Two defenses: publish with `mandatory: true`, which makes the broker send a `basic.return` before the ack so the relay can tell; or give the exchange an *alternate exchange*, which receives everything nobody else wanted, bound to a queue `jadero.unrouted` that we can watch. The alternate exchange works for every publisher without code; `mandatory` needs return handling in the client.
 
-**The CloudEvents envelope (Recognize, with one Own part).** CloudEvents 1.0 is a standard set of metadata around an event: `specversion`, `id` (unique per event, our idempotency key), `source` (who emitted it, `jadero/api`), `type` (what happened, `dev.jadero.system.ping.v1`, versioned), `time`, `datacontenttype`, and `data` (the payload). Extensions add attributes; the distributed tracing extension adds `traceparent`. On AMQP there are two *content modes*: *structured* (the whole envelope is the JSON body, content type `application/cloudevents+json`) and *binary* (metadata goes into AMQP headers prefixed `cloudEvents:`, the body is just `data`). The Own part is versioning: a consumer may be older or newer than the producer, so a type's schema only gains optional fields (expand), and a breaking change is a new type `...v2` published next to `v1` until every consumer moved (contract). The routing key is the type without the reverse-DNS prefix: `system.ping.v1`. Schemas live in `packages/contracts` as Zod, and a contract test has every consumer parse the producer's example fixture.
+### C4. Acknowledgements and prefetch
 
-**One trace across an asynchronous hop (Own).** A trace is a tree of spans joined by a trace id; context crosses a process boundary in the W3C `traceparent` string (`00-<trace id>-<parent span id>-<flags>`). Over HTTP the OTel instrumentation puts it in a header. Over RabbitMQ, `instrumentation-amqplib` injects it into the message headers at publish and continues the trace at consume. The outbox breaks this chain unless we act: the relay publishes seconds later, from another process (`api-worker`), inside its own poll loop, so the context active at publish time is the relay's, not the request's. ADR-010 says the outbox row stores the request's `traceparent`; the relay must make that the active context (as parent or as a link) before it publishes, and then the amqplib instrumentation carries it on. A second consideration is privacy: spans and log lines carry ids and types, never the event body.
+Tier: Own.
 
-**Ports and adapters for a broker (Own).** ADR-003's rule: the application depends on an abstract class (the port), and an adapter in `infrastructure/` implements it. For messaging the port answers "publish this envelope" and "deliver envelopes of this type to this handler", and the handler returns an outcome (done, retry later, dead) instead of calling `ack` itself. What this buys: use cases and handlers are tested with the in-memory adapter, no broker; a contract suite proves the in-memory and RabbitMQ adapters behave alike; the retry and dead-letter policy lives in one adapter, not in every handler. What it costs: one more layer, and some broker features (headers, priorities) stay out unless the port names them. The owner's D-41 doubt ("an adapter would allow swapping RabbitMQ; unsure it is worth it beyond learning") is fair: the main payoff is testability and one place for the failure policy, not swapping brokers.
+A consumer gets a delivery and must later say what happened: `ack` (done, delete it), `nack` or `reject` with `requeue=true` (put it back at the head of the queue, usually redelivered at once), or with `requeue=false` (drop it, or dead-letter it if the queue has a dead-letter exchange). Until it answers, the message is *unacknowledged*: invisible to others and redelivered if the consumer's connection dies. *Prefetch* (QoS) caps how many unacknowledged messages one consumer may hold; ADR-029 sets 10. Low prefetch spreads work and limits what is redelivered after a crash; high prefetch hides network latency. The key point for design: the ack is the commit point of the consumer. Ack too early and a crash loses the message; ack after the effects commit and a crash means the message comes again. There is no third option, which is why the next concept exists.
 
-**Process types (Own).** One codebase and one image per service, started with different commands (report section 3.2). `api` serves HTTP; `api-worker` runs the relay (and later the PDF CV and revalidation). Background work gets its own process, memory limit and restart policy, so a stuck relay cannot slow a request, and an HTTP crash does not stop event delivery. It is not a new service: same database, same code, same deploy. The same applies to `agent` (HTTP chat) and `agent-ingest` (event consumer, WP-20).
+### C5. At-least-once delivery and the idempotent consumer
 
-**Readiness with a broker (Own).** From WP-3: liveness asks "restart me?", readiness asks "send me work?". Thanks to the outbox, `api` does not need the broker to do its job, so the broker does not belong in `api`'s readiness (if it did, a broker outage would take the site's API out of rotation for no reason). `api-worker` cannot do its job without both Postgres and RabbitMQ, so its readiness checks both. A consumer process likewise. A process with no HTTP server still needs a way to answer the probe (a small health server on its own port is the simplest).
+Tier: Own.
+
+Between a consumer committing its database transaction and RabbitMQ receiving the ack there is a gap. If the process dies in that gap, the broker redelivers a message whose effects are already committed. The same happens on the producer side (Trace 1, step 3). So every message may arrive more than once: *at-least-once delivery*. "Exactly once" between a broker and a database is not available; what we can build is *exactly-once effects*: the consumer records the event id in an `inbox` table in the same transaction as its effects, with a unique key. The second delivery's insert hits the key, the consumer knows the work is done, acks and stops. The inbox only works if the insert and the effects share one transaction; an inbox row written in a separate transaction brings the gap back. Some effects are idempotent by nature (an upsert of "revision 7 of project X" that ignores older revisions), and that is a second line of defense, not a replacement: not every handler can be written that way.
+
+### C6. Ordering
+
+Tier: Own.
+
+One queue with one consumer and prefetch 1 delivers in order. Retries, prefetch above 1, more consumers, and the relay's batches all break that. We do not promise order. Consumers that care compare a version carried in the event (the content revision in WP-14) and ignore older ones. The ping does not care.
+
+### C7. The dual-write problem and the transactional outbox
+
+Tier: Own.
+
+A use case that writes its database and then publishes to the broker does two writes into two systems with no shared transaction. Crash after the commit and before the publish: the state changed and nobody hears about it. Publish first and the commit fails: everyone hears about something that never happened. A try/catch with rollback does not help, because the broker publish cannot be rolled back and the crash may be a killed process (this was the owner's D-12 question). The *transactional outbox* turns two writes into one: the use case inserts the event as a row in an `outbox` table in the same database transaction as the state change. Either both commit or neither does. A separate *relay* later reads the row, publishes it, and marks it sent. The broker leaves the request path entirely: `api` keeps accepting writes while RabbitMQ is down, and the relay catches up (report section 3.5).
+
+### C8. The relay and the atomic claim
+
+Tier: Own.
+
+The relay is a loop: find unsent rows, publish each, wait for the broker's *publisher confirm* (the broker's "I have it, on disk"), mark the row sent. Two relays (or two loop iterations that overlap) must not publish the same row at once. `SELECT ... FOR UPDATE SKIP LOCKED` locks the rows it reads and makes a concurrent reader skip them instead of waiting: an atomic claim. The lock lives until the transaction ends, so the relay keeps the transaction open while it publishes the batch, then marks and commits. If it dies after the confirm and before the commit, the rows unlock unmarked and get published again: at-least-once, handled by the inbox. If RabbitMQ is down, the publish never confirms; the relay must give up after a timeout, record the attempt and back off, or it hangs forever (`amqp-connection-manager` has no publish timeout by default, Facts checked). How the relay learns there is work is a choice (option block L): poll on a timer, or let Postgres wake it with `LISTEN/NOTIFY`.
+
+### C9. Retries, dead letters and poison messages
+
+Tier: Own.
+
+A handler can fail for two kinds of reasons: *transient* (database blip, provider timeout: try later) and *permanent* (the payload does not parse, a bug: trying again changes nothing). Requeueing at once turns a transient failure into a hot loop that burns CPU and logs; a permanent failure requeued forever is a *poison message* that blocks nothing in theory but floods everything in practice. RabbitMQ's tools: a *dead-letter exchange* (DLX) per queue receives messages that are rejected without requeue, expire by TTL, or exceed the delivery limit; a *TTL* on a queue makes messages expire after a fixed time. Combined, they give delayed retry without any timer in our code: put the message in a "wait 10 s" queue that has no consumer, a TTL of 10 s, and a DLX that sends it back to the work queue. Three such queues give ADR-029's tiers (10 s, 1 min, 10 min); after the last, the message goes to the *dead-letter queue* (DLQ), where a human (WP-50) decides. Two traps verified for RabbitMQ 4.3: (1) the quorum delivery limit of 20 counts `basic.reject` and consumer crashes, but **not** `basic.nack`, and golevelup's default error behavior is `nack` with requeue, so a failing handler on defaults loops forever and the delivery limit never fires; (2) dead-lettering out of a quorum queue is *at-most-once* by default (a message can be lost in transfer), unless the queue sets `dead-letter-strategy: at-least-once` and `overflow: reject-publish`. A third trap, structural: a wait queue that dead-letters back to `jadero.events` with the original routing key re-publishes to *every* bound queue, so one consumer's retry becomes a duplicate for all the others. A retry must return to the one queue that failed (option block R).
+
+### C10. The CloudEvents envelope
+
+Tier: Recognize, with one Own part.
+
+CloudEvents 1.0 is a standard set of metadata around an event: `specversion`, `id` (unique per event, our idempotency key), `source` (who emitted it, `jadero/api`), `type` (what happened, `dev.jadero.system.ping.v1`, versioned), `time`, `datacontenttype`, and `data` (the payload). Extensions add attributes; the distributed tracing extension adds `traceparent`. On AMQP there are two *content modes*: *structured* (the whole envelope is the JSON body, content type `application/cloudevents+json`) and *binary* (metadata goes into AMQP headers prefixed `cloudEvents:`, the body is just `data`). The Own part is versioning: a consumer may be older or newer than the producer, so a type's schema only gains optional fields (expand), and a breaking change is a new type `...v2` published next to `v1` until every consumer moved (contract). The routing key is the type without the reverse-DNS prefix: `system.ping.v1`. Schemas live in `packages/contracts` as Zod, and a contract test has every consumer parse the producer's example fixture.
+
+### C11. One trace across an asynchronous hop
+
+Tier: Own.
+
+A trace is a tree of spans joined by a trace id; context crosses a process boundary in the W3C `traceparent` string (`00-<trace id>-<parent span id>-<flags>`). Over HTTP the OTel instrumentation puts it in a header. Over RabbitMQ, `instrumentation-amqplib` injects it into the message headers at publish and continues the trace at consume. The outbox breaks this chain unless we act: the relay publishes seconds later, from another process (`api-worker`), inside its own poll loop, so the context active at publish time is the relay's, not the request's. ADR-010 says the outbox row stores the request's `traceparent`; the relay must make that the active context (as parent or as a link) before it publishes, and then the amqplib instrumentation carries it on. A second consideration is privacy: spans and log lines carry ids and types, never the event body.
+
+### C12. Ports and adapters for a broker
+
+Tier: Own.
+
+ADR-003's rule: the application depends on an abstract class (the port), and an adapter in `infrastructure/` implements it. For messaging the port answers "publish this envelope" and "deliver envelopes of this type to this handler", and the handler returns an outcome (done, retry later, dead) instead of calling `ack` itself. What this buys: use cases and handlers are tested with the in-memory adapter, no broker; a contract suite proves the in-memory and RabbitMQ adapters behave alike; the retry and dead-letter policy lives in one adapter, not in every handler. What it costs: one more layer, and some broker features (headers, priorities) stay out unless the port names them. The owner's D-41 doubt ("an adapter would allow swapping RabbitMQ; unsure it is worth it beyond learning") is fair: the main payoff is testability and one place for the failure policy, not swapping brokers.
+
+### C13. Process types
+
+Tier: Own.
+
+One codebase and one image per service, started with different commands (report section 3.2). `api` serves HTTP; `api-worker` runs the relay (and later the PDF CV and revalidation). Background work gets its own process, memory limit and restart policy, so a stuck relay cannot slow a request, and an HTTP crash does not stop event delivery. It is not a new service: same database, same code, same deploy. The same applies to `agent` (HTTP chat) and `agent-ingest` (event consumer, WP-20).
+
+### C14. Readiness with a broker
+
+Tier: Own.
+
+From WP-3: liveness asks "restart me?", readiness asks "send me work?". Thanks to the outbox, `api` does not need the broker to do its job, so the broker does not belong in `api`'s readiness (if it did, a broker outage would take the site's API out of rotation for no reason). `api-worker` cannot do its job without both Postgres and RabbitMQ, so its readiness checks both. A consumer process likewise. A process with no HTTP server still needs a way to answer the probe (a small health server on its own port is the simplest).
 
 ## One concrete trace
 
@@ -168,9 +230,9 @@ The trace uses the shapes the questions propose as defaults; where an answer cha
 6. **What the trace shows** (console exporter in dev): `POST /dev/ping` (api) > `INSERT messaging.outbox` (api) > `system.ping.v1 publish` (api-worker) > `agent.system.ping process` (agent) > two `INSERT` spans (agent). One trace id across three processes, with a gap of up to 1 s (the poll) between the insert and the publish, which is the outbox's latency made visible.
 7. **The same event again.** Suppose `api-worker` was killed after the confirm and before `COMMIT`. The row unlocks with `published_at` still null, the next tick publishes it again with the same `id`. In `agent` the inbox insert returns **0 rows**: the handler skips the effects, commits, acks, and logs at `debug` `"duplicate ignored"`. The heartbeat row is unchanged. This is at-least-once delivery with exactly-once effects.
 
-### Trace 2: the consumer fails, and the broker goes away
+### Trace 2: two failures
 
-**The consumer's database is down.**
+#### Trace 2a: the consumer's database is down
 
 1. `agent`'s Postgres stops. A ping arrives; the inbox `INSERT` fails with `ECONNREFUSED 127.0.0.1:5432`. The transaction never started, nothing was written.
 2. The handler throws; the adapter classifies it as transient (any error that is not a schema failure) and, with Q3's default, publishes a copy to queue `agent.system.ping.retry.10s` through the default exchange with header `x-jadero-attempt: 2`, waits for the confirm, then acks the original. Log at `warn`: `"event retry scheduled"`, `attempt: 1`, `delay_ms: 10000`, the error class and message, no body.
@@ -180,7 +242,7 @@ The trace uses the shapes the questions propose as defaults; where an answer cha
 6. A payload that does not parse (a producer bug) skips the tiers: retrying cannot fix it, so it goes straight to the DLQ on attempt 1.
 7. The counterexample, what the defaults would do: golevelup's `REQUEUE` behavior calls `nack(requeue=true)`; the message returns to the head of the queue and is redelivered within milliseconds, thousands of times a minute, and on RabbitMQ 4.3 a `nack` does not count toward the delivery limit of 20, so nothing stops it.
 
-**The broker is down.**
+#### Trace 2b: the broker is down
 
 1. `docker compose stop rabbitmq`. `api` still answers `POST /dev/ping` with 202: the outbox insert does not need the broker. `api`'s `/health/ready` stays 200.
 2. The relay claims the row, publishes; `amqp-connection-manager` buffers it in memory and the confirm never comes. After 5 s the relay's timeout fires, it records `attempts = attempts + 1`, `last_error = 'publish timeout'`, `next_attempt_at = now() + backoff` (1 s, 2 s, 4 s, capped at 60 s), commits, and logs at `warn`. `api-worker`'s `/health/ready` turns 503 with `{"broker":{"status":"down","message":"unavailable"}}`.
@@ -196,21 +258,23 @@ The trace uses the shapes the questions propose as defaults; where an answer cha
 | Transactional outbox | Trace 1, step 2 |
 | Message relay, publisher confirms | Trace 1, step 3 |
 | Atomic claim (`FOR UPDATE SKIP LOCKED`) | Trace 1, step 3 |
-| At-least-once delivery | Trace 1, step 7; Trace 2 "broker down", step 4 |
+| At-least-once delivery | Trace 1, step 7; Trace 2b, step 4 |
 | Idempotent consumer (inbox) | Trace 1, steps 5 and 7 |
-| Retry with backoff (delayed retry via TTL and DLX) | Trace 2, steps 2 to 4; the relay's backoff in "broker down", step 2 |
-| Dead-letter queue, poison message | Trace 2, steps 5 to 7 |
+| Retry with backoff (delayed retry via TTL and DLX) | Trace 2a, steps 2 to 4; the relay's backoff in Trace 2b, step 2 |
+| Dead-letter queue, poison message | Trace 2a, steps 5 to 7 |
 | Alternate exchange | Trace 1, step 4 |
 | Event envelope (CloudEvents), versioned event types, expand/contract | Trace 1, step 2 |
 | Trace context propagation | Trace 1, steps 3, 5, 6 |
-| Ports and adapters, contract test suite | The `MessageBus` port, in-memory and RabbitMQ adapters (Options P) |
-| Process types | `api` and `api-worker`, `agent` HTTP and its consumer (Options W) |
-| Infrastructure as code | `infra/rabbitmq/definitions.json` (Options T) |
-| Synthetic heartbeat | The ping as a periodic end-to-end check (Options W) |
+| Ports and adapters, contract test suite | The `MessageBus` port, in-memory and RabbitMQ adapters (option block P) |
+| Process types | `api` and `api-worker`, `agent` HTTP and its consumer (option block W) |
+| Infrastructure as code | `infra/rabbitmq/definitions.json` (option block T) |
+| Synthetic heartbeat | The ping as a periodic end-to-end check (option block W) |
 
 ## Options and trade-offs
 
-**P. Shape of the `MessageBus` port (ADR-029 decides: golevelup behind our port, an in-memory adapter for unit tests).**
+### P. Port shape
+
+Already decided by the ADRs: ADR-029 decides: golevelup behind our port, an in-memory adapter for unit tests.
 
 Forces: handlers should be testable without a broker; the retry and dead-letter policy should live in one place; the port should not grow a copy of the whole AMQP API; less code is less to maintain.
 
@@ -221,7 +285,9 @@ Forces: handlers should be testable without a broker; the retry and dead-letter 
 
 What would make this wrong: if handlers keep needing AMQP details the port does not expose (priorities, per-message TTL, headers beyond trace context), the port is in the way; if only one consumer ever exists, P1's extra code is waste.
 
-**T. Who declares exchanges, queues and bindings (ADR-029 decides: `infra/rabbitmq/definitions.json` is the reviewed source of truth; vhosts `/prod` and `/staging`, one user per service and vhost, each allowed only its own queues).**
+### T. Who declares the topology
+
+Already decided by the ADRs: ADR-029 decides: `infra/rabbitmq/definitions.json` is the reviewed source of truth; vhosts `/prod` and `/staging`, one user per service and vhost, each allowed only its own queues.
 
 Forces: one reviewed place for the topology; least privilege (a service user that can *configure* can also delete or redeclare); a mismatch between what code asserts and what exists breaks the channel (`PRECONDITION_FAILED` when arguments differ); developers want `pnpm dev:up` to just work; definitions with real passwords are a secret.
 
@@ -234,9 +300,11 @@ Also in T, with a clear default: an alternate exchange `jadero.unrouted` on `jad
 
 What would make this wrong: frequent topology changes that make the two-file edit painful (T4 then pays off); or a broker you do not control (a managed service that forbids definitions import).
 
-**R. How a failed message reaches the right retry tier (ADR-029 decides: TTL retry queues of 10 s, 1 min and 10 min, then a DLQ per queue; ADR-012: every queue has a DLQ).**
+### R. Retry routing
 
-Forces: a retry must go back only to the queue that failed (Trace 2, step 3); the tier must grow with the attempt; no message may be lost between queues; no hot loop; the topology should stay readable.
+Already decided by the ADRs: ADR-029 decides: TTL retry queues of 10 s, 1 min and 10 min, then a DLQ per queue; ADR-012: every queue has a DLQ.
+
+Forces: a retry must go back only to the queue that failed (Trace 2a, step 3); the tier must grow with the attempt; no message may be lost between queues; no hot loop; the topology should stay readable.
 
 - *R1. Consumer-routed: the adapter publishes a copy to the right wait queue and acks the original.* Per consumer queue Q: `Q.retry.10s`, `Q.retry.1m`, `Q.retry.10m` (no consumers, `x-message-ttl`, DLX = default exchange with `x-dead-letter-routing-key: Q`), and `Q.dlq`. The adapter reads an attempt header, picks the tier, publishes with confirm, then acks. After the last tier it `reject`s without requeue into `jadero.dlx`, which routes to `Q.dlq`. Matches the ADR. Pros: exact tiers; retries never fan out; the attempt count is ours and visible. Cons: four extra queues per consumer (generated, T4 helps); a crash between the copy's confirm and the ack gives a duplicate, which the inbox absorbs.
 - *R2. Broker-routed with dead-letter chains only (`reject` without requeue, DLX into a 10 s queue, back to Q).* Pros: no publish from the consumer. Cons: a DLX is fixed per queue, so the broker cannot pick a longer delay for a later attempt; you get one fixed delay unless you build a chain of queues per attempt; at-least-once dead-lettering needs the quorum settings above. Wins when one fixed delay is enough, which departs from the ADR's three tiers (superseding ADR).
@@ -245,7 +313,9 @@ Forces: a retry must go back only to the queue that failed (Trace 2, step 3); th
 
 What would make this wrong: if most failures turn out to be permanent (bugs), tiers only delay the DLQ by 11 minutes; if a consumer needs strict order, any retry that lets later messages pass breaks it.
 
-**S. Where the outbox and inbox live before WP-10 brings Drizzle (ADR-012: outbox in each producer's database, inbox in each consumer's database, same transaction as the effects; ADR-005: Drizzle, repositories wrap it; WP-3 decision D1: `pg` is the driver).**
+### S. Outbox and inbox storage before WP-10
+
+Already decided by the ADRs: ADR-012: outbox in each producer's database, inbox in each consumer's database, same transaction as the effects; ADR-005: Drizzle, repositories wrap it; WP-3 decision D1: `pg` is the driver.
 
 Forces: the outbox insert must join the caller's transaction, so the store has to accept a transaction handle from outside; `packages/messaging` must not depend on Drizzle or on any service's schema; WP-10 will add Drizzle and must not need to rewrite messaging; DDL must reach each service's database.
 
@@ -256,7 +326,9 @@ Forces: the outbox insert must join the caller's transaction, so the store has t
 
 What would make this wrong: if WP-10 picks a different driver than `pg` (it inherits D1, so unlikely), or if Drizzle's transaction object cannot expose a raw query (then the adapter in WP-10 is more than three lines).
 
-**L. How the relay finds work and claims it (ADR-012 decides: claim with `FOR UPDATE SKIP LOCKED`, publish with confirms, mark sent; `api-worker` relays for `api`).**
+### L. Relay trigger and claim
+
+Already decided by the ADRs: ADR-012 decides: claim with `FOR UPDATE SKIP LOCKED`, publish with confirms, mark sent; `api-worker` relays for `api`.
 
 Forces: latency between commit and publish; load on Postgres when idle; behavior under a broker outage; simplicity.
 
@@ -269,7 +341,9 @@ Also in L, with clear defaults: publish timeout 5 s; backoff per row 1 s doublin
 
 What would make this wrong: if a future feature needs sub-second propagation (L2), or volume grows to thousands of events a minute (L3).
 
-**I. The inbox key and how long it remembers (ADR-012 decides: an `inbox` table of processed event ids in the consumer's transaction).**
+### I. Inbox key and retention
+
+Already decided by the ADRs: ADR-012 decides: an `inbox` table of processed event ids in the consumer's transaction.
 
 Forces: one service may have several consumers of the same event (e.g. in `agent`, ingestion and a usage counter); a duplicate can arrive late (a replay from the DLQ days later, WP-50); the table must not grow forever.
 
@@ -279,7 +353,9 @@ Forces: one service may have several consumers of the same event (e.g. in `agent
 
 Retention, with a clear default: keep inbox rows 30 days, deleted by a daily cleanup; a replay older than that is a human decision in WP-50 anyway. What would make this wrong: a replay policy that resends events older than the retention window as routine.
 
-**E. Envelope details and the trace across the outbox (ADR-029 decides: CloudEvents 1.0 with `id`, `source`, versioned `type`, `time`, `traceparent`; ADR-010 decides: `traceparent` in RabbitMQ headers through `instrumentation-amqplib`, and the outbox stores the request's `traceparent`).**
+### E. Envelope and the trace across the outbox
+
+Already decided by the ADRs: ADR-029 decides: CloudEvents 1.0 with `id`, `source`, versioned `type`, `time`, `traceparent`; ADR-010 decides: `traceparent` in RabbitMQ headers through `instrumentation-amqplib`, and the outbox stores the request's `traceparent`.
 
 Forces: the id must be unique and cheap to index; consumers should parse one shape; the trace should be one tree in the backend; OTel's messaging conventions prefer links for batches.
 
@@ -290,7 +366,9 @@ Forces: the id must be unique and cheap to index; consumers should parse one sha
 
 Id generation, with a clear default: UUIDv7 created in code, because the envelope must hold its id before the insert (the `uuid` package, 14.0.2). Postgres 18's `uuidv7()` would only fit if the database generated the id, and `crypto.randomUUID()` gives v4, which indexes worse because it is random. What would make this wrong: many events per request (batches) make E2 more honest than E1.
 
-**W. Process types, readiness and how the ping is triggered (report 3.2 decides: `api` and `api-worker` process types; ADR-012: `api-worker` relays; WP-3 forward question: the broker in `api-worker`'s readiness, not `api`'s).**
+### W. Process types, readiness and the ping
+
+Already decided by the ADRs: report 3.2 decides: `api` and `api-worker` process types; ADR-012: `api-worker` relays; WP-3 forward question: the broker in `api-worker`'s readiness, not `api`'s.
 
 Forces: the deliverable needs `api` to `agent` with one trace; the skeleton should be the shape WP-11, WP-14 and WP-20 extend, not a shortcut they undo; the ping trigger must not become a public endpoint; a heartbeat would be useful later (the "Under the hood" page shows broker lag).
 
@@ -302,7 +380,9 @@ The trigger, three options: (a) a heartbeat every 5 minutes from `api-worker` (w
 
 What would make this wrong: memory on the CX33 (each Node process is about 60 to 100 MB); if four processes do not fit with everything else, W2 for `agent` until WP-20 is the fallback.
 
-**Defaults that need no question** (say so if you want one changed): the AsyncAPI 3 stub is written by hand in `packages/contracts/asyncapi.yaml` with payload schemas generated from Zod (`z.toJSONSchema`) and a unit test that parses it with `@asyncapi/parser` and checks every Zod event type appears (the CI check of ADR-029 runs this test in WP-6); `packages/contracts` and `packages/messaging` are compiled packages (like `platform-nest`), Nest a peer dependency of `messaging` only; `agent` on port 3002; the outbox and inbox tables in a `messaging` schema; the D-43 doubt (a separate "toolbox" repository publishing versioned packages): in one monorepo the workspace packages are that toolbox, without publishing; a separate repo would pay off only if another repository needed the contracts.
+### Defaults that need no question
+
+Say so if you want one changed. The AsyncAPI 3 stub is written by hand in `packages/contracts/asyncapi.yaml` with payload schemas generated from Zod (`z.toJSONSchema`) and a unit test that parses it with `@asyncapi/parser` and checks every Zod event type appears (the CI check of ADR-029 runs this test in WP-6); `packages/contracts` and `packages/messaging` are compiled packages (like `platform-nest`), Nest a peer dependency of `messaging` only; `agent` on port 3002; the outbox and inbox tables in a `messaging` schema; the D-43 doubt (a separate "toolbox" repository publishing versioned packages): in one monorepo the workspace packages are that toolbox, without publishing; a separate repo would pay off only if another repository needed the contracts.
 
 ## The question for the owner
 
@@ -323,7 +403,7 @@ Also say which steps you already know (D-38 fast path); step 2 (contracts) is th
 
 Read after answering.
 
-1. **P1.** Several consumers are coming (agent, api-worker, contact), and the hot-loop default (Trace 2, step 7) is exactly the kind of mistake one adapter should prevent once. P4 stays the named fallback if golevelup's blocking `init` gets in the way during step 4.
+1. **P1.** Several consumers are coming (agent, api-worker, contact), and the hot-loop default (Trace 2a, step 7) is exactly the kind of mistake one adapter should prevent once. P4 stays the named fallback if golevelup's blocking `init` gets in the way during step 4.
 2. **T4**, a close second T1. One typed topology that the adapter reads (queue names, tiers) and a test that keeps `definitions.json` in sync; services without `configure`, with `check*` at startup. If you pick T1, the adapter keeps its own list of names and tiers, and a test compares them with the JSON instead. Either way: the alternate exchange.
 3. **R1.** It is the only option that gives the ADR's three tiers without fan-out; R3's in-process retry can be added later for latency-sensitive handlers without changing R1. If P2 was your answer to question 1, R1 means every handler must call the same retry helper, which is the argument for P1.
 4. **S1.** The SQL of the claim is the lesson, WP-10's decisions stay in WP-10, and the `SqlExecutor` seam is what lets Drizzle join without a rewrite.
