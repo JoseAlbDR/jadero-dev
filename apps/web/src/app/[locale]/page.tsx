@@ -13,9 +13,9 @@ export default function HomePage({ params }: Readonly<{ params: Promise<{ locale
   const t = useTranslations("HomePage");
 
   return (
-    <main>
-      <h1>{t("title")}</h1>
-      <p>{t("lead")}</p>
+    <main className="mx-auto max-w-3xl px-6 py-24">
+      <h1 className="font-serif text-5xl tracking-tight">{t("title")}</h1>
+      <p className="mt-6 text-lg text-muted-foreground">{t("lead")}</p>
     </main>
   );
 }

@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: fileURLToPath(new URL("../..", import.meta.url)),
   poweredByHeader: false,
   reactStrictMode: true,
+  // packages/ui ships TypeScript source (just-in-time package); Next compiles it.
+  transpilePackages: ["@jadero/ui"],
 };
 
 export default withNextIntl(nextConfig);

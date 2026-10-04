@@ -21,7 +21,7 @@
     },
     "//#lint": {
       "inputs": [
-        "**/*.{ts,tsx,js,mjs,cjs,json,jsonc}",
+        "**/*.{ts,tsx,js,mjs,cjs,json,jsonc,css}",
         "biome.json",
         "!**/node_modules/**",
         "!**/dist/**",

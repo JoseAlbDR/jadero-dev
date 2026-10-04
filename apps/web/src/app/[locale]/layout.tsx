@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { ReactNode } from "react";
 import { requireLocale } from "@/i18n/locale";
 import { routing } from "@/i18n/routing";
+import "../globals.css";
 
 type LocaleLayoutProps = Readonly<{
   children: ReactNode;
