@@ -56,6 +56,7 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-041 | Work tracking from roadmap to tickets | accepted | D-72 | [0041-work-tracking-from-roadmap-to-tickets.md](0041-work-tracking-from-roadmap-to-tickets.md) |
 | ADR-042 | NestJS 12 on Node 24 LTS | accepted | D-4 | [0042-node-24-lts-runtime.md](0042-node-24-lts-runtime.md) |
 | ADR-043 | Configuration loaded before Nest, and secrets | accepted | D-7 | [0043-configuration-loaded-before-nest-and-secrets.md](0043-configuration-loaded-before-nest-and-secrets.md) |
+| ADR-044 | Visual direction confirmed from the mockups | accepted | D-23 | [0044-visual-direction-confirmed-from-the-mockups.md](0044-visual-direction-confirmed-from-the-mockups.md) |
 <!-- adr-index:end -->
 
 Read in this order for a first pass: 029 (service boundaries), 002 (topology and edge), 003 (inside a service), 012 (async work), 031 (content layers), 013 to 016 (AI layer and RAG), 020 and 021 (security), 025 to 027 (delivery and hosting), 041 (work tracking).

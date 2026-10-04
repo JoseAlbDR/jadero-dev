@@ -22,5 +22,53 @@
   },
   "LocaleSwitcher": {
     "label": "Language"
+  },
+  "Mockups": {
+    "metaTitle": "Design directions",
+    "indexTitle": "Design directions",
+    "indexLead": "Three throwaway hero mockups for choosing the visual direction. The copy is a placeholder.",
+    "notice": "Mockup, not the real site",
+    "directions": {
+      "terminal": "Terminal editorial",
+      "editorial": "Swiss editorial",
+      "bento": "Bento glass",
+      "hybrid": "Swiss editorial + terminal block"
+    },
+    "summaries": {
+      "terminal": "Developer-native: a sans with a monospace accent, near-black with one vivid accent, the prompt as the hero.",
+      "editorial": "Calm and senior: a serif headline on a 12-column grid, one muted accent, the prompt as one quiet element.",
+      "bento": "Contemporary: a grid of glass cards over a soft gradient, large radii, small hover moves.",
+      "hybrid": "Direction 2 with the full prompt block of Direction 1: the serif headline and grid, plus the terminal card."
+    },
+    "role": "Backend engineer",
+    "headline": "I design, test, ship and run backend systems, from the data model to the server they run on.",
+    "lead": "This site is one of them: browse the code, the decisions and the live architecture.",
+    "ctaWork": "Read the case studies",
+    "ctaArchitecture": "See the architecture",
+    "promptLabel": "Ask me anything about my work",
+    "promptHint": "Try one of these",
+    "questions": {
+      "deploy": "How is this site deployed?",
+      "outbox": "Why an outbox between the services?",
+      "tests": "Which tests run on every pull request?"
+    },
+    "resting": "The assistant arrives in a later release. Everything else works without it.",
+    "pillarsTitle": "What this site proves",
+    "pillars": {
+      "backend": "Backend architecture",
+      "reliability": "Reliability and messaging",
+      "testing": "Testing and quality",
+      "cicd": "CI/CD and infrastructure",
+      "security": "Security",
+      "delivery": "Product delivery",
+      "ai": "Applied AI",
+      "process": "Engineering process"
+    },
+    "stackTitle": "Stack",
+    "nowTitle": "Now",
+    "nowBody": "Building jadero.dev v2 in public, one release at a time.",
+    "caseTitle": "Featured case study",
+    "caseName": "jadero.dev",
+    "caseBody": "Services, messaging, tests and deploys behind a personal site."
   }
 }
