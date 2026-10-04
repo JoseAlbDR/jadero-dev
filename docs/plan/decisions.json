@@ -1381,7 +1381,8 @@
       "status": "decided",
       "decidedOption": "a",
       "decidedBy": "owner",
-      "decidedAt": "2026-10-02"
+      "decidedAt": "2026-10-02",
+      "ownerNote": "2026-10-04, after the WP-15 mockups: confirmed option a as mockup 4 (Swiss editorial base with the full terminal prompt card of Direction 1), terracotta accent. Concrete choices in ADR-044. Switchable designs from the admin were discarded as overkill."
     },
     {
       "id": "D-24",
