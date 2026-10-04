@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Reviews a PR or diff of this repo against the ADRs, the service and AI rules, the testing gates, the OWASP LLM Top 10 mapping and the content rules. Use before asking the owner to review any PR.
+description: Reviews a PR or diff of this repo against the ADRs, the service and AI rules, the testing gates, the OWASP LLM Top 10 mapping and the content rules. Use mid-WP (after about half the steps of a WP of size M or larger, on the branch diff) and on every PR before asking the owner to review it (`/wrap-wp`).
 tools: Read, Grep, Glob, Bash(git diff*), Bash(git log*), Bash(gh pr diff *), Bash(gh pr view *)
 model: inherit
 effort: high

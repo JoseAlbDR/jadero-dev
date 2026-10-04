@@ -64,8 +64,8 @@ a { color: var(--accent); }
 <div class="tablewrap"><table>
 <tr><th>Role</th><th>Does</th><th>Never does</th></tr>
 <tr><td>Owner</td><td>Decides every backend and agent pattern, answers the questions in each explainer before any code, explains the design back after the PR review, reviews and merges every PR, runs anything that touches the server, secrets or money (<code>pnpm eval</code>).</td><td>Delegates a decision to an agent.</td></tr>
-<tr><td>Main session</td><td>Runs <code>/wp</code>, <code>/learn-step</code>, implements in small steps, keeps the step log, opens the PR. Model: Opus 5.5 is enough; a Mythos-class model is not needed for this work. Effort: high for learning WPs, medium for frontend and chores.</td><td>Pushes to <code>main</code>, deploys, ssh, real AI or mail providers in dev or tests, batches a whole WP into one diff.</td></tr>
-<tr><td>Subagents</td><td><code>@agent-reviewer</code> reviews every PR against the ADRs before the owner sees it. <code>Explore</code> does wide searches. A subagent can run <code>/wp</code> and <code>/learn-step</code> when the main session runs on a heavier model than the task needs.</td><td>Approves, merges, or implements on its own.</td></tr>
+<tr><td>Main session</td><td>Teaches and decides with the owner: runs <code>/wp</code>, presents the explainer, records the decision, explains each step before <code>/step</code> builds it, asks the check questions, leads the explain-back and the recap, opens the PR. Delegates context-heavy work to agents (<code>.claude/rules/orchestration.md</code>). Model: Opus 5.5 is enough; a Mythos-class model is not needed for this work. Effort: high for learning WPs, medium for frontend and chores.</td><td>Pushes to <code>main</code>, deploys, ssh, real AI or mail providers in dev or tests, batches a whole WP into one diff.</td></tr>
+<tr><td>Subagents</td><td><code>explainer-writer</code> drafts the explainer; <code>implementer</code> builds one step (code, tests, verify, step log, commit); <code>cartographer</code> keeps the code map and the artifacts current; <code>researcher</code> answers fact questions with sources; <code>@agent-reviewer</code> reviews mid-WP and every PR; <code>Explore</code> does wide searches. Each reports in under 300 words; parallel agents that touch git run in their own worktree.</td><td>Talks to the owner, records a decision, approves, merges, or builds more than one step at a time.</td></tr>
 </table></div>
 
 <h2 id="truth">Sources of truth, in order of precedence</h2>
@@ -107,13 +107,13 @@ a { color: var(--accent); }
 
 <div class="stage"><div class="n">5</div><div>
 <h3>Implement in small visible steps</h3>
-<p class="who">Agent in the main session, owner watching</p>
+<p class="who">Main session explains and asks, <code>implementer</code> agent builds (<code>/step</code>), owner watching</p>
 <p>One step at a time, under the step contract (<code>AGENTS.md</code> section 5): name the files, the explainer paragraph and the ADR lines first, and stop if the code would depart from an ADR; write; <code>pnpm verify</code> green; show it running; a privacy check (logs, spans, error bodies, headers); two lines in the explainer's step log written from the diff; one check question for the owner on learning steps; one conventional commit scoped to the service (<code>feat(contact): add outbox relay</code>). A WP of size M or larger gets a mid-WP <code>@agent-reviewer</code> run. Zod at every boundary, fakes and contract suites first, Testcontainers for SQL or the broker. The owner can stop at any step and ask <code>/explain</code>.</p>
 </div></div>
 
 <div class="stage"><div class="n">6</div><div>
 <h3>Map: update the code map and the docs</h3>
-<p class="who">Agent, as the last implementation step</p>
+<p class="who"><code>cartographer</code> agent through <code>/map</code>, as the last implementation step; then <code>/wrap-wp</code></p>
 <p>The last step of every WP brings <code>docs/architecture/code-map.html</code> up to date (its JSON data block, so a new box or arrow is data, not code), plus every doc the WP changed: <code>AGENTS.md</code> commands, the service's own <code>AGENTS.md</code>, <code>docs/local-playbook.md</code> and these process pages. The claude.ai artifacts are copies; the repo files are the source. The owner uses the map to review the design before the PR.</p>
 </div></div>
 
@@ -172,7 +172,7 @@ a { color: var(--accent); }
 
 <h2 id="session">Session hygiene</h2>
 <h3>Model and effort</h3>
-<p>The repo pins no model. For the main session Opus 5.5 at high effort for learning WPs, medium for frontend and chores. The reviewer agent inherits the session model at high effort. If the session runs on a heavier model, delegate <code>/wp</code> and <code>/learn-step</code> to a subagent on Opus and keep the main session for the conversation with the owner.</p>
+<p>The repo pins no model. For the main session Opus 5.5 at high effort for learning WPs, medium for frontend and chores. The reviewer agent inherits the session model at high effort. The orchestrator pattern keeps the main session for the conversation with the owner: drafting, building, mapping and research go to agents, so its context stays small (WP-5's single session reached about 700k tokens).</p>
 <h3>When to compact</h3>
 <ul>
 <li>After <code>/wp</code> and before <code>/learn-step</code> is rarely needed; the two are short.</li>
@@ -194,7 +194,7 @@ a { color: var(--accent); }
 </table></div>
 <p>Four prompts in <code>docs/sessions.md</code>, copied verbatim in the local guide:</p>
 <ul>
-<li><strong>Start the next work package:</strong> the same prompt for every backend or learning WP. The session lists the WPs whose dependencies are closed, recommends the next backend one and waits for the owner's choice; then <code>/wp</code>, <code>/learn-step</code>, the decision, steps under the step contract, the code map, the PR, the review and the explain-back.</li>
+<li><strong>Start the next work package:</strong> the same prompt for every backend or learning WP. The session lists the WPs whose dependencies are closed, recommends the next backend one and waits for the owner's choice; then <code>/wp</code>, <code>/learn-step</code>, the decision, <code>/step</code> per step, <code>/map</code> and <code>/wrap-wp</code> (PR, review, explain-back).</li>
 <li><strong>A frontend work package:</strong> result-only, no learning gate; builds to the design system, stops only for product or content questions, a screenshot per step, then the PR and the review.</li>
 <li><strong>Resume a work package in a new session:</strong> read the explainer and the branch log, say where we are and which step is next, wait for the go.</li>
 <li><strong>A chore outside a work package:</strong> a <code>chore/</code> branch, one change, <code>pnpm verify</code> green, one commit, a PR without <code>Closes</code>.</li>
@@ -207,9 +207,8 @@ a { color: var(--accent); }
 <li>Start Claude Code in the repo. The SessionStart hook prints the branch, the gate status and where the decisions are.</li>
 <li><code>/wp NN</code>. Read the step list; say go, or edit it.</li>
 <li><code>/learn-step NN</code> (learning WPs). Read the explainer. Ask <code>/explain</code> for anything unclear. Answer the question.</li>
-<li>Implement one step. Check the commit and the step log line. Repeat.</li>
-<li>Last step: the code map and the docs the WP changed.</li>
-<li>Open the PR; run <code>@agent-reviewer</code>; fix; review; explain the design back (Recap); merge.</li>
+<li><code>/step NN M</code>: read the explanation, watch the demo, answer the check question. Repeat.</li>
+<li><code>/map</code>, then <code>/wrap-wp NN</code>: docs, artifacts, PR, <code>@agent-reviewer</code> and fixes, explain the design back (Recap); merge.</li>
 <li>Close the session with the explainer's Recap filled and the card in Done.</li>
 </ol>
 

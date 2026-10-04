@@ -1,0 +1,19 @@
+---
+name: wrap-wp
+description: The closing checklist of a work package, from the last step to the merge and the start prompt of the next WP. Use when the last implementation step of a WP is committed, without the owner asking.
+user-invocable: true
+arguments: [wp]
+allowed-tools: Read, Glob, Grep, Agent, Bash(git *), Bash(gh pr *), Bash(gh issue *), Bash(pnpm *), mcp__github__create_pull_request, mcp__github__pull_request_read, mcp__github__list_pull_requests, mcp__github__issue_read
+---
+Close WP-$wp. Go through the list in order, mark each item done or n/a with the reason, and stop where the owner is needed.
+
+1. **Steps logged.** Every step in the explainer's Proposed steps is done and has its two step-log lines; `git log origin/main..HEAD` matches them.
+2. **Map.** `/map` (the `cartographer` agent): code map JSON in sync, rendered clean, event catalog and flow updated for new events.
+3. **Docs.** `AGENTS.md` status line and section 3 commands, the touched apps' `AGENTS.md`, `docs/sessions.md` or the process pages when the flow changed. Delegate to the `implementer` agent (as a docs step) when the edits are more than a few lines.
+4. **Artifacts.** Every artifact in `docs/artifacts.md` whose source changed is republished and its row updated (the cartographer does it; check the rows).
+5. **PR.** Title a conventional commit scoped to the service, body per `.github/PULL_REQUEST_TEMPLATE.md` with `Closes #<issue>`. Check first that no merged PR already holds this branch.
+6. **Review.** The `reviewer` agent on the PR. Fix its findings (through the `implementer` agent, one commit per fix), push, re-run `pnpm verify` yourself.
+7. **Docker demo.** The WP's processes running together (`pnpm dev:up`, `pnpm dev`, the main trace once, `pnpm test:int`). In a cloud session, give the owner the commands and wait for their output.
+8. **Explain-back** in interview form, in the main session: why this way, what else, when to change it, what happens when it fails, the main trace drawn from memory. Challenge partial answers; record answers and gaps in the explainer's Recap; commit and push.
+9. **Merge order.** List the open PRs (`gh pr list` or the GitHub tools), which touch the same shared files (`docs/sessions.md` "Two sessions in parallel"), and the order to merge them. Say "ready to merge" only after the last push, naming the head commit.
+10. **Next.** Tell the owner to `/clear` (or start a new session) once this PR is merged, and print the "start the next work package" prompt from `docs/sessions.md`.
