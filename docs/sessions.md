@@ -49,6 +49,8 @@ Answer in Spanish; files in plain English, no em dashes, no attribution lines in
 
 To force a specific WP, replace the first two sentences with "Next work package in jadero-dev: WP-N (<title>)."
 
+Order chosen on 2026-10-04: WP-10 (data layer, R1) runs before WP-6 (CI, R0), because it unblocks the frontend content WPs (WP-12 and the pages); WP-6 follows. The picking rule above would offer WP-6 first, so start WP-10 with the forced form.
+
 ### First runs of the orchestrator flow
 
 WP-10 is the first WP built with the agents and skills of `.claude/rules/orchestration.md` (added after WP-5, not yet tried on a WP). During its first runs the main session watches for friction: an agent report that misses what the owner needs, a skill step that does not fit, the learning gate blocking a step it should allow, context still growing past about 300k tokens. Each finding goes into the step log, and at `/wrap-wp` into one `chore/` PR that fixes the agent, skill or rule.
@@ -62,7 +64,7 @@ Frontend work package in jadero-dev: WP-N (<title>), issue #<n>. Result-only, no
 git fetch origin; /wp N (dependencies, branch wp/N-<slug> from origin/main, steps, definition of done),
 then build it step by step to the design system and the ADRs it names, without stopping for me
 except for product or content questions (copy, layout choices that change what a visitor sees).
-Each step through the implementer agent: pnpm verify, one scoped commit (feat(web): ...), a screenshot
+Each step through the implementer agent (it reads the issue and apps/web/AGENTS.md, there is no explainer): pnpm verify, one scoped commit (feat(web): ...), a screenshot
 of the result. Last step: /map if the workspace changed. Then the PR with Closes #<n>, @agent-reviewer, fix its
 findings, and send me the screenshots and the PR link. I merge.
 Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.
@@ -111,7 +113,7 @@ commits to a PR after saying it is ready.
 
 ## A dedicated local profile
 
-A separate Claude Code profile keeps this repo's sessions apart from any other setup: point `CLAUDE_CONFIG_DIR` at its own directory (for example an alias that runs `CLAUDE_CONFIG_DIR=<profile dir> claude`). The repo brings its own project settings, hooks, skills, rules and the reviewer agent; the profile only needs the personal part.
+A separate Claude Code profile keeps this repo's sessions apart from any other setup: point `CLAUDE_CONFIG_DIR` at its own directory (for example an alias that runs `CLAUDE_CONFIG_DIR=<profile dir> claude`). The repo brings its own project settings, hooks, skills, rules and agents; the profile only needs the personal part.
 
 Profile `settings.json`:
 

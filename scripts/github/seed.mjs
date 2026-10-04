@@ -182,7 +182,7 @@ for (const wp of plan.workPackages) {
           "",
           `- [ ] Explainer \`docs/learning/${wp.id.toLowerCase()}.md\` written, or the step marked \`known\``,
           "- [ ] Decision recorded (ADR link in the explainer front matter)",
-          "- [ ] Small visible steps in the main session, each with a two-line note in the explainer",
+          "- [ ] Small visible steps through `/step` (the main session explains, the implementer agent builds), each with a two-line note in the explainer",
           "- [ ] Explained back by the owner",
           "",
           `**The owner learns:** ${wp.learns || "see deliverable"}`,
@@ -201,7 +201,7 @@ for (const wp of plan.workPackages) {
         ]
       : ["- [ ] Deployed to staging", "- [ ] Changelog entry present (release-please)"]),
     "",
-    "Content rules apply: public-level only, no employer details, no secrets (the repo becomes public).",
+    "Content rules apply: no proprietary employer code or configuration, no client names, no personal data, no secrets (the repo becomes public).",
   ].join("\n");
   wpIssues.set(
     wp.id,
