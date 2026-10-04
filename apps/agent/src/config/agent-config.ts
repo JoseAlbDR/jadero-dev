@@ -3,11 +3,13 @@ import { z } from "zod";
 
 /**
  * The environment `agent` reads at boot: the platform variables, `SERVICE_NAME` defaulting to
- * `agent`, and its own database (`agent_dev` in development, ADR-029).
+ * `agent`, and its own database (`agent_dev` in development, ADR-029) with its pool size.
  */
 export const agentEnv = platformEnv.extend({
   SERVICE_NAME: z.string().min(1).default("agent"),
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+  // The consumer's prefetch (4) plus the readiness check and the inbox cleanup.
+  DATABASE_POOL_MAX: z.coerce.number<string>().int().min(1).default(6),
 });
 
 /** The parsed `agent` environment. */
@@ -23,6 +25,7 @@ export abstract class AgentConfig {
   abstract readonly logLevel: AgentEnv["LOG_LEVEL"];
   abstract readonly serviceName: string;
   abstract readonly databaseUrl: string;
+  abstract readonly databasePoolMax: number;
 }
 
 /**
@@ -36,6 +39,7 @@ export function toAgentConfig(env: AgentEnv): AgentConfig {
     logLevel: env.LOG_LEVEL,
     serviceName: env.SERVICE_NAME,
     databaseUrl: env.DATABASE_URL,
+    databasePoolMax: env.DATABASE_POOL_MAX,
   };
 }
 

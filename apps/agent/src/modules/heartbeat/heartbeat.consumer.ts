@@ -1,6 +1,6 @@
 import { systemPingV1 } from "@jadero/contracts";
 import { cleanupInbox, idempotent, MessageBus } from "@jadero/messaging";
-import { PinoLogger } from "@jadero/platform-nest";
+import { PG_POOL, PinoLogger } from "@jadero/platform-nest";
 import {
   type BeforeApplicationShutdown,
   Inject,
@@ -10,7 +10,6 @@ import {
   type OnModuleInit,
 } from "@nestjs/common";
 import { Pool } from "pg";
-import { PG_POOL } from "../platform/index.js";
 import { HeartbeatRepository } from "./heartbeat.repository.js";
 
 /** How often inbox rows past their retention (30 days, decision I1) are deleted. */

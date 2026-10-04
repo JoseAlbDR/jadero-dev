@@ -1,10 +1,9 @@
 import { MessageBus, OutboxRelay, RabbitMqMessageBus } from "@jadero/messaging";
-import { PinoLogger } from "@jadero/platform-nest";
+import { PG_POOL, PinoLogger } from "@jadero/platform-nest";
 import { Logger, Module } from "@nestjs/common";
 import { Pool } from "pg";
 import { ApiWorkerConfig } from "../../config/api-config.js";
 import { PingModule } from "../ping/index.js";
-import { PG_POOL, PostgresModule } from "../platform/index.js";
 import { RelayLifecycle } from "./relay.lifecycle.js";
 
 /**
@@ -12,7 +11,7 @@ import { RelayLifecycle } from "./relay.lifecycle.js";
  * `api`'s pool, the heartbeat, and the broker readiness check.
  */
 @Module({
-  imports: [PostgresModule, PingModule],
+  imports: [PingModule],
   providers: [
     {
       provide: MessageBus,

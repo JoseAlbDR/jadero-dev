@@ -1,8 +1,8 @@
 import { systemPingV1 } from "@jadero/contracts";
 import { addToOutbox, inTransaction } from "@jadero/messaging";
+import { PG_POOL } from "@jadero/platform-nest";
 import { Inject, Injectable } from "@nestjs/common";
 import { Pool } from "pg";
-import { PG_POOL } from "../platform/index.js";
 
 /**
  * Writes a `system.ping.v1` event to `api`'s outbox (WP-5). It never touches the broker: the relay

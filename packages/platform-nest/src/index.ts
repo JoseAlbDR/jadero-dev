@@ -8,6 +8,15 @@ export {
   parseConfig,
 } from "./config/load-config.js";
 export { type PlatformEnv, platformEnv } from "./config/platform-env.js";
+export {
+  CONNECT_TIMEOUT_MS,
+  DatabaseModule,
+  type DatabaseModuleOptions,
+  poolConfig,
+  QUERY_TIMEOUT_MS,
+} from "./database/database.module.js";
+export { type Database, DRIZZLE, PG_POOL } from "./database/database.tokens.js";
+export { PostgresReadinessCheck } from "./database/postgres.readiness-check.js";
 export { ProblemDetailsFilter } from "./errors/problem-details.filter.js";
 export {
   type InvalidField,

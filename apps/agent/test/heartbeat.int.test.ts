@@ -6,13 +6,13 @@ import {
   MessageBus,
   migrateMessagingSchema,
 } from "@jadero/messaging";
+import { PG_POOL } from "@jadero/platform-nest";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { agentConsumerEnv, toAgentConsumerConfig } from "../src/config/agent-config.js";
 import { ConsumerModule } from "../src/consumer.module.js";
-import { PG_POOL } from "../src/modules/platform/index.js";
 import { createTestDatabase } from "./setup/test-database.js";
 
 let pool: pg.Pool;

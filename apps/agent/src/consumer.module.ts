@@ -1,8 +1,13 @@
-import { HealthModule, LoggingModule, TelemetryModule } from "@jadero/platform-nest";
+import {
+  DatabaseModule,
+  HealthModule,
+  LoggingModule,
+  PostgresReadinessCheck,
+  TelemetryModule,
+} from "@jadero/platform-nest";
 import { type DynamicModule, Module } from "@nestjs/common";
 import { AgentConfig, AgentConsumerConfig } from "./config/agent-config.js";
 import { BrokerReadinessCheck, HeartbeatModule } from "./modules/heartbeat/index.js";
-import { PostgresModule, PostgresReadinessCheck } from "./modules/platform/index.js";
 
 /**
  * The root module of `agent`'s consumer process (report section 3.2; `agent-ingest` in WP-20): it
@@ -25,8 +30,9 @@ export class ConsumerModule {
           level: config.logLevel,
           pretty: config.nodeEnv === "development",
         }),
+        DatabaseModule.forRoot({ url: config.databaseUrl, poolMax: config.databasePoolMax }),
         HealthModule.forRoot({
-          imports: [PostgresModule, HeartbeatModule],
+          imports: [HeartbeatModule],
           checks: [PostgresReadinessCheck, BrokerReadinessCheck],
         }),
         TelemetryModule,

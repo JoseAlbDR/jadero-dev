@@ -1,7 +1,12 @@
-import { HealthModule, LoggingModule, TelemetryModule } from "@jadero/platform-nest";
+import {
+  DatabaseModule,
+  HealthModule,
+  LoggingModule,
+  PostgresReadinessCheck,
+  TelemetryModule,
+} from "@jadero/platform-nest";
 import { type DynamicModule, Module } from "@nestjs/common";
 import { AgentConfig } from "./config/agent-config.js";
-import { PostgresModule, PostgresReadinessCheck } from "./modules/platform/index.js";
 
 /**
  * The root module of `agent`, the HTTP process type: health checks today, chat from WP-22 on. Ready
@@ -23,7 +28,8 @@ export class AppModule {
           level: config.logLevel,
           pretty: config.nodeEnv === "development",
         }),
-        HealthModule.forRoot({ imports: [PostgresModule], checks: [PostgresReadinessCheck] }),
+        DatabaseModule.forRoot({ url: config.databaseUrl, poolMax: config.databasePoolMax }),
+        HealthModule.forRoot({ checks: [PostgresReadinessCheck] }),
         TelemetryModule,
       ],
       providers: [{ provide: AgentConfig, useValue: config }],

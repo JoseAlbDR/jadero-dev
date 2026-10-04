@@ -2,7 +2,7 @@
   "name": "@jadero/platform-nest",
   "version": "0.0.0",
   "private": true,
-  "description": "Bootstrap shared by the NestJS services: fail-fast config, structured logging, problem details, health checks, OpenTelemetry, app wiring. Infrastructure only, no domain code. Compiled to dist/.",
+  "description": "Bootstrap shared by the NestJS services: fail-fast config, structured logging, problem details, health checks, OpenTelemetry, the database connection (pg pool and Drizzle), app wiring. Infrastructure only, no domain code. Compiled to dist/.",
   "type": "module",
   "exports": {
     ".": {
@@ -34,7 +34,9 @@
     "@opentelemetry/instrumentation-pg": "catalog:",
     "@opentelemetry/instrumentation-pino": "catalog:",
     "@opentelemetry/sdk-node": "catalog:",
+    "drizzle-orm": "catalog:",
     "nestjs-pino": "catalog:",
+    "pg": "catalog:",
     "pino": "catalog:",
     "pino-http": "catalog:",
     "pino-pretty": "catalog:"
@@ -54,6 +56,7 @@
     "@opentelemetry/context-async-hooks": "catalog:",
     "@types/express": "catalog:",
     "@types/node": "catalog:",
+    "@types/pg": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
     "typescript": "catalog:",

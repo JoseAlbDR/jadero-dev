@@ -1,6 +1,7 @@
 import { JADERO_QUEUES, MessageBus, RabbitMqMessageBus } from "@jadero/messaging";
-import { configureApp } from "@jadero/platform-nest";
+import { configureApp, PG_POOL } from "@jadero/platform-nest";
 import { Test } from "@nestjs/testing";
+import type { Pool } from "pg";
 import { describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module.js";
 import {
@@ -31,6 +32,14 @@ describe("agent config", () => {
     });
   });
 
+  it("sizes the pool at 6 by default and reads DATABASE_POOL_MAX", () => {
+    expect(toAgentConfig(agentEnv.parse(base)).databasePoolMax).toBe(6);
+    expect(toAgentConfig(agentEnv.parse({ ...base, DATABASE_POOL_MAX: "8" })).databasePoolMax).toBe(
+      8,
+    );
+    expect(agentEnv.safeParse({ ...base, DATABASE_POOL_MAX: "0" }).success).toBe(false);
+  });
+
   it("the consumer refuses to start without the broker URL", () => {
     expect(agentConsumerEnv.safeParse(base).success).toBe(false);
   });
@@ -46,7 +55,10 @@ describe("agent HTTP process with its database down", () => {
     const url = await app.getUrl();
     expect((await fetch(`${url}/health/live`)).status).toBe(200);
     expect((await fetch(`${url}/health/ready`)).status).toBe(503);
+    const pool = app.get<Pool>(PG_POOL);
+    expect(pool.options.max).toBe(6);
     await app.close();
+    expect(pool.ended).toBe(true);
   });
 });
 
