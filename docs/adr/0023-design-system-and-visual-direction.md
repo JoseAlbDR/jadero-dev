@@ -1,18 +1,18 @@
 ---
 id: ADR-023
 title: "Design system and visual direction"
-status: accepted
+status: superseded
 date: 2026-10-03
 deciders: [owner]
 decisions: [D-23, D-74]
 supersedes: []
-superseded_by: null
+superseded_by: ADR-045
 source: docs/plan/report.md ("ADR-023: Design system and visual direction (amended 2026-10-02; reframed 2026-10-03)")
 ---
 
 # ADR-023: Design system and visual direction
 
-**Status:** Accepted (owner review 2026-10-03, D-23); the WP-15 mockups confirm the direction.
+**Status:** Superseded by ADR-045 (the owner picked Bento glass from the WP-15 mockups, 2026-10-04; the foundation is restated there unchanged). Previously: accepted (owner review 2026-10-03, D-23); the WP-15 mockups confirm the direction.
 
 Decided by the owner in the plan review of 2026-10-02 and 2026-10-03 (decisions D-23, D-74). This record was extracted verbatim from `docs/plan/report.md`; the narrative, traces and sources stay there. From now on this file is the canonical record: a new decision is a new ADR that supersedes this one, never an edit.
 

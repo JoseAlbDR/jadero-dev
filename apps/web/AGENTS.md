@@ -1,6 +1,6 @@
 # apps/web
 
-The public multilingual site (ADR-001, ADR-022, ADR-023, ADR-045). Today (WP-4) it is the skeleton: Next.js 16 App Router, next-intl with `/en`, `/es` and `/de`, Tailwind v4 tokens from `@jadero/ui`, a light, dark and system theme toggle, a locale switcher and a placeholder home. Result-only area: no learning gate; changes are reviewed from screenshots. Pages and content arrive in WP-16.
+The public multilingual site (ADR-001, ADR-022, ADR-045, which supersedes ADR-023 and restates its foundation). Today (WP-4) it is the skeleton: Next.js 16 App Router, next-intl with `/en`, `/es` and `/de`, Tailwind v4 tokens from `@jadero/ui`, a light, dark and system theme toggle, a locale switcher and a placeholder home. Result-only area: no learning gate; changes are reviewed from screenshots. Pages and content arrive in WP-16.
 
 **Visual direction (ADR-045, decided 2026-10-04, supersedes ADR-044):** Bento glass, as in mockup `/mockups/bento-agent`. Glass cards over a soft aurora, Geist and Geist Mono, violet accent in light mode and cyan in dark mode, and the agent as a dark terminal card as large as the hero, right next to it. WP-16 moves these tokens into `packages/ui` and deletes the mockups; build every page to this direction, not to the other mockups.
 

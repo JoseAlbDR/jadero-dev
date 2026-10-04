@@ -68,7 +68,9 @@ Answer in Spanish; files in plain English, no em dashes, no attribution lines in
 
 Notes for this prompt (from WP-4):
 
-- A session cannot attach images to a PR from the command line. It saves the screenshots in its scratchpad and lists the paths; the owner drags the ones that matter into a PR comment. The e2e tests are the evidence the issue requires; screenshots are for the owner's visual review.
+- A session cannot attach images to a PR from the command line. It publishes the screenshots as an artifact gallery (an HTML page with the images as its files) and links it from a PR comment; the files stay in the scratchpad, never in the repo. The e2e tests are the evidence the issue requires; screenshots are for the owner's visual review.
+- From WP-15: the session says "ready to merge" only after its last push, and names the head commit. A PR merged before the last push loses that commit (it happened with #88 and needed #90). The owner checks the PR's head commit matches before merging.
+- The visual direction is ADR-045 (Bento glass with the agent terminal card); `apps/web/AGENTS.md` says what WP-16 builds from the mockups.
 - Catalog or other tooling changes hit the learning gate even on a frontend branch: see AGENTS.md section 5.
 - To try the result locally, stay on the branch until the PR is merged: on `main`, `pnpm --filter @jadero/web dev` matches nothing before the merge, and `pnpm install` there removes the web packages.
 
