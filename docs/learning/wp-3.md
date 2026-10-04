@@ -49,7 +49,8 @@ The session presents all questions in one message with this pointer; a question 
 | WP-51 | OpenAPI documents generated from the Zod contracts | R1 |
 | ADR-003 | Inside a service: hexagonal modules where there are rules, layered where trivial; ports are abstract classes | |
 | ADR-006 | Zod for every boundary, contracts in `packages/contracts`, errors as RFC 9457 | |
-| ADR-007 | Config from the environment, validated at boot; secrets never printed | |
+| ADR-007 | Config from the environment, validated at boot; secrets never printed (superseded by ADR-043 on the library) | |
+| ADR-043 | Config validated by an own Zod loader before Nest starts, not `@nestjs/config`; secrets rules unchanged | WP-3 |
 | ADR-009 | Test pyramid, Testcontainers, coverage gates | |
 | ADR-010 | Logs with pino, traces with OpenTelemetry, `/health/live` and `/health/ready` | |
 | ADR-029 | Each service owns its database; services talk only through RabbitMQ | |
@@ -435,7 +436,7 @@ Answers as the owner gives them. `decision: recorded` is set after question 7.
 6. Module template: **G3, `templates/nest-module/{layered,hexagonal}/`**, type-checked and covered by dependency-cruiser (2026-10-03).
 7. Spike: **I3, one day, the eight rows as listed** (2026-10-03). Throwaway code on `spike/wp-3-nest12`; results in the step log; a no-go or wrapper that changes a decided library becomes an ADR before step 3.
 
-Defaults kept: C (health module in `platform-nest`, checks per service), H (one Postgres container per `pnpm test:int` run, one database per test file), J (`tsc --watch` plus `node --watch`), `api` on port 3001. No step marked known. No accepted ADR changes, so no new ADR.
+Defaults kept: C (health module in `platform-nest`, checks per service), H (one Postgres container per `pnpm test:int` run, one database per test file), J (`tsc --watch` plus `node --watch`), `api` on port 3001. No step marked known. No accepted ADR changes at decision time (ADR-043 came later, see the amendments).
 
 `decision: recorded` on 2026-10-03.
 
@@ -443,6 +444,7 @@ Amendments after the spike (2026-10-03):
 
 - S1, Biome on Nest code: **a**. A `biome.json` override for the Nest paths (`apps/api`, `apps/agent`, `apps/contact`, `apps/mcp`, `packages/platform-nest`, `templates/`) enables parameter decorators and turns `style/useImportType` off there, with a note in `.claude/rules/`. The rule stays on everywhere else.
 - S2, Nest controller spans: **a**, the fallback named before the spike: HTTP and Express spans only (they carry `http.route`), no patch. Revisit when `instrumentation-nestjs-core` declares Nest 12.
+- ADR-007 and `@nestjs/config` (2026-10-04): the code from step 3 uses an own `loadConfig`, not `@nestjs/config` as ADR-007 says, and the explainer had not raised it. The owner prefers the own loader (validation before `NestFactory.create`, one loader for the app and the OTel entry, typed `ApiConfig`): **ADR-043** supersedes ADR-007 on the config library and restates the secrets decision unchanged.
 - Nest 11 instead of 12? The owner asked to move to Nest 11 if it is more stable, to avoid a pile of workarounds. Answer: stay on 12. Of the spike findings only one comes from Nest 12 (the controller spans range), and S2 a needs no code for it. The Biome `import type` trap, the decorator parser flag and the OTel exporters behave the same on Nest 11. Nest 11 has no Standard Schema support, so ADR-006's validation would need an own Zod pipe or another library, and ADR-042 would need a superseding ADR. Workarounds in the plan: none patched; two configuration lines (Biome override, OTel exporters off).
 
 ## Step log
