@@ -221,7 +221,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
   <header class="top">
     <div class="eyebrow">jadero.dev v2 · monorepo · NestJS 12 on Node 24</div>
     <h1>Code map</h1>
-    <p class="lede">How the repo fits together today: which package depends on which, what the <code>api</code> container injects at runtime, the two module shapes new code copies, how <code>api</code> boots, what a request passes through and how one trace id follows it, how the build, <code>pnpm dev</code> and the checks run, and what a page request passes through in <code>web</code>. Click or tap any box for what it is, how it works, why it was built this way, and where the code lives.</p>
+    <p class="lede">How the repo fits together today: which package depends on which, what the <code>api</code> container injects at runtime, the two module shapes new code copies, how <code>api</code> boots, what a request passes through and how one trace id follows it, how the build, <code>pnpm dev</code> and the checks run, what a page request passes through in <code>web</code>, and how an event crosses the broker from <code>api</code> to <code>agent</code>. Click or tap any box for what it is, how it works, why it was built this way, and where the code lives.</p>
   </header>
   <nav class="toc" id="toc" aria-label="Sections"></nav>
   <main id="sections"></main>
@@ -620,7 +620,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
   "nodes": {
     "ws-api": {
       "label": "api", "sub": "@jadero/api", "kind": "app", "status": "real", "wp": "WP-3",
-      "what": "The content, auth, media and CV service. Today it is the boot skeleton: validated config, logging, problem+json errors with request and trace ids, health endpoints, OpenTelemetry traces and a Postgres pool for readiness. No feature modules yet.",
+      "what": "The content, auth, media and CV service. Today it is the boot skeleton (validated config, logging, problem+json errors with request and trace ids, health endpoints, OpenTelemetry traces, a Postgres pool) plus, since WP-5, the outbox in content_dev, `POST /dev/ping` in development, and its second process type `api-worker` (`dist/worker.js`: outbox relay and heartbeat; section 8). No feature modules yet.",
       "how": "`start` and `dev` run `node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js`, so tracing starts before any import of `main.js`. `main.ts` then validates the environment, builds `AppModule.forRoot(config)`, applies `configureApp` from platform-nest and listens on `PORT`. Runtime dependency on `@jadero/platform-nest`; dev dependency on `@jadero/config` for its tsconfig and Vitest base. Its own runtime dependencies are Nest, Express, `pg`, rxjs, reflect-metadata and zod; Testcontainers is a dev dependency for `pnpm test:int`.",
       "why": "ADR-001 splits the backend into services, and ADR-029 says each one owns its database and talks to the others only through events. api comes first because the site's content lives there. Feature modules join from WP-10 (database) and WP-12 (content).",
       "files": ["apps/api/package.json", "apps/api/AGENTS.md", "apps/api/src/main.ts", "apps/api/src/app.module.ts", "apps/api/src/config/api-config.ts", "apps/api/src/modules/platform/"]
@@ -873,8 +873,8 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "di-pgpool": {
       "label": "PG_POOL", "sub": "symbol token · useFactory(ApiConfig)", "kind": "token", "status": "real", "wp": "WP-3 step 6",
       "what": "The `pg` connection pool.",
-      "how": "`useFactory: (config: ApiConfig) => new Pool({ connectionString: config.databaseUrl, max: 2, connectionTimeoutMillis: 1000, query_timeout: 1000 })` with `inject: [ApiConfig]`. `query_timeout` frees the connection when a readiness check times out. The pool connects lazily, so api boots while the database is down and readiness reports it. Consumers use `@Inject(PG_POOL)` because `Pool` is a class from a library, not our token.",
-      "why": "A symbol token keeps the pool out of string keys and makes the binding explicit. A small pool of 2 is enough for a readiness probe until WP-10 sizes it for real queries.",
+      "how": "`useFactory: (config: ApiConfig) => new Pool({ connectionString: config.databaseUrl, max: 4, connectionTimeoutMillis: 1000, query_timeout: 1000 })` with `inject: [ApiConfig]`. `query_timeout` frees the connection when a readiness check times out. The pool connects lazily, so api boots while the database is down and readiness reports it. Consumers use `@Inject(PG_POOL)` because `Pool` is a class from a library, not our token.",
+      "why": "A symbol token keeps the pool out of string keys and makes the binding explicit. A pool of 4 leaves room for a readiness check, the relay's batch and the heartbeat at once in `api-worker` (WP-5) until WP-10 sizes it for real queries.",
       "files": ["apps/api/src/modules/platform/postgres.module.ts", "apps/api/src/modules/platform/postgres.tokens.ts"]
     },
     "di-prc": {
@@ -985,7 +985,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "otel-sdk": {
       "label": "NodeSDK", "sub": "http, express, pg, pino", "kind": "ext", "status": "real", "wp": "WP-3 step 7",
       "what": "The OpenTelemetry Node SDK, built by `createTelemetrySdk(env)`.",
-      "how": "An explicit instrumentation list: `HttpInstrumentation`, `ExpressInstrumentation`, `PgInstrumentation` and `PinoInstrumentation({ disableLogSending: true })`. `HttpInstrumentation` gets a hook that redacts the client address, peer address and user agent on incoming spans. Traces only: `metricReaders: []` and `logRecordProcessors: []`, because sdk-node otherwise starts OTLP metric and log exporters to `:4318` by itself (spike row 6). Spans go to the console (`SimpleSpanProcessor`) or to OTLP over protobuf (`BatchSpanProcessor`). amqplib joins in WP-5.",
+      "how": "An explicit instrumentation list: `HttpInstrumentation`, `ExpressInstrumentation`, `PgInstrumentation` and `PinoInstrumentation({ disableLogSending: true })`. `HttpInstrumentation` gets a hook that redacts the client address, peer address and user agent on incoming spans. Traces only: `metricReaders: []` and `logRecordProcessors: []`, because sdk-node otherwise starts OTLP metric and log exporters to `:4318` by itself (spike row 6). Spans go to the console (`SimpleSpanProcessor`) or to OTLP over protobuf (`BatchSpanProcessor`). Since WP-5 `AmqplibInstrumentation` too: traceparent in RabbitMQ headers on publish, the trace continued on consume (section 8).",
       "why": "WP-3 decision F1: an explicit list, not the auto-instrumentation bundle, so the project knows what is patched. Decision S2: no Nest controller spans, because `instrumentation-nestjs-core` does not declare Nest 12 yet; HTTP and Express spans already carry `http.route`.",
       "files": ["packages/platform-nest/src/telemetry/create-sdk.ts"]
     },
@@ -1238,7 +1238,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "label": "pnpm dev:up", "sub": "Postgres 18 + pgvector, RabbitMQ 4", "kind": "check", "status": "real", "wp": "WP-1",
       "what": "Local dependencies in Docker; the apps run on the host.",
       "how": "`infra/compose/compose.dev.yml`: pgvector on Postgres 18 and RabbitMQ with the management UI, ports bound to 127.0.0.1, healthchecks so `--wait` returns when ready.",
-      "why": "ADR-027 and ADR-029. api's readiness check connects to Postgres (`content_dev`); RabbitMQ waits for WP-5. The Postgres image tag is shared with the integration tests.",
+      "why": "ADR-027 and ADR-029. api's readiness check connects to Postgres (`content_dev`). Since WP-5 RabbitMQ loads vhost `dev`, its users, exchanges, queues and policies from `infra/rabbitmq/definitions.json`. The Postgres image tag is shared with the integration tests.",
       "files": ["infra/compose/compose.dev.yml"]
     },
     "c-build": {
@@ -1680,7 +1680,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
           byId[id].classList.toggle("hit", hit);
           byId[id].classList.toggle("dim", !hit);
         });
-        body.innerHTML = '<div class="ex-body"><div><div class="fig-title">Request</div><pre>' + esc(ex.request) + '</pre></div><div><div class="fig-title">Response</div><pre>' + esc(ex.response) + '</pre></div></div><p class="ex-note">' + fmt(ex.note) + "</p>";
+        body.innerHTML = '<div class="ex-body"><div><div class="fig-title">Request</div><pre>' + esc(ex.request) + '</pre></div><div><div class="fig-title">Response</div><pre>' + esc(ex.response) + "</pre></div></div>" + (ex.note ? '<p class="ex-note">' + fmt(ex.note) + "</p>" : "");
       }
       fig.examples.forEach((ex, i) => {
         var b = h("button", null, esc(ex.label)); b.type = "button";
