@@ -19,6 +19,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@nestjs/terminus": "catalog:",
     "nestjs-pino": "catalog:",
     "pino": "catalog:",
     "pino-http": "catalog:",
