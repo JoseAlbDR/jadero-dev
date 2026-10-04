@@ -98,6 +98,20 @@ test.describe("theme (ADR-023)", () => {
     );
   });
 
+  test("keeps the chosen theme when the locale changes", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.goto("/en");
+    await page.getByRole("button", { name: en.ThemeToggle.dark }).click();
+    // A locale change mounts the [locale] layout again on the client, theme script included.
+    await page.getByRole("link", { name: "Español" }).click();
+    await expect(page).toHaveURL(/\/es$/);
+    await expect(page.locator("html")).toHaveClass(/\bdark\b/);
+    await expect(page.getByRole("button", { name: es.ThemeToggle.dark })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
   test("follows the system preference by default", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "dark" });
     await page.goto("/es");
