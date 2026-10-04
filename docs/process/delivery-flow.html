@@ -109,7 +109,7 @@ a { color: var(--accent); }
 <div class="stage"><div class="n">5</div><div>
 <h3>Implement in small visible steps</h3>
 <p class="who">Agent in the main session, owner watching</p>
-<p>One step at a time: write, <code>pnpm verify</code> green, one conventional commit scoped to the service (<code>feat(contact): add outbox relay</code>), two lines in the explainer's step log (what changed, why). Zod at every boundary, fakes and contract suites first, Testcontainers for SQL or the broker. The owner can stop at any step and ask <code>/explain</code>.</p>
+<p>One step at a time, under the step contract (<code>AGENTS.md</code> section 5): name the files, the explainer paragraph and the ADR lines first, and stop if the code would depart from an ADR; write; <code>pnpm verify</code> green; show it running; a privacy check (logs, spans, error bodies, headers); two lines in the explainer's step log written from the diff; one check question for the owner on learning steps; one conventional commit scoped to the service (<code>feat(contact): add outbox relay</code>). A WP of size M or larger gets a mid-WP <code>@agent-reviewer</code> run. Zod at every boundary, fakes and contract suites first, Testcontainers for SQL or the broker. The owner can stop at any step and ask <code>/explain</code>.</p>
 </div></div>
 
 <div class="stage"><div class="n">6</div><div>

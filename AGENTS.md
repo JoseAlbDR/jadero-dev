@@ -45,13 +45,20 @@ Learning paths: `apps/api`, `apps/agent`, `apps/contact`, `apps/mcp`, `packages/
 1. `/wp NN` lists the WP's concepts and decisions and creates branch `wp/NN-slug`.
 2. `/learn-step` writes `docs/learning/wp-NN.md`, self-contained (a reading pointer per question and a one-line summary of every WP or ADR it names; all questions asked in one message): concepts from first principles, one concrete trace (real payload, real SQL), named patterns, options with trade-offs, the exact question for the owner. Then it stops.
 3. The owner decides. The explainer's front matter gets `decision: recorded` (with the ADR link). Only then may code under the learning paths change (hook `learning-gate.sh` enforces it). Fast path (D-38): a step the owner already knows is marked `known` in the explainer and skips the full explainer and explain-back.
-4. Implement in small steps in the main session; after each step append a two-line "what just happened" to the explainer.
+4. Implement in small steps in the main session, each following the step contract:
+   - **Before**: name the files, the explainer paragraph each implements and the ADR lines the step touches. If the code will differ from an ADR or a recorded decision, stop and ask; an ADR change is `/adr` first.
+   - **Build**: write, `pnpm verify` green, show it running (a boot, a request, a test).
+   - **Privacy check**: where does request data go (logs, spans, error bodies, headers)? No IPs in clear, no secrets, no bodies at info, no query strings.
+   - **Step log**: two lines ("what just happened", "why") written from the step's `git diff`, not from memory. Never revert a file that holds uncommitted work; commit or stash first.
+   - **Check question** (learning steps): one one-line question on the mechanism just built; a wrong answer is explained on the spot and noted in the step log.
+   - **Commit**: one scoped conventional commit.
+   For a WP of size M or larger, run `@agent-reviewer` on the branch after about half the steps, not only on the PR.
 5. Recap: the owner explains the design back; record gaps; `pnpm verify` green; commit.
 Frontend WPs (`apps/web`, `apps/admin`, `packages/ui`) skip the gate: build to the design system, show screenshots.
 
 ## 6. Conventions
 
-- Conventional one-line commits scoped to the service (`feat(agent): add hybrid retrieval`); the PR title is the squash commit and the changelog line. Branch `wp/NN-slug` for a work package (the learning gate reads the number from it), `chore/`, `fix/` or `docs/` for anything else; versions come from the squash commit's type, never from the branch name. PR body `Closes #<issue>`.
+- Conventional one-line commits scoped to the service (`feat(agent): add hybrid retrieval`); the PR title is the squash commit and the changelog line. Branch `wp/NN-slug` for a work package (the learning gate reads the number from it), `chore/`, `fix/` or `docs/` for anything else; versions come from the squash commit's type, never from the branch name. PR body `Closes #<issue>`. Once a PR is announced ready to merge, no more commits go to it without telling the owner; later work goes to a new branch.
 - Never add tool attribution footers, model names or session links to commits, PR bodies or code.
 - Zod for every boundary; RFC 9457 problem details for errors; JSDoc on every new public method; no hard-coded UI strings (next-intl).
 - Owner voice for any user-facing copy and docs: plain English, no hype words, no em dashes.
