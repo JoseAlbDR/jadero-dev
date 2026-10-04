@@ -1,18 +1,18 @@
 ---
 id: ADR-044
 title: "Visual direction confirmed from the mockups"
-status: accepted
+status: superseded
 date: 2026-10-04
 deciders: [owner]
 decisions: [D-23]
 supersedes: []
-superseded_by: null
+superseded_by: ADR-045
 source: WP-15 (issue #23, PR #84), the hero mockups under apps/web/src/app/[locale]/mockups/
 ---
 
 # ADR-044: Visual direction confirmed from the mockups
 
-**Status:** Accepted (owner, 2026-10-04, after the WP-15 screenshots). Refines ADR-023 and does not supersede it: ADR-023's foundation and its recommendation (Swiss editorial base with the terminal-style prompt) stand. This record fixes the concrete choices WP-16 builds on.
+**Status:** Superseded by ADR-045 (the owner switched to Bento glass on 2026-10-04). Accepted (owner, 2026-10-04, after the WP-15 screenshots). Refines ADR-023 and does not supersede it: ADR-023's foundation and its recommendation (Swiss editorial base with the terminal-style prompt) stand. This record fixes the concrete choices WP-16 builds on.
 
 ## Context
 

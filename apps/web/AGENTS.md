@@ -1,8 +1,8 @@
 # apps/web
 
-The public multilingual site (ADR-001, ADR-022, ADR-023, ADR-044). Today (WP-4) it is the skeleton: Next.js 16 App Router, next-intl with `/en`, `/es` and `/de`, Tailwind v4 tokens from `@jadero/ui`, a light, dark and system theme toggle, a locale switcher and a placeholder home. Result-only area: no learning gate; changes are reviewed from screenshots. Pages and content arrive in WP-16.
+The public multilingual site (ADR-001, ADR-022, ADR-023, ADR-045). Today (WP-4) it is the skeleton: Next.js 16 App Router, next-intl with `/en`, `/es` and `/de`, Tailwind v4 tokens from `@jadero/ui`, a light, dark and system theme toggle, a locale switcher and a placeholder home. Result-only area: no learning gate; changes are reviewed from screenshots. Pages and content arrive in WP-16.
 
-**Visual direction (ADR-044, decided 2026-10-04):** the hybrid of mockup 4. Swiss editorial base (Fraunces headings, Inter body, 12-column grid, thin rules, warm paper or warm near-black) with one terracotta accent, and Direction 1's terminal prompt card in Geist Mono as the signature element. WP-16 moves these tokens into `packages/ui` and deletes the mockups; build every page to this direction, not to the other mockups.
+**Visual direction (ADR-045, decided 2026-10-04, supersedes ADR-044):** Bento glass, as in mockup `/mockups/bento-agent`. Glass cards over a soft aurora, Geist and Geist Mono, violet accent in light mode and cyan in dark mode, and the agent as a dark terminal card as large as the hero, right next to it. WP-16 moves these tokens into `packages/ui` and deletes the mockups; build every page to this direction, not to the other mockups.
 
 ## Run it
 
@@ -22,7 +22,7 @@ pnpm test:e2e                            # from the root: build, then Playwright
 - `src/i18n/`: `routing.ts` (locales, default, cookie, localized pathnames), `navigation.ts` (use its `Link` and `usePathname`, never `next/link`), `request.ts` (messages per request), `locale.ts` (`requireLocale`), `alternates.ts` (`localeAlternates`), `global.d.ts` (typed keys from `messages/en.json`).
 - `src/app/[locale]/`: the locale layout (`<html lang>`, metadata with hreflang, providers, header), the home, the localized 404 and a catch-all that triggers it. `src/app/layout.tsx` only passes children through.
 - `src/components/`: app components (header, theme provider and toggle, locale switcher). Reusable, text-free components go to `packages/ui`.
-- `src/app/[locale]/mockups/`: the WP-15 hero mockups (`/mockups/terminal`, `/editorial`, `/bento`, `/hybrid`), throwaway and `noindex`. Each overrides the tokens in `mockups.css` through its `data-direction`; the owner picked `/hybrid` (ADR-044). WP-16 deletes the folder, its five `routing.pathnames` entries, the `Mockups` messages, its e2e block, this line and the code-map mentions, after promoting `TerminalPrompt` and the tokens.
+- `src/app/[locale]/mockups/`: the WP-15 hero mockups (`/mockups/terminal`, `/editorial`, `/bento`, `/hybrid`, `/bento-agent`), throwaway and `noindex`. Each overrides the tokens in `mockups.css` through its `data-direction`; the owner picked `/bento-agent` (ADR-045). WP-16 deletes the folder, its six `routing.pathnames` entries, the `Mockups` messages, its e2e block, this line and the code-map mentions, after promoting the agent terminal card and the tokens.
 - `messages/{en,es,de}.json`: every UI string. `test/messages.test.ts` fails when a locale's keys differ from English or a string is empty.
 - `e2e/`: Playwright smoke and axe checks per locale; `playwright.config.ts` serves the standalone build.
 
