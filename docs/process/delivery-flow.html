@@ -124,9 +124,9 @@ a { color: var(--accent); }
 </div></div>
 
 <div class="stage"><div class="n">8</div><div>
-<h3>Review, then explain back</h3>
-<p class="who"><code>@agent-reviewer</code> first, then the owner</p>
-<p>The reviewer subagent runs its ten-point checklist (boundaries, messaging, AI and guards, OWASP LLM Top 10, testing, secrets, content rules, delivery, learning gate, docs) and reports findings with file:line and the smallest fix; it never approves. The agent fixes what it can and pushes. The owner reviews the PR. Then comes the explain-back: the owner explains the design back in their own words, and the agent records the answers and the gaps in the explainer's Recap.</p>
+<h3>Review, explain back, journal draft</h3>
+<p class="who"><code>@agent-reviewer</code> first, then the owner, then an agent</p>
+<p>The reviewer subagent runs its ten-point checklist (boundaries, messaging, AI and guards, OWASP LLM Top 10, testing, secrets, content rules, delivery, learning gate, docs) and reports findings with file:line and the smallest fix; it never approves. The agent fixes what it can and pushes. The owner reviews the PR. Then comes the explain-back: the owner explains the design back in their own words, and the agent records the answers and the gaps in the explainer's Recap. Then, still at <code>/wrap-wp</code> and before the merge, an agent drafts the journal post in <code>docs/journal/wp-N.md</code> from the Recap, and the owner corrects it (ADR-034).</p>
 </div></div>
 
 <div class="stage"><div class="n">9</div><div>
@@ -136,9 +136,9 @@ a { color: var(--accent); }
 </div></div>
 
 <div class="stage"><div class="n">10</div><div>
-<h3>Ship and write up</h3>
+<h3>Ship</h3>
 <p class="who">Owner present</p>
-<p>Deploy to staging, then production (agents never run deploy scripts). Journal post drafted for learning WPs. The definition of done in the issue is the checklist: tests green with gates, docs updated where a rule or command changed, deployed to staging, changelog entry present.</p>
+<p>Deploy to staging, then production (agents never run deploy scripts). The journal post, drafted and corrected before the merge, is published from the admin once WP-39 exists. The definition of done in the issue is the checklist: tests green with gates, docs updated where a rule or command changed, deployed to staging, changelog entry present.</p>
 </div></div>
 
 <h2 id="explainback">What the explain-back is, and what it is not</h2>
