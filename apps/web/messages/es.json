@@ -10,5 +10,17 @@
   "NotFound": {
     "title": "Página no encontrada",
     "description": "La página que buscas no existe."
+  },
+  "Header": {
+    "home": "Inicio"
+  },
+  "ThemeToggle": {
+    "label": "Tema de color",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "system": "Sistema"
+  },
+  "LocaleSwitcher": {
+    "label": "Idioma"
   }
 }
