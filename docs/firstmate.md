@@ -63,7 +63,8 @@ Answer in Spanish; the files stay in English.
 ```
 Next work package in jadero-dev: WP-5 (messaging foundation and the agent skeleton), a learning WP.
 Follow the repo's flow exactly (AGENTS.md section 5, docs/agent-tooling.md, docs/firstmate.md):
-1. git switch main && git pull && pnpm install && pnpm verify:all.
+1. git fetch origin (as its own command), then pnpm install && pnpm verify:all. Do not git switch main
+   or git pull: in a worktree main is checked out elsewhere and the switch fails.
 2. /wp 5: check that WP-3 is merged, create wp/5-<slug> from origin/main, propose 4 to 8 steps and the
    definition of done from the issue, then stop.
 3. After my go: /learn-step 5. The explainer must be self-contained (How to read this file, Named here,
@@ -87,6 +88,8 @@ Answer in Spanish; files in plain English, no em dashes, no attribution lines in
 ```
 
 To start any other WP, change the number and the title; the rest stays.
+
+In a worktree the local `main` can be stale, and `pnpm verify` runs `turbo --affected`, which compares with it. Run `TURBO_SCM_BASE=origin/main pnpm verify` there so the affected set is computed against the fetched `origin/main` (Turborepo reads `TURBO_SCM_BASE` and `TURBO_SCM_HEAD`).
 
 ## What stays repo-local whatever firstmate adopts
 

@@ -127,7 +127,7 @@ WP-3 explainer: docs/learning/wp-3.md (decision: pending).</span>
 <p>Two halves. The file is the textbook written for this WP: first principles, one trace with real payloads, named patterns, options. The session is the teacher: you ask about any paragraph or file, and the agent answers right there; at the end it asks you three or four questions and you answer in your own words (the explain-back). The gaps go to the Recap section of the file and become the raw material of the journal post.</p>
 <ul>
 <li>The explainer is self-contained: you never open an ADR, another WP or the plan to answer. Its "How to read this file" table says exactly what to read before each question (5 to 10 minutes), and its "Named here" table says in one line what every WP or ADR it names is.</li>
-<li>The session asks all the questions in one message, each with its reading pointer, the options, the recommendation and what changes later depending on your answer. A question that depends on another gets a recommendation per possible answer of the first, so you answer everything in one reply.</li>
+<li>The session asks all the questions in one message, each with its reading pointer, the options and what changes later depending on your answer. The recommendations come in a separate block after the last question: you read it only after you have answered. A question that depends on another gets a recommendation per possible answer of the first in that block, so you answer everything in one reply.</li>
 <li>Nothing is to memorize. An explain-back you cannot answer means the explainer missed something: it gets taught, added to the file and noted in the Recap, not asked again as a test.</li>
 <li>A step you already know: say "known". It gets <code>fast_path: known</code>, no explanation, no explain-back for that step.</li>
 <li>A fact marked <strong>verify</strong> in an explainer is something the agent could not confirm from a primary source. Ask it to verify at implementation time, or verify it yourself.</li>
@@ -186,7 +186,8 @@ Answer in Spanish; the files stay in English.</code></pre>
 <h3>Prompt: start a work package (WP-5 next)</h3>
 <pre><code>Next work package in jadero-dev: WP-5 (messaging foundation and the agent skeleton), a learning WP.
 Follow the repo's flow exactly (AGENTS.md section 5, docs/agent-tooling.md, docs/firstmate.md):
-1. git switch main &amp;&amp; git pull &amp;&amp; pnpm install &amp;&amp; pnpm verify:all.
+1. git fetch origin (as its own command), then pnpm install &amp;&amp; pnpm verify:all. Do not git switch main
+   or git pull: in a worktree main is checked out elsewhere and the switch fails.
 2. /wp 5: check that WP-3 is merged, create wp/5-&lt;slug&gt; from origin/main, propose 4 to 8 steps and the
    definition of done from the issue, then stop.
 3. After my go: /learn-step 5. The explainer must be self-contained (How to read this file, Named here,
@@ -208,6 +209,7 @@ Follow the repo's flow exactly (AGENTS.md section 5, docs/agent-tooling.md, docs
    journal post myself. I merge.
 Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.</code></pre>
 <p>To start any other WP, change the number and the title; the rest stays.</p>
+<p>In a worktree the local <code>main</code> can be stale, and <code>pnpm verify</code> runs <code>turbo --affected</code>, which compares with it. Run <code>TURBO_SCM_BASE=origin/main pnpm verify</code> there so the affected set is computed against the fetched <code>origin/main</code>.</p>
 
 <h2 id="cheatsheet">Cheat sheet</h2>
 <div class="tablewrap"><table>
