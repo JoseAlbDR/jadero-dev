@@ -16,6 +16,7 @@
       "!!**/.turbo",
       "!!**/coverage",
       "!!docs/plan",
+      "!!docs/artifacts",
       "!!docs/**/*.html"
     ]
   },
