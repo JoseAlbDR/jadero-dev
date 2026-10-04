@@ -26,6 +26,9 @@ export const STACK = [
   "nginx",
 ] as const;
 
+/** Shell prompt and shortcut of the terminal mockup: commands are not translated either. */
+export const TERMINAL = { cwd: "~/jadero.dev", command: "$ whoami", shortcut: "/" } as const;
+
 /** Small label that marks every mockup as a placeholder, so a screenshot never passes as the site. */
 export function MockupNotice() {
   const t = useTranslations("Mockups");

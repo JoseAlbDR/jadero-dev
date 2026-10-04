@@ -5,7 +5,7 @@ import { use } from "react";
 import { localeAlternates } from "@/i18n/alternates";
 import { requireLocale } from "@/i18n/locale";
 import { Link } from "@/i18n/navigation";
-import { MockupNotice, PILLARS, QUESTIONS } from "../_shared";
+import { MockupNotice, PILLARS, QUESTIONS, TERMINAL } from "../_shared";
 
 type TerminalPageProps = Readonly<{ params: Promise<{ locale: string }> }>;
 
@@ -39,7 +39,7 @@ export default function TerminalPage({ params }: TerminalPageProps) {
         <MockupNotice />
 
         <p className="mt-10 font-mono text-muted-foreground text-sm">
-          <span className="text-(--signal)">~/jadero.dev</span> $ whoami
+          <span className="text-(--signal)">{TERMINAL.cwd}</span> {TERMINAL.command}
         </p>
         <p className="mt-1 font-mono text-sm">{t("role")}</p>
 
@@ -65,7 +65,7 @@ export default function TerminalPage({ params }: TerminalPageProps) {
 
         <section
           aria-label={t("promptLabel")}
-          className="mt-14 max-w-3xl rounded-lg border bg-(--surface) shadow-2xl shadow-black/5"
+          className="mt-14 max-w-3xl rounded-lg border bg-(--surface) shadow-2xl shadow-foreground/5"
         >
           <button
             type="button"
@@ -77,7 +77,7 @@ export default function TerminalPage({ params }: TerminalPageProps) {
             <span className="text-muted-foreground">{t("promptLabel")}</span>
             <span aria-hidden className="mockup-caret -ml-2 h-6 w-2.5 bg-(--signal)" />
             <kbd className="ml-auto rounded border px-1.5 py-0.5 text-muted-foreground text-xs">
-              ⌘K
+              {TERMINAL.shortcut}
             </kbd>
           </button>
           <div className="border-t px-5 py-4">
