@@ -1,5 +1,5 @@
 import { AmqpConnection } from "@golevelup/nestjs-rabbitmq";
-import type { EventContract } from "@jadero/contracts";
+import { cloudEventEnvelope, type EventContract } from "@jadero/contracts";
 import type { LoggerService } from "@nestjs/common";
 import type { ChannelWrapper } from "amqp-connection-manager";
 import type { ConsumeMessage } from "amqplib";
@@ -190,7 +190,8 @@ export class RabbitMqMessageBus extends MessageBus {
     const fields = {
       queue,
       event_id: raw.properties.messageId,
-      type: (body as { type?: unknown } | undefined)?.type,
+      // Only a validated type reaches the log; an invalid body's strings stay out of it.
+      type: envelopeType(body),
       attempt,
       duration_ms: Date.now() - started,
     };
@@ -248,6 +249,11 @@ export class RabbitMqMessageBus extends MessageBus {
       timeout: this.publishTimeoutMs,
     } as Parameters<AmqpConnection["publish"]>[3]);
   }
+}
+
+function envelopeType(body: unknown): string | undefined {
+  const parsed = cloudEventEnvelope.safeParse(body);
+  return parsed.success ? parsed.data.type : undefined;
 }
 
 function copyHeaders(raw: ConsumeMessage): Record<string, unknown> {

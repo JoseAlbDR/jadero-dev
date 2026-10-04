@@ -14,8 +14,11 @@ import { HeartbeatRepository } from "./heartbeat.repository.js";
       provide: MessageBus,
       useFactory: (config: AgentConsumerConfig, log: PinoLogger) => {
         log.setContext("MessageBus");
+        // Prefetch 4: each delivery holds one pooled connection for its inbox transaction, and the
+        // pool (6) keeps two more for the readiness check and the inbox cleanup.
         return new RabbitMqMessageBus({
           uri: config.rabbitmqUrl,
+          prefetch: 4,
           logger: new Logger("RabbitMQ"),
           log,
         });

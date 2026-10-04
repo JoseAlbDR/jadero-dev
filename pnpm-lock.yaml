@@ -45,6 +45,9 @@ catalogs:
     '@opentelemetry/context-async-hooks':
       specifier: 2.11.0
       version: 2.11.0
+    '@opentelemetry/core':
+      specifier: 2.11.0
+      version: 2.11.0
     '@opentelemetry/exporter-trace-otlp-proto':
       specifier: 0.222.0
       version: 0.222.0
@@ -444,6 +447,12 @@ importers:
       '@nestjs/core':
         specifier: 'catalog:'
         version: 12.1.2(@nestjs/common@12.1.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(@nestjs/platform-express@12.1.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@opentelemetry/context-async-hooks':
+        specifier: 'catalog:'
+        version: 2.11.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core':
+        specifier: 'catalog:'
+        version: 2.11.0(@opentelemetry/api@1.9.1)
       '@testcontainers/postgresql':
         specifier: 'catalog:'
         version: 12.2.0(supports-color@7.2.0)

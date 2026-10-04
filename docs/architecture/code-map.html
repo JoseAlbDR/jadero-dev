@@ -628,7 +628,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "ws-platform": {
       "label": "platform-nest", "sub": "@jadero/platform-nest", "kind": "pkg", "status": "real", "wp": "WP-3",
       "what": "The bootstrap every NestJS service shares: fail-fast config, structured logging, RFC 9457 errors, the health module, the OpenTelemetry entry and one `configureApp`. Infrastructure only, no domain code.",
-      "how": "Compiled with tsc to `dist/` and exposed through two `exports` entries: `.` for everything Nest uses, and `./instrumentation` for the file `node --import` loads before the app. Nest packages, rxjs and zod are peer dependencies, so the app supplies the single copy of `@nestjs/core`. `@nestjs/terminus`, nestjs-pino, pino, pino-http, pino-pretty and the OpenTelemetry SDK, OTLP exporter and four instrumentations are its own dependencies, which is why api never lists them.",
+      "how": "Compiled with tsc to `dist/` and exposed through two `exports` entries: `.` for everything Nest uses, and `./instrumentation` for the file `node --import` loads before the app. Nest packages, rxjs and zod are peer dependencies, so the app supplies the single copy of `@nestjs/core`. `@nestjs/terminus`, nestjs-pino, pino, pino-http, pino-pretty and the OpenTelemetry SDK, OTLP exporter and five instrumentations (http, express, pg, pino, amqplib) are its own dependencies, which is why api never lists them.",
       "why": "AGENTS.md rule 5: shared packages hold infrastructure, never domain code. One boot path means api, agent and contact log, validate and fail the same way. WP-3 decision C (default kept) puts the health module here too, with checks registered per service.",
       "files": ["packages/platform-nest/package.json", "packages/platform-nest/src/index.ts", "packages/platform-nest/src/telemetry/"]
     },
@@ -964,7 +964,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "b-otel": {
       "label": "--import instrumentation", "sub": "before main.js", "kind": "step", "status": "real", "wp": "WP-3 step 7",
       "what": "The OpenTelemetry entry, `@jadero/platform-nest/instrumentation`, which Node runs before it loads `main.js`.",
-      "how": "It registers the ESM loader hook (`register(\"@opentelemetry/instrumentation/hook.mjs\", import.meta.url)`), validates `telemetryEnv` with `loadConfig` (a bad value exits 1 and names the variable), builds `NodeSDK` with http, express, pg and pino instrumentations, starts it and keeps it for shutdown. With `OTEL_TRACES_EXPORTER=none`, the default, it starts nothing; dev sets `console` in `.env`.",
+      "how": "It registers the ESM loader hook (`register(\"@opentelemetry/instrumentation/hook.mjs\", import.meta.url)`), validates `telemetryEnv` with `loadConfig` (a bad value exits 1 and names the variable), builds `NodeSDK` with http, express, pg, pino and amqplib instrumentations, starts it and keeps it for shutdown. With `OTEL_TRACES_EXPORTER=none`, the default, it starts nothing; dev sets `console` in `.env`.",
       "why": "In ESM every import of `main.js` loads before its first line, so patching from inside `main.ts` would be too late and would silently produce no spans. A separate file loaded with `--import` is the only place early enough (WP-3 decision F1).",
       "files": ["packages/platform-nest/src/telemetry/instrumentation.ts", "packages/platform-nest/src/telemetry/create-sdk.ts", "packages/platform-nest/test/telemetry.test.ts", "packages/platform-nest/test/fixtures/otel-smoke.mjs"]
     },
@@ -983,9 +983,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/platform-nest/src/telemetry/instrumentation.ts", "packages/platform-nest/src/config/load-config.ts"]
     },
     "otel-sdk": {
-      "label": "NodeSDK", "sub": "http, express, pg, pino", "kind": "ext", "status": "real", "wp": "WP-3 step 7",
+      "label": "NodeSDK", "sub": "http, express, pg, pino, amqplib", "kind": "ext", "status": "real", "wp": "WP-3 step 7",
       "what": "The OpenTelemetry Node SDK, built by `createTelemetrySdk(env)`.",
-      "how": "An explicit instrumentation list: `HttpInstrumentation`, `ExpressInstrumentation`, `PgInstrumentation` and `PinoInstrumentation({ disableLogSending: true })`. `HttpInstrumentation` gets a hook that redacts the client address, peer address and user agent on incoming spans. Traces only: `metricReaders: []` and `logRecordProcessors: []`, because sdk-node otherwise starts OTLP metric and log exporters to `:4318` by itself (spike row 6). Spans go to the console (`SimpleSpanProcessor`) or to OTLP over protobuf (`BatchSpanProcessor`). Since WP-5 `AmqplibInstrumentation` too: traceparent in RabbitMQ headers on publish, the trace continued on consume (section 8).",
+      "how": "An explicit instrumentation list: `HttpInstrumentation`, `ExpressInstrumentation`, `PgInstrumentation`, `PinoInstrumentation({ disableLogSending: true })` and `AmqplibInstrumentation`. `HttpInstrumentation` gets a hook that redacts the client address, peer address and user agent on incoming spans. Traces only: `metricReaders: []` and `logRecordProcessors: []`, because sdk-node otherwise starts OTLP metric and log exporters to `:4318` by itself (spike row 6). Spans go to the console (`SimpleSpanProcessor`) or to OTLP over protobuf (`BatchSpanProcessor`). Since WP-5 `AmqplibInstrumentation` too: traceparent in RabbitMQ headers on publish, the trace continued on consume (section 8).",
       "why": "WP-3 decision F1: an explicit list, not the auto-instrumentation bundle, so the project knows what is patched. Decision S2: no Nest controller spans, because `instrumentation-nestjs-core` does not declare Nest 12 yet; HTTP and Express spans already carry `http.route`.",
       "files": ["packages/platform-nest/src/telemetry/create-sdk.ts"]
     },

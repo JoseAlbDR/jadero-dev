@@ -69,4 +69,23 @@ describe("agent consumer: system.ping.v1 (idempotent consumer)", () => {
     ]);
     expect(bus.deadLetters("agent.system.ping")).toEqual([]);
   });
+
+  it("never lets an older ping overwrite a newer one (delivery order is not guaranteed)", async () => {
+    const newer = createEnvelope(systemPingV1, { trigger: "manual" }, "jadero/api");
+    const older = {
+      ...createEnvelope(systemPingV1, { trigger: "heartbeat" }, "jadero/api"),
+      time: "2026-01-01T00:00:00.000Z",
+    };
+    await bus.publish({ routingKey: systemPingV1.routingKey, envelope: newer });
+    await bus.publish({ routingKey: systemPingV1.routingKey, envelope: older });
+    await vi.waitFor(async () => {
+      const { rows } = await pool.query(
+        "SELECT count(*)::int AS n FROM messaging.inbox WHERE event_id = $1",
+        [older.id],
+      );
+      expect(rows[0].n).toBe(1);
+    });
+    const { rows } = await pool.query("SELECT last_event_id FROM broker_heartbeat");
+    expect(rows).toEqual([{ last_event_id: newer.id }]);
+  });
 });

@@ -46,7 +46,9 @@ export function backoffSeconds(attempts: number): number {
  * up to 50 due rows with `FOR UPDATE SKIP LOCKED` (a second relay skips them instead of waiting),
  * publishes each with the request's trace context restored (ADR-010, decision E1), waits for the
  * broker's confirm, and marks it published in the same transaction. A row whose publish fails gets
- * its attempt counted and a later `next_attempt_at`; the others still go out. A crash after a
+ * its attempt counted and a later `next_attempt_at`, and ends the batch: with the broker down,
+ * one publish timeout per poll instead of one per row. On `stop()` the row in flight finishes and
+ * the rest of the batch stays for the next start. A crash after a
  * confirm and before the commit publishes the row again on the next poll: at-least-once, which
  * the consumers' inbox absorbs.
  */
@@ -57,6 +59,7 @@ export class OutboxRelay {
   private timer: NodeJS.Timeout | undefined;
   private running: Promise<unknown> = Promise.resolve();
   private active = false;
+  private stopping = false;
 
   /** @param options the pool, the bus and the polling settings. */
   constructor(private readonly options: OutboxRelayOptions) {
@@ -80,6 +83,8 @@ export class OutboxRelay {
       const published: string[] = [];
       let failed = 0;
       for (const row of rows) {
+        // On shutdown, finish the row in flight and leave the rest unclaimed for the next start.
+        if (this.stopping) break;
         try {
           const parent = propagation.extract(context.active(), {
             traceparent: row.envelope.traceparent ?? "",
@@ -100,6 +105,9 @@ export class OutboxRelay {
             { event_id: row.id, routing_key: row.routing_key, attempts, error: errorKind(error) },
             "outbox publish failed",
           );
+          // The broker is probably down: stop this batch instead of waiting a publish timeout per
+          // row with the claim (and its row locks) held. The other rows stay due for the next poll.
+          break;
         }
       }
       if (published.length > 0) {
@@ -134,6 +142,7 @@ export class OutboxRelay {
   start(): void {
     if (this.active) return;
     this.active = true;
+    this.stopping = false;
     const tick = () => {
       this.running = this.runOnce()
         .catch((error) => this.options.log?.warn({ error: errorKind(error) }, "outbox poll failed"))
@@ -147,6 +156,7 @@ export class OutboxRelay {
   /** Stops polling and waits for the batch in progress. */
   async stop(): Promise<void> {
     this.active = false;
+    this.stopping = true;
     if (this.timer) clearTimeout(this.timer);
     await this.running;
   }

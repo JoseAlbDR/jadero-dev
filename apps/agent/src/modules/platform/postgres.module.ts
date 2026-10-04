@@ -30,8 +30,8 @@ class PoolCloser implements OnApplicationShutdown {
         // query_timeout frees the connection when a readiness check times out.
         new Pool({
           connectionString: config.databaseUrl,
-          // Room for a readiness check, the relay's batch and the heartbeat at once.
-          max: 4,
+          // The consumer's prefetch (4) plus the readiness check and the inbox cleanup.
+          max: 6,
           connectionTimeoutMillis: 1000,
           query_timeout: 1000,
         }),
