@@ -8,13 +8,15 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "start": "node --env-file-if-exists=.env dist/main.js"
+    "start": "node --env-file-if-exists=.env dist/main.js",
+    "test:int": "vitest run -c vitest.int.config.ts"
   },
   "dependencies": {
     "@jadero/platform-nest": "workspace:*",
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
     "@nestjs/platform-express": "catalog:",
+    "pg": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
     "zod": "catalog:"
@@ -22,7 +24,10 @@
   "devDependencies": {
     "@jadero/config": "workspace:*",
     "@nestjs/testing": "catalog:",
+    "@testcontainers/postgresql": "catalog:",
     "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "testcontainers": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

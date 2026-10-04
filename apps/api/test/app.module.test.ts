@@ -15,17 +15,30 @@ class FeatureModule {}
 
 describe("api config", () => {
   it("defaults SERVICE_NAME to api and maps to camelCase", () => {
-    expect(toApiConfig(apiEnv.parse({ PORT: "3001" }))).toEqual({
+    expect(
+      toApiConfig(
+        apiEnv.parse({
+          PORT: "3001",
+          DATABASE_URL: "postgres://content:content@127.0.0.1:5432/content_dev",
+        }),
+      ),
+    ).toEqual({
       nodeEnv: "development",
       port: 3001,
       logLevel: "info",
       serviceName: "api",
+      databaseUrl: "postgres://content:content@127.0.0.1:5432/content_dev",
     });
   });
 
   it("injects ApiConfig into a provider of another module (DI by abstract class under Vitest)", async () => {
     const config = toApiConfig(
-      apiEnv.parse({ PORT: "3001", NODE_ENV: "test", LOG_LEVEL: "fatal" }),
+      apiEnv.parse({
+        PORT: "3001",
+        NODE_ENV: "test",
+        LOG_LEVEL: "fatal",
+        DATABASE_URL: "postgres://content:content@127.0.0.1:5432/content_dev",
+      }),
     );
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule.forRoot(config), FeatureModule],
