@@ -11,7 +11,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "sql"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -24,6 +25,7 @@
   "dependencies": {
     "@golevelup/nestjs-rabbitmq": "catalog:",
     "@jadero/contracts": "workspace:*",
+    "@opentelemetry/api": "catalog:",
     "amqp-connection-manager": "catalog:"
   },
   "peerDependencies": {
@@ -37,9 +39,12 @@
     "@jadero/config": "workspace:*",
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
+    "@testcontainers/postgresql": "catalog:",
     "@types/amqplib": "catalog:",
     "@types/node": "catalog:",
+    "@types/pg": "catalog:",
     "amqplib": "catalog:",
+    "pg": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
     "testcontainers": "catalog:",

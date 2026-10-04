@@ -361,6 +361,9 @@ importers:
       '@jadero/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@opentelemetry/api':
+        specifier: 'catalog:'
+        version: 1.9.1
       amqp-connection-manager:
         specifier: 'catalog:'
         version: 5.0.0(amqplib@0.10.9)
@@ -374,15 +377,24 @@ importers:
       '@nestjs/core':
         specifier: 'catalog:'
         version: 12.1.2(@nestjs/common@12.1.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(@nestjs/platform-express@12.1.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@testcontainers/postgresql':
+        specifier: 'catalog:'
+        version: 12.2.0(supports-color@7.2.0)
       '@types/amqplib':
         specifier: 'catalog:'
         version: 0.10.8
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.1
+      '@types/pg':
+        specifier: 'catalog:'
+        version: 8.23.1
       amqplib:
         specifier: 'catalog:'
         version: 0.10.9
+      pg:
+        specifier: 'catalog:'
+        version: 8.23.1
       reflect-metadata:
         specifier: 'catalog:'
         version: 0.2.2

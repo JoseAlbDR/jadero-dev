@@ -1,15 +1,26 @@
 export { dispatch } from "./dispatch.js";
+export { errorKind } from "./error-kind.js";
 export {
   type DeadLetter,
   InMemoryMessageBus,
   type InMemoryMessageBusOptions,
 } from "./in-memory-message-bus.js";
+export { cleanupInbox, idempotent, recordInInbox } from "./inbox/idempotent.js";
 export {
   type Delivery,
   MessageBus,
   type OutgoingMessage,
   type Subscription,
 } from "./message-bus.js";
+export { createEnvelope, currentTraceparent, uuidv7 } from "./outbox/envelope.js";
+export { addToOutbox } from "./outbox/outbox.js";
+export {
+  backoffSeconds,
+  type MessagingLog,
+  OutboxRelay,
+  type OutboxRelayOptions,
+  type RelayRun,
+} from "./outbox/outbox-relay.js";
 export {
   DEFAULT_RETRY_TIERS_MS,
   type DeadOutcome,
@@ -27,5 +38,14 @@ export {
   RabbitMqMessageBus,
   type RabbitMqMessageBusOptions,
 } from "./rabbitmq-message-bus.js";
+export {
+  inTransaction,
+  MESSAGING_SCHEMA_SQL,
+  migrateMessagingSchema,
+  type SqlClient,
+  type SqlExecutor,
+  type SqlPool,
+  type SqlResult,
+} from "./sql/sql-executor.js";
 export { topicMatches } from "./topic.js";
 export * from "./topology/index.js";
