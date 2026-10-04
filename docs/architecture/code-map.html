@@ -97,6 +97,9 @@ figcaption { color: var(--muted); font-size: 13.5px; max-width: 80ch; }
 .node.k-global rect { fill: var(--fill-glob); stroke: var(--consume); }
 .node.k-env rect { fill: var(--fill-ext); stroke: var(--muted); }
 .node.k-step rect { fill: var(--sheet); }
+.node.k-template rect { fill: var(--fill-ext); stroke: var(--ink); stroke-width: 1.2; }
+.node.k-domain rect { fill: var(--fill-pkg); stroke-width: 1.8; }
+.node.k-file rect { fill: var(--sheet); stroke: var(--muted); }
 .node.planned rect { fill: var(--sheet); stroke: var(--planned); stroke-dasharray: 5 4; stroke-width: 1.2; }
 .node.planned .lbl { fill: var(--planned); }
 .node.planned .sub { fill: var(--planned); }
@@ -218,7 +221,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
   <header class="top">
     <div class="eyebrow">jadero.dev v2 · monorepo · NestJS 12 on Node 24</div>
     <h1>Code map</h1>
-    <p class="lede">How the repo fits together today: which package depends on which, what the <code>api</code> container injects at runtime, how it boots, what a request passes through, and how the build and checks run. Click or tap any box for what it is, how it works, why it was built this way, and where the code lives.</p>
+    <p class="lede">How the repo fits together today: which package depends on which, what the <code>api</code> container injects at runtime, the two module shapes new code copies, how <code>api</code> boots, what a request passes through and how one trace id follows it, and how the build, <code>pnpm dev</code> and the checks run. Click or tap any box for what it is, how it works, why it was built this way, and where the code lives.</p>
   </header>
   <nav class="toc" id="toc" aria-label="Sections"></nav>
   <main id="sections"></main>
@@ -228,7 +231,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       <h3>How to update this map</h3>
       <ol>
         <li>All content lives in the JSON block <code>&lt;script id="map-data"&gt;</code> near the end of this file. The rendering code below it should not need changes.</li>
-        <li>Add a box: add an entry to <code>nodes</code> (label, sub, kind, status, wp, what, how, why, files), then place it in a figure: <code>place</code> for a graph (x, y, width, height in the figure's viewBox), or add its id to <code>steps</code> or <code>cards</code>.</li>
+        <li>Add a box: add an entry to <code>nodes</code> (label, sub, kind, status, wp, what, how, why, files), then place it in a figure: <code>place</code> for a graph (x, y, width, height in the figure's viewBox), or add its id to <code>steps</code> or <code>cards</code>. A steps figure counts from 1 unless it sets <code>"start"</code>.</li>
         <li>Add an arrow: add <code>{ "from", "to", "label", "kind" }</code> to the figure's <code>edges</code>. Kinds: dep, dev, imports, provides, injects, consumes, throws, extends, lifecycle, flow, planned, forbidden. Add <code>"hideLabel": true</code> when a gap is too small for the label. Use <code>via</code> points to route around a box.</li>
         <li>When a planned box becomes real, change its <code>status</code> to <code>real</code> and its edges from <code>planned</code> to their real kind.</li>
         <li>Bump <code>meta.lastUpdated</code>, save in <code>docs/architecture/code-map.html</code>, and republish the artifact from the same file.</li>
@@ -242,24 +245,26 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 <script type="application/json" id="map-data">
 {
   "meta": {
-    "lastUpdated": "after WP-3 step 6 (health and the Testcontainers harness)",
+    "lastUpdated": "after WP-3 step 8",
     "kinds": {
       "app": "deployable app", "pkg": "library package", "module": "Nest module", "provider": "provider",
       "token": "DI token", "ext": "external library", "global": "app-level wiring", "env": "environment",
-      "step": "step", "rule": "architecture rule", "check": "check"
+      "step": "step", "rule": "architecture rule", "check": "check",
+      "template": "template package · not deployed", "domain": "domain code", "file": "file"
     }
   },
   "sections": [
     {
       "id": "workspace", "eyebrow": "1 · Workspace", "title": "What lives where",
-      "intro": "pnpm workspace with deployables under apps/ and libraries under packages/. Solid boxes exist on disk; dashed boxes are planned and carry the work package that brings them. Arrows are real workspace:* dependencies.",
+      "intro": "pnpm workspace with deployables under apps/, libraries under packages/ and copyable code under templates/. Solid boxes exist on disk; dashed boxes are planned and carry the work package that brings them. Arrows are real workspace:* dependencies.",
       "figures": [
         {
-          "type": "graph", "title": "Workspace packages and their workspace:* dependencies", "viewBox": [1000, 600],
-          "caption": "api depends on platform-nest at runtime and on config for its tsconfig and Vitest base; platform-nest depends on config the same way. Red dotted arrows are imports that dependency-cruiser forbids.",
+          "type": "graph", "title": "Workspace packages and their workspace:* dependencies", "viewBox": [1000, 720],
+          "caption": "api depends on platform-nest at runtime and on config for its tsconfig and Vitest base; platform-nest and the module template depend on config the same way. The template is a workspace package so pnpm verify checks it, but nothing deploys it. Red dotted arrows are imports that dependency-cruiser forbids.",
           "lanes": [
             { "x": 8, "y": 30, "w": 984, "h": 150, "label": "apps/ · deployables" },
-            { "x": 8, "y": 262, "w": 984, "h": 250, "label": "packages/ · libraries" }
+            { "x": 8, "y": 262, "w": 984, "h": 250, "label": "packages/ · libraries" },
+            { "x": 8, "y": 604, "w": 984, "h": 108, "label": "templates/ · checked, never deployed" }
           ],
           "place": {
             "ws-api": [20, 90, 140, 62], "ws-agent-app": [180, 90, 140, 62], "ws-contact": [340, 90, 140, 62],
@@ -267,12 +272,14 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             "ws-platform": [20, 310, 150, 62], "ws-config": [190, 420, 140, 62],
             "ws-contracts": [350, 310, 140, 62], "ws-messaging": [510, 310, 140, 62], "ws-ai": [670, 310, 140, 62], "ws-agent-pkg": [830, 310, 140, 62],
             "ws-ui": [350, 420, 140, 62], "ws-cv": [510, 420, 140, 62],
-            "ext-nest-db": [720, 536, 250, 48]
+            "ext-nest-db": [720, 536, 250, 48],
+            "ws-template": [20, 638, 220, 58]
           },
           "edges": [
             { "from": "ws-api", "to": "ws-platform", "label": "workspace:*", "kind": "dep", "labelAt": [92, 200] },
             { "from": "ws-api", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "labelAt": [156, 250] },
             { "from": "ws-platform", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev" },
+            { "from": "ws-template", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "labelAt": [222, 560] },
             { "points": [[590, 256], [590, 186]], "label": "packages never import apps", "kind": "forbidden", "ref": "rule-shared-no-apps", "labelAt": [590, 222] },
             { "from": "ws-ai", "to": "ext-nest-db", "label": "never", "kind": "forbidden", "ref": "rule-ai-agent-no-nest" },
             { "from": "ws-agent-pkg", "to": "ext-nest-db", "label": "never", "kind": "forbidden", "ref": "rule-ai-agent-no-nest" }
@@ -280,7 +287,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
         },
         {
           "type": "cards", "title": "Rules dependency-cruiser enforces (pnpm depcruise)",
-          "caption": "Every import under apps/ and packages/ is checked against these rules in pnpm verify. Red edge: error. Amber edge: warning.",
+          "caption": "Every import under apps/, packages/ and templates/ is checked against these rules in pnpm verify. Red edge: error. Amber edge: warning.",
           "cards": ["rule-shared-no-apps", "rule-no-cross-service", "rule-ai-agent-no-nest", "rule-no-domain-in-packages", "rule-no-circular", "rule-domain-only-domain", "rule-app-not-infra", "rule-through-index", "rule-no-orphans"]
         }
       ]
@@ -291,13 +298,13 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "figures": [
         {
           "type": "graph", "title": "Nest module and DI graph of api", "viewBox": [1000, 780],
-          "caption": "LoggingModule provides the nestjs-pino Logger (through LoggerModule); configureApp consumes it with app.get(Logger) and hands it to app.useLogger. ApiConfig and ReadinessCheck are abstract classes used as DI tokens; PG_POOL and READINESS_CHECKS are symbol tokens. HealthModule comes from platform-nest; api plugs its Postgres check into it. Dashed boxes are planned.",
+          "caption": "LoggingModule provides the nestjs-pino Logger (through LoggerModule); configureApp consumes it with app.get(Logger) and hands it to app.useLogger. ApiConfig and ReadinessCheck are abstract classes used as DI tokens; PG_POOL and READINESS_CHECKS are symbol tokens. HealthModule comes from platform-nest; api plugs its Postgres check into it. TelemetryModule exists in platform-nest but AppModule does not import it yet, so its arrow is dashed. Dashed boxes are planned.",
           "lanes": [
             { "x": 8, "y": 10, "w": 984, "h": 606, "label": "DI container · built by NestFactory.create" },
             { "x": 8, "y": 640, "w": 984, "h": 130, "label": "configureApp(app) · app-level, outside any module" }
           ],
           "place": {
-            "di-appmodule": [300, 40, 320, 56], "apiconfig": [680, 40, 300, 56],
+            "di-appmodule": [300, 40, 320, 56], "apiconfig": [680, 40, 300, 56], "di-telemetry": [680, 150, 300, 56],
             "di-logging": [20, 150, 250, 56], "di-health": [300, 150, 320, 56],
             "di-loggermodule": [20, 260, 250, 56], "di-terminus": [300, 260, 150, 56], "di-shutdownstate": [480, 260, 140, 56], "di-postgresmodule": [680, 260, 300, 56],
             "di-logger": [20, 370, 120, 56], "di-pinologger": [150, 370, 120, 56], "di-healthcontroller": [300, 370, 320, 56], "di-pgpool": [680, 370, 300, 56],
@@ -309,6 +316,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             { "from": "di-appmodule", "to": "apiconfig", "label": "provides", "kind": "provides" },
             { "from": "di-appmodule", "to": "di-logging", "label": "imports forRoot(...)", "kind": "imports", "labelAt": [317, 118] },
             { "from": "di-appmodule", "to": "di-health", "label": "imports", "kind": "imports" },
+            { "from": "di-appmodule", "to": "di-telemetry", "label": "not imported yet", "kind": "planned", "labelAt": [652, 124] },
             { "from": "di-logging", "to": "di-loggermodule", "label": "imports, re-exports", "kind": "imports" },
             { "from": "di-loggermodule", "to": "di-logger", "label": "provides", "kind": "provides" },
             { "from": "di-loggermodule", "to": "di-pinologger", "label": "provides", "kind": "provides" },
@@ -336,33 +344,87 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       ]
     },
     {
-      "id": "boot", "eyebrow": "3 · Boot", "title": "How api starts",
-      "intro": "The environment is read once and validated before any Nest module exists, so a bad deploy exits at container start instead of failing on a request an hour later.",
+      "id": "modules", "eyebrow": "3 · Modules", "title": "Two module shapes to copy",
+      "intro": "templates/nest-module holds one module of each shape ADR-003 allows. Copy the layered one where there are no rules worth protecting, the hexagonal one where there are. Both are type-checked, tested and held to the rules in pnpm verify, so the shape you copy is one the tools accept.",
       "figures": [
         {
-          "type": "steps", "title": "Boot sequence of apps/api/src/main.ts",
-          "steps": ["b-node", "loadconfig", "toapiconfig", "b-create", "b-configure", "b-listen"]
+          "type": "graph", "title": "notes (layered) and widgets (hexagonal) in templates/nest-module/src/modules", "viewBox": [1000, 600],
+          "caption": "Left: three classes in one folder, no ports. Right: the use case depends on two ports (abstract classes, which are also the DI tokens), the module file binds an adapter to each, and the domain is plain TypeScript. Red dotted arrows are imports dependency-cruiser rejects; click their labels for the rule.",
+          "lanes": [
+            { "x": 8, "y": 10, "w": 334, "h": 580, "label": "layered · notes/" },
+            { "x": 352, "y": 10, "w": 640, "h": 580, "label": "hexagonal · widgets/" }
+          ],
+          "place": {
+            "m-notes-index": [30, 44, 290, 50], "m-notes-module": [30, 144, 290, 56], "m-notes-controller": [30, 250, 290, 56],
+            "m-notes-service": [30, 356, 290, 56], "m-notes-repo": [30, 462, 290, 56],
+            "m-w-index": [370, 44, 200, 50], "m-w-module": [600, 44, 380, 56],
+            "m-w-controller": [370, 140, 200, 56],
+            "m-w-usecase": [370, 240, 200, 56], "m-w-repo-port": [600, 240, 180, 56], "m-w-id-port": [800, 240, 180, 56],
+            "m-w-inmem": [586, 350, 208, 56], "m-w-randomid": [805, 350, 170, 56],
+            "m-w-widget": [370, 440, 200, 56], "m-w-error": [600, 440, 180, 56],
+            "m-ext-npm": [370, 530, 200, 48]
+          },
+          "edges": [
+            { "from": "m-notes-index", "to": "m-notes-module", "label": "re-exports", "kind": "imports" },
+            { "from": "m-notes-module", "to": "m-notes-controller", "label": "declares", "kind": "provides" },
+            { "from": "m-notes-controller", "to": "m-notes-service", "label": "injects", "kind": "injects" },
+            { "from": "m-notes-service", "to": "m-notes-repo", "label": "injects", "kind": "injects" },
+            { "from": "m-w-index", "to": "m-w-module", "label": "re-exports", "kind": "imports", "hideLabel": true },
+            { "from": "m-w-module", "to": "m-w-controller", "label": "declares", "kind": "provides", "labelAt": [630, 120] },
+            { "from": "m-w-module", "to": "m-w-repo-port", "label": "binds", "kind": "provides", "labelAt": [740, 170] },
+            { "from": "m-w-module", "to": "m-w-id-port", "label": "binds", "kind": "provides", "labelAt": [840, 170] },
+            { "from": "m-w-controller", "to": "m-w-usecase", "label": "injects", "kind": "injects" },
+            { "from": "m-w-usecase", "to": "m-w-repo-port", "label": "injects", "kind": "injects", "hideLabel": true },
+            { "from": "m-w-usecase", "to": "m-w-id-port", "label": "injects", "kind": "injects", "via": [[470, 318], [890, 318]], "hideLabel": true },
+            { "from": "m-w-inmem", "to": "m-w-repo-port", "label": "extends", "kind": "extends" },
+            { "from": "m-w-randomid", "to": "m-w-id-port", "label": "extends", "kind": "extends" },
+            { "from": "m-w-usecase", "to": "m-w-widget", "label": "Widget.create", "kind": "imports", "labelAt": [470, 412] },
+            { "from": "m-w-widget", "to": "m-w-error", "label": "throws", "kind": "throws", "hideLabel": true },
+            { "from": "m-w-usecase", "to": "m-w-inmem", "label": "never", "kind": "forbidden", "ref": "rule-app-not-infra", "labelAt": [600, 333] },
+            { "from": "m-w-widget", "to": "m-ext-npm", "label": "never", "kind": "forbidden", "ref": "rule-domain-only-domain" }
+          ]
         },
         {
-          "type": "graph", "title": "Where the config comes from", "viewBox": [1000, 170],
-          "caption": "platformEnv is the shared schema in platform-nest; apiEnv extends it in api. loadConfig reads process.env exactly once, and the result reaches providers only as ApiConfig.",
+          "type": "cards", "title": "Rules that hold the shapes in place",
+          "caption": "Breaking any of these fails pnpm verify, in apps/, packages/ and templates/ alike.",
+          "cards": ["rule-domain-only-domain", "rule-app-not-infra", "rule-through-index", "rule-no-circular"]
+        }
+      ]
+    },
+    {
+      "id": "boot", "eyebrow": "4 · Boot", "title": "How api starts",
+      "intro": "Telemetry starts before main.js, then the environment is validated before any Nest module exists, so a bad deploy exits at container start instead of failing on a request an hour later.",
+      "figures": [
+        {
+          "type": "steps", "title": "Boot sequence: node --import, then apps/api/src/main.ts", "start": 0,
+          "steps": ["b-otel", "b-node", "loadconfig", "toapiconfig", "b-create", "b-configure", "b-listen"]
+        },
+        {
+          "type": "graph", "title": "Where the config comes from", "viewBox": [1000, 260],
+          "caption": "Both readers of process.env go through loadConfig (ADR-043). Top row: platformEnv is the shared schema in platform-nest, apiEnv extends it in api, and the result reaches providers only as ApiConfig. Bottom row: the instrumentation entry validates the OTEL_* variables the same way before Nest exists and starts the SDK.",
           "place": {
-            "platformenv": [4, 100, 146, 56], "apienv": [216, 100, 146, 56], "b-env": [428, 14, 146, 46],
-            "loadconfig": [428, 100, 146, 56], "toapiconfig": [640, 100, 146, 56], "apiconfig": [852, 100, 146, 56]
+            "platformenv": [4, 20, 146, 56], "apienv": [216, 20, 146, 56],
+            "loadconfig": [428, 20, 146, 56], "toapiconfig": [640, 20, 146, 56], "apiconfig": [852, 20, 146, 56],
+            "b-env": [216, 106, 146, 46],
+            "telemetryenv": [4, 190, 146, 56], "otel-loadconfig": [428, 190, 146, 56], "otel-sdk": [640, 190, 146, 56], "otel-state": [852, 190, 146, 56]
           },
           "edges": [
             { "from": "platformenv", "to": "apienv", "label": "extend", "kind": "flow" },
             { "from": "apienv", "to": "loadconfig", "label": "schema", "kind": "flow" },
-            { "from": "b-env", "to": "loadconfig", "label": "read once", "kind": "flow" },
+            { "from": "b-env", "to": "loadconfig", "label": "read", "kind": "flow" },
+            { "from": "b-env", "to": "otel-loadconfig", "label": "read", "kind": "flow" },
             { "from": "loadconfig", "to": "toapiconfig", "label": "ApiEnv", "kind": "flow" },
-            { "from": "toapiconfig", "to": "apiconfig", "label": "useValue", "kind": "provides" }
+            { "from": "toapiconfig", "to": "apiconfig", "label": "useValue", "kind": "provides" },
+            { "from": "telemetryenv", "to": "otel-loadconfig", "label": "schema", "kind": "flow", "labelAt": [189, 218] },
+            { "from": "otel-loadconfig", "to": "otel-sdk", "label": "parsed", "kind": "flow" },
+            { "from": "otel-sdk", "to": "otel-state", "label": "start()", "kind": "flow" }
           ]
         }
       ]
     },
     {
-      "id": "request", "eyebrow": "4 · Request", "title": "What a request passes through",
-      "intro": "One lane from the socket to the log line. The amber step only runs when something throws. Pick an example to see which steps it touches.",
+      "id": "request", "eyebrow": "5 · Request", "title": "What a request passes through",
+      "intro": "One lane from the socket to the log line. The amber step only runs when something throws. Pick an example to see which steps it touches. With telemetry on, the whole lane runs inside one HTTP span, and its trace id shows up in three places.",
       "figures": [
         {
           "type": "steps", "title": "Request pipeline",
@@ -395,23 +457,48 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
               "request": "GET /health/ready",
               "response": "HTTP/1.1 503 Service Unavailable\ncontent-type: application/json\n\n{\n  \"status\": \"error\",\n  \"info\": { \"shutdown\": { \"status\": \"up\" } },\n  \"error\": { \"database\": { \"status\": \"down\", \"message\": \"unavailable\" } },\n  \"details\": { ... both checks ... }\n}",
               "note": "Postgres is down (the unit test points DATABASE_URL at port 1). HealthController runs the checks, Terminus throws a 503, and the controller-scoped HealthBodyFilter writes the Terminus body instead of problem+json, so the global filter step is skipped. The cause (ECONNREFUSED and the address) goes only to a warn line, \"readiness check failed\". Sources: apps/api/test/health.test.ts and packages/platform-nest/test/health.test.ts."
+            },
+            {
+              "id": "ex-trace", "label": "404 with trace id",
+              "path": ["r-express", "r-pinohttp", "r-router", "r-filter", "r-log"],
+              "request": "GET /nope\nx-request-id: trace-three-0001",
+              "response": "HTTP/1.1 404 Not Found\ncontent-type: application/problem+json\nx-request-id: trace-three-0001\n\n{\n  \"type\": \"about:blank\",\n  \"title\": \"Not Found\",\n  \"status\": 404,\n  \"detail\": \"Cannot GET /nope\",\n  \"instance\": \"/nope\",\n  \"requestId\": \"trace-three-0001\",\n  \"traceId\": \"4bf92f3577b34da6a3ce929d0e0e4736\"\n}\n\nlog line:\n{\"level\":40,\"service\":\"api\",\"req_id\":\"trace-three-0001\",\n \"trace_id\":\"4bf92f3577b34da6a3ce929d0e0e4736\",\"span_id\":\"00f067aa0ba902b7\",\n \"res\":{\"statusCode\":404},\"msg\":\"request completed\"}\n\nconsole span:\n{ traceId: '4bf92f3577b34da6a3ce929d0e0e4736', name: 'GET', kind: 1, ... }",
+              "note": "The same 404 as before, started with `pnpm start` so the instrumentation entry is loaded. ProblemDetailsFilter adds `traceId` from `currentTraceId()`, the pino instrumentation adds `trace_id` and `span_id` to the line, and the console exporter prints the `GET` span (plus the Express middleware spans) with the same id. The ids here are examples in the right format; the shape is what step 7 showed on `api` and what `packages/platform-nest/test/telemetry.test.ts` asserts with a real `node --import`."
             }
+          ]
+        },
+        {
+          "type": "graph", "title": "One trace id, three places", "viewBox": [1000, 250],
+          "caption": "HttpInstrumentation opens a SERVER span when the request arrives and keeps it as the active context for the rest of the request (AsyncLocalStorage, like the request id). Anything that asks for the active span gets the same trace id. Give a client's traceId to the logs or the trace viewer and both lead to the same request.",
+          "place": {
+            "t-span": [20, 96, 230, 60], "t-ctx": [300, 96, 200, 60],
+            "t-body": [560, 14, 420, 56], "t-log": [560, 98, 420, 56], "t-export": [560, 182, 420, 56]
+          },
+          "edges": [
+            { "from": "t-span", "to": "t-ctx", "label": "sets", "kind": "flow" },
+            { "from": "t-ctx", "to": "t-body", "label": "currentTraceId()", "kind": "flow", "hideLabel": true },
+            { "from": "t-ctx", "to": "t-log", "label": "PinoInstrumentation", "kind": "flow", "hideLabel": true },
+            { "from": "t-span", "to": "t-export", "label": "on end", "kind": "flow", "via": [[135, 210]], "labelAt": [330, 210] }
           ]
         }
       ]
     },
     {
-      "id": "build", "eyebrow": "5 · Build and tooling", "title": "From source to a checked commit",
-      "intro": "platform-nest is a real compiled package, not a path alias. Turborepo builds it before anything that depends on it, and the same checks run in pnpm verify and in the git hooks.",
+      "id": "build", "eyebrow": "6 · Build and tooling", "title": "From source to a checked commit",
+      "intro": "platform-nest is a real compiled package, not a path alias. Turborepo builds it before anything that depends on it, pnpm dev keeps both dist folders fresh while you edit, and the same checks run in pnpm verify and in the git hooks.",
       "figures": [
         {
           "type": "steps", "title": "How api gets platform-nest",
           "steps": ["k-src", "k-tsc", "k-exports", "k-symlink", "k-turbo"]
         },
         {
+          "type": "steps", "title": "What pnpm dev runs (decision J)",
+          "steps": ["d-turbo", "d-pn-watch", "d-api-watch", "d-node-watch"]
+        },
+        {
           "type": "cards", "title": "Checks and when they run",
           "caption": "pnpm verify is the single \"am I done\" command; lefthook runs Biome and commitlint at commit time.",
-          "cards": ["c-verify", "c-biome", "c-depcruise", "c-typecheck", "c-vitest", "c-testint", "c-precommit", "c-commitlint", "c-compose"]
+          "cards": ["c-verify", "c-build", "c-biome", "c-depcruise", "c-typecheck", "c-vitest", "c-testint", "c-precommit", "c-commitlint", "c-compose"]
         }
       ]
     }
@@ -419,17 +506,24 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
   "nodes": {
     "ws-api": {
       "label": "api", "sub": "@jadero/api", "kind": "app", "status": "real", "wp": "WP-3",
-      "what": "The content, auth, media and CV service. Today it is the boot skeleton: validated config, logging, problem+json errors, health endpoints and a Postgres pool for readiness. No feature modules yet.",
-      "how": "`main.ts` validates the environment, builds `AppModule.forRoot(config)`, applies `configureApp` from platform-nest and listens on `PORT`. Runtime dependency on `@jadero/platform-nest`; dev dependency on `@jadero/config` for its tsconfig and Vitest base. Its own runtime dependencies are Nest, Express, `pg`, rxjs, reflect-metadata and zod; Testcontainers is a dev dependency for `pnpm test:int`.",
+      "what": "The content, auth, media and CV service. Today it is the boot skeleton: validated config, logging, problem+json errors with request and trace ids, health endpoints, OpenTelemetry traces and a Postgres pool for readiness. No feature modules yet.",
+      "how": "`start` and `dev` run `node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js`, so tracing starts before any import of `main.js`. `main.ts` then validates the environment, builds `AppModule.forRoot(config)`, applies `configureApp` from platform-nest and listens on `PORT`. Runtime dependency on `@jadero/platform-nest`; dev dependency on `@jadero/config` for its tsconfig and Vitest base. Its own runtime dependencies are Nest, Express, `pg`, rxjs, reflect-metadata and zod; Testcontainers is a dev dependency for `pnpm test:int`.",
       "why": "ADR-001 splits the backend into services, and ADR-029 says each one owns its database and talks to the others only through events. api comes first because the site's content lives there. Feature modules join from WP-10 (database) and WP-12 (content).",
-      "files": ["apps/api/package.json", "apps/api/src/main.ts", "apps/api/src/app.module.ts", "apps/api/src/config/api-config.ts", "apps/api/src/modules/platform/"]
+      "files": ["apps/api/package.json", "apps/api/AGENTS.md", "apps/api/src/main.ts", "apps/api/src/app.module.ts", "apps/api/src/config/api-config.ts", "apps/api/src/modules/platform/"]
     },
     "ws-platform": {
       "label": "platform-nest", "sub": "@jadero/platform-nest", "kind": "pkg", "status": "real", "wp": "WP-3",
-      "what": "The bootstrap every NestJS service shares: fail-fast config, structured logging, RFC 9457 errors, the health module and one `configureApp`. Infrastructure only, no domain code.",
-      "how": "Compiled with tsc to `dist/` and exposed through one `exports` entry. Nest packages, rxjs and zod are peer dependencies, so the app supplies the single copy of `@nestjs/core`. `@nestjs/terminus`, nestjs-pino, pino, pino-http and pino-pretty are its own dependencies, which is why api never lists them.",
+      "what": "The bootstrap every NestJS service shares: fail-fast config, structured logging, RFC 9457 errors, the health module, the OpenTelemetry entry and one `configureApp`. Infrastructure only, no domain code.",
+      "how": "Compiled with tsc to `dist/` and exposed through two `exports` entries: `.` for everything Nest uses, and `./instrumentation` for the file `node --import` loads before the app. Nest packages, rxjs and zod are peer dependencies, so the app supplies the single copy of `@nestjs/core`. `@nestjs/terminus`, nestjs-pino, pino, pino-http, pino-pretty and the OpenTelemetry SDK, OTLP exporter and four instrumentations are its own dependencies, which is why api never lists them.",
       "why": "AGENTS.md rule 5: shared packages hold infrastructure, never domain code. One boot path means api, agent and contact log, validate and fail the same way. WP-3 decision C (default kept) puts the health module here too, with checks registered per service.",
-      "files": ["packages/platform-nest/package.json", "packages/platform-nest/src/index.ts"]
+      "files": ["packages/platform-nest/package.json", "packages/platform-nest/src/index.ts", "packages/platform-nest/src/telemetry/"]
+    },
+    "ws-template": {
+      "label": "nest-module", "sub": "@jadero/template-nest-module", "kind": "template", "status": "real", "wp": "WP-3 step 8",
+      "what": "Copyable module shapes for the Nest services: a layered `notes` module and a hexagonal `widgets` module. A workspace package that nothing imports and nothing deploys.",
+      "how": "Real TypeScript with its own `typecheck` and `test` scripts, so `pnpm verify` type-checks it, runs its tests and checks it against the dependency-cruiser rules. It has no `build`. Nest, rxjs and zod are normal dependencies here because no app consumes it. Section 3 shows both shapes.",
+      "why": "WP-3 decision G3: a checked folder instead of documentation or a generator. The cheapest shape to copy should be the right one, and a template the tools check cannot drift from what the rules accept. Widening the rules to `templates/` is what found the gap in `domain-imports-only-domain`.",
+      "files": ["templates/nest-module/package.json", "templates/nest-module/README.md", "templates/nest-module/src/modules/", "pnpm-workspace.yaml"]
     },
     "ws-config": {
       "label": "config", "sub": "@jadero/config", "kind": "pkg", "status": "real", "wp": "WP-1",
@@ -558,16 +652,16 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": [".dependency-cruiser.cjs"]
     },
     "rule-domain-only-domain": {
-      "label": "domain imports only domain", "sub": "domain-imports-only-domain · error", "kind": "rule", "status": "real", "wp": "WP-1",
-      "what": "A file in `src/modules/<m>/domain/` may import only the same module's domain folder and Node built-ins.",
-      "how": "Matches the module name in the `from` path and reuses it as `$3` in `pathNot`.",
-      "why": "ADR-003: the domain layer is plain TypeScript. No module uses it yet in api; it guards the hexagonal modules from WP-12.",
+      "label": "domain imports only domain", "sub": "domain-imports-only-domain · error", "kind": "rule", "status": "real", "wp": "WP-1, fixed in WP-3 step 8",
+      "what": "A file in `src/modules/<m>/domain/` may import only the same module's domain folder and Node built-ins: no other layer, no other module, no npm package.",
+      "how": "`from` matches `^(apps|packages|templates)/<pkg>/src/modules/<m>/domain/`; `to` flags anything whose path is not `$1/$2/src/modules/$3/domain/` and is not a Node built-in (`dependencyTypesNot: [core]`). Before step 8 the rule only looked at imports into `apps/`, so a domain file could import `@nestjs/common` and pass. Now an npm import fails too.",
+      "why": "ADR-003: the domain layer is plain TypeScript, so its rules run and test without Nest or a database. The template's `Widget` is the first domain code it guards; api's hexagonal modules arrive with WP-12.",
       "files": [".dependency-cruiser.cjs"]
     },
     "rule-app-not-infra": {
       "label": "application never imports infrastructure", "sub": "application-never-imports-infrastructure · error", "kind": "rule", "status": "real", "wp": "WP-1",
       "what": "Use cases depend on ports, never on adapters.",
-      "how": "From `src/modules/*/application/` to `src/modules/*/infrastructure/` is an error; module wiring binds adapter to port.",
+      "how": "From `src/modules/*/application/` to `src/modules/*/infrastructure/` is an error, in apps/, packages/ and templates/; module wiring binds adapter to port. Tests count too: a template use-case test that imported the in-memory adapter was caught in step 8 and now uses a fake of the port declared in the test file.",
       "why": "ADR-003: ports are abstract classes and DI tokens, the same idea `ApiConfig` already uses.",
       "files": [".dependency-cruiser.cjs"]
     },
@@ -589,7 +683,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "label": "AppModule.forRoot(config)", "sub": "root dynamic module · global", "kind": "module", "status": "real", "wp": "WP-3 step 3",
       "what": "The root module of api, built around an already validated configuration.",
       "how": "A static `forRoot(config)` returns a `DynamicModule` with `global: true`. It imports `LoggingModule.forRoot({ serviceName, level, pretty })` from the config (pretty only when `nodeEnv` is development), imports `HealthModule.forRoot({ imports: [PostgresModule], checks: [PostgresReadinessCheck] })`, provides `ApiConfig` with `useValue: config` and exports it, so any module (PostgresModule included) can inject it without importing AppModule.",
-      "why": "Because the config is parsed before the module is built, a bad environment never reaches a module (WP-3 decision B2). `forRoot` takes the config as an argument instead of reading `process.env`, which keeps the environment read in one place (ADR-007).",
+      "why": "Because the config is parsed before the module is built, a bad environment never reaches a module (WP-3 decision B2). `forRoot` takes the config as an argument instead of reading `process.env`, which keeps the environment read in one place (ADR-043).",
       "files": ["apps/api/src/app.module.ts", "apps/api/test/app.module.test.ts", "apps/api/test/setup/boot.ts"]
     },
     "apiconfig": {
@@ -704,6 +798,13 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "why": "Request ids without request-scoped providers, which would rebuild the provider graph on every request. The logging test proves a singleton's line carries the caller's id.",
       "files": ["packages/platform-nest/src/index.ts", "packages/platform-nest/test/logging.test.ts"]
     },
+    "di-telemetry": {
+      "label": "TelemetryModule", "sub": "platform-nest · flushes spans", "kind": "module", "status": "real", "wp": "WP-3 step 7",
+      "what": "Ties the SDK started by the instrumentation entry to the app's shutdown, so the last requests' spans are exported.",
+      "how": "Provides a private `TelemetryFlusher` whose `onApplicationShutdown` calls `shutdownTelemetry()`. That hook runs after the HTTP server has closed, like PoolCloser. Exported from `@jadero/platform-nest`, but `AppModule.forRoot` does not import it yet, so today api ends without a final flush; with the console exporter each span is written as it ends, so nothing is lost in dev.",
+      "why": "The SDK lives outside Nest (it starts before Nest exists), so a small module is the bridge to Nest's lifecycle. Batched OTLP export needs the flush, otherwise spans still in the buffer are dropped on SIGTERM.",
+      "files": ["packages/platform-nest/src/telemetry/telemetry.module.ts", "packages/platform-nest/src/telemetry/telemetry-state.ts", "apps/api/src/app.module.ts"]
+    },
     "di-feature": {
       "label": "feature providers", "sub": "planned · WP-10 on", "kind": "provider", "status": "planned", "wp": "WP-10 on",
       "what": "The services, repositories and use cases that feature modules will add.",
@@ -728,29 +829,64 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "g-filter": {
       "label": "ProblemDetailsFilter", "sub": "global @Catch() filter", "kind": "global", "status": "real", "wp": "WP-3 step 5",
       "what": "The one exception filter: every error leaves as `application/problem+json` (RFC 9457).",
-      "how": "`RequestValidationException` becomes 400 `validation-failed` with an `errors` array; any other HttpException under 500 keeps its status and message as `about:blank`; anything else is a generic 500 whose stack goes only to the error log. Every body carries `requestId` from pino-http.",
+      "how": "`RequestValidationException` becomes 400 `validation-failed` with an `errors` array; any other HttpException under 500 keeps its status and message as `about:blank`; anything else is a generic 500 whose stack goes only to the error log. Every body carries `requestId` from pino-http and, when telemetry is on, `traceId` from `currentTraceId()`.",
       "why": "ADR-006: one error shape for every route and service. Exception shielding keeps internals out of responses. Health routes will keep their own body (WP-3 decision E1).",
       "files": ["packages/platform-nest/src/errors/problem-details.filter.ts", "packages/platform-nest/src/errors/problem-details.ts", "packages/platform-nest/test/problem-details.e2e.test.ts"]
     },
     "g-shutdown": {
       "label": "enableShutdownHooks()", "sub": "SIGTERM runs app.close()", "kind": "global", "status": "real", "wp": "WP-3 step 3",
       "what": "Makes SIGTERM and SIGINT run `app.close()` and the lifecycle hooks.",
-      "how": "Nest listens for the signals and calls `onModuleDestroy`, then `beforeApplicationShutdown` (ShutdownState flips readiness to 503), closes the HTTP server, then `onApplicationShutdown` (PoolCloser ends the Postgres pool). The configure-app test checks a probe's `onApplicationShutdown` runs.",
+      "how": "Nest listens for the signals and calls `onModuleDestroy`, then `beforeApplicationShutdown` (ShutdownState flips readiness to 503), closes the HTTP server, then `onApplicationShutdown` (PoolCloser ends the Postgres pool; TelemetryModule would flush spans here once AppModule imports it). The configure-app test checks a probe's `onApplicationShutdown` runs.",
       "why": "Graceful shutdown for containers: readiness drops first, in-flight requests finish, and the pool closes last (WP-3 first principles, lifecycle).",
       "files": ["packages/platform-nest/src/bootstrap/configure-app.ts", "packages/platform-nest/test/configure-app.test.ts"]
     },
     "b-node": {
-      "label": "node dist/main.js", "sub": "pnpm start", "kind": "step", "status": "real", "wp": "WP-3 step 3",
-      "what": "Starts the compiled service.",
-      "how": "The `start` script is `node --env-file-if-exists=.env dist/main.js`: Node loads `.env` into `process.env` when the file exists. ESM evaluates every import before `main.ts` runs its body.",
-      "why": "Node's built-in env file instead of dotenv, so the same file can feed the OpenTelemetry entry later (WP-3 options B and F). The OTel `--import` flag is not added yet.",
+      "label": "dist/main.js imports", "sub": "Nest, Express, pg, pino load", "kind": "step", "status": "real", "wp": "WP-3 steps 3 and 7",
+      "what": "Node evaluates `main.js` and, before its first line, every module it imports.",
+      "how": "The `start` script is `node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js`; `dev` uses the same flags plus `--watch`. Node loads `.env` into `process.env` when the file exists, runs the `--import` entry (step 0), then loads `main.js`. ESM evaluates every import of `main.js` before its body runs, so http, Express, pg and pino are loaded here, already patched.",
+      "why": "Node's built-in env file instead of dotenv, so the same file feeds the instrumentation entry and the app (WP-3 options B and F, ADR-043).",
       "files": ["apps/api/package.json"]
+    },
+    "b-otel": {
+      "label": "--import instrumentation", "sub": "before main.js", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "The OpenTelemetry entry, `@jadero/platform-nest/instrumentation`, which Node runs before it loads `main.js`.",
+      "how": "It registers the ESM loader hook (`register(\"@opentelemetry/instrumentation/hook.mjs\", import.meta.url)`), validates `telemetryEnv` with `loadConfig` (a bad value exits 1 and names the variable), builds `NodeSDK` with http, express, pg and pino instrumentations, starts it and keeps it for shutdown. With `OTEL_TRACES_EXPORTER=none` it starts nothing.",
+      "why": "In ESM every import of `main.js` loads before its first line, so patching from inside `main.ts` would be too late and would silently produce no spans. A separate file loaded with `--import` is the only place early enough (WP-3 decision F1).",
+      "files": ["packages/platform-nest/src/telemetry/instrumentation.ts", "packages/platform-nest/src/telemetry/create-sdk.ts", "packages/platform-nest/test/telemetry.test.ts", "packages/platform-nest/test/fixtures/otel-smoke.mjs"]
+    },
+    "telemetryenv": {
+      "label": "telemetryEnv", "sub": "OTEL_* in platform-nest", "kind": "env", "status": "real", "wp": "WP-3 step 7",
+      "what": "The OpenTelemetry variables under their standard names: `OTEL_SERVICE_NAME` (required), `OTEL_TRACES_EXPORTER` (`console`, `otlp` or `none`, default `console`) and `OTEL_EXPORTER_OTLP_ENDPOINT`.",
+      "how": "A `z.object` with a `superRefine`: the endpoint is required when the exporter is `otlp`, and the error names `OTEL_EXPORTER_OTLP_ENDPOINT`.",
+      "why": "Validated like every other config (ADR-043), so a typo in a deploy fails at start instead of quietly exporting nothing.",
+      "files": ["packages/platform-nest/src/telemetry/telemetry-env.ts", "packages/platform-nest/test/telemetry.test.ts"]
+    },
+    "otel-loadconfig": {
+      "label": "loadConfig(telemetryEnv)", "sub": "in the --import entry", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "The same fail-fast loader as `main.ts`, called with the telemetry schema.",
+      "how": "Parses `process.env`; on failure prints one line per bad variable to stderr and exits 1. The test runs the built entry with `OTEL_TRACES_EXPORTER=otlp` and no endpoint and checks the message.",
+      "why": "One way to read config for the app and the entry, which is one of the reasons for ADR-043.",
+      "files": ["packages/platform-nest/src/telemetry/instrumentation.ts", "packages/platform-nest/src/config/load-config.ts"]
+    },
+    "otel-sdk": {
+      "label": "NodeSDK", "sub": "http, express, pg, pino", "kind": "ext", "status": "real", "wp": "WP-3 step 7",
+      "what": "The OpenTelemetry Node SDK, built by `createTelemetrySdk(env)`.",
+      "how": "An explicit instrumentation list: `HttpInstrumentation`, `ExpressInstrumentation`, `PgInstrumentation` and `PinoInstrumentation({ disableLogSending: true })`. Traces only: `metricReaders: []` and `logRecordProcessors: []`, because sdk-node otherwise starts OTLP metric and log exporters to `:4318` by itself (spike row 6). Spans go to the console (`SimpleSpanProcessor`) or to OTLP over protobuf (`BatchSpanProcessor`). amqplib joins in WP-5.",
+      "why": "WP-3 decision F1: an explicit list, not the auto-instrumentation bundle, so the project knows what is patched. Decision S2: no Nest controller spans, because `instrumentation-nestjs-core` does not declare Nest 12 yet; HTTP and Express spans already carry `http.route`.",
+      "files": ["packages/platform-nest/src/telemetry/create-sdk.ts"]
+    },
+    "otel-state": {
+      "label": "setTelemetrySdk(sdk)", "sub": "kept for shutdown", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "Keeps the started SDK in module state so the app can flush it later.",
+      "how": "`telemetry-state.ts` holds the SDK. `shutdownTelemetry()` takes it, clears the slot and awaits `sdk.shutdown()`, which exports pending spans. A no-op when telemetry is off.",
+      "why": "The entry runs before Nest exists, so the SDK cannot be a provider. TelemetryModule reaches it through this module at shutdown.",
+      "files": ["packages/platform-nest/src/telemetry/telemetry-state.ts"]
     },
     "loadconfig": {
       "label": "loadConfig(apiEnv)", "sub": "exits 1 on a bad env", "kind": "step", "status": "real", "wp": "WP-3 step 3",
       "what": "Parses the environment against a Zod schema, or prints one line per bad variable and exits with code 1.",
       "how": "`parseConfig` runs `schema.safeParse(process.env)`; on failure it throws `ConfigError` with variable names and messages only. `loadConfig` writes them to stderr and calls `process.exit(1)`. Tests replace output and exit through `LoadConfigIo`.",
-      "why": "Fail fast (ADR-007): a missing variable stops the container in about 290 ms instead of breaking the first request. Values are never printed because they may be secrets (AGENTS.md section 7).",
+      "why": "Fail fast: a missing variable stops the container in about 290 ms instead of breaking the first request. ADR-043 records why this is our own loader and not `@nestjs/config`, superseding ADR-007 on the library: validation must finish before `NestFactory.create` (the library validates inside it), the OpenTelemetry entry needs the same loader before Nest exists, and `ApiConfig` gives typed injection instead of string keys. The secrets rules of ADR-007 stay unchanged. Values are never printed because they may be secrets (AGENTS.md section 7).",
       "files": ["packages/platform-nest/src/config/load-config.ts", "packages/platform-nest/test/load-config.test.ts"]
     },
     "toapiconfig": {
@@ -785,7 +921,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "label": "platformEnv", "sub": "in platform-nest", "kind": "env", "status": "real", "wp": "WP-3 step 3",
       "what": "The variables every Nest service reads: `NODE_ENV`, `PORT`, `LOG_LEVEL`, `SERVICE_NAME`.",
       "how": "A `z.object`. `PORT` is a string piped into a coerced integer from 1 to 65535, so a missing value reads \"received undefined\". Booleans, when they arrive, use `z.stringbool()` because `z.coerce.boolean()` turns \"false\" into true.",
-      "why": "Each module contributes a slice and the service merges them (ADR-007).",
+      "why": "Each module contributes a slice and the service merges them (ADR-043, which kept this rule from ADR-007).",
       "files": ["packages/platform-nest/src/config/platform-env.ts"]
     },
     "apienv": {
@@ -798,8 +934,8 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "b-env": {
       "label": "process.env", "sub": "+ .env file if present", "kind": "env", "status": "real", "wp": "WP-3 step 3",
       "what": "The raw environment of the process.",
-      "how": "Read exactly once, as the default argument of `loadConfig`.",
-      "why": "ADR-007: no `process.env` reads outside the config loader.",
+      "how": "Read only through `loadConfig`, where it is the default argument: once by the instrumentation entry with `telemetryEnv`, once by `main.ts` with `apiEnv`. Node fills it from `.env` first when the file exists (`--env-file-if-exists`).",
+      "why": "ADR-043: no `process.env` reads outside the config loader. The only exception is test setup, such as the Docker host lookup for Testcontainers.",
       "files": ["packages/platform-nest/src/config/load-config.ts"]
     },
     "r-express": {
@@ -847,7 +983,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "r-log": {
       "label": "request log line", "sub": "\"request completed\"", "kind": "step", "status": "real", "wp": "WP-3 step 4",
       "what": "One JSON line per request when the response finishes.",
-      "how": "Carries `service`, `req_id`, `req: { method, url }`, `res: { statusCode }` and the response time. Level from `requestLogLevel`: `/health/*` debug when it passes and warn when it fails, other 5xx error, other 4xx warn, else info.",
+      "how": "Carries `service`, `req_id`, `req: { method, url }`, `res: { statusCode }` and the response time, plus `trace_id` and `span_id` when telemetry is on (added by the pino instrumentation). Level from `requestLogLevel`: `/health/*` debug when it passes and warn when it fails, other 5xx error, other 4xx warn, else info.",
       "why": "Lines are easy to grep by request id, and no headers, body or client IP are written (AGENTS.md section 7).",
       "files": ["packages/platform-nest/src/logging/logger-params.ts"]
     },
@@ -866,9 +1002,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/platform-nest/tsconfig.build.json", "packages/config/tsconfig/node-library.json"]
     },
     "k-exports": {
-      "label": "exports map", "sub": "types → dist/index.d.ts · default → dist/index.js", "kind": "step", "status": "real", "wp": "WP-3 step 3",
-      "what": "Tells Node and TypeScript which files `@jadero/platform-nest` means.",
-      "how": "`\"exports\": { \".\": { \"types\": \"./dist/index.d.ts\", \"default\": \"./dist/index.js\" } }`. The editor reads the `.d.ts` from dist, not src.",
+      "label": "exports map", "sub": ". and ./instrumentation → dist/", "kind": "step", "status": "real", "wp": "WP-3 steps 3 and 7",
+      "what": "Tells Node and TypeScript which files `@jadero/platform-nest` and `@jadero/platform-nest/instrumentation` mean.",
+      "how": "`.` points at `dist/index.d.ts` and `dist/index.js`; `./instrumentation` at `dist/telemetry/instrumentation.d.ts` and `.js`, which is what `node --import` resolves. The editor reads the `.d.ts` from dist, not src.",
       "why": "This is why the editor shows stale errors in api (\"has no exported member\") after a change in platform-nest or a pull, until `pnpm build` (`turbo run build`) rebuilds dist.",
       "files": ["packages/platform-nest/package.json"]
     },
@@ -903,7 +1039,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "c-depcruise": {
       "label": "dependency-cruiser", "sub": "pnpm depcruise", "kind": "check", "status": "real", "wp": "WP-1",
       "what": "Checks which file may import which (section 1 rules).",
-      "how": "Reads the import graph of apps/ and packages/, counting `import type` too, and resolves through `exports`.",
+      "how": "Reads the import graph of apps/, packages/ and templates/, counting `import type` too, and resolves through `exports`.",
       "why": "Architecture fitness functions (ADR-024).",
       "files": [".dependency-cruiser.cjs", "tsconfig.depcruise.json"]
     },
@@ -924,9 +1060,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "c-testint": {
       "label": "pnpm test:int", "sub": "Testcontainers · needs Docker", "kind": "check", "status": "real", "wp": "WP-3 step 6",
       "what": "Integration tests against real containers, kept out of `pnpm verify`.",
-      "how": "`turbo run test:int` runs each package's `vitest.int.config.ts`, built from `integrationConfig()`: only `test/**/*.int.test.ts`, longer timeouts, and a global setup. api's global setup starts one `pgvector/pgvector:0.8.7-pg18` container per run and provides its URL; each test file creates and drops its own database. A unit test keeps that tag equal to `compose.dev.yml`.",
-      "why": "WP-3 decision H: one container per run, one database per file, so files run in parallel without sharing rows. `pnpm verify` stays fast and Docker-free; CI runs these from WP-6.",
-      "files": ["apps/api/vitest.int.config.ts", "apps/api/test/setup/postgres.global-setup.ts", "apps/api/test/setup/test-database.ts", "apps/api/test/images.test.ts", "packages/config/vitest/base.js"]
+      "how": "`turbo run test:int` runs each package's `vitest.int.config.ts`, built from `integrationConfig()`: only `test/**/*.int.test.ts`, longer timeouts, and a global setup. api's global setup first calls `useDockerContextHost()`, then starts one `pgvector/pgvector:0.8.7-pg18` container per run and provides its URL; each test file creates and drops its own database. A unit test keeps that tag equal to `compose.dev.yml`.",
+      "why": "WP-3 decision H: one container per run, one database per file, so files run in parallel without sharing rows. `pnpm verify` stays fast and Docker-free; CI runs these from WP-6. Testcontainers looks only at `DOCKER_HOST`, `~/.testcontainers.properties` and `/var/run/docker.sock`, not at the Docker CLI context that OrbStack, Colima and Docker Desktop use on macOS. `useDockerContextHost()` asks `docker context inspect` and sets `DOCKER_HOST` when none is set, so `pnpm test:int` works wherever `pnpm dev:up` works.",
+      "files": ["apps/api/vitest.int.config.ts", "apps/api/test/setup/postgres.global-setup.ts", "apps/api/test/setup/docker-host.ts", "apps/api/test/docker-host.test.ts", "apps/api/test/setup/test-database.ts", "apps/api/test/images.test.ts", "packages/config/vitest/base.js"]
     },
     "c-precommit": {
       "label": "lefthook pre-commit", "sub": "biome check --write on staged files", "kind": "check", "status": "real", "wp": "WP-1",
@@ -948,6 +1084,188 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "how": "`infra/compose/compose.dev.yml`: pgvector on Postgres 18 and RabbitMQ with the management UI, ports bound to 127.0.0.1, healthchecks so `--wait` returns when ready.",
       "why": "ADR-027 and ADR-029. api's readiness check connects to Postgres (`content_dev`); RabbitMQ waits for WP-5. The Postgres image tag is shared with the integration tests.",
       "files": ["infra/compose/compose.dev.yml"]
+    },
+    "c-build": {
+      "label": "pnpm build", "sub": "turbo run build · every dist/", "kind": "check", "status": "real", "wp": "WP-3",
+      "what": "Compiles every package that has a `build` script, in dependency order.",
+      "how": "`turbo run build`: platform-nest, then api. Cached on `dist/**`, so an unchanged package is restored, not rebuilt.",
+      "why": "Run it after a pull or a branch switch when the editor shows errors such as `has no exported member` in api: the editor reads platform-nest's types from `dist/`, which goes stale until it is rebuilt. `pnpm dev` keeps dist fresh while it runs.",
+      "files": ["package.json", "turbo.json"]
+    },
+    "d-turbo": {
+      "label": "turbo run dev", "sub": "build once, then watch", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "Starts every package's `dev` task, after one full build.",
+      "how": "In `turbo.json`, `dev` has `dependsOn: [\"^build\", \"build\"]` so every dist exists before anything watches, `with: [\"dev:build\"]` so a package's `dev:build` runs next to its `dev`, and `cache: false` with `persistent: true` because both never end.",
+      "why": "Decision J: `tsc --watch` plus `node --watch`, no extra tool. Copy `apps/api/.env.example` to `.env` first, since `dev` boots the real app.",
+      "files": ["turbo.json", "package.json"]
+    },
+    "d-pn-watch": {
+      "label": "platform-nest dev", "sub": "tsc --watch → dist/", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "Recompiles platform-nest on every save.",
+      "how": "Its `dev` script is `tsc -p tsconfig.build.json --watch --preserveWatchOutput`.",
+      "why": "api reads platform-nest from `dist/`, so dist must follow the source while you edit both.",
+      "files": ["packages/platform-nest/package.json"]
+    },
+    "d-api-watch": {
+      "label": "api dev:build", "sub": "tsc --watch → dist/", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "Recompiles api on every save.",
+      "how": "Started next to api's `dev` by `with`; the same `tsc --watch --preserveWatchOutput` on api's build config.",
+      "why": "Node runs JavaScript from `dist/`, not TypeScript from `src/`: decorators need the compiler (WP-3 first principles).",
+      "files": ["apps/api/package.json"]
+    },
+    "d-node-watch": {
+      "label": "api dev", "sub": "node --watch on both dist/", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "Runs api and restarts it when either dist folder changes.",
+      "how": "`node --watch-path=dist --watch-path=../../packages/platform-nest/dist --watch-preserve-output --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js`: the same start line as `start`, so dev also has traces.",
+      "why": "Watching compiled output keeps one compiler (tsc) and one runtime (node) in the loop, the same pair production uses.",
+      "files": ["apps/api/package.json"]
+    },
+    "t-span": {
+      "label": "HTTP SERVER span", "sub": "HttpInstrumentation", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "The span the http instrumentation opens for each incoming request. It carries the trace id.",
+      "how": "The patched `http` module starts a span named `GET` (or the method) when a request arrives; Express spans become its children and set `http.route`. pg query spans join the same trace.",
+      "why": "One trace per request, without touching controller code. Nest controller spans are off (decision S2).",
+      "files": ["packages/platform-nest/src/telemetry/create-sdk.ts"]
+    },
+    "t-ctx": {
+      "label": "active context", "sub": "AsyncLocalStorage", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "Where the current span lives while the request runs.",
+      "how": "The SDK's context manager keeps the span in AsyncLocalStorage, so code anywhere in the request (a filter, a logger call) finds it with `trace.getActiveSpan()`.",
+      "why": "The same idea nestjs-pino uses for the request id: no request-scoped providers.",
+      "files": ["packages/platform-nest/src/telemetry/trace-id.ts"]
+    },
+    "t-body": {
+      "label": "problem body", "sub": "traceId · from currentTraceId()", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "`traceId` in every problem+json body when telemetry is on.",
+      "how": "`currentTraceId()` reads the active span's context and returns the 32-hex-digit id when it is valid, else undefined. ProblemDetailsFilter spreads it into the body next to `requestId`.",
+      "why": "A client that reports an error quotes one id, and that id finds both the log lines and the trace.",
+      "files": ["packages/platform-nest/src/telemetry/trace-id.ts", "packages/platform-nest/src/errors/problem-details.filter.ts", "packages/platform-nest/test/telemetry.test.ts"]
+    },
+    "t-log": {
+      "label": "pino line", "sub": "trace_id, span_id · PinoInstrumentation", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "`trace_id`, `span_id` and `trace_flags` on every pino line written inside a span.",
+      "how": "`PinoInstrumentation({ disableLogSending: true })` adds the fields; log records are not forwarded to an OpenTelemetry log pipeline, they stay with pino on stdout.",
+      "why": "Logs and traces join on one id without a second log path. The test runs a real `node --import` and checks that the logged `trace_id` matches a printed span.",
+      "files": ["packages/platform-nest/src/telemetry/create-sdk.ts", "packages/platform-nest/test/telemetry.test.ts"]
+    },
+    "t-export": {
+      "label": "span exporter", "sub": "console in dev · OTLP later", "kind": "step", "status": "real", "wp": "WP-3 step 7",
+      "what": "Where finished spans go.",
+      "how": "`OTEL_TRACES_EXPORTER=console` prints each span as it ends; `otlp` batches them to `OTEL_EXPORTER_OTLP_ENDPOINT/v1/traces`; `none` turns telemetry off.",
+      "why": "Console is enough to see traces locally; the OTLP collector and trace viewer come with the observability WPs (ADR-010).",
+      "files": ["packages/platform-nest/src/telemetry/create-sdk.ts", "packages/platform-nest/src/telemetry/telemetry-env.ts"]
+    },
+    "m-notes-index": {
+      "label": "notes/index.ts", "sub": "public surface", "kind": "file", "status": "real", "wp": "WP-3 step 8",
+      "what": "The only file other modules may import from this module.",
+      "how": "Exports `NotesModule` and the `Note` type.",
+      "why": "Rule `modules-import-through-index` (ADR-003).",
+      "files": ["templates/nest-module/src/modules/notes/index.ts"]
+    },
+    "m-notes-module": {
+      "label": "NotesModule", "sub": "layered · ADR-003", "kind": "module", "status": "real", "wp": "WP-3 step 8",
+      "what": "The layered shape: controller, application service and repository in one folder.",
+      "how": "`@Module({ controllers: [NotesController], providers: [NotesService, NotesRepository] })`. No ports and no domain folder.",
+      "why": "For modules with no rules worth protecting (health, revalidation, cv). A port with one implementation and nothing to protect would be ceremony.",
+      "files": ["templates/nest-module/src/modules/notes/notes.module.ts", "templates/nest-module/README.md"]
+    },
+    "m-notes-controller": {
+      "label": "NotesController", "sub": "POST /notes · GET /notes", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
+      "what": "The HTTP edge of the layered module.",
+      "how": "`@Body({ schema: AddNoteBody })` validates `{ text }` (1 to 500 characters) through the global pipe, so a bad body is a 400 problem. It delegates to `NotesService`.",
+      "why": "Validation at the boundary with Zod (ADR-006). In a service the schema moves to `packages/contracts`.",
+      "files": ["templates/nest-module/src/modules/notes/notes.controller.ts"]
+    },
+    "m-notes-service": {
+      "label": "NotesService", "sub": "application service", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
+      "what": "The one class the controller calls. It trims and stores.",
+      "how": "Injects `NotesRepository` by class. Tested with the real in-memory repository, since there is no port to fake.",
+      "why": "Keeps the controller thin even in a simple module.",
+      "files": ["templates/nest-module/src/modules/notes/notes.service.ts", "templates/nest-module/src/modules/notes/notes.service.test.ts"]
+    },
+    "m-notes-repo": {
+      "label": "NotesRepository", "sub": "in-memory map · Drizzle from WP-10", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
+      "what": "Storage for notes.",
+      "how": "A `Map` keeps the template runnable. In a real module this is the Drizzle repository.",
+      "why": "One implementation, injected directly by class.",
+      "files": ["templates/nest-module/src/modules/notes/notes.repository.ts"]
+    },
+    "m-w-index": {
+      "label": "widgets/index.ts", "sub": "public surface", "kind": "file", "status": "real", "wp": "WP-3 step 8",
+      "what": "The only file other modules may import from this module.",
+      "how": "Exports `WidgetsModule` only. Domain classes, ports and adapters stay private.",
+      "why": "Rule `modules-import-through-index` (ADR-003).",
+      "files": ["templates/nest-module/src/modules/widgets/index.ts"]
+    },
+    "m-w-module": {
+      "label": "WidgetsModule", "sub": "hexagonal · binds adapters to ports", "kind": "module", "status": "real", "wp": "WP-3 step 8",
+      "what": "The wiring: the only place that knows which adapter backs each port.",
+      "how": "Declares `WidgetsController`, provides `CreateWidget`, `{ provide: WidgetRepository, useClass: InMemoryWidgetRepository }` and `{ provide: IdGenerator, useClass: RandomIdGenerator }`. A wiring test boots it.",
+      "why": "Swap the in-memory adapter for a Drizzle one here and nothing else changes (composition root).",
+      "files": ["templates/nest-module/src/modules/widgets/widgets.module.ts", "templates/nest-module/test/wiring.test.ts"]
+    },
+    "m-w-controller": {
+      "label": "WidgetsController", "sub": "presentation/ · POST /widgets", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
+      "what": "The HTTP edge: validates the shape, calls one use case, maps domain errors to HTTP.",
+      "how": "`@Body({ schema })` checks `{ name: string }` (400 on a bad shape). It calls `CreateWidget.execute` and turns `WidgetNameInvalid` into `UnprocessableEntityException`, which ProblemDetailsFilter renders as a 422 problem.",
+      "why": "Shape errors (400) and rule errors (422) stay distinct: the shape is the boundary's job, the rule is the domain's.",
+      "files": ["templates/nest-module/src/modules/widgets/presentation/widgets.controller.ts"]
+    },
+    "m-w-usecase": {
+      "label": "CreateWidget", "sub": "application/ · use case", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
+      "what": "One use case per class: it orchestrates the domain and the ports and holds no rules of its own.",
+      "how": "Injects `WidgetRepository` and `IdGenerator` by their abstract classes, calls `Widget.create(ids.next(), name)` and saves it. Its test declares its own fakes of both ports.",
+      "why": "Depends on ports only (rule `application-never-imports-infrastructure`), so it tests with fakes and no database (ADR-009).",
+      "files": ["templates/nest-module/src/modules/widgets/application/create-widget.use-case.ts", "templates/nest-module/src/modules/widgets/application/create-widget.use-case.test.ts"]
+    },
+    "m-w-repo-port": {
+      "label": "WidgetRepository", "sub": "port · abstract class", "kind": "token", "status": "real", "wp": "WP-3 step 8",
+      "what": "What the use cases need from storage: `findById` and `save`.",
+      "how": "An abstract class in `application/`. It is the TypeScript type and the DI token at once, like `ApiConfig`.",
+      "why": "Ports are abstract classes (ADR-003, AGENTS.md rule 4).",
+      "files": ["templates/nest-module/src/modules/widgets/application/widget.repository.ts"]
+    },
+    "m-w-id-port": {
+      "label": "IdGenerator", "sub": "port · abstract class", "kind": "token", "status": "real", "wp": "WP-3 step 8",
+      "what": "A port for new ids.",
+      "how": "One abstract method, `next()`. The test fake returns a fixed id.",
+      "why": "Keeps use cases deterministic in tests.",
+      "files": ["templates/nest-module/src/modules/widgets/application/id-generator.ts"]
+    },
+    "m-w-inmem": {
+      "label": "InMemoryWidgetRepository", "sub": "infrastructure/ · adapter", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
+      "what": "An adapter for the repository port that keeps the template runnable.",
+      "how": "Extends `WidgetRepository` with a `Map`. In a service a Drizzle adapter replaces it and gets a Testcontainers test.",
+      "why": "Adapters live in `infrastructure/` and are bound only in the module file.",
+      "files": ["templates/nest-module/src/modules/widgets/infrastructure/in-memory-widget.repository.ts"]
+    },
+    "m-w-randomid": {
+      "label": "RandomIdGenerator", "sub": "infrastructure/ · adapter", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
+      "what": "Production ids.",
+      "how": "Extends `IdGenerator` and returns `randomUUID()` from `node:crypto`.",
+      "why": "Randomness stays at the edge, behind a port.",
+      "files": ["templates/nest-module/src/modules/widgets/infrastructure/random-id-generator.ts"]
+    },
+    "m-w-widget": {
+      "label": "Widget", "sub": "domain/ · aggregate", "kind": "domain", "status": "real", "wp": "WP-3 step 8",
+      "what": "The aggregate. It guards its own rule: a name has 1 to 60 characters after trimming.",
+      "how": "A private constructor, `Widget.create(id, name)` and `rename(name)` both check the rule and throw `WidgetNameInvalid`. Plain TypeScript: no Nest, no database, no npm package.",
+      "why": "Nothing outside can put it in a bad state, and its test needs no framework. Rule `domain-imports-only-domain` keeps it that way.",
+      "files": ["templates/nest-module/src/modules/widgets/domain/widget.ts", "templates/nest-module/src/modules/widgets/domain/widget.test.ts"]
+    },
+    "m-w-error": {
+      "label": "WidgetNameInvalid", "sub": "domain/ · error", "kind": "domain", "status": "real", "wp": "WP-3 step 8",
+      "what": "The error the domain throws when the name rule is broken.",
+      "how": "Extends `Error` and keeps the attempted name. The controller maps it to 422.",
+      "why": "The domain names its failures; the presentation layer decides the HTTP status.",
+      "files": ["templates/nest-module/src/modules/widgets/domain/widget.errors.ts"]
+    },
+    "m-ext-npm": {
+      "label": "@nestjs/common, zod", "sub": "any npm package", "kind": "ext", "status": "real", "wp": "WP-3 step 8 (rule fix)",
+      "what": "What a domain file may never import.",
+      "how": "Since step 8, `domain-imports-only-domain` flags every import outside the module's `domain/` folder except Node built-ins, npm packages included.",
+      "why": "Before the fix a domain file could import `@nestjs/common` and pass; widening the rules to `templates/` found it.",
+      "files": [".dependency-cruiser.cjs"]
     }
   }
 }
@@ -1096,7 +1414,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       var li = h("li");
       var b = h("button", "step" + (n.branch ? " branch" : "") + (n.status === "planned" ? " planned" : ""));
       b.type = "button";
-      b.innerHTML = '<span class="n">' + (i + 1) + '</span><span class="t">' + esc(n.label) + '</span><span class="d">' + esc(n.sub || "") + "</span>";
+      b.innerHTML = '<span class="n">' + (i + (fig.start != null ? fig.start : 1)) + '</span><span class="t">' + esc(n.label) + '</span><span class="d">' + esc(n.sub || "") + "</span>";
       b.addEventListener("click", () => { openPanel(id); });
       if (i > 0) link(fig.steps[i - 1], id, "flow", "then");
       li.appendChild(b); ol.appendChild(li);

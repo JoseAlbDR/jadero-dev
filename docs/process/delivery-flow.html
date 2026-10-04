@@ -54,16 +54,16 @@ a { color: var(--accent); }
 <main>
 <p class="eyebrow">jadero.dev v2 · process reference</p>
 <h1>How a work package moves from the board to production</h1>
-<p class="lede">The flow this cloud session ran end to end on WP-1, written down so the same flow runs locally with firstmate and the Claude Code tooling in the repo. Every rule here has a file in the repo as its source (<code>docs/agent-tooling.md</code>, <code>docs/local-playbook.md</code>); this page only orders them.</p>
+<p class="lede">The flow that ran end to end on WP-1 and WP-3, written down so the same flow runs locally with firstmate and the Claude Code tooling in the repo. Every rule here has a file in the repo as its source (<code>docs/agent-tooling.md</code>, <code>docs/local-playbook.md</code>, <code>docs/firstmate.md</code>); this page only orders them.</p>
 
 <nav class="toc">
-<a href="#roles">Roles</a><a href="#truth">Sources of truth</a><a href="#stages">The nine stages</a><a href="#gates">Gates</a><a href="#board">Board states</a><a href="#session">Session hygiene</a><a href="#firstmate">Firstmate mapping</a><a href="#daily">Daily checklist</a><a href="#wp1">WP-1 trial</a>
+<a href="#roles">Roles</a><a href="#truth">Sources of truth</a><a href="#stages">The ten stages</a><a href="#explainback">Explain-back</a><a href="#gates">Gates</a><a href="#board">Board states</a><a href="#session">Session hygiene</a><a href="#firstmate">Firstmate mapping</a><a href="#daily">Daily checklist</a><a href="#wp1">WP-1 trial</a><a href="#wp3">WP-3 run</a>
 </nav>
 
 <h2 id="roles">Roles</h2>
 <div class="tablewrap"><table>
 <tr><th>Role</th><th>Does</th><th>Never does</th></tr>
-<tr><td>Owner</td><td>Decides every backend and agent pattern, answers the question in each explainer, explains the design back, reviews and merges every PR, runs anything that touches the server, secrets or money (<code>pnpm eval</code>).</td><td>Delegates a decision to an agent.</td></tr>
+<tr><td>Owner</td><td>Decides every backend and agent pattern, answers the questions in each explainer before any code, explains the design back after the PR review, reviews and merges every PR, runs anything that touches the server, secrets or money (<code>pnpm eval</code>).</td><td>Delegates a decision to an agent.</td></tr>
 <tr><td>Main session</td><td>Runs <code>/wp</code>, <code>/learn-step</code>, implements in small steps, keeps the step log, opens the PR. Model: Opus 5.5 is enough; a Mythos-class model is not needed for this work. Effort: high for learning WPs, medium for frontend and chores.</td><td>Pushes to <code>main</code>, deploys, ssh, real AI or mail providers in dev or tests, batches a whole WP into one diff.</td></tr>
 <tr><td>Subagents</td><td><code>@agent-reviewer</code> reviews every PR against the ADRs before the owner sees it. <code>Explore</code> does wide searches. A subagent can run <code>/wp</code> and <code>/learn-step</code> when the main session runs on a heavier model than the task needs.</td><td>Approves, merges, or implements on its own.</td></tr>
 <tr><td>Firstmate</td><td>The owner's framework: plan, approve, implement, review, MR. Points its implementers at <code>AGENTS.md</code>; its sandbox and guard hooks are the security layer.</td><td>Replaces the learning gate or the ADR files.</td></tr>
@@ -71,14 +71,14 @@ a { color: var(--accent); }
 
 <h2 id="truth">Sources of truth, in order of precedence</h2>
 <ol>
-<li><code>docs/adr/</code>: 41 accepted decision records. Never edited; a change is a new ADR that supersedes one (<code>/adr</code>).</li>
+<li><code>docs/adr/</code>: the decision records ADR-001 to ADR-043. Never edited; a change is a new ADR that supersedes one (<code>/adr</code>), as ADR-043 did for ADR-007 during WP-3.</li>
 <li><code>docs/plan/report.md</code> section 14 and <code>docs/plan/decisions.json</code>: the work packages, releases R0 to R7, and the 76 owner decisions as data.</li>
 <li>GitHub: epic <code>jadero.dev v2</code>, one issue per WP (#8 to #64), milestones R0 to R7, the Project board. The issue is the task; the PR closes it.</li>
 <li><code>AGENTS.md</code> (imported by <code>CLAUDE.md</code>): the rules every agent reads. <code>.claude/rules/*.md</code> add path-scoped detail.</li>
 <li><code>docs/learning/wp-NN.md</code>: the explainer and the recorded decision for each learning WP.</li>
 </ol>
 
-<h2 id="stages">The nine stages of one work package</h2>
+<h2 id="stages">The ten stages of one work package</h2>
 <p>Example throughout: WP-11, Contact service, a learning WP of release R1.</p>
 
 <div class="stage"><div class="n">1</div><div>
@@ -96,14 +96,14 @@ a { color: var(--accent); }
 <div class="stage"><div class="n">3</div><div>
 <h3>Learn: <code>/learn-step 11</code></h3>
 <p class="who">Agent writes, owner reads · gate closed</p>
-<p>The skill writes <code>docs/learning/wp-11.md</code>: first principles, one concrete trace with real payloads and SQL, the named patterns, options with trade-offs, and the exact question the owner must answer. It stops. While the front matter says <code>decision: pending</code>, the hook <code>learning-gate.sh</code> denies any edit under a learning path (<code>apps/*</code> except web and admin, <code>packages/messaging|ai|agent|contracts</code>, <code>infra/</code>, <code>.github/workflows/</code>). A denied edit is the process working.</p>
+<p>The skill writes <code>docs/learning/wp-11.md</code>: first principles, one concrete trace with real payloads and SQL (two on a service WP, success and failure), the named patterns, options with trade-offs, and the exact questions the owner must answer. The explainer is self-contained: a "How to read this file" table points each question at the parts to read first, and a "Named here" table summarizes in one line every WP and ADR it mentions, so the owner never has to open another file to answer. All questions come in one message; a question that depends on another gets a recommendation per possible answer. It stops. While the front matter says <code>decision: pending</code>, the hook <code>learning-gate.sh</code> denies any edit under a learning path. The list in the hook: <code>apps/api</code>, <code>apps/agent</code>, <code>apps/contact</code>, <code>apps/mcp</code>, <code>apps/gateway</code>, <code>apps/guard-classifier</code>; <code>packages/messaging</code>, <code>packages/ai</code>, <code>packages/agent</code>, <code>packages/contracts</code>, <code>packages/platform-nest</code>; <code>templates/</code>, <code>infra/</code>, <code>.github/workflows/</code>; and the repo tooling files <code>turbo.json</code>, <code>pnpm-workspace.yaml</code>, <code>packages/config/</code>, <code>.dependency-cruiser.*</code>, <code>lefthook.yml</code> and <code>commitlint.config.*</code>. A denied edit is the process working.</p>
 <p>Fast path (D-38): a step the owner already knows gets <code>fast_path: known</code> in the explainer and skips the full explainer and the explain-back.</p>
 </div></div>
 
 <div class="stage"><div class="n">4</div><div>
 <h3>Decide</h3>
 <p class="who">Owner · gate opens</p>
-<p>The owner answers the question, in chat or in the file. The agent records it under Decision, sets <code>decision: recorded</code> and links the ADR. If the answer changes an accepted ADR, <code>/adr</code> first. Only now may code under the learning paths change.</p>
+<p>The owner answers the questions, in chat or in the file. The agent records them under Decision, sets <code>decision: recorded</code> and links the ADR. If the answer changes an accepted ADR, <code>/adr</code> first. Only now may code under the learning paths change.</p>
 </div></div>
 
 <div class="stage"><div class="n">5</div><div>
@@ -113,28 +113,37 @@ a { color: var(--accent); }
 </div></div>
 
 <div class="stage"><div class="n">6</div><div>
+<h3>Map: update the code map and the docs</h3>
+<p class="who">Agent, as the last implementation step</p>
+<p>The last step of every WP brings <code>docs/architecture/code-map.html</code> up to date (its JSON data block, so a new box or arrow is data, not code), plus every doc the WP changed: <code>AGENTS.md</code> commands, the service's own <code>AGENTS.md</code>, <code>docs/local-playbook.md</code> and these process pages. The claude.ai artifacts are copies; the repo files are the source. The owner uses the map to review the design before the PR.</p>
+</div></div>
+
+<div class="stage"><div class="n">7</div><div>
 <h3>Open the PR</h3>
 <p class="who">Agent · board: In progress → In review (automatic)</p>
 <p>Title: the conventional commit that becomes the squash commit and the changelog line. Body from the template with <code>Closes #19</code> on the first line; the Project workflow "Pull request linked to issue" moves the card to In review. No attribution footers, model names or session links anywhere. CI runs lint, typecheck, unit, integration and the coverage gates of ADR-009.</p>
 </div></div>
 
-<div class="stage"><div class="n">7</div><div>
-<h3>Review</h3>
+<div class="stage"><div class="n">8</div><div>
+<h3>Review, then explain back</h3>
 <p class="who"><code>@agent-reviewer</code> first, then the owner</p>
-<p>The reviewer subagent runs its ten-point checklist (boundaries, messaging, AI and guards, OWASP LLM Top 10, testing, secrets, content rules, delivery, learning gate, docs) and reports findings with file:line and the smallest fix; it never approves. The agent fixes what it can and pushes. Then the owner explains the design back (the Recap section of the explainer records gaps) and reviews the PR.</p>
+<p>The reviewer subagent runs its ten-point checklist (boundaries, messaging, AI and guards, OWASP LLM Top 10, testing, secrets, content rules, delivery, learning gate, docs) and reports findings with file:line and the smallest fix; it never approves. The agent fixes what it can and pushes. The owner reviews the PR. Then comes the explain-back: the owner explains the design back in their own words, and the agent records the answers and the gaps in the explainer's Recap.</p>
 </div></div>
 
-<div class="stage"><div class="n">8</div><div>
+<div class="stage"><div class="n">9</div><div>
 <h3>Merge</h3>
 <p class="who">Owner · board: In review → Done (automatic)</p>
 <p>Squash merge; the branch is deleted; the issue closes through <code>Closes #</code>; the workflow "Item closed" moves the card to Done. release-please opens or updates the release PR for the service from the squash commit; merging that PR tags the version and builds the image.</p>
 </div></div>
 
-<div class="stage"><div class="n">9</div><div>
+<div class="stage"><div class="n">10</div><div>
 <h3>Ship and write up</h3>
 <p class="who">Owner present</p>
 <p>Deploy to staging, then production (agents never run deploy scripts). Journal post drafted for learning WPs. The definition of done in the issue is the checklist: tests green with gates, docs updated where a rule or command changed, deployed to staging, changelog entry present.</p>
 </div></div>
+
+<h2 id="explainback">What the explain-back is, and what it is not</h2>
+<div class="note"><p>The explain-back is the owner explaining the design back, in their own words, after the PR review (stage 8). The agent asks only about what the explainer taught, and writes the answers and any gaps in the explainer's Recap section. It is not the decision questions of stages 3 and 4: those are choices the owner makes before any code exists. An "I don't know" in the explain-back means the explainer missed something, and the explainer gets fixed. A step marked <code>fast_path: known</code> has no explain-back.</p></div>
 
 <h2 id="gates">The gates, and what enforces each</h2>
 <div class="tablewrap"><table>
@@ -174,6 +183,7 @@ a { color: var(--accent); }
 <p>In a cloud session <code>gh</code> is not authenticated as the owner, so the seed script, Project edits and anything that needs the owner's token run locally. Pushes and PRs work through the GitHub app. Locally, everything in this page works as written and the hooks run in the owner's Claude Code.</p>
 
 <h2 id="firstmate">Mapping onto firstmate</h2>
+<p>The full guide is <code>docs/firstmate.md</code>: what firstmate reads and in which order, the stages mapped to its concepts (Map and the learning gate have no equivalent), every place the two may collide with the rule for each, and the two prompts to start a session. The table below is the short version.</p>
 <div class="tablewrap"><table>
 <tr><th>Firstmate concept</th><th>In this repo</th><th>Keep or replace</th></tr>
 <tr><td>Plan</td><td><code>/wp NN</code> step list, plus the issue's acceptance criteria</td><td>Either; the step list must end in commits with green <code>pnpm verify</code></td></tr>
@@ -193,7 +203,8 @@ a { color: var(--accent); }
 <li><code>/wp NN</code>. Read the step list; say go, or edit it.</li>
 <li><code>/learn-step NN</code> (learning WPs). Read the explainer. Ask <code>/explain</code> for anything unclear. Answer the question.</li>
 <li>Implement one step. Check the commit and the step log line. Repeat.</li>
-<li>Open the PR; run <code>@agent-reviewer</code>; fix; explain the design back; merge.</li>
+<li>Last step: the code map and the docs the WP changed.</li>
+<li>Open the PR; run <code>@agent-reviewer</code>; fix; review; explain the design back (Recap); merge.</li>
 <li>Close the session with the explainer's Recap filled and the card in Done.</li>
 </ol>
 
@@ -218,11 +229,29 @@ a { color: var(--accent); }
 <li>Untracked <code>package.json</code> on <code>main</code> blocked <code>git switch</code>; setup commands are chained with <code>&amp;&amp;</code>.</li>
 <li>Biome 2.5 moved <code>recommended</code> to <code>preset</code>; Turborepo is on 2.11.7.</li>
 </ul>
+<h2 id="wp3">The WP-3 run</h2>
+<div class="card">
+<p>WP-3 (Service platform and API skeleton, issue #11) was the first WP to run the canonical flow: <code>/wp 3</code>, a self-contained explainer with all seven questions in one message, the owner's answers recorded on 2026-10-03 before any code, then eight steps, each with one scoped commit and two lines in the step log. No step was marked known. The PR review, the explain-back and the Recap come next.</p>
+</div>
+<h3>What went well</h3>
+<ul>
+<li><strong>One canonical run.</strong> The decisions came first and were the owner's own (A1 Express, B2 <code>ApiConfig</code>, D1 <code>pg</code>, E1 Terminus body, F1 <code>NodeSDK</code>, G3 checked templates, I3 spike). Every later change was written down as an amendment under Decision instead of rewriting the answers.</li>
+<li><strong>A spike before code, 8 of 8 rows go.</strong> One day of throwaway code on <code>spike/wp-3-nest12</code> tested Nest 12 with Vitest, nestjs-pino, RabbitMQ and Testcontainers, better-auth, MCP, OpenTelemetry, LangGraph and the install scripts. No library decided by an ADR failed. The one partial (Nest controller spans, blocked by a declared version range) took the fallback named in advance (S2). Two traps surfaced before any real code: Biome's <code>import type</code> fix breaks DI (S1, an override for Nest paths), and the OTel SDK starts exporters nobody asked for.</li>
+<li><strong>Nest 11 or 12, answered with evidence.</strong> When the owner asked whether to step back to Nest 11, the spike rows showed only one finding came from Nest 12, and it needed no code.</li>
+</ul>
+<h3>What changed</h3>
+<ul>
+<li><strong>ADR-043.</strong> The step 3 code used an own config loader, while ADR-007 named <code>@nestjs/config</code>, and the explainer had not raised it. The owner kept the own loader (validation before <code>NestFactory.create</code>, one loader for the app and the OTel entry, typed <code>ApiConfig</code>), and ADR-043 supersedes ADR-007 on the library only. Lesson: before writing code, check it against the accepted ADRs, not only against the explainer.</li>
+<li><strong>The Docker context fix.</strong> Testcontainers does not read the Docker CLI context that OrbStack uses, so <code>pnpm test:int</code> failed where <code>pnpm dev:up</code> worked. The integration setup now asks <code>docker context inspect</code> and sets <code>DOCKER_HOST</code>.</li>
+<li><strong>The domain rule fix.</strong> Widening the dependency-cruiser rules to <code>templates/</code> showed that <code>domain-imports-only-domain</code> only flagged imports into <code>apps/</code>, so a domain file could import <code>@nestjs/common</code>. It now flags any import outside the module's <code>domain/</code>. The same widening caught a template test that imported an adapter from <code>application/</code>.</li>
+<li><strong>The code map.</strong> An interactive map of the repo (<code>docs/architecture/code-map.html</code>) now lives in the repo and is updated as the last step of every WP (the new Map stage). Reviewing the design through it found real fixes, applied in their own commit.</li>
+<li><strong>The firstmate guide.</strong> <code>docs/firstmate.md</code> records how firstmate runs this flow, where it may collide, and the prompts to start a session and a WP.</li>
+</ul>
+
 <h3>Still open after the trials</h3>
 <ul>
-<li>ADR-010 on observability: <code>@nestjs/observe</code> cannot meet the ADR's OTLP decision, and the broker in <code>api</code>'s readiness check is questionable with an outbox. The WP-3 explainer flags both.</li>
+<li>ADR-010 on observability: the <code>@nestjs/observe</code> question is settled by WP-3 decision F1 (<code>NodeSDK</code> with an explicit list, no new ADR). The broker in <code>api</code>'s readiness check is still questionable with an outbox; WP-5 decides.</li>
 <li>The plan report names databases <code>jadero_content</code>; the code follows ADR-027's <code>content_dev</code>. The report should follow the ADR.</li>
-<li>The WP-3 explainer has seven questions for the owner; steps that need Docker (Testcontainers, <code>dev:up</code>) run on the owner's machine.</li>
 <li>The Project views are a manual step.</li>
 </ul>
 </main>

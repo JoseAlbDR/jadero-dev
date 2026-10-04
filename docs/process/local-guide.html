@@ -50,9 +50,9 @@ input[type="checkbox"] { accent-color: var(--accent); margin-right: 6px; }
 <p class="eyebrow">jadero.dev v2 · playbook for the owner's machine</p>
 <h1>Working the repo from your laptop, step by step</h1>
 <p class="lede">How to run the same flow the cloud session ran, on your machine with Claude Code (Opus 5.5) and firstmate. Setup once, what to do after a merge, the daily loop, and what to do when something blocks. Every rule here has its source file in the repo.</p>
-<p class="status">Version 6, 2026-10-03: self-contained explainers, one question at a time; WP-1 closed; verify:all, verify after merging main, RabbitMQ cookie fix, Biome preset. Companion page: the delivery flow (nine stages, roles, gates).</p>
+<p class="status">Version 7, 2026-10-04: WP-3 built (steps 1 to 8); pnpm build, pnpm dev and pnpm test:int; the stale dist and Testcontainers-on-OrbStack fixes; pages to keep current; continue tomorrow with firstmate. Companion page: the delivery flow (ten stages, roles, gates).</p>
 
-<nav class="toc"><a href="#once">Setup once</a><a href="#first">After a merge to main</a><a href="#session">What a session looks like</a><a href="#daily">Daily loop</a><a href="#learning">How you learn</a><a href="#blocked">When something blocks</a><a href="#firstmate">With firstmate</a><a href="#cheatsheet">Cheat sheet</a></nav>
+<nav class="toc"><a href="#once">Setup once</a><a href="#first">After a merge to main</a><a href="#session">What a session looks like</a><a href="#daily">Daily loop</a><a href="#learning">How you learn</a><a href="#blocked">When something blocks</a><a href="#firstmate">With firstmate</a><a href="#pages">Pages to keep current</a><a href="#tomorrow">Continue tomorrow</a><a href="#cheatsheet">Cheat sheet</a></nav>
 
 <h2 id="once">Setup once</h2>
 <div class="tablewrap"><table>
@@ -63,7 +63,7 @@ input[type="checkbox"] { accent-color: var(--accent); margin-right: 6px; }
 <tr><td>gh</td><td>2.60+</td><td><code>gh auth status</code>; scopes repo and project</td><td>The <code>/wp</code> skill reads issues through it; the seed script needs the project scope</td></tr>
 <tr><td>Claude Code</td><td>current</td><td>Model Opus 5.5 in your user settings (<code>/model</code>); the repo pins none</td><td>High effort for learning WPs; the reviewer agent inherits the model</td></tr>
 </table></div>
-<pre class="term"><span class="you">$ cd ~/dev/projects/jadero-dev &amp;&amp; git switch main &amp;&amp; git pull</span>
+<pre class="term"><span class="you">$ cd jadero-dev &amp;&amp; git switch main &amp;&amp; git pull</span>
 <span class="you">$ nvm use &amp;&amp; corepack enable</span>
 <span class="you">$ pnpm install</span>
 <span class="dim">Packages: +41 ... Done in 4s using pnpm v11.28.2</span>
@@ -98,7 +98,7 @@ WP-3 explainer: docs/learning/wp-3.md (decision: pending).</span>
 
 <span class="you">&gt; /explain fail-fast configuration</span>
 
-<span class="you">&gt; My answers: 1 Fastify, 2 template under packages/platform-nest, 3 spike as a table in the explainer. Record the decision.</span>
+<span class="you">&gt; My answers: 1 Express, 2 ApiConfig class, 3 pg, ... Record the decision.</span>
 <span class="dim">docs/learning/wp-3.md: decision: recorded, adr: [...]. The gate is open.</span>
 
 <span class="you">&gt; Step 2. Explain each file before you write it.</span>
@@ -151,12 +151,54 @@ WP-3 explainer: docs/learning/wp-3.md (decision: pending).</span>
 <tr><td>RabbitMQ exits with <code>.erlang.cookie: eacces</code></td><td>An old volume where a root process wrote the cookie before the server</td><td>The compose file now runs it as <code>user: rabbitmq</code>; run <code>docker compose -f infra/compose/compose.dev.yml down -v</code> once</td></tr>
 <tr><td>Biome warns that <code>recommended</code> is deprecated</td><td>Biome 2.5 renamed the option</td><td><code>pnpm exec biome migrate --write</code> (it becomes <code>"preset": "recommended"</code>)</td></tr>
 <tr><td><code>nvm use</code>: no .nvmrc found</td><td>The branch predates WP-1</td><td>Switch to a branch that has <code>.nvmrc</code>; <code>nvm install</code> installs and selects 24.x</td></tr>
+<tr><td>Testcontainers: <code>Could not find a working container runtime strategy</code>, while <code>pnpm dev:up</code> works</td><td>The socket is not at <code>/var/run/docker.sock</code> (OrbStack, Colima, Docker Desktop on macOS). Compose reads the Docker context; Testcontainers does not</td><td>The harness now reads the context itself (<code>apps/api/test/setup/docker-host.ts</code>). If it still fails, check <code>docker context ls</code> and <code>docker info</code>, or set <code>docker.host</code> in <code>~/.testcontainers.properties</code>. A "No test files found" line next to it is a side effect of the failed global setup</td></tr>
+<tr><td>Editor: <code>Module '"@jadero/platform-nest"' has no exported member 'X'</code> while <code>pnpm verify</code> is green</td><td>The editor reads the package's compiled <code>dist/index.d.ts</code>, which is older than the source after a pull</td><td><code>pnpm build</code> (Turborepo builds packages in dependency order); <code>pnpm verify</code> builds them too, and <code>pnpm dev</code> keeps them fresh while it runs</td></tr>
 <tr><td>Claude cannot read <code>.env.example</code></td><td><code>.claude/settings.json</code> denies <code>Read(.env.*)</code></td><td>Expected; it can <code>cat</code> it. Real values live in 1Password, never in files</td></tr>
 </table></div>
 
 <h2 id="firstmate">With firstmate</h2>
-<p>Point firstmate's implementers at <code>AGENTS.md</code>; it is tool-neutral and the rules under <code>.claude/rules/</code> are plain Markdown. The mapping (plan = <code>/wp</code> step list, approve = recorded decision, implement = one step with its log line, review = the reviewer checklist, MR = PR with <code>Closes #</code>) is in <code>docs/agent-tooling.md</code>. Two things firstmate must honor and cannot replace: the learning gate (read the explainer front matter before touching a learning path) and the ADR files (supersede, never edit). Security guardrails stay firstmate's job; the repo does not duplicate them.</p>
+<p>The full guide is <code>docs/firstmate.md</code>: what firstmate reads and in which order, the flow mapped to its concepts, the collision table with a rule per row, and the two prompts in <a href="#tomorrow">Continue tomorrow</a>. In short: point firstmate's implementers at <code>AGENTS.md</code>; it is tool-neutral and the rules under <code>.claude/rules/</code> are plain Markdown. The mapping (plan = <code>/wp</code> step list, approve = recorded decision, implement = one step with its log line, review = the reviewer checklist, MR = PR with <code>Closes #</code>) is in <code>docs/agent-tooling.md</code>. Two things firstmate must honor and cannot replace: the learning gate (read the explainer front matter before touching a learning path) and the ADR files (supersede, never edit). Security guardrails stay firstmate's job; the repo does not duplicate them.</p>
 <p>Cloud sessions are fine for anything that needs no Docker and no owner presence: explainers, ADR drafts, tooling fixes, reviews. Implementation of a learning WP belongs in your local session, where you are present and Docker runs.</p>
+
+<h2 id="pages">Pages to keep current</h2>
+<div class="tablewrap"><table>
+<tr><th>Page</th><th>Source in the repo</th><th>Published copy</th><th>Update when</th></tr>
+<tr><td>Code map</td><td><code>docs/architecture/code-map.html</code> (JSON data block)</td><td>claude.ai artifact</td><td>Every WP that adds an app, package, module, provider or changes the request path (last step of <code>/wp</code>)</td></tr>
+<tr><td>Delivery flow</td><td><code>docs/process/delivery-flow.html</code> (mirrors <code>docs/agent-tooling.md</code>)</td><td>claude.ai artifact</td><td>The flow changes</td></tr>
+<tr><td>Local guide</td><td><code>docs/process/local-guide.html</code> (mirrors <code>docs/local-playbook.md</code>)</td><td>claude.ai artifact</td><td>The playbook changes</td></tr>
+</table></div>
+<p>A session that can publish artifacts republishes them; one that cannot edits the repo files, and the next session that can publishes them. The repo files are the source; the artifacts are copies.</p>
+
+<h2 id="tomorrow">Continue tomorrow</h2>
+<p>Two prompts from <code>docs/firstmate.md</code>, copied as they are. Run the first once, in your first local session with firstmate, before anything changes. Run the second to start the next work package.</p>
+<h3>Prompt: first local session (check the fit, change nothing)</h3>
+<pre><code>Read AGENTS.md, CLAUDE.md, .claude/ (rules, skills, agents, hooks, settings.json), docs/agent-tooling.md,
+docs/local-playbook.md and docs/firstmate.md in the jadero-dev repo. Then compare them with your own
+framework rules and hooks. Report, without changing any file:
+1. every place where your defaults would break this repo's flow (decision gate, one step per commit,
+   GitHub instead of GitLab, commit format and identity, branch names, ADRs in the repo, hooks that
+   would run twice or fight);
+2. what you would change on your side for this repo (config, skills to turn off);
+3. anything in the repo that looks wrong or stale.
+Answer in Spanish; the files stay in English.</code></pre>
+<h3>Prompt: start a work package (WP-5 next)</h3>
+<pre><code>Next work package in jadero-dev: WP-5 (messaging foundation and the agent skeleton), a learning WP.
+Follow the repo's flow exactly (AGENTS.md section 5, docs/agent-tooling.md, docs/firstmate.md):
+1. git switch main &amp;&amp; git pull &amp;&amp; pnpm install &amp;&amp; pnpm verify:all.
+2. /wp 5: check that WP-3 is merged, create wp/5-&lt;slug&gt; from origin/main, propose 4 to 8 steps and the
+   definition of done from the issue, then stop.
+3. After my go: /learn-step 5. The explainer must be self-contained (How to read this file, Named here,
+   two traces for a service WP, facts checked against the npm registry, all questions in one message,
+   dependent questions with a recommendation per answer). Stop. Do not write code under learning paths.
+4. When I answer: record the decision (decision: recorded), then build one step at a time: tell me which
+   files and why before writing, pnpm verify, one scoped commit, two lines in the step log, show it
+   running. Steps that need Docker run here (pnpm dev:up, pnpm test:int).
+5. Last step: update docs/architecture/code-map.html (its JSON data) and the docs the WP changed.
+6. Open the PR with Closes #13, run @agent-reviewer, fix its findings, then ask me the
+   explain-back questions (only about what the explainer taught) and write my answers and the gaps in
+   the Recap. I merge.
+Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.</code></pre>
+<p>To start any other WP, change the number and the title; the rest stays.</p>
 
 <h2 id="cheatsheet">Cheat sheet</h2>
 <div class="tablewrap"><table>
@@ -166,11 +208,14 @@ WP-3 explainer: docs/learning/wp-3.md (decision: pending).</span>
 <tr><td><code>pnpm lint</code> / <code>pnpm lint:fix</code></td><td>Biome check / format and safe fixes</td></tr>
 <tr><td><code>pnpm depcruise</code></td><td>Import rules of ADR-003 and AGENTS.md section 4</td></tr>
 <tr><td><code>pnpm dev:up</code> / <code>pnpm dev:down</code></td><td>Postgres 18 (pgvector) and RabbitMQ 4 on 127.0.0.1</td></tr>
+<tr><td><code>pnpm build</code></td><td>Compiles every package to <code>dist/</code> in dependency order, cached. Run it when the editor shows stale errors after a pull</td></tr>
+<tr><td><code>pnpm dev</code></td><td>Builds once, then <code>tsc --watch</code> for <code>platform-nest</code> and <code>api</code> and <code>node --watch</code> on <code>dist/</code>, with the same OpenTelemetry <code>--import</code> line as <code>start</code>. First copy <code>apps/api/.env.example</code> to <code>apps/api/.env</code> and run <code>pnpm dev:up</code>; <code>api</code> listens on 3001</td></tr>
+<tr><td><code>pnpm test:int</code></td><td>Integration tests with Testcontainers: one Postgres container per run, one database per test file. Needs Docker; not part of <code>pnpm verify</code></td></tr>
 <tr><td><code>pnpm adr:new "Title"</code> / <code>pnpm adr:index</code> / <code>--check</code></td><td>Next ADR from the template / regenerate the index / fail when stale</td></tr>
 <tr><td><code>/wp NN</code>, <code>/learn-step NN</code>, <code>/explain X</code>, <code>/adr Title</code></td><td>The four skills</td></tr>
 <tr><td><code>@agent-reviewer</code></td><td>Ten-point review before you look at a PR</td></tr>
 <tr><td><code>LEFTHOOK=0 git commit ...</code></td><td>Skip hooks once (CI runs the same checks; it only delays the failure)</td></tr>
 <tr><td><code>node scripts/github/seed.mjs</code></td><td>Re-seed issues and the Project after adding a WP to <code>decisions.json</code></td></tr>
 </table></div>
-<div class="note"><p>Now: WP-3 (service platform and API skeleton), run end to end with the canonical flow. Its explainer is on branch <code>wp/3-service-platform</code> with the decision pending: read it, ask, decide, then implement step by step. Steps with Testcontainers or <code>pnpm dev:up</code> run on your machine (the cloud has no Docker).</p></div>
+<div class="note"><p>Now: WP-3 (service platform and API skeleton) has all eight steps on branch <code>wp/3-service-platform</code>. Next: the PR with <code>Closes #11</code>, <code>@agent-reviewer</code>, your review, then the explain-back into the Recap, and the merge. After that, WP-5 with the second prompt above. Steps with Testcontainers or <code>pnpm dev:up</code> run on your machine (the cloud has no Docker).</p></div>
 </main>
