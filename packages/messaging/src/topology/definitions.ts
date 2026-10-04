@@ -56,21 +56,26 @@ function escapeRegex(name: string): string {
   return name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-const quorum = (extra: Record<string, unknown> = {}) => ({
-  "x-queue-type": "quorum",
-  // At-least-once dead-lettering: a message moving to a retry queue or the DLQ cannot be lost on
-  // the way (the quorum default is at-most-once), which requires reject-publish overflow.
-  "x-dead-letter-strategy": "at-least-once",
-  "x-overflow": "reject-publish",
-  ...extra,
-});
+/** Every queue is a quorum queue; the type is the only argument, set once at declaration. */
+const QUORUM = { "x-queue-type": "quorum" } as const;
+
+/**
+ * At-least-once dead-lettering: a message moving to a retry queue or the DLQ cannot be lost on the
+ * way (the quorum default is at-most-once), which requires reject-publish overflow.
+ */
+const SAFE_DEAD_LETTERING = {
+  "dead-letter-strategy": "at-least-once",
+  overflow: "reject-publish",
+} as const;
 
 /**
  * Builds the RabbitMQ definitions of one virtual host (WP-5 decisions T4 and R1): the topic
  * exchange with its alternate exchange, the dead-letter exchange, one retry exchange per service
  * for the consumer's retried and dead-lettered copies, and per consumer queue a quorum queue, one
  * wait queue per retry tier (no consumer; its TTL is the timer, then the broker dead-letters it
- * back through the default exchange to that queue only) and a dead-letter queue. Service users get
+ * back through the retry exchange to that queue only) and a dead-letter queue. Queues carry only
+ * their type as an argument; TTLs, dead-lettering and the delivery limit are policies, because
+ * RabbitMQ cannot change a declared queue's arguments but applies a changed policy at once. Service users get
  * no `configure` right: they cannot declare or delete anything, so the topology lives only here.
  * @param input the vhost, its consumer queues and users.
  * @returns the object RabbitMQ imports with `load_definitions`.
@@ -92,35 +97,46 @@ export function buildDefinitions(input: TopologyInput): Record<string, unknown> 
   const queue = (name: string, args: Record<string, unknown>) =>
     queues.push({ name, vhost, durable: true, auto_delete: false, arguments: args });
 
-  queue(UNROUTED, { "x-queue-type": "quorum" });
+  const policies: Record<string, unknown>[] = [];
+  const policy = (queueName: string, definition: Record<string, unknown>) =>
+    policies.push({
+      vhost,
+      name: queueName,
+      pattern: `^${escapeRegex(queueName)}$`,
+      "apply-to": "queues",
+      priority: 10,
+      definition,
+    });
+
+  queue(UNROUTED, QUORUM);
   bind(UNROUTED, UNROUTED, "");
   for (const consumer of input.queues) {
     const retryExchange = retryExchangeName(consumer.service);
-    queue(
-      consumer.name,
-      quorum({
-        "x-dead-letter-exchange": DEAD_LETTER_EXCHANGE,
-        "x-dead-letter-routing-key": consumer.name,
-        // Explicit, not the implicit 4.x default: a consumer that crashes on a message 20 times
-        // (a crash counts, a nack does not) sends it to the DLQ through jadero.dlx.
-        "x-delivery-limit": 20,
-      }),
-    );
+    queue(consumer.name, QUORUM);
+    policy(consumer.name, {
+      ...SAFE_DEAD_LETTERING,
+      "dead-letter-exchange": DEAD_LETTER_EXCHANGE,
+      "dead-letter-routing-key": consumer.name,
+      // Explicit, not the implicit 4.x default: a consumer that crashes on a message 20 times
+      // (a crash counts, a nack does not) sends it to the DLQ through jadero.dlx.
+      "delivery-limit": 20,
+    });
     for (const key of consumer.bindings) bind(EVENTS_EXCHANGE, consumer.name, key);
+    // Expired retries come back through the service's retry exchange, to this queue only.
+    bind(retryExchange, consumer.name, consumer.name);
     for (const delayMs of tiers) {
       const wait = retryQueueName(consumer.name, delayMs);
-      queue(
-        wait,
-        quorum({
-          "x-message-ttl": delayMs,
-          "x-dead-letter-exchange": "",
-          "x-dead-letter-routing-key": consumer.name,
-        }),
-      );
+      queue(wait, QUORUM);
+      policy(wait, {
+        ...SAFE_DEAD_LETTERING,
+        "message-ttl": delayMs,
+        "dead-letter-exchange": retryExchange,
+        "dead-letter-routing-key": consumer.name,
+      });
       bind(retryExchange, wait, wait);
     }
     const dlq = deadLetterQueueName(consumer.name);
-    queue(dlq, { "x-queue-type": "quorum" });
+    queue(dlq, QUORUM);
     bind(DEAD_LETTER_EXCHANGE, dlq, consumer.name);
     bind(retryExchange, dlq, dlq);
   }
@@ -195,7 +211,7 @@ export function buildDefinitions(input: TopologyInput): Record<string, unknown> 
     ],
     queues,
     bindings,
-    policies: [],
+    policies,
     parameters: [],
     global_parameters: [],
     topic_permissions: [],

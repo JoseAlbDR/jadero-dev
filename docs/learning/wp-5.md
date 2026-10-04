@@ -531,6 +531,11 @@ No step marked `known`. Every answer matched the recommendation; the owner asked
 
 `decision: recorded` on 2026-10-04.
 
+Amendments (2026-10-04):
+
+- Circuit breaker on broker calls: **no**, owner's decision after the mid-WP review. Broker calls get a timeout; the relay backs off per row, consumers retry through the wait queues, and no request waits on the broker, so a breaker adds nothing there. Cockatiel goes where a slow call blocks a request: AI and mail adapters (WP-11, WP-19). This is what ADR-029 already says; `.claude/rules/services.md` had widened it to the broker and is corrected in PR #87.
+- Queue settings as policies (step 4c): queues declare only their type; TTLs, dead-lettering and the delivery limit are policies, because RabbitMQ cannot change a declared queue's arguments (found when the owner's dev broker kept the old arguments after a restart).
+
 ## Step log
 
 - Step 2, contracts: new compiled package `packages/contracts` with the CloudEvents envelope (`cloudEventEnvelope`), `defineEvent(routingKey, data)` that derives the `type` and the envelope schema from one string and refuses keys that are not `<context>.<event>.v<N>`, and the first event `system.ping.v1` (`trigger: manual | heartbeat`); one JSON fixture per event, which a test parses for every contract; `asyncapi.json` (AsyncAPI 3.1) generated from the Zod schemas, with tests that fail when it is stale or invalid. 19 tests.
@@ -552,6 +557,11 @@ No step marked `known`. Every answer matched the recommendation; the owner asked
 
 - Mid-WP review (`@agent-reviewer`, after step 4b), fixes: (1) copies no longer go through the default exchange, where a missing wait queue meant a confirmed copy, an acked original and a lost message; each service has a direct retry exchange (`agent.retry`) bound to its wait queues and DLQ, with `jadero.unrouted` as alternate exchange, and the service user may write only to it (least privilege: the default exchange reaches every queue); (2) an unconfirmed copy no longer causes an immediate requeue (a nack does not count toward the 4.3 delivery limit, so it would loop): the delivery is held 1 s, then put back, and is never acked without its copy; (3) `stop()` cancels the consumers and waits for deliveries in progress; (4) consumers run on their own channel through amqp-connection-manager, whose consumer tags survive reconnects, and `start()` is idempotent; (5) retry reasons keep the error class and code only, never the message, which can carry values; (6) `x-delivery-limit: 20` is explicit and copies drop the broker's `x-death` headers. New tests: `dispatch` (non-JSON body, unknown type, redacted reasons), the retry exchange and permissions in the topology, and a Docker test for a non-JSON body. Open for the owner: cockatiel around broker calls (`.claude/rules/services.md`).
 - Why: every finding was a way to lose a message or loop on one, the two failures this WP exists to prevent; the review caught them before any service depends on the adapter.
+
+- Check question, step 4 (ack lost after the consumer's commit): the owner named idempotency and an inbox of consumed messages, which is the answer, and also an outbox table that "the broker checks" to avoid sending twice, which is not. The outbox lives in the producer's database and the relay reads it, not the broker; it guarantees nothing is lost and may publish twice. In this case it plays no part: the delivery was never acked, so the quorum queue still holds it and redelivers it when the consumer reconnects (the connection loss counts toward the delivery limit of 20); the consumer's inbox insert of `(consumer, event_id)` returns no row, so it skips the effects and acks.
+
+- Step 4c, queue settings as policies: queue arguments are only `x-queue-type: quorum`; one policy per queue (exact-name pattern) carries at-least-once dead-lettering, `reject-publish`, the dead-letter target and `delivery-limit: 20` for consumer queues, and `message-ttl` plus the return route for wait queues; expired retries now return through the service's retry exchange (`agent.retry`, bound to the consumer queue by its own name) instead of the default exchange.
+- Why: RabbitMQ never changes a declared queue's arguments, so a TTL or a limit set as an argument can only change by deleting the queue; a policy changes in place, which matters once queues hold production messages.
 
 ## Recap
 

@@ -106,12 +106,7 @@
       "durable": true,
       "auto_delete": false,
       "arguments": {
-        "x-queue-type": "quorum",
-        "x-dead-letter-strategy": "at-least-once",
-        "x-overflow": "reject-publish",
-        "x-dead-letter-exchange": "jadero.dlx",
-        "x-dead-letter-routing-key": "agent.system.ping",
-        "x-delivery-limit": 20
+        "x-queue-type": "quorum"
       }
     },
     {
@@ -120,12 +115,7 @@
       "durable": true,
       "auto_delete": false,
       "arguments": {
-        "x-queue-type": "quorum",
-        "x-dead-letter-strategy": "at-least-once",
-        "x-overflow": "reject-publish",
-        "x-message-ttl": 10000,
-        "x-dead-letter-exchange": "",
-        "x-dead-letter-routing-key": "agent.system.ping"
+        "x-queue-type": "quorum"
       }
     },
     {
@@ -134,12 +124,7 @@
       "durable": true,
       "auto_delete": false,
       "arguments": {
-        "x-queue-type": "quorum",
-        "x-dead-letter-strategy": "at-least-once",
-        "x-overflow": "reject-publish",
-        "x-message-ttl": 60000,
-        "x-dead-letter-exchange": "",
-        "x-dead-letter-routing-key": "agent.system.ping"
+        "x-queue-type": "quorum"
       }
     },
     {
@@ -148,12 +133,7 @@
       "durable": true,
       "auto_delete": false,
       "arguments": {
-        "x-queue-type": "quorum",
-        "x-dead-letter-strategy": "at-least-once",
-        "x-overflow": "reject-publish",
-        "x-message-ttl": 600000,
-        "x-dead-letter-exchange": "",
-        "x-dead-letter-routing-key": "agent.system.ping"
+        "x-queue-type": "quorum"
       }
     },
     {
@@ -181,6 +161,14 @@
       "destination": "agent.system.ping",
       "destination_type": "queue",
       "routing_key": "system.ping.v1",
+      "arguments": {}
+    },
+    {
+      "source": "agent.retry",
+      "vhost": "dev",
+      "destination": "agent.system.ping",
+      "destination_type": "queue",
+      "routing_key": "agent.system.ping",
       "arguments": {}
     },
     {
@@ -224,7 +212,64 @@
       "arguments": {}
     }
   ],
-  "policies": [],
+  "policies": [
+    {
+      "vhost": "dev",
+      "name": "agent.system.ping",
+      "pattern": "^agent\\.system\\.ping$",
+      "apply-to": "queues",
+      "priority": 10,
+      "definition": {
+        "dead-letter-strategy": "at-least-once",
+        "overflow": "reject-publish",
+        "dead-letter-exchange": "jadero.dlx",
+        "dead-letter-routing-key": "agent.system.ping",
+        "delivery-limit": 20
+      }
+    },
+    {
+      "vhost": "dev",
+      "name": "agent.system.ping.retry.10s",
+      "pattern": "^agent\\.system\\.ping\\.retry\\.10s$",
+      "apply-to": "queues",
+      "priority": 10,
+      "definition": {
+        "dead-letter-strategy": "at-least-once",
+        "overflow": "reject-publish",
+        "message-ttl": 10000,
+        "dead-letter-exchange": "agent.retry",
+        "dead-letter-routing-key": "agent.system.ping"
+      }
+    },
+    {
+      "vhost": "dev",
+      "name": "agent.system.ping.retry.1m",
+      "pattern": "^agent\\.system\\.ping\\.retry\\.1m$",
+      "apply-to": "queues",
+      "priority": 10,
+      "definition": {
+        "dead-letter-strategy": "at-least-once",
+        "overflow": "reject-publish",
+        "message-ttl": 60000,
+        "dead-letter-exchange": "agent.retry",
+        "dead-letter-routing-key": "agent.system.ping"
+      }
+    },
+    {
+      "vhost": "dev",
+      "name": "agent.system.ping.retry.10m",
+      "pattern": "^agent\\.system\\.ping\\.retry\\.10m$",
+      "apply-to": "queues",
+      "priority": 10,
+      "definition": {
+        "dead-letter-strategy": "at-least-once",
+        "overflow": "reject-publish",
+        "message-ttl": 600000,
+        "dead-letter-exchange": "agent.retry",
+        "dead-letter-routing-key": "agent.system.ping"
+      }
+    }
+  ],
   "parameters": [],
   "global_parameters": [],
   "topic_permissions": []

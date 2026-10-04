@@ -14,10 +14,19 @@ type Queue = { name: string; arguments: Record<string, unknown> };
 type Binding = { source: string; destination: string; routing_key: string };
 type Permission = { user: string; configure: string; write: string; read: string };
 type User = { name: string; password_hash: string };
+type Policy = { name: string; pattern: string; definition: Record<string, unknown> };
 
 const committed = JSON.parse(
   readFileSync(new URL("../../../infra/rabbitmq/definitions.json", import.meta.url), "utf8"),
-) as { queues: Queue[]; bindings: Binding[]; permissions: Permission[]; users: User[] };
+) as {
+  queues: Queue[];
+  bindings: Binding[];
+  permissions: Permission[];
+  users: User[];
+  policies: Policy[];
+};
+const policyOf = (queue: string) =>
+  committed.policies.find((p) => new RegExp(p.pattern).test(queue));
 
 describe("infra/rabbitmq/definitions.json", () => {
   it("is generated from the topology module (run `pnpm --filter @jadero/messaging topology`)", () => {
@@ -28,26 +37,36 @@ describe("infra/rabbitmq/definitions.json", () => {
 
   it("gives every consumer queue three wait queues that return to it, and a DLQ", () => {
     for (const { name } of JADERO_QUEUES) {
-      const main = committed.queues.find((q) => q.name === name);
-      expect(main?.arguments).toMatchObject({
+      // The type is the only argument; everything that may change later is a policy.
+      expect(committed.queues.find((q) => q.name === name)?.arguments).toEqual({
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "jadero.dlx",
-        "x-dead-letter-strategy": "at-least-once",
-        "x-overflow": "reject-publish",
+      });
+      expect(policyOf(name)?.definition).toEqual({
+        "dead-letter-strategy": "at-least-once",
+        overflow: "reject-publish",
+        "dead-letter-exchange": "jadero.dlx",
+        "dead-letter-routing-key": name,
+        "delivery-limit": 20,
       });
       for (const [label, ttl] of [
         ["10s", 10_000],
         ["1m", 60_000],
         ["10m", 600_000],
       ] as const) {
-        const wait = committed.queues.find((q) => q.name === `${name}.retry.${label}`);
-        // Back through the default exchange to this queue only: other consumers never see a retry.
-        expect(wait?.arguments).toMatchObject({
-          "x-message-ttl": ttl,
-          "x-dead-letter-exchange": "",
-          "x-dead-letter-routing-key": name,
+        const wait = `${name}.retry.${label}`;
+        expect(committed.queues.find((q) => q.name === wait)?.arguments).toEqual({
+          "x-queue-type": "quorum",
+        });
+        // Back through the retry exchange to this queue only: other consumers never see a retry.
+        expect(policyOf(wait)?.definition).toMatchObject({
+          "message-ttl": ttl,
+          "dead-letter-exchange": "agent.retry",
+          "dead-letter-routing-key": name,
         });
       }
+      expect(committed.bindings).toContainEqual(
+        expect.objectContaining({ source: "agent.retry", destination: name, routing_key: name }),
+      );
       expect(committed.bindings).toContainEqual(
         expect.objectContaining({
           source: "jadero.dlx",
@@ -69,7 +88,6 @@ describe("infra/rabbitmq/definitions.json", () => {
           }),
         );
       }
-      expect(main?.arguments["x-delivery-limit"]).toBe(20);
     }
   });
 
