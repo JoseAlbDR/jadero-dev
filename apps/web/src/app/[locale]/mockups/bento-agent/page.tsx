@@ -123,6 +123,22 @@ export default function BentoAgentPage({ params }: BentoAgentPageProps) {
             </div>
           </section>
 
+          <section className={`${CARD} md:col-span-4`} aria-labelledby="pillars-title">
+            <h2
+              id="pillars-title"
+              className="text-muted-foreground text-xs uppercase tracking-widest"
+            >
+              {t("pillarsTitle")}
+            </h2>
+            <ul className="mt-4 flex flex-wrap gap-2 text-sm">
+              {PILLARS.map((pillar) => (
+                <li key={pillar} className="rounded-full border bg-background/50 px-3.5 py-1.5">
+                  {t(`pillars.${pillar}`)}
+                </li>
+              ))}
+            </ul>
+          </section>
+
           <section className={CARD} aria-labelledby="now-title">
             <h2 id="now-title" className="text-muted-foreground text-xs uppercase tracking-widest">
               {t("nowTitle")}
@@ -155,22 +171,6 @@ export default function BentoAgentPage({ params }: BentoAgentPageProps) {
               <ArrowUpRight aria-hidden className="size-5 text-(--signal)" />
             </Link>
             <p className="mt-2 text-muted-foreground text-sm">{t("caseBody")}</p>
-          </section>
-
-          <section className={`${CARD} md:col-span-4`} aria-labelledby="pillars-title">
-            <h2
-              id="pillars-title"
-              className="text-muted-foreground text-xs uppercase tracking-widest"
-            >
-              {t("pillarsTitle")}
-            </h2>
-            <ul className="mt-4 flex flex-wrap gap-2 text-sm">
-              {PILLARS.map((pillar) => (
-                <li key={pillar} className="rounded-full border bg-background/50 px-3.5 py-1.5">
-                  {t(`pillars.${pillar}`)}
-                </li>
-              ))}
-            </ul>
           </section>
         </div>
       </div>
