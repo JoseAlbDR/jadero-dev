@@ -17,5 +17,6 @@ export const routing = defineRouting({
     "/mockups/terminal": "/mockups/terminal",
     "/mockups/editorial": "/mockups/editorial",
     "/mockups/bento": "/mockups/bento",
+    "/mockups/hybrid": "/mockups/hybrid",
   },
 });

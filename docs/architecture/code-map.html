@@ -1120,7 +1120,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "w-page": {
       "label": "[locale]/page.tsx", "sub": "prerendered per locale", "kind": "step", "status": "real", "wp": "WP-4",
       "what": "The placeholder home, the WP-15 design mockups, or the localized 404 for an unknown path.",
-      "how": "Built once per locale at `next build` and served as static HTML. `[locale]/[...rest]/page.tsx` calls `notFound()`, which renders `[locale]/not-found.tsx` in the visitor's language. `[locale]/mockups/` holds three throwaway hero mockups (terminal, editorial, bento) with `noindex`: each page marks its root with `data-direction`, and `mockups.css` overrides the `packages/ui` tokens with `:root:has([data-direction=...])`, so the header takes the direction too.",
+      "how": "Built once per locale at `next build` and served as static HTML. `[locale]/[...rest]/page.tsx` calls `notFound()`, which renders `[locale]/not-found.tsx` in the visitor's language. `[locale]/mockups/` holds four throwaway hero mockups (terminal, editorial, bento and hybrid, the editorial base with the terminal block) with `noindex`: each page marks its root with `data-direction`, and `mockups.css` overrides the `packages/ui` tokens with `:root:has([data-direction=...])`, so the header takes the direction too.",
       "why": "WP-16 builds the real home and pages; each new page adds its localized pathname in `routing.ts`. The mockups let the owner confirm the ADR-023 direction from screenshots (D-23) and are deleted once one is picked.",
       "files": ["apps/web/src/app/[locale]/page.tsx", "apps/web/src/app/[locale]/not-found.tsx", "apps/web/src/app/[locale]/[...rest]/page.tsx", "apps/web/src/app/[locale]/mockups/"]
     },

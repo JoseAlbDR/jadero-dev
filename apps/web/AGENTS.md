@@ -18,7 +18,7 @@ pnpm test:e2e                            # from the root: build, then Playwright
 - `src/i18n/`: `routing.ts` (locales, default, cookie, localized pathnames), `navigation.ts` (use its `Link` and `usePathname`, never `next/link`), `request.ts` (messages per request), `locale.ts` (`requireLocale`), `alternates.ts` (`localeAlternates`), `global.d.ts` (typed keys from `messages/en.json`).
 - `src/app/[locale]/`: the locale layout (`<html lang>`, metadata with hreflang, providers, header), the home, the localized 404 and a catch-all that triggers it. `src/app/layout.tsx` only passes children through.
 - `src/components/`: app components (header, theme provider and toggle, locale switcher). Reusable, text-free components go to `packages/ui`.
-- `src/app/[locale]/mockups/`: the WP-15 hero mockups (`/mockups/terminal`, `/editorial`, `/bento`), throwaway and `noindex`. Each overrides the tokens in `mockups.css` through its `data-direction`; delete the folder, its `routing.pathnames` entries, the `Mockups` messages, its e2e block, this line and the code-map mentions once the owner picks a direction.
+- `src/app/[locale]/mockups/`: the WP-15 hero mockups (`/mockups/terminal`, `/editorial`, `/bento`, `/hybrid`), throwaway and `noindex`. Each overrides the tokens in `mockups.css` through its `data-direction`; delete the folder, its five `routing.pathnames` entries, the `Mockups` messages, its e2e block, this line and the code-map mentions once the owner picks a direction.
 - `messages/{en,es,de}.json`: every UI string. `test/messages.test.ts` fails when a locale's keys differ from English or a string is empty.
 - `e2e/`: Playwright smoke and axe checks per locale; `playwright.config.ts` serves the standalone build.
 

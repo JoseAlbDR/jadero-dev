@@ -126,7 +126,7 @@ test.describe("theme (ADR-023)", () => {
 
 // WP-15 throwaway mockups: each direction must meet the same bar before the owner picks one.
 test.describe("design direction mockups (ADR-023)", () => {
-  for (const direction of ["", "/terminal", "/editorial", "/bento"] as const) {
+  for (const direction of ["", "/terminal", "/editorial", "/bento", "/hybrid"] as const) {
     for (const colorScheme of ["light", "dark"] as const) {
       test(`mockups${direction} has no WCAG 2.2 AA violations in ${colorScheme} mode`, async ({
         page,

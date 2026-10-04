@@ -5,7 +5,7 @@ import { use } from "react";
 import { localeAlternates } from "@/i18n/alternates";
 import { requireLocale } from "@/i18n/locale";
 import { Link } from "@/i18n/navigation";
-import { MockupNotice, PILLARS, QUESTIONS, TERMINAL } from "../_shared";
+import { MockupNotice, PILLARS, TERMINAL, TerminalPrompt } from "../_shared";
 
 type TerminalPageProps = Readonly<{ params: Promise<{ locale: string }> }>;
 
@@ -63,45 +63,7 @@ export default function TerminalPage({ params }: TerminalPageProps) {
           </Link>
         </div>
 
-        <section
-          aria-label={t("promptLabel")}
-          className="mt-14 max-w-3xl rounded-lg border bg-(--surface) shadow-2xl shadow-foreground/5"
-        >
-          <button
-            type="button"
-            className="flex w-full items-center gap-3 px-5 py-5 text-left font-mono text-lg"
-          >
-            <span aria-hidden className="text-(--signal)">
-              &gt;
-            </span>
-            <span className="text-muted-foreground">{t("promptLabel")}</span>
-            <span aria-hidden className="mockup-caret -ml-2 h-6 w-2.5 bg-(--signal)" />
-            <kbd className="ml-auto rounded border px-1.5 py-0.5 text-muted-foreground text-xs">
-              {TERMINAL.shortcut}
-            </kbd>
-          </button>
-          <div className="border-t px-5 py-4">
-            <p className="font-mono text-muted-foreground text-xs uppercase tracking-widest">
-              {t("promptHint")}
-            </p>
-            <ul className="mt-3 space-y-2 font-mono text-sm">
-              {QUESTIONS.map((question) => (
-                <li key={question}>
-                  <button type="button" className="text-left hover:text-(--signal)">
-                    <span aria-hidden className="text-muted-foreground">
-                      ↳{" "}
-                    </span>
-                    {t(`questions.${question}`)}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <p className="flex items-center gap-2 border-t px-5 py-3 font-mono text-muted-foreground text-xs">
-            <span aria-hidden className="size-2 rounded-full bg-(--signal)" />
-            {t("resting")}
-          </p>
-        </section>
+        <TerminalPrompt className="mt-14 max-w-3xl" />
 
         <section aria-labelledby="pillars-title" className="mt-20">
           <h2

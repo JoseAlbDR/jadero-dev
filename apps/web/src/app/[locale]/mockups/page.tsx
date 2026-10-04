@@ -8,7 +8,7 @@ import { Link } from "@/i18n/navigation";
 
 type MockupsPageProps = Readonly<{ params: Promise<{ locale: string }> }>;
 
-const DIRECTIONS = ["terminal", "editorial", "bento"] as const;
+const DIRECTIONS = ["terminal", "editorial", "bento", "hybrid"] as const;
 
 /**
  * Title and alternates of the mockup index.

@@ -70,6 +70,7 @@
   --border: oklch(0.86 0.012 70);
   --accent: oklch(0.93 0.012 75);
   --signal: oklch(0.5 0.13 40);
+  --surface: oklch(0.99 0.006 80);
 }
 
 :root.dark:has([data-direction="editorial"]) {
@@ -80,6 +81,7 @@
   --border: oklch(1 0 0 / 14%);
   --accent: oklch(0.23 0.006 60);
   --signal: oklch(0.74 0.12 45);
+  --surface: oklch(0.195 0.007 60);
 }
 
 /* Direction 3, "Bento glass": glass cards over a soft aurora, one cyan or violet accent. */
