@@ -22,5 +22,10 @@ export {
   type RetryOutcome,
   retry,
 } from "./outcome.js";
+export {
+  DEAD_REASON_HEADER,
+  RabbitMqMessageBus,
+  type RabbitMqMessageBusOptions,
+} from "./rabbitmq-message-bus.js";
 export { topicMatches } from "./topic.js";
 export * from "./topology/index.js";

@@ -10,6 +10,7 @@ catalog:
   "@biomejs/biome": 2.5.15
   "@commitlint/cli": 21.2.3
   "@commitlint/config-conventional": 21.2.3
+  "@golevelup/nestjs-rabbitmq": 9.1.0
   "@nestjs/common": 12.1.2
   "@nestjs/core": 12.1.2
   "@nestjs/platform-express": 12.1.2
@@ -27,6 +28,7 @@ catalog:
   "@opentelemetry/instrumentation-pg": 0.74.0
   "@opentelemetry/instrumentation-pino": 0.68.0
   "@opentelemetry/sdk-node": 0.222.0
+  "@types/amqplib": 0.10.8
   "@types/express": 5.0.6
   "@types/node": 24.19.1
   "@types/pg": 8.23.1
@@ -34,6 +36,7 @@ catalog:
   "@types/react-dom": 19.3.0
   class-variance-authority: 0.7.1
   clsx: 2.1.1
+  amqplib: 0.10.9
   dependency-cruiser: 18.5.0
   jsdom: 30.1.1
   lefthook: 2.1.16

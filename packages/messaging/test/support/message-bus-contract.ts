@@ -8,6 +8,7 @@ import {
   type MessageBus,
   retry,
 } from "../../src/index.js";
+import { TEST_RETRY_TIERS_MS } from "./tiers.js";
 
 /** What a contract run needs from an adapter: the bus plus a way to look at its side queues. */
 export interface BusHarness {
@@ -16,9 +17,6 @@ export interface BusHarness {
   unrouted(): Promise<readonly { routingKey: string }[]>;
   close(): Promise<void>;
 }
-
-/** Short tiers so a run takes milliseconds; the policy is the same as with 10 s, 1 min, 10 min. */
-export const TEST_RETRY_TIERS_MS = [20, 40, 60] as const;
 
 type Ping = EnvelopeOf<typeof systemPingV1>;
 

@@ -60,6 +60,9 @@ export abstract class MessageBus {
   /** Starts consuming every subscribed queue. */
   abstract start(): Promise<void>;
 
-  /** Stops consuming; deliveries in progress finish first. */
+  /** Stops consuming; deliveries in progress finish first. `start` resumes. */
   abstract stop(): Promise<void>;
+
+  /** Stops and releases the connection, at application shutdown. */
+  abstract close(): Promise<void>;
 }

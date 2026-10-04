@@ -103,8 +103,9 @@ export class InMemoryMessageBus extends MessageBus {
     return this.unroutedMessages;
   }
 
-  /** Clears pending retry timers, so a test run can end. */
-  dispose(): void {
+  /** @inheritdoc Also clears pending retry timers, so a test run can end. */
+  override async close(): Promise<void> {
+    await this.stop();
     for (const timer of this.timers) clearTimeout(timer);
     this.timers.clear();
   }

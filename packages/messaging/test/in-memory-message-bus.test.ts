@@ -7,9 +7,6 @@ messageBusContract("in memory", async ({ retryTiersMs }) => {
     bus,
     deadLetters: async (queue) => bus.deadLetters(queue),
     unrouted: async () => bus.unrouted(),
-    close: async () => {
-      await bus.stop();
-      bus.dispose();
-    },
+    close: () => bus.close(),
   };
 });
