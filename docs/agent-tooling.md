@@ -10,15 +10,23 @@ What Claude Code (or any agent that reads `AGENTS.md`) finds here and why each p
 | `CLAUDE.md` | `@AGENTS.md` plus a few Claude-specific notes (plan mode, subagents, where overrides go). | Always, by Claude Code |
 | `CLAUDE.local.md`, `.claude/settings.local.json` | Personal overrides, gitignored. | Always, by the person who has them |
 | `.claude/rules/*.md` | Path-scoped rules with a `paths:` front matter: services, Nest, AI and agent, testing, infra, frontend, docs. Each restates the ADRs that apply to those files. | Only when the agent reads or edits a matching file |
+| `.claude/rules/orchestration.md` | The orchestrator pattern: the "situation, use" table for every agent and skill, the context rule, parallel agents in worktrees, verifying reports. No `paths:`, so it applies everywhere. | Always |
 | `.claude/settings.json` | Permissions (the usual dev commands pre-approved; `.env` files denied), fake providers as default env, three hooks. | Session start |
 | `.claude/hooks/learning-gate.sh` | PreToolUse on Edit/Write: on a `wp/NN-*` branch, a file under a learning path may change only when `docs/learning/wp-N.md` says `decision: recorded` (or `fast_path: known`, D-38). Exit 2 denies with the reason. The one mechanism that enforces the learning requirement. | Every edit |
 | `.claude/hooks/format.sh` | PostToolUse on Edit/Write: Biome format of the touched file once the repo has Biome (WP-1). Never fails. | Every edit |
 | `.claude/hooks/session-start.sh` | SessionStart: prints branch, where the decisions are, and the WP's gate status. | Session start |
 | `.claude/skills/adr` | `/adr <title>`: new ADR from the template, or supersede one; regenerates the index. | On demand |
 | `.claude/skills/wp` | `/wp NN`: checks dependencies and the gate, creates `wp/NN-slug`, proposes the step list, stops for the go. | On demand |
-| `.claude/skills/learn-step` | `/learn-step NN [step]`: writes the explainer and stops. The gate opens when the owner's decision is recorded in it. | On demand |
+| `.claude/skills/learn-step` | `/learn-step NN [step]`: the `explainer-writer` agent drafts the explainer; the main session checks it, presents it and stops. The gate opens when the owner's decision is recorded in it. | On demand, or by the orchestration rule |
+| `.claude/skills/step` | `/step NN M`: one implementation step. The main session explains it, the `implementer` agent builds it, the main session re-runs `pnpm verify`, presents demo, privacy check and step log, and asks one check question. A step that changes a process ends with a real `pnpm dev` run. | Every step after the decision |
+| `.claude/skills/map` | `/map`: launches the `cartographer` agent for the current branch. | After a step that changes the shape of the code; last step of a WP |
+| `.claude/skills/wrap-wp` | `/wrap-wp NN`: the closing checklist (steps logged, map, docs, artifacts, PR, review, Docker demo, explain-back, merge order, `/clear` and the next start prompt). | When the last step is committed |
 | `.claude/skills/explain` | `/explain <topic>`: first principles plus a concrete trace with file:line and the ADR. | On demand |
-| `.claude/agents/reviewer.md` | Subagent with the review checklist: boundaries, messaging, AI and guards, OWASP LLM Top 10, testing gates, secrets, content rules, delivery, learning gate, docs. Reports, never fixes, never approves. | `@agent-reviewer`, or delegated by Claude before a PR review |
+| `.claude/agents/reviewer.md` | Subagent with the review checklist: boundaries, messaging, AI and guards, OWASP LLM Top 10, testing gates, secrets, content rules, delivery, learning gate, docs. Reports, never fixes, never approves. | Mid-WP (size M or larger) and on every PR |
+| `.claude/agents/implementer.md` | Builds one step under the step contract on the current `wp/` branch: code, tests, `pnpm verify`, demo, step log from the diff, privacy check, one commit, push. Stops on any departure from an ADR or a recorded decision. Never talks to the owner. | From `/step` |
+| `.claude/agents/explainer-writer.md` | Drafts `docs/learning/wp-N.md` to the `/learn-step` specification, checks facts, commits, returns the chat version. | From `/learn-step` |
+| `.claude/agents/cartographer.md` | Syncs the code map's JSON block with the code, renders it in Chromium, republishes changed artifacts and updates `docs/artifacts.md`. | From `/map` and `/wrap-wp` |
+| `.claude/agents/researcher.md` | Answers fact questions with a source and date (`npm view`, `npm pack` and grep, raw docs on GitHub), or marks **verify**. Read-only on the repo. | Whenever a step or answer depends on a fact |
 | `docs/learning/` | Explainer template and the written explainers. | By the skills and the gate |
 | `docs/local-playbook.md` | The hands-on version of this flow for the owner's machine: setup, what a session looks like, daily loop, what to do when something blocks. | By the owner and every session |
 | `.github/ISSUE_TEMPLATE`, `PULL_REQUEST_TEMPLATE.md`, `scripts/github/seed.mjs` | The tracking structure of ADR-041 (WP-49). | By people and by `gh` |
@@ -30,8 +38,8 @@ Security guardrails (no pushes to the default branch, no deploys, no ssh, no rea
 1. `/wp 11`: dependencies checked, branch `wp/11-contact-service`, step list proposed.
 2. `/learn-step 11`: `docs/learning/wp-11.md` written; the agent stops. The gate is closed: an edit under `apps/contact/` is denied with "run /learn-step first".
 3. The owner reads, asks (`/explain outbox`), decides. The agent records the decision, sets `decision: recorded`. The gate opens.
-4. Small steps in the session; after each, two lines in the step log; `pnpm verify` green; commit.
-5. `@agent-reviewer` on the PR; the owner reviews; squash merge closes the issue.
+4. `/step 11 1`, `/step 11 2`, ...: the session explains each step, the `implementer` agent builds it (two lines in the step log, `pnpm verify` green, commit), the session asks one check question.
+5. `/wrap-wp 11`: `/map`, docs, `@agent-reviewer` on the PR, explain-back; the owner reviews; squash merge closes the issue.
 A step the owner already knows: `fast_path: known` in the explainer, no full explainer, no explain-back (D-38).
 
 ## Sessions
@@ -48,14 +56,20 @@ One work package moves through ten stages. The owner moves cards to Ready and In
 | 2 | `/wp NN` | Agent | Branch `wp/NN-slug`, step list, definition of done; stops for the go |
 | 3 | `/learn-step NN` (learning WPs) | Agent writes, owner reads | `docs/learning/wp-N.md`, self-contained, all questions in one message, `decision: pending`; the gate is closed |
 | 4 | Decision | Owner | `decision: recorded` with the ADR link; `/adr` first if an ADR changes |
-| 5 | Implement one step at a time (step contract, `AGENTS.md` section 5) | Agent in the main session | Per step: ADR lines named first, green `pnpm verify`, privacy check, step log from the diff, one check question on learning steps, one scoped commit; a mid-WP review for size M or larger |
-| 6 | Map and docs (last step) | Agent | `docs/architecture/code-map.html` data and the docs the WP changed; artifacts republished when the session can |
+| 5 | Implement one step at a time with `/step` (step contract, `AGENTS.md` section 5) | Main session explains and asks; `implementer` agent builds | Per step: ADR lines named first, green `pnpm verify`, privacy check, step log from the diff, one check question on learning steps, one scoped commit; a mid-WP review for size M or larger |
+| 6 | Map and docs (last step), then `/wrap-wp` | `cartographer` agent via `/map` | `docs/architecture/code-map.html` data and the docs the WP changed; artifacts republished when the session can |
 | 7 | PR | Agent | Title = conventional commit; body `Closes #N`; CI; card moves to In review |
 | 8 | Review, then explain back | `@agent-reviewer`, then the owner | Findings fixed and pushed; the owner explains the design back in their own words (not the decision questions); answers and gaps in the Recap |
 | 9 | Merge | Owner | Squash (remove any tool footer from the body); issue closes; card to Done; release-please PR per service |
 | 10 | Ship and write up | Owner present | Staging, production, journal post |
 
-Model and effort: Opus 5.5 at high effort for learning WPs and the reviewer, medium for frontend and chores. When the main session runs on a heavier model than the task needs, `/wp` and `/learn-step` can be delegated to a subagent on Opus; implementation stays in the main session so the owner sees each step.
+Model and effort: Opus 5.5 at high effort for learning WPs and the reviewer, medium for frontend and chores. Since 2026-10-04 the orchestrator pattern applies (next section): the owner still sees each step, because the main session explains it before the build and presents the report after it.
+
+## The orchestrator pattern (2026-10-04)
+
+Why: the WP-5 session reached about 700k tokens of context, because the main session read library sources and large HTML files and ran every implementation step itself. In the same session three background agents in one working directory switched branches under each other.
+
+What: the main session keeps what needs its context (teaching, decisions, challenging the owner's answers, check questions, explain-back, recap) and delegates the rest: drafting explainers (`explainer-writer`), building steps (`implementer`), the code map and artifacts (`cartographer`), facts (`researcher`), reviews (`reviewer`), wide searches (`Explore`). Each agent returns a report under 300 words in a fixed shape; the main session checks the claims that matter (re-runs `pnpm verify`, looks at the commit) before telling the owner. Independent agents run in parallel in the background; any that touch git run with `isolation: "worktree"`, never two on the same files. The table of which to use when is `.claude/rules/orchestration.md`, which loads in every session, so the main session picks the agent without the owner asking.
 
 Compact after the decision is recorded (the reasoning is in the explainer) and after the reviewer has reported (keep the PR number, open findings and the step log).
 

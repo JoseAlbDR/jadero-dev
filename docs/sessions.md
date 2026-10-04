@@ -31,25 +31,26 @@ docs/sessions.md) for that WP, called WP-N below:
 1. pnpm install && pnpm verify:all on origin/main.
 2. /wp N: check that its dependencies are closed, create wp/N-<slug> from origin/main, propose 4 to 8
    steps and the definition of done from its issue, then stop.
-3. After my go: /learn-step N. In the chat, before asking anything: each ADR decision the WP implements
-   as problem, concrete example, decision, alternatives (why discarded, when each would win) and the
-   patterns to recognize, with a diagram where it helps; then your implementation choices, one line
-   each; then only the open architecture questions no ADR decides, recommendations in a separate block
-   after them. Challenge my answers when you disagree. Stop. No code under learning paths.
-4. When I answer: record the decision (decision: recorded), then build one step at a time under the
-   step contract (AGENTS.md section 5): a short plain explanation of what the step builds and its
-   pattern, files, explainer heading and ADR lines before writing (stop if
-   the code would depart from an ADR), pnpm verify, show it running, privacy check, two step-log lines
-   from the diff, one check question for me, one scoped commit. @agent-reviewer after about half the
-   steps. Steps that need Docker in a cloud session: tell me the exact commands and wait for my output.
-5. Last step: update docs/architecture/code-map.html (its JSON data) and the docs the WP changed.
-6. Open the PR with Closes #<its issue>, run @agent-reviewer, fix its findings, then do my explain-back
-   in interview form (why, what else, when to change it, what happens when it fails; I draw the main
-   trace from memory) and write it in the Recap. I write the journal post. I merge.
+3. After my go: /learn-step N (explainer-writer drafts, you check and present). In the chat, before
+   asking anything: each ADR decision the WP implements as problem, example, decision, alternatives
+   (why discarded, when each would win) and patterns; your implementation choices, one line each; only
+   the open architecture questions no ADR decides, recommendations after them. Challenge my answers
+   when you disagree. Stop. No code under learning paths.
+4. When I answer: record the decision (decision: recorded), then /step N 1, /step N 2, ...: you explain
+   each step before the implementer builds it, then show me demo, privacy check and step log, and ask
+   one check question. Reviewer after about half the steps. Docker in a cloud session: give me the
+   commands and wait for my output.
+5. Then /map and /wrap-wp N: docs, artifacts, PR with Closes #<its issue>, reviewer and fixes, my
+   explain-back in interview form written in the Recap. I write the journal post. I merge.
+Stay lean per .claude/rules/orchestration.md: delegate to the agents without me asking.
 Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.
 ```
 
 To force a specific WP, replace the first two sentences with "Next work package in jadero-dev: WP-N (<title>)."
+
+### First runs of the orchestrator flow
+
+WP-10 is the first WP built with the agents and skills of `.claude/rules/orchestration.md` (added after WP-5, not yet tried on a WP). During its first runs the main session watches for friction: an agent report that misses what the owner needs, a skill step that does not fit, the learning gate blocking a step it should allow, context still growing past about 300k tokens. Each finding goes into the step log, and at `/wrap-wp` into one `chore/` PR that fixes the agent, skill or rule.
 
 ## Prompt: a frontend work package
 
@@ -60,8 +61,8 @@ Frontend work package in jadero-dev: WP-N (<title>), issue #<n>. Result-only, no
 git fetch origin; /wp N (dependencies, branch wp/N-<slug> from origin/main, steps, definition of done),
 then build it step by step to the design system and the ADRs it names, without stopping for me
 except for product or content questions (copy, layout choices that change what a visitor sees).
-Each step: pnpm verify, one scoped commit (feat(web): ...), a screenshot of the result. Last step:
-the code map if the workspace changed. Then the PR with Closes #<n>, @agent-reviewer, fix its
+Each step through the implementer agent: pnpm verify, one scoped commit (feat(web): ...), a screenshot
+of the result. Last step: /map if the workspace changed. Then the PR with Closes #<n>, @agent-reviewer, fix its
 findings, and send me the screenshots and the PR link. I merge.
 Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.
 ```
@@ -87,8 +88,8 @@ Rule: the PR that merges second brings `main` in before its merge: `git fetch or
 
 ```
 Resume WP-N in jadero-dev on branch wp/N-<slug>. Read docs/learning/wp-N.md (Decision, Step log) and
-git log origin/main..HEAD, tell me in three lines where we are and which step is next under the step
-contract, then wait for my go.
+git log origin/main..HEAD, tell me in three lines where we are and which step is next, then wait for my
+go and continue with /step (or /wrap-wp N when the steps are done).
 ```
 
 ## Prompt: a chore outside a work package
@@ -100,6 +101,8 @@ commits to a PR after saying it is ready.
 ```
 
 ## Rules that keep a session on track
+
+- Orchestrator pattern (`.claude/rules/orchestration.md`): the main session teaches and decides; agents draft, build, map and research, each reporting in under 300 words. Parallel agents that touch git run in their own worktree (`isolation: "worktree"`): in WP-5, three background agents in one checkout switched branches under each other.
 
 - A request for a report or a check changes nothing until the owner says go; then one PR per agreed change.
 - Compact after the decision is recorded and after the review; keep branch, WP, explainer path, step list with done marks and open findings.

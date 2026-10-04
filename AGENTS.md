@@ -47,7 +47,7 @@ Learning paths: `apps/api`, `apps/agent`, `apps/contact`, `apps/mcp`, `packages/
 1. `/wp NN` lists the WP's concepts and decisions and creates branch `wp/NN-slug`.
 2. `/learn-step` writes `docs/learning/wp-N.md`, self-contained: each ADR decision the WP implements explained as problem, concrete example, decision, alternatives (why discarded, when each would win) and the patterns to recognize, with a diagram where it helps; the few open questions (only architecture no ADR decides); the implementation choices, one line each; one concrete trace (real payload, real SQL). The same content goes in the chat, so the owner decides without opening the file. Then it stops.
 3. The owner says go, objects to a choice or answers the open questions; the agent challenges an answer that differs from its recommendation and discusses it. The explainer's front matter gets `decision: recorded` (with the ADR link). Only then may code under the learning paths change (hook `learning-gate.sh` enforces it). Fast path (D-38): a step the owner already knows is marked `known` in the explainer and skips the full explainer and explain-back.
-4. Implement in small steps in the main session, each following the step contract:
+4. Implement in small steps, each through `/step` (the main session explains and checks, the `implementer` agent builds), each following the step contract:
    - **Before**: explain in a few plain lines what the step builds and which pattern it is, with a small example; name the files, the explainer heading each implements (a concept `C<n>` or an option block) and the ADR lines the step touches. If the code will differ from an ADR or a recorded decision, stop and ask; an ADR change is `/adr` first.
    - **Build**: write, `pnpm verify` green, show it running (a boot, a request, a test).
    - **Privacy check**: where does request data go (logs, spans, error bodies, headers)? No IPs in clear, no secrets, no bodies at info, no query strings.
@@ -70,6 +70,10 @@ Refined with the owner on 2026-10-04 (WP-5); every agent follows it, and this fi
 - **Repetition across WPs.** A pattern seen in an earlier WP is named and compared ("the same idempotency as WP-N, here ..."), not re-taught from zero.
 - **Few, real questions.** Implementation details are listed as choices, one line each; questions are only for architecture no ADR decides.
 - **Persist the process.** Feedback that changes how sessions work goes into this repo (AGENTS.md, `.claude/skills/`, `docs/`) in its own `chore/` PR, never only in a conversation. Before pushing to a branch, check that its PR is not already merged; follow-up work after a merge goes to a new branch from `main`.
+### Orchestrator pattern (approved 2026-10-04, after WP-5)
+
+The main session keeps only what needs its context (teaching, decisions, challenging answers, check questions, explain-back, recap) and delegates context-heavy work to subagents: `explainer-writer`, `implementer`, `cartographer`, `researcher` and `reviewer`, through `/learn-step`, `/step`, `/map` and `/wrap-wp`. WP-5's single session reached about 700k tokens of context doing it all itself. Which agent or skill fits each situation, the context rule and the rules for parallel agents (worktree isolation for any that touch git) are in `.claude/rules/orchestration.md`, which loads in every session.
+
 Frontend WPs (`apps/web`, `apps/admin`, `packages/ui`) skip the gate: build to the design system, show screenshots. The hook still guards the repo tooling files (catalog in `pnpm-workspace.yaml`, `turbo.json`, `.dependency-cruiser.cjs`): when a frontend WP must change them, ask the owner, then add a short `docs/learning/wp-N.md` with `decision: recorded` and `fast_path: known` that names each tooling change (WP-4 is the example).
 
 ## 6. Conventions

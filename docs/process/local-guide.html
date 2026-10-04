@@ -50,7 +50,7 @@ input[type="checkbox"] { accent-color: var(--accent); margin-right: 6px; }
 <p class="eyebrow">jadero.dev v2 · playbook for the owner's machine</p>
 <h1>Working the repo from your laptop, step by step</h1>
 <p class="lede">How to run the same flow the cloud session ran, on your machine with Claude Code (Opus 5.5). Setup once, what to do after a merge, the daily loop, and what to do when something blocks. Every rule here has its source file in the repo.</p>
-<p class="status">Version 12, 2026-10-04: explainers lead with the ADR decisions explained (problem, example, decision, alternatives, patterns); only open architecture questions are asked. Version 11: one start prompt for every WP, plus a frontend prompt. Version 10: Claude Code sessions only (no framework); prompts from docs/sessions.md. Version 9: learning aimed at orchestrating agents (Own, Recognize, Delegate; answer before the recommendation; interview-style explain-back). Version 8: the step contract (ADR lines first, privacy check, step log from the diff, one check question per learning step, mid-WP review). Version 7: WP-3 built (steps 1 to 8); pnpm build, pnpm dev and pnpm test:int; the stale dist and Testcontainers-on-OrbStack fixes; pages to keep current; continue tomorrow. Companion page: the delivery flow (ten stages, roles, gates).</p>
+<p class="status">Version 13, 2026-10-04: the orchestrator pattern: the main session teaches and decides, agents draft, build, map and research (<code>/step</code>, <code>/map</code>, <code>/wrap-wp</code>; rule <code>.claude/rules/orchestration.md</code>). Version 12: explainers lead with the ADR decisions explained (problem, example, decision, alternatives, patterns); only open architecture questions are asked. Version 11: one start prompt for every WP, plus a frontend prompt. Version 10: Claude Code sessions only (no framework); prompts from docs/sessions.md. Version 9: learning aimed at orchestrating agents (Own, Recognize, Delegate; answer before the recommendation; interview-style explain-back). Version 8: the step contract (ADR lines first, privacy check, step log from the diff, one check question per learning step, mid-WP review). Version 7: WP-3 built (steps 1 to 8); pnpm build, pnpm dev and pnpm test:int; the stale dist and Testcontainers-on-OrbStack fixes; pages to keep current; continue tomorrow. Companion page: the delivery flow (ten stages, roles, gates).</p>
 
 <nav class="toc"><a href="#once">Setup once</a><a href="#first">After a merge to main</a><a href="#session">What a session looks like</a><a href="#daily">Daily loop</a><a href="#learning">How you learn</a><a href="#blocked">When something blocks</a><a href="#start">Starting a session</a><a href="#pages">Pages to keep current</a><a href="#tomorrow">Continue tomorrow</a><a href="#cheatsheet">Cheat sheet</a></nav>
 
@@ -115,9 +115,9 @@ WP-3 explainer: docs/learning/wp-3.md (decision: pending).</span>
 <tr><th>When</th><th>You</th><th>Agent</th><th>Board</th></tr>
 <tr><td>Start</td><td><code>git switch main &amp;&amp; git pull</code>; pick the Ready card or move one there</td><td></td><td>Ready</td></tr>
 <tr><td>Open the WP</td><td><code>/wp NN</code>; read the step list; say go or edit it</td><td>Checks dependencies and the gate, creates <code>wp/NN-slug</code>, proposes steps, stops</td><td>In progress (you move it)</td></tr>
-<tr><td>Learn</td><td>Read <code>docs/learning/wp-N.md</code>; ask; answer the question</td><td><code>/learn-step NN</code> writes it and stops; records your decision</td><td></td></tr>
-<tr><td>Build</td><td>One step at a time; answer the one-line check question; stop and ask whenever something is not mechanical yet</td><td>Names files and ADR lines first, writes, <code>pnpm verify</code>, privacy check, two step-log lines from the diff, one check question, one scoped commit; a mid-WP review for M or larger</td><td></td></tr>
-<tr><td>Review</td><td>Explain the design back; review the PR on GitHub</td><td>Opens the PR with <code>Closes #</code>; runs <code>@agent-reviewer</code>; fixes; records Recap gaps</td><td>In review (automatic)</td></tr>
+<tr><td>Learn</td><td>Read <code>docs/learning/wp-N.md</code>; ask; answer the question</td><td><code>/learn-step NN</code>: the <code>explainer-writer</code> agent drafts it, the session presents it and stops; records your decision</td><td></td></tr>
+<tr><td>Build</td><td>One step at a time; answer the one-line check question; stop and ask whenever something is not mechanical yet</td><td><code>/step NN M</code>: the session names files and ADR lines first, the <code>implementer</code> agent writes, runs <code>pnpm verify</code>, privacy check, two step-log lines from the diff, one scoped commit; the session presents it and asks one check question; a mid-WP review for M or larger</td><td></td></tr>
+<tr><td>Review</td><td>Explain the design back; review the PR on GitHub</td><td><code>/map</code> and <code>/wrap-wp NN</code>: opens the PR with <code>Closes #</code>; runs <code>@agent-reviewer</code>; fixes; records Recap gaps</td><td>In review (automatic)</td></tr>
 <tr><td>Close</td><td>Squash merge; later deploy and journal</td><td></td><td>Done (automatic)</td></tr>
 </table></div>
 <p>Compact (<code>/compact</code>) after the decision is recorded and after the reviewer has reported. Keep: branch, WP id, the explainer path, the step list with done marks, open findings. Drop everything the explainer already holds.</p>
@@ -198,21 +198,18 @@ docs/sessions.md) for that WP, called WP-N below:
 1. pnpm install &amp;&amp; pnpm verify:all on origin/main.
 2. /wp N: check that its dependencies are closed, create wp/N-&lt;slug&gt; from origin/main, propose 4 to 8
    steps and the definition of done from its issue, then stop.
-3. After my go: /learn-step N. In the chat, before asking anything: each ADR decision the WP implements
-   as problem, concrete example, decision, alternatives (why discarded, when each would win) and the
-   patterns to recognize, with a diagram where it helps; then your implementation choices, one line
-   each; then only the open architecture questions no ADR decides, recommendations in a separate block
-   after them. Challenge my answers when you disagree. Stop. No code under learning paths.
-4. When I answer: record the decision (decision: recorded), then build one step at a time under the
-   step contract (AGENTS.md section 5): a short plain explanation of what the step builds and its
-   pattern, files, explainer heading and ADR lines before writing (stop if
-   the code would depart from an ADR), pnpm verify, show it running, privacy check, two step-log lines
-   from the diff, one check question for me, one scoped commit. @agent-reviewer after about half the
-   steps. Steps that need Docker in a cloud session: tell me the exact commands and wait for my output.
-5. Last step: update docs/architecture/code-map.html (its JSON data) and the docs the WP changed.
-6. Open the PR with Closes #&lt;its issue&gt;, run @agent-reviewer, fix its findings, then do my explain-back
-   in interview form (why, what else, when to change it, what happens when it fails; I draw the main
-   trace from memory) and write it in the Recap. I write the journal post. I merge.
+3. After my go: /learn-step N (explainer-writer drafts, you check and present). In the chat, before
+   asking anything: each ADR decision the WP implements as problem, example, decision, alternatives
+   (why discarded, when each would win) and patterns; your implementation choices, one line each; only
+   the open architecture questions no ADR decides, recommendations after them. Challenge my answers
+   when you disagree. Stop. No code under learning paths.
+4. When I answer: record the decision (decision: recorded), then /step N 1, /step N 2, ...: you explain
+   each step before the implementer builds it, then show me demo, privacy check and step log, and ask
+   one check question. Reviewer after about half the steps. Docker in a cloud session: give me the
+   commands and wait for my output.
+5. Then /map and /wrap-wp N: docs, artifacts, PR with Closes #&lt;its issue&gt;, reviewer and fixes, my
+   explain-back in interview form written in the Recap. I write the journal post. I merge.
+Stay lean per .claude/rules/orchestration.md: delegate to the agents without me asking.
 Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.</code></pre>
 <h3>Prompt: a frontend work package</h3>
 <p>Result-only, no learning gate; it can run in its own session while a backend WP runs in another.</p>
@@ -220,14 +217,14 @@ Answer in Spanish; files in plain English, no em dashes, no attribution lines in
 git fetch origin; /wp N (dependencies, branch wp/N-&lt;slug&gt; from origin/main, steps, definition of done),
 then build it step by step to the design system and the ADRs it names, without stopping for me
 except for product or content questions (copy, layout choices that change what a visitor sees).
-Each step: pnpm verify, one scoped commit (feat(web): ...), a screenshot of the result. Last step:
-the code map if the workspace changed. Then the PR with Closes #&lt;n&gt;, @agent-reviewer, fix its
+Each step through the implementer agent: pnpm verify, one scoped commit (feat(web): ...), a screenshot
+of the result. Last step: /map if the workspace changed. Then the PR with Closes #&lt;n&gt;, @agent-reviewer, fix its
 findings, and send me the screenshots and the PR link. I merge.
 Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.</code></pre>
 <h3>Prompt: resume a work package in a new session</h3>
 <pre><code>Resume WP-N in jadero-dev on branch wp/N-&lt;slug&gt;. Read docs/learning/wp-N.md (Decision, Step log) and
-git log origin/main..HEAD, tell me in three lines where we are and which step is next under the step
-contract, then wait for my go.</code></pre>
+git log origin/main..HEAD, tell me in three lines where we are and which step is next, then wait for my
+go and continue with /step (or /wrap-wp N when the steps are done).</code></pre>
 <h3>Prompt: a chore outside a work package</h3>
 <pre><code>In jadero-dev, on a new branch chore/&lt;slug&gt; from origin/main: &lt;what to change&gt;. Keep it to that change,
 pnpm verify green, one scoped commit, a PR without Closes, and tell me when it is ready. Do not add
@@ -245,8 +242,9 @@ commits to a PR after saying it is ready.</code></pre>
 <tr><td><code>pnpm dev</code></td><td>Builds once, then <code>tsc --watch</code> for <code>platform-nest</code> and <code>api</code> and <code>node --watch</code> on <code>dist/</code>, with the same OpenTelemetry <code>--import</code> line as <code>start</code>. First copy <code>apps/api/.env.example</code> to <code>apps/api/.env</code> and run <code>pnpm dev:up</code>; <code>api</code> listens on 3001</td></tr>
 <tr><td><code>pnpm test:int</code></td><td>Integration tests with Testcontainers: one Postgres container per run, one database per test file. Needs Docker; not part of <code>pnpm verify</code></td></tr>
 <tr><td><code>pnpm adr:new "Title"</code> / <code>pnpm adr:index</code> / <code>--check</code></td><td>Next ADR from the template / regenerate the index / fail when stale</td></tr>
-<tr><td><code>/wp NN</code>, <code>/learn-step NN</code>, <code>/explain X</code>, <code>/adr Title</code></td><td>The four skills</td></tr>
-<tr><td><code>@agent-reviewer</code></td><td>Ten-point review before you look at a PR</td></tr>
+<tr><td><code>/wp NN</code>, <code>/learn-step NN</code>, <code>/step NN M</code>, <code>/map</code>, <code>/wrap-wp NN</code>, <code>/explain X</code>, <code>/adr Title</code></td><td>The skills: start a WP, the explainer, one step, the code map, close a WP, explain, a new ADR. The session uses them on its own (<code>.claude/rules/orchestration.md</code>)</td></tr>
+<tr><td><code>@agent-reviewer</code></td><td>Ten-point review mid-WP (size M or larger) and before you look at a PR</td></tr>
+<tr><td><code>implementer</code>, <code>explainer-writer</code>, <code>cartographer</code>, <code>researcher</code></td><td>The agents the main session delegates to: one step, the explainer draft, the code map and artifacts, facts with sources. Each reports in under 300 words</td></tr>
 <tr><td><code>LEFTHOOK=0 git commit ...</code></td><td>Skip hooks once (CI runs the same checks; it only delays the failure)</td></tr>
 <tr><td><code>node scripts/github/seed.mjs</code></td><td>Re-seed issues and the Project after adding a WP to <code>decisions.json</code></td></tr>
 </table></div>
