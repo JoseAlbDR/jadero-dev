@@ -49,10 +49,10 @@ input[type="checkbox"] { accent-color: var(--accent); margin-right: 6px; }
 <main>
 <p class="eyebrow">jadero.dev v2 · playbook for the owner's machine</p>
 <h1>Working the repo from your laptop, step by step</h1>
-<p class="lede">How to run the same flow the cloud session ran, on your machine with Claude Code (Opus 5.5) and firstmate. Setup once, what to do after a merge, the daily loop, and what to do when something blocks. Every rule here has its source file in the repo.</p>
-<p class="status">Version 9, 2026-10-04: learning aimed at orchestrating agents (Own, Recognize, Delegate; answer before the recommendation; interview-style explain-back). Version 8: the step contract (ADR lines first, privacy check, step log from the diff, one check question per learning step, mid-WP review). Version 7: WP-3 built (steps 1 to 8); pnpm build, pnpm dev and pnpm test:int; the stale dist and Testcontainers-on-OrbStack fixes; pages to keep current; continue tomorrow with firstmate. Companion page: the delivery flow (ten stages, roles, gates).</p>
+<p class="lede">How to run the same flow the cloud session ran, on your machine with Claude Code (Opus 5.5). Setup once, what to do after a merge, the daily loop, and what to do when something blocks. Every rule here has its source file in the repo.</p>
+<p class="status">Version 10, 2026-10-04: Claude Code sessions only (no framework); prompts from docs/sessions.md. Version 9: learning aimed at orchestrating agents (Own, Recognize, Delegate; answer before the recommendation; interview-style explain-back). Version 8: the step contract (ADR lines first, privacy check, step log from the diff, one check question per learning step, mid-WP review). Version 7: WP-3 built (steps 1 to 8); pnpm build, pnpm dev and pnpm test:int; the stale dist and Testcontainers-on-OrbStack fixes; pages to keep current; continue tomorrow. Companion page: the delivery flow (ten stages, roles, gates).</p>
 
-<nav class="toc"><a href="#once">Setup once</a><a href="#first">After a merge to main</a><a href="#session">What a session looks like</a><a href="#daily">Daily loop</a><a href="#learning">How you learn</a><a href="#blocked">When something blocks</a><a href="#firstmate">With firstmate</a><a href="#pages">Pages to keep current</a><a href="#tomorrow">Continue tomorrow</a><a href="#cheatsheet">Cheat sheet</a></nav>
+<nav class="toc"><a href="#once">Setup once</a><a href="#first">After a merge to main</a><a href="#session">What a session looks like</a><a href="#daily">Daily loop</a><a href="#learning">How you learn</a><a href="#blocked">When something blocks</a><a href="#start">Starting a session</a><a href="#pages">Pages to keep current</a><a href="#tomorrow">Continue tomorrow</a><a href="#cheatsheet">Cheat sheet</a></nav>
 
 <h2 id="once">Setup once</h2>
 <div class="tablewrap"><table>
@@ -158,9 +158,18 @@ WP-3 explainer: docs/learning/wp-3.md (decision: pending).</span>
 <tr><td>Claude cannot read <code>.env.example</code></td><td><code>.claude/settings.json</code> denies <code>Read(.env.*)</code></td><td>Expected; it can <code>cat</code> it. Real values live in 1Password, never in files</td></tr>
 </table></div>
 
-<h2 id="firstmate">With firstmate</h2>
-<p>The full guide is <code>docs/firstmate.md</code>: what firstmate reads and in which order, the flow mapped to its concepts, the collision table with a rule per row, and the two prompts in <a href="#tomorrow">Continue tomorrow</a>. In short: point firstmate's implementers at <code>AGENTS.md</code>; it is tool-neutral and the rules under <code>.claude/rules/</code> are plain Markdown. The mapping (plan = <code>/wp</code> step list, approve = recorded decision, implement = one step with its log line, review = the reviewer checklist, MR = PR with <code>Closes #</code>) is in <code>docs/agent-tooling.md</code>. Two things firstmate must honor and cannot replace: the learning gate (read the explainer front matter before touching a learning path) and the ADR files (supersede, never edit). Security guardrails stay firstmate's job; the repo does not duplicate them.</p>
-<p>Cloud sessions are fine for anything that needs no Docker and no owner presence: explainers, ADR drafts, tooling fixes, reviews. Implementation of a learning WP belongs in your local session, where you are present and Docker runs.</p>
+<h2 id="start">Starting a session</h2>
+<p>Every work package runs in a Claude Code session started in this repo, in the cloud (claude.ai/code) or on your machine. There is no other framework: <code>AGENTS.md</code>, <code>CLAUDE.md</code> and <code>.claude/</code> carry the whole flow. The full guide is <code>docs/sessions.md</code>: what a new session reads, the differences below, and the three prompts in <a href="#tomorrow">Continue tomorrow</a>.</p>
+<div class="tablewrap"><table>
+<tr><th></th><th>Cloud session (claude.ai/code)</th><th>Local session (Claude Code on your machine)</th></tr>
+<tr><td>Good for</td><td>Explainers, decisions, platform code, docs, reviews, publishing the artifacts</td><td>The same, plus anything that needs Docker</td></tr>
+<tr><td>Docker (<code>pnpm dev:up</code>, <code>pnpm test:int</code>)</td><td>Not available: you run those steps locally and paste the output</td><td>Available (OrbStack works)</td></tr>
+<tr><td>GitHub</td><td>Through its GitHub tools; it cannot delete branches; PR bodies get a "Generated by Claude Code" footer to delete before the squash</td><td><code>gh</code></td></tr>
+<tr><td>Node and pnpm</td><td>May need <code>export PATH=~/.local/node24/bin:$PATH</code> or a setup step</td><td><code>nvm use &amp;&amp; corepack enable</code></td></tr>
+<tr><td>Commit identity</td><td>Set <code>git config user.name</code> and <code>user.email</code> to you in the checkout</td><td>Already you</td></tr>
+<tr><td>Artifacts (code map, process pages)</td><td>Can republish them</td><td>Edits the repo files; the next cloud session republishes</td></tr>
+</table></div>
+<p>The security layer is Claude Code's permission settings (<code>.claude/settings.json</code> denies reading the real <code>.env</code> files), the learning gate and your review. A sandbox applies only when the session runs in one (cloud sessions do; a local session may not). The repo states the rules in <code>AGENTS.md</code> section 7.</p>
 
 <h2 id="pages">Pages to keep current</h2>
 <div class="tablewrap"><table>
@@ -172,42 +181,37 @@ WP-3 explainer: docs/learning/wp-3.md (decision: pending).</span>
 <p>A session that can publish artifacts republishes them; one that cannot edits the repo files, and the next session that can publishes them. The repo files are the source; the artifacts are copies.</p>
 
 <h2 id="tomorrow">Continue tomorrow</h2>
-<p>Two prompts from <code>docs/firstmate.md</code>, copied as they are. Run the first once, in your first local session with firstmate, before anything changes. Run the second to start the next work package.</p>
-<h3>Prompt: first local session (check the fit, change nothing)</h3>
-<pre><code>Read AGENTS.md, CLAUDE.md, .claude/ (rules, skills, agents, hooks, settings.json), docs/agent-tooling.md,
-docs/local-playbook.md and docs/firstmate.md in the jadero-dev repo. Then compare them with your own
-framework rules and hooks. Report, without changing any file:
-1. every place where your defaults would break this repo's flow (decision gate, one step per commit,
-   GitHub instead of GitLab, commit format and identity, branch names, ADRs in the repo, hooks that
-   would run twice or fight);
-2. what you would change on your side for this repo (config, skills to turn off);
-3. anything in the repo that looks wrong or stale.
-Answer in Spanish; the files stay in English.</code></pre>
+<p>Three prompts from <code>docs/sessions.md</code>, copied as they are. Use the first to start the next work package, the second to pick one up in a new session, the third for a change outside a work package.</p>
 <h3>Prompt: start a work package (WP-5 next)</h3>
-<pre><code>Next work package in jadero-dev: WP-5 (messaging foundation and the agent skeleton), a learning WP.
-Follow the repo's flow exactly (AGENTS.md section 5, docs/agent-tooling.md, docs/firstmate.md):
-1. git switch main &amp;&amp; git pull &amp;&amp; pnpm install &amp;&amp; pnpm verify:all.
-2. /wp 5: check that WP-3 is merged, create wp/5-&lt;slug&gt; from origin/main, propose 4 to 8 steps and the
-   definition of done from the issue, then stop.
-3. After my go: /learn-step 5. The explainer must be self-contained (How to read this file, Named here,
-   two traces for a service WP, facts checked against the npm registry, all questions in one message,
-   dependent questions with a recommendation per answer). Teach design, architecture and patterns:
-   label concepts Own / Recognize / Delegate, put library details in a delegated appendix, give for each
-   decision the forces, at least three options (one you would not pick, and when it would win) and what
-   would make it wrong. Put the recommendations in a separate block after the questions: I answer first
-   with my pick and one risk, then we compare. Stop. Do not write code under learning paths.
-4. When I answer: record the decision (decision: recorded), then build one step at a time under the step
-   contract (AGENTS.md section 5): tell me which files, which explainer paragraph and which ADR lines
-   before writing (stop if the code would depart from an ADR), pnpm verify, show it running, privacy
-   check, two step-log lines from the diff, one check question for me, one scoped commit. Run
-   @agent-reviewer after about half the steps. Steps that need Docker run here (pnpm dev:up, pnpm test:int).
+<p>Change the number, title and issue; the rest stays.</p>
+<pre><code>Next work package in jadero-dev: WP-5 (messaging foundation and the agent skeleton), issue #13, a
+learning WP. Follow the repo's flow exactly (AGENTS.md section 5, docs/agent-tooling.md, docs/sessions.md):
+1. git fetch origin, then pnpm install &amp;&amp; pnpm verify:all on origin/main.
+2. /wp 5: check that its dependencies are closed, create wp/5-&lt;slug&gt; from origin/main, propose 4 to 8
+   steps and the definition of done from the issue, then stop.
+3. After my go: /learn-step 5. Self-contained explainer; concepts labelled Own, Recognize or Delegate;
+   for each decision the forces, at least three options (one you would not pick, and when it would
+   win) and what would make it wrong; all questions in one message, recommendations in a separate block
+   after the questions. I answer first with my pick and one risk, then we compare. Stop. No code under
+   learning paths.
+4. When I answer: record the decision (decision: recorded), then build one step at a time under the
+   step contract (AGENTS.md section 5): files, explainer paragraph and ADR lines before writing (stop if
+   the code would depart from an ADR), pnpm verify, show it running, privacy check, two step-log lines
+   from the diff, one check question for me, one scoped commit. @agent-reviewer after about half the
+   steps. Steps that need Docker: tell me the exact commands and wait for my output.
 5. Last step: update docs/architecture/code-map.html (its JSON data) and the docs the WP changed.
-6. Open the PR with Closes #13, run @agent-reviewer, fix its findings, then ask me the
-   explain-back in interview form (why this way, what else, when to change it, what happens when it
-   fails; I draw the main trace from memory) and write my answers and the gaps in the Recap. I write the
-   journal post myself. I merge.
+6. Open the PR with Closes #13, run @agent-reviewer, fix its findings, then do my explain-back in
+   interview form (why, what else, when to change it, what happens when it fails; I draw the main
+   trace from memory) and write it in the Recap. I write the journal post. I merge.
 Answer in Spanish; files in plain English, no em dashes, no attribution lines in commits or PRs.</code></pre>
-<p>To start any other WP, change the number and the title; the rest stays.</p>
+<h3>Prompt: resume a work package in a new session</h3>
+<pre><code>Resume WP-N in jadero-dev on branch wp/N-&lt;slug&gt;. Read docs/learning/wp-N.md (Decision, Step log) and
+git log origin/main..HEAD, tell me in three lines where we are and which step is next under the step
+contract, then wait for my go.</code></pre>
+<h3>Prompt: a chore outside a work package</h3>
+<pre><code>In jadero-dev, on a new branch chore/&lt;slug&gt; from origin/main: &lt;what to change&gt;. Keep it to that change,
+pnpm verify green, one scoped commit, a PR without Closes, and tell me when it is ready. Do not add
+commits to a PR after saying it is ready.</code></pre>
 
 <h2 id="cheatsheet">Cheat sheet</h2>
 <div class="tablewrap"><table>
@@ -226,5 +230,5 @@ Answer in Spanish; files in plain English, no em dashes, no attribution lines in
 <tr><td><code>LEFTHOOK=0 git commit ...</code></td><td>Skip hooks once (CI runs the same checks; it only delays the failure)</td></tr>
 <tr><td><code>node scripts/github/seed.mjs</code></td><td>Re-seed issues and the Project after adding a WP to <code>decisions.json</code></td></tr>
 </table></div>
-<div class="note"><p>Now: WP-3 (service platform and API skeleton) is merged (#70) and its Recap is written. Next: WP-5 with the second prompt above. Steps with Testcontainers or <code>pnpm dev:up</code> run on your machine (the cloud has no Docker).</p></div>
+<div class="note"><p>Now: WP-3 (service platform and API skeleton) is merged (#70) and its Recap is written. Next: WP-5 with the start prompt above. Steps with Testcontainers or <code>pnpm dev:up</code> run on your machine (the cloud has no Docker).</p></div>
 </main>
