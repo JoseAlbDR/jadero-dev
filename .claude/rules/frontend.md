@@ -4,7 +4,7 @@ paths:
   - "apps/admin/**"
   - "packages/ui/**"
 ---
-# Frontend rules (ADR-022, ADR-023; result-only area, no learning gate)
+# Frontend rules (ADR-022, ADR-045; result-only area, no learning gate)
 
 - Next.js 16 App Router, `next-intl` with `localePrefix: "always"`, localized pathnames, `setRequestLocale`, `generateStaticParams` for es, en, de. No hard-coded UI strings; CI fails on missing message keys.
 - Tailwind v4 tokens in `packages/ui/theme.css`; shadcn/ui components owned in `packages/ui`; light, dark and system through `next-themes`; `prefers-reduced-motion` respected.

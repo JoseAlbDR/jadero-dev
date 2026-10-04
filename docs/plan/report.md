@@ -1086,7 +1086,7 @@ Every item is a call the owner makes in WP-0; each has a recommendation. Rows ma
 | D-20 | Locales required to publish | `en` and `es` required, `de` warned until complete | 011, 022 | decided: a |
 | D-21 | LangSmith setup | Tracing in staging and production, EU region, input masking, free plan | 019 | decided: a |
 | D-22 | Eval gates | Adversarial pass rate 100%; per-run budget (proposal USD 0.50); path-filtered PRs + nightly | 019 | decided: a |
-| D-23 | Visual direction (*reframed*) | Swiss editorial base + terminal-style agent prompt; confirm from WP-15 mockups | 023 | decided: a |
+| D-23 | Visual direction (*reframed*) | Swiss editorial base + terminal-style agent prompt; confirm from WP-15 mockups | 023 | decided: c (recommended a); ADR-045 |
 | D-24 | PDF CV | react-pdf in `api-worker`, regenerated on publish | section 9 | decided: a |
 | D-25 | Guard architecture | (changed 2026-10-03) Own TS guard module for launch, then a Python Prompt Guard 2 classifier service behind the same port, with fallback | 020 | decided: e (second pass); WP-55 in R7; exception to TypeScript-everywhere recorded |
 | D-26 | Rate-limit storage | `@nestjs/throttler` with a custom Postgres storage in each service's own database | 021 | decided: a |

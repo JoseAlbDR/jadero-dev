@@ -27,7 +27,7 @@ export const STACK = [
   "nginx",
 ] as const;
 
-/** Shell prompt and shortcut of the terminal mockup: commands are not translated either. */
+/** Shell prompt, shortcut and window title of the terminal cards: not translated. */
 export const TERMINAL = {
   cwd: "~/jadero.dev",
   command: "$ whoami",
