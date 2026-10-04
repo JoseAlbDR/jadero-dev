@@ -15,7 +15,8 @@
       "!!**/dist",
       "!!**/.turbo",
       "!!**/coverage",
-      "!!docs/plan"
+      "!!docs/plan",
+      "!!docs/**/*.html"
     ]
   },
   "formatter": {
