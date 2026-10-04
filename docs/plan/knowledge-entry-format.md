@@ -4,17 +4,17 @@ Goal: entries that ingest cleanly into the jadero.dev agent's RAG (structure-awa
 
 ## Frontmatter (YAML, required)
 ```yaml
-id: kb-supplier-approval-workflow     # stable, kebab-case, never reused
-title: Supplier profile approval workflow
+id: kb-invoice-approval-workflow      # stable, kebab-case, never reused
+title: Invoice approval workflow
 type: feature | improvement | tech-debt | integration | performance | tooling | workshop
-domain: suppliers | contracts | integrations | platform | ai-tooling | ...
+domain: billing | contracts | integrations | platform | ai-tooling | ...
 period: 2025-03 to 2025-05           # month precision
 role: sole author | lead | contributor   # his real role
 stack: [NestJS, PostgreSQL, DynamoDB, AWS CDK]
 patterns: [partial unique index, event-driven, feature flag, soft delete]
 cv_bullet: backend-10                 # id of the approved CV line it details, or none
 related: [kb-configurable-statuses]   # other entry ids
-public_names: [Coface]               # third-party names used; each must be publicly presented by the company
+public_names: [Acme Payments]             # third-party names used; each must be publicly presented by the company
 sources: [merged MRs, ADR, spec, Confluence page]   # kinds only, no links or ids
 confidence: high | medium            # medium when only docs, not code, support a detail
 conflicts: none | "<doc said X, shipped code does Y; text follows the code>"

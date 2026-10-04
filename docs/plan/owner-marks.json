@@ -16,7 +16,7 @@
  "D-4": {
   "at": "2026-10-02T22:07:55.199Z",
   "choice": "a",
-  "note": "Está bien podemos experimentar con NestJS 12, aunque en mercanis usamos versiones mas antiguas, asi puedo aprender sobre NestJS 12 y proponer el bump de version en mi trabajo con datos"
+  "note": "Está bien podemos experimentar con NestJS 12, asi puedo aprender sobre NestJS 12 y proponer el bump de version en mi trabajo"
  },
  "D-5": {
   "at": "2026-10-02T22:08:59.898Z",
@@ -26,7 +26,7 @@
  "D-6": {
   "at": "2026-10-02T22:10:13.122Z",
   "choice": "a",
-  "note": "Es importante que generemos la documentacion de OpenAPI y como automatizarla para los diferentes DTOS y contratos de los endpoints, estamos trabajando esto tambien en Mercanis y quiero aprender mejor"
+  "note": "Es importante que generemos la documentacion de OpenAPI y como automatizarla para los diferentes DTOS y contratos de los endpoints, quiero aprender mejor"
  },
  "D-7": {
   "at": "2026-10-02T22:11:17.745Z",
@@ -202,7 +202,7 @@
  "D-45": {
   "at": "2026-10-03T00:14:26.651Z",
   "choice": "d",
-  "note": "NestJS gateway service estaria bien solo por el afan de aprender, aunque sea otro punto de fallo, no estoy seguro acerca de este aunque haya elegido la opcion recomendada, esta pregunta esta repetida, deberiamos ver como quedarnos lo mejor de los dos mundos, nunca he implementado un gateway, en Mercanis estoy trabajando ahora en servicios dentro de uno y me gustaria aprender mas sobre ello, el gateway tiene 3000 portal, 3001 backoffice, podriamos preguntarle a firstmate que puede explorar codigo de mercanis como está implementado y sacar ideas de ahi sin hacer disclosing de codigo propietario de mercanis, solo temas de arquitectura diseño y patrones usados"
+  "note": "NestJS gateway service estaria bien solo por el afan de aprender, aunque sea otro punto de fallo, no estoy seguro acerca de este aunque haya elegido la opcion recomendada, esta pregunta esta repetida, deberiamos ver como quedarnos lo mejor de los dos mundos, nunca he implementado un gateway, en Mercanis estoy trabajando ahora en servicios dentro de uno y me gustaria aprender mas sobre ello, podriamos preguntarle a firstmate que puede explorar codigo de mercanis como está implementado y sacar ideas de ahi sin hacer disclosing de codigo propietario de mercanis, solo temas de arquitectura diseño y patrones usados"
  },
  "D-46": {
   "at": "2026-10-02T23:07:22.517Z",
