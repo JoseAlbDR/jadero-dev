@@ -1,4 +1,5 @@
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
+import { AmqplibInstrumentation } from "@opentelemetry/instrumentation-amqplib";
 import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { PgInstrumentation } from "@opentelemetry/instrumentation-pg";
@@ -16,7 +17,7 @@ export const REDACTED_CLIENT_ATTRIBUTES = {
 
 /**
  * Builds the OpenTelemetry SDK (WP-3 decision F1): an explicit list of instrumentations (http,
- * express, pg, pino; amqplib joins in WP-5), traces only. Nest controller spans are left out
+ * express, pg, pino, amqplib), traces only. Nest controller spans are left out
  * (decision S2: `instrumentation-nestjs-core` does not declare Nest 12 yet).
  * @param env the validated telemetry variables.
  * @returns the SDK, not started; undefined when the exporter is `none`.
@@ -41,6 +42,10 @@ export function createTelemetrySdk(env: TelemetryEnv): NodeSDK | undefined {
       new HttpInstrumentation({ startIncomingSpanHook: () => REDACTED_CLIENT_ATTRIBUTES }),
       new ExpressInstrumentation(),
       new PgInstrumentation(),
+      // Injects traceparent into RabbitMQ message headers on publish and continues the trace on
+      // consume (ADR-010). The relay restores each outbox row's stored context before publishing,
+      // so the trace runs from the HTTP request to the consumer (WP-5 decision E1).
+      new AmqplibInstrumentation(),
       // Adds trace_id, span_id and trace_flags to every pino line; logs stay with pino.
       new PinoInstrumentation({ disableLogSending: true }),
     ],

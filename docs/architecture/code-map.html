@@ -221,7 +221,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
   <header class="top">
     <div class="eyebrow">jadero.dev v2 · monorepo · NestJS 12 on Node 24</div>
     <h1>Code map</h1>
-    <p class="lede">How the repo fits together today: which package depends on which, what the <code>api</code> container injects at runtime, the two module shapes new code copies, how <code>api</code> boots, what a request passes through and how one trace id follows it, how the build, <code>pnpm dev</code> and the checks run, and what a page request passes through in <code>web</code>. Click or tap any box for what it is, how it works, why it was built this way, and where the code lives.</p>
+    <p class="lede">How the repo fits together today: which package depends on which, what the <code>api</code> container injects at runtime, the two module shapes new code copies, how <code>api</code> boots, what a request passes through and how one trace id follows it, how the build, <code>pnpm dev</code> and the checks run, what a page request passes through in <code>web</code>, and how an event crosses the broker from <code>api</code> to <code>agent</code>. Click or tap any box for what it is, how it works, why it was built this way, and where the code lives.</p>
   </header>
   <nav class="toc" id="toc" aria-label="Sections"></nav>
   <main id="sections"></main>
@@ -234,6 +234,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
         <li>Add a box: add an entry to <code>nodes</code> (label, sub, kind, status, wp, what, how, why, files), then place it in a figure: <code>place</code> for a graph (x, y, width, height in the figure's viewBox), or add its id to <code>steps</code> or <code>cards</code>. A steps figure counts from 1 unless it sets <code>"start"</code>.</li>
         <li>Add an arrow: add <code>{ "from", "to", "label", "kind" }</code> to the figure's <code>edges</code>. Kinds: dep, dev, imports, provides, injects, consumes, throws, extends, lifecycle, flow, planned, forbidden. Add <code>"hideLabel": true</code> when a gap is too small for the label. Use <code>via</code> points to route around a box.</li>
         <li>When a planned box becomes real, change its <code>status</code> to <code>real</code> and its edges from <code>planned</code> to their real kind.</li>
+        <li>A new event type gets a card in section 8's event catalog and its path in the graph there (producer, exchange, consumer queues, tables).</li>
         <li>Bump <code>meta.lastUpdated</code>, save in <code>docs/architecture/code-map.html</code>, and republish the artifact from the same file.</li>
       </ol>
     </div>
@@ -245,7 +246,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 <script type="application/json" id="map-data">
 {
   "meta": {
-    "lastUpdated": "after WP-15",
+    "lastUpdated": "after WP-5 and WP-15",
     "kinds": {
       "app": "deployable app", "pkg": "library package", "module": "Nest module", "provider": "provider",
       "token": "DI token", "ext": "external library", "global": "app-level wiring", "env": "environment",
@@ -285,7 +286,14 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             { "from": "ws-agent-pkg", "to": "ext-nest-db", "label": "never", "kind": "forbidden", "ref": "rule-ai-agent-no-nest" },
             { "from": "ws-web", "to": "ws-ui", "label": "workspace:*", "kind": "dep", "via": [[660, 240], [660, 398], [470, 398]], "labelAt": [660, 288] },
             { "from": "ws-web", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "via": [[660, 240], [660, 500], [260, 500]], "hideLabel": true },
-            { "from": "ws-ui", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "hideLabel": true }
+            { "from": "ws-ui", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "hideLabel": true },
+            { "from": "ws-api", "to": "ws-messaging", "label": "workspace:*", "kind": "dep", "hideLabel": true },
+            { "from": "ws-api", "to": "ws-contracts", "label": "workspace:*", "kind": "dep", "hideLabel": true },
+            { "from": "ws-agent-app", "to": "ws-platform", "label": "workspace:*", "kind": "dep", "hideLabel": true },
+            { "from": "ws-agent-app", "to": "ws-messaging", "label": "workspace:*", "kind": "dep", "hideLabel": true },
+            { "from": "ws-agent-app", "to": "ws-contracts", "label": "workspace:*", "kind": "dep", "hideLabel": true },
+            { "from": "ws-messaging", "to": "ws-contracts", "label": "workspace:*", "kind": "dep", "hideLabel": true },
+            { "from": "ws-agent-app", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "hideLabel": true }
           ]
         },
         {
@@ -519,12 +527,300 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
           ]
         }
       ]
+    },
+    {
+      "id": "messaging",
+      "eyebrow": "8 · Messaging",
+      "title": "How an event crosses the broker",
+      "intro": "WP-5: a system.ping.v1 event travels from api to agent with one trace. api never talks to RabbitMQ in the request: it writes an outbox row in its own transaction, and api-worker relays it. agent's consumer applies it once, however often it arrives. Four processes: api, api-worker, agent, agent consumer.",
+      "figures": [
+        {
+          "type": "graph",
+          "title": "Where system.ping.v1 travels: processes, tables, exchanges and queues",
+          "viewBox": [
+            1000,
+            610
+          ],
+          "caption": "Read top left to bottom right. api only writes a row; api-worker is the only process that talks to RabbitMQ for api. The exchange copies the message into every bound queue; the agent consumer applies it inside one transaction with its inbox and acks after the commit. A failed delivery goes as a copy through agent.retry to a wait queue and comes back to the same queue after its TTL; after the last tier it goes to the DLQ. Dashed red arrows are the paths a message takes when something fails.",
+          "lanes": [
+            {
+              "x": 8,
+              "y": 10,
+              "w": 320,
+              "h": 360,
+              "label": "api · content_dev"
+            },
+            {
+              "x": 340,
+              "y": 10,
+              "w": 320,
+              "h": 590,
+              "label": "RabbitMQ · vhost dev"
+            },
+            {
+              "x": 672,
+              "y": 10,
+              "w": 320,
+              "h": 480,
+              "label": "agent · agent_dev"
+            }
+          ],
+          "place": {
+            "e-request": [
+              24,
+              50,
+              288,
+              52
+            ],
+            "g-outbox": [
+              24,
+              170,
+              288,
+              52
+            ],
+            "e-relay": [
+              24,
+              290,
+              240,
+              52
+            ],
+            "g-unrouted": [
+              380,
+              170,
+              264,
+              52
+            ],
+            "e-route": [
+              380,
+              290,
+              264,
+              52
+            ],
+            "g-queue": [
+              380,
+              410,
+              264,
+              52
+            ],
+            "g-retry": [
+              380,
+              492,
+              264,
+              48
+            ],
+            "g-dlq": [
+              380,
+              552,
+              264,
+              44
+            ],
+            "g-heartbeat": [
+              720,
+              170,
+              256,
+              52
+            ],
+            "e-inbox": [
+              720,
+              290,
+              256,
+              52
+            ],
+            "e-consume": [
+              720,
+              410,
+              256,
+              52
+            ]
+          },
+          "edges": [
+            {
+              "from": "e-request",
+              "to": "g-outbox",
+              "label": "INSERT, same transaction",
+              "kind": "flow"
+            },
+            {
+              "from": "e-relay",
+              "to": "g-outbox",
+              "label": "claim FOR UPDATE SKIP LOCKED",
+              "kind": "consumes"
+            },
+            {
+              "from": "e-relay",
+              "to": "e-route",
+              "label": "publish, confirm",
+              "kind": "flow",
+              "labelAt": [
+                322,
+                316
+              ]
+            },
+            {
+              "from": "e-route",
+              "to": "g-unrouted",
+              "label": "no binding matches",
+              "kind": "throws"
+            },
+            {
+              "from": "e-route",
+              "to": "g-queue",
+              "label": "binding system.ping.v1",
+              "kind": "flow"
+            },
+            {
+              "from": "g-queue",
+              "to": "e-consume",
+              "label": "deliver",
+              "kind": "flow",
+              "labelAt": [
+                682,
+                436
+              ]
+            },
+            {
+              "from": "e-consume",
+              "to": "e-inbox",
+              "label": "INSERT (consumer, event_id)",
+              "kind": "flow"
+            },
+            {
+              "from": "e-inbox",
+              "to": "g-heartbeat",
+              "label": "new event: upsert",
+              "kind": "flow"
+            },
+            {
+              "from": "e-consume",
+              "to": "g-retry",
+              "label": "retry copy",
+              "kind": "throws",
+              "labelAt": [
+                700,
+                500
+              ]
+            },
+            {
+              "from": "g-retry",
+              "to": "g-queue",
+              "label": "TTL expires",
+              "kind": "throws",
+              "hideLabel": true
+            },
+            {
+              "from": "e-consume",
+              "to": "g-dlq",
+              "label": "dead copy",
+              "kind": "throws",
+              "labelAt": [
+                930,
+                520
+              ],
+              "via": [
+                [
+                  930,
+                  574
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "type": "cards",
+          "title": "Event catalog",
+          "caption": "Every event type, its producer and its consumer queues. A new event adds a card here and its path to the graph above; the same list is the AsyncAPI catalog in packages/contracts/asyncapi.json.",
+          "cards": [
+            "ev-system-ping-v1"
+          ]
+        },
+        {
+          "type": "steps",
+          "title": "One ping, api to agent",
+          "steps": [
+            "e-request",
+            "e-outbox",
+            "e-relay",
+            "e-route",
+            "e-consume",
+            "e-inbox",
+            "e-ack"
+          ],
+          "examples": [
+            {
+              "id": "ex-ping",
+              "label": "Ping arrives",
+              "path": [
+                "e-request",
+                "e-outbox",
+                "e-relay",
+                "e-route",
+                "e-consume",
+                "e-inbox",
+                "e-ack"
+              ],
+              "request": "POST /dev/ping   (api, development only)",
+              "response": "HTTP/1.1 202 Accepted\n\n{\"eventId\":\"0199b1c4-7e2a-7c3d-9f10-3a5b7c9d1e2f\"}",
+              "note": "About a second later the relay publishes it; the consumer logs `event handled` with the same trace_id as the request. Source: docs/learning/wp-5.md, Trace 1."
+            },
+            {
+              "id": "ex-duplicate",
+              "label": "Same event twice",
+              "path": [
+                "e-relay",
+                "e-route",
+                "e-consume",
+                "e-inbox",
+                "e-ack"
+              ],
+              "request": "api-worker dies after RabbitMQ confirmed, before its COMMIT",
+              "response": "row still unpublished, sent again on the next poll\ninbox INSERT returns no row: effects skipped, ack",
+              "note": "At-least-once delivery, exactly-once effects. Source: packages/messaging/test/outbox-inbox.int.test.ts and apps/agent/test/heartbeat.int.test.ts."
+            },
+            {
+              "id": "ex-retry",
+              "label": "Consumer database down",
+              "path": [
+                "e-route",
+                "e-consume"
+              ],
+              "request": "agent's Postgres stops; a ping arrives",
+              "response": "copy to agent.system.ping.retry.10s via agent.retry, original acked\nthen 1 min, then 10 min; the 4th failure goes to agent.system.ping.dlq",
+              "note": "4 runs over 11 min 10 s, never a requeue loop. Source: the contract suite in packages/messaging/test/support/message-bus-contract.ts."
+            },
+            {
+              "id": "ex-broker-down",
+              "label": "Broker down",
+              "path": [
+                "e-request",
+                "e-outbox",
+                "e-relay"
+              ],
+              "request": "docker compose stop rabbitmq; POST /dev/ping",
+              "response": "api still answers 202; the row waits\nrelay: publish timeout after 5 s, attempts + 1, next try in 1 s, 2 s, 4 s ... 60 s\napi-worker /health/ready 503 (broker), api /health/ready 200",
+              "note": "No synchronous path touches the broker. Source: docs/learning/wp-5.md, Trace 2b."
+            }
+          ]
+        },
+        {
+          "type": "cards",
+          "title": "Decisions this path rests on",
+          "caption": "Recorded in docs/learning/wp-5.md (Decision) on 2026-10-04; ADR-012 and ADR-029 decide the patterns.",
+          "cards": [
+            "d-p1",
+            "d-t4",
+            "d-r1",
+            "d-s1",
+            "d-e1",
+            "d-w1"
+          ]
+        }
+      ]
     }
   ],
   "nodes": {
     "ws-api": {
       "label": "api", "sub": "@jadero/api", "kind": "app", "status": "real", "wp": "WP-3",
-      "what": "The content, auth, media and CV service. Today it is the boot skeleton: validated config, logging, problem+json errors with request and trace ids, health endpoints, OpenTelemetry traces and a Postgres pool for readiness. No feature modules yet.",
+      "what": "The content, auth, media and CV service. Today it is the boot skeleton (validated config, logging, problem+json errors with request and trace ids, health endpoints, OpenTelemetry traces, a Postgres pool) plus, since WP-5, the outbox in content_dev, `POST /dev/ping` in development, and its second process type `api-worker` (`dist/worker.js`: outbox relay and heartbeat; section 8). No feature modules yet.",
       "how": "`start` and `dev` run `node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js`, so tracing starts before any import of `main.js`. `main.ts` then validates the environment, builds `AppModule.forRoot(config)`, applies `configureApp` from platform-nest and listens on `PORT`. Runtime dependency on `@jadero/platform-nest`; dev dependency on `@jadero/config` for its tsconfig and Vitest base. Its own runtime dependencies are Nest, Express, `pg`, rxjs, reflect-metadata and zod; Testcontainers is a dev dependency for `pnpm test:int`.",
       "why": "ADR-001 splits the backend into services, and ADR-029 says each one owns its database and talks to the others only through events. api comes first because the site's content lives there. Feature modules join from WP-10 (database) and WP-12 (content).",
       "files": ["apps/api/package.json", "apps/api/AGENTS.md", "apps/api/src/main.ts", "apps/api/src/app.module.ts", "apps/api/src/config/api-config.ts", "apps/api/src/modules/platform/"]
@@ -532,7 +828,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "ws-platform": {
       "label": "platform-nest", "sub": "@jadero/platform-nest", "kind": "pkg", "status": "real", "wp": "WP-3",
       "what": "The bootstrap every NestJS service shares: fail-fast config, structured logging, RFC 9457 errors, the health module, the OpenTelemetry entry and one `configureApp`. Infrastructure only, no domain code.",
-      "how": "Compiled with tsc to `dist/` and exposed through two `exports` entries: `.` for everything Nest uses, and `./instrumentation` for the file `node --import` loads before the app. Nest packages, rxjs and zod are peer dependencies, so the app supplies the single copy of `@nestjs/core`. `@nestjs/terminus`, nestjs-pino, pino, pino-http, pino-pretty and the OpenTelemetry SDK, OTLP exporter and four instrumentations are its own dependencies, which is why api never lists them.",
+      "how": "Compiled with tsc to `dist/` and exposed through two `exports` entries: `.` for everything Nest uses, and `./instrumentation` for the file `node --import` loads before the app. Nest packages, rxjs and zod are peer dependencies, so the app supplies the single copy of `@nestjs/core`. `@nestjs/terminus`, nestjs-pino, pino, pino-http, pino-pretty and the OpenTelemetry SDK, OTLP exporter and five instrumentations (http, express, pg, pino, amqplib) are its own dependencies, which is why api never lists them.",
       "why": "AGENTS.md rule 5: shared packages hold infrastructure, never domain code. One boot path means api, agent and contact log, validate and fail the same way. WP-3 decision C (default kept) puts the health module here too, with checks registered per service.",
       "files": ["packages/platform-nest/package.json", "packages/platform-nest/src/index.ts", "packages/platform-nest/src/telemetry/"]
     },
@@ -551,11 +847,11 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/config/package.json", "packages/config/tsconfig/base.json", "packages/config/tsconfig/node-service.json", "packages/config/tsconfig/node-library.json", "packages/config/vitest/base.js"]
     },
     "ws-agent-app": {
-      "label": "agent", "sub": "planned · WP-5", "kind": "app", "status": "planned", "wp": "WP-5",
-      "what": "The ask-me agent service: knowledge, chat, guards and usage, plus an `agent-ingest` worker.",
-      "how": "Will boot through platform-nest like api, keep its own read model of content fed by events, and wrap the LangGraph graph from `packages/agent`.",
-      "why": "AGENTS.md rule 3: the agent never calls api; it keeps its own read model fed by events (ADR-029).",
-      "files": ["apps/agent (not created yet)"]
+      "label": "agent", "sub": "@jadero/agent", "kind": "app", "status": "real", "wp": "WP-5",
+      "what": "The knowledge, chat, guards and usage service. Today it is the skeleton: an HTTP process with health checks and a consumer process that reads system.ping.v1 into its own broker_heartbeat table through the inbox.",
+      "how": "Two process types from one codebase: `dist/main.js` (HTTP, port 3002, ready when its database answers) and `dist/consumer.js` (port 3012 for health only, ready when Postgres and RabbitMQ answer; `agent-ingest` from WP-20). `HeartbeatConsumer` subscribes to `agent.system.ping` with `idempotent()`, so the inbox insert and the upsert share one transaction. `pnpm --filter @jadero/agent migrate` creates the messaging schema and its tables.",
+      "why": "ADR-029: agent owns agent_dev and learns about other services only from events; the agent never calls api. The consumer is its own process so a slow or failing consumer never takes the chat down (report section 3.2).",
+      "files": ["apps/agent/AGENTS.md", "apps/agent/src/main.ts", "apps/agent/src/consumer.ts", "apps/agent/src/modules/heartbeat/", "apps/agent/sql/0001_broker_heartbeat.sql"]
     },
     "ws-contact": {
       "label": "contact", "sub": "planned · WP-11", "kind": "app", "status": "planned", "wp": "WP-11",
@@ -586,18 +882,18 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["apps/admin (not created yet)"]
     },
     "ws-contracts": {
-      "label": "contracts", "sub": "planned · WP-12", "kind": "pkg", "status": "planned", "wp": "WP-12",
-      "what": "Zod DTOs and event schemas shared by services and the admin.",
-      "how": "Events use a CloudEvents envelope and versioned names like `content.post-published.v1`, changed expand and contract.",
-      "why": "AGENTS.md rule 5 and ADR-006: one schema validates the admin form, the API body and an agent tool input.",
-      "files": ["packages/contracts (not created yet)"]
+      "label": "contracts", "sub": "@jadero/contracts", "kind": "pkg", "status": "real", "wp": "WP-5",
+      "what": "Message contracts as Zod: the CloudEvents 1.0 envelope, defineEvent and the first event, system.ping.v1, with one example fixture per event and the AsyncAPI 3.1 catalog generated from the schemas.",
+      "how": "`defineEvent(\"system.ping.v1\", schema)` derives the routing key, the type `dev.jadero.system.ping.v1` and the envelope schema. A fixture test parses every event's example; a compatibility test compares each version's schema with its frozen copy in `compat/`, so within a version only optional fields can be added. Compiled to dist/; zod is a peer dependency.",
+      "why": "ADR-029 and AGENTS.md rule 5: one shared contract per event, versioned and changed expand/contract, so producer and consumer can deploy in any order.",
+      "files": ["packages/contracts/src/envelope.ts", "packages/contracts/src/define-event.ts", "packages/contracts/src/events/", "packages/contracts/fixtures/", "packages/contracts/compat/", "packages/contracts/asyncapi.json"]
     },
     "ws-messaging": {
-      "label": "messaging", "sub": "planned · WP-5", "kind": "pkg", "status": "planned", "wp": "WP-5",
-      "what": "The bus port with RabbitMQ and in-memory adapters, plus the outbox and inbox.",
-      "how": "Services write events to an outbox table in the same transaction; a relay publishes them to RabbitMQ; consumers dedupe through an inbox.",
-      "why": "ADR-029 and AGENTS.md rule 2: between api, agent and contact only asynchronous messages.",
-      "files": ["packages/messaging (not created yet)"]
+      "label": "messaging", "sub": "@jadero/messaging", "kind": "pkg", "status": "real", "wp": "WP-5",
+      "what": "The MessageBus port with RabbitMQ and in-memory adapters, the shared retry and dead-letter policy, the topology that generates infra/rabbitmq/definitions.json, the transactional outbox with its relay, and the inbox.",
+      "how": "Handlers return done, retry or dead; `dispatch` and `dispose` decide for both adapters (retries at 10 s, 1 min, 10 min through the service's retry exchange, then the DLQ). `addToOutbox(tx, ...)` joins the caller's transaction through the `SqlExecutor` seam; `OutboxRelay` claims rows with FOR UPDATE SKIP LOCKED and publishes with confirms; `idempotent(pool, effects)` is the inbox. A nine-behavior contract suite runs against both adapters.",
+      "why": "ADR-012 and ADR-029: no lost events (outbox), no repeated effects (inbox), no hot loops (consumer-routed retries), one failure policy for every service.",
+      "files": ["packages/messaging/src/message-bus.ts", "packages/messaging/src/rabbitmq-message-bus.ts", "packages/messaging/src/outbox/", "packages/messaging/src/inbox/", "packages/messaging/src/topology/", "packages/messaging/sql/0001_messaging.sql"]
     },
     "ws-ai": {
       "label": "ai", "sub": "planned · WP-19", "kind": "pkg", "status": "planned", "wp": "WP-19",
@@ -777,8 +1073,8 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "di-pgpool": {
       "label": "PG_POOL", "sub": "symbol token · useFactory(ApiConfig)", "kind": "token", "status": "real", "wp": "WP-3 step 6",
       "what": "The `pg` connection pool.",
-      "how": "`useFactory: (config: ApiConfig) => new Pool({ connectionString: config.databaseUrl, max: 2, connectionTimeoutMillis: 1000, query_timeout: 1000 })` with `inject: [ApiConfig]`. `query_timeout` frees the connection when a readiness check times out. The pool connects lazily, so api boots while the database is down and readiness reports it. Consumers use `@Inject(PG_POOL)` because `Pool` is a class from a library, not our token.",
-      "why": "A symbol token keeps the pool out of string keys and makes the binding explicit. A small pool of 2 is enough for a readiness probe until WP-10 sizes it for real queries.",
+      "how": "`useFactory: (config: ApiConfig) => new Pool({ connectionString: config.databaseUrl, max: 4, connectionTimeoutMillis: 1000, query_timeout: 1000 })` with `inject: [ApiConfig]`. `query_timeout` frees the connection when a readiness check times out. The pool connects lazily, so api boots while the database is down and readiness reports it. Consumers use `@Inject(PG_POOL)` because `Pool` is a class from a library, not our token.",
+      "why": "A symbol token keeps the pool out of string keys and makes the binding explicit. A pool of 4 leaves room for a readiness check, the relay's batch and the heartbeat at once in `api-worker` (WP-5) until WP-10 sizes it for real queries.",
       "files": ["apps/api/src/modules/platform/postgres.module.ts", "apps/api/src/modules/platform/postgres.tokens.ts"]
     },
     "di-prc": {
@@ -868,7 +1164,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "b-otel": {
       "label": "--import instrumentation", "sub": "before main.js", "kind": "step", "status": "real", "wp": "WP-3 step 7",
       "what": "The OpenTelemetry entry, `@jadero/platform-nest/instrumentation`, which Node runs before it loads `main.js`.",
-      "how": "It registers the ESM loader hook (`register(\"@opentelemetry/instrumentation/hook.mjs\", import.meta.url)`), validates `telemetryEnv` with `loadConfig` (a bad value exits 1 and names the variable), builds `NodeSDK` with http, express, pg and pino instrumentations, starts it and keeps it for shutdown. With `OTEL_TRACES_EXPORTER=none`, the default, it starts nothing; dev sets `console` in `.env`.",
+      "how": "It registers the ESM loader hook (`register(\"@opentelemetry/instrumentation/hook.mjs\", import.meta.url)`), validates `telemetryEnv` with `loadConfig` (a bad value exits 1 and names the variable), builds `NodeSDK` with http, express, pg, pino and amqplib instrumentations, starts it and keeps it for shutdown. With `OTEL_TRACES_EXPORTER=none`, the default, it starts nothing; dev sets `console` in `.env`.",
       "why": "In ESM every import of `main.js` loads before its first line, so patching from inside `main.ts` would be too late and would silently produce no spans. A separate file loaded with `--import` is the only place early enough (WP-3 decision F1).",
       "files": ["packages/platform-nest/src/telemetry/instrumentation.ts", "packages/platform-nest/src/telemetry/create-sdk.ts", "packages/platform-nest/test/telemetry.test.ts", "packages/platform-nest/test/fixtures/otel-smoke.mjs"]
     },
@@ -887,9 +1183,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/platform-nest/src/telemetry/instrumentation.ts", "packages/platform-nest/src/config/load-config.ts"]
     },
     "otel-sdk": {
-      "label": "NodeSDK", "sub": "http, express, pg, pino", "kind": "ext", "status": "real", "wp": "WP-3 step 7",
+      "label": "NodeSDK", "sub": "http, express, pg, pino, amqplib", "kind": "ext", "status": "real", "wp": "WP-3 step 7",
       "what": "The OpenTelemetry Node SDK, built by `createTelemetrySdk(env)`.",
-      "how": "An explicit instrumentation list: `HttpInstrumentation`, `ExpressInstrumentation`, `PgInstrumentation` and `PinoInstrumentation({ disableLogSending: true })`. `HttpInstrumentation` gets a hook that redacts the client address, peer address and user agent on incoming spans. Traces only: `metricReaders: []` and `logRecordProcessors: []`, because sdk-node otherwise starts OTLP metric and log exporters to `:4318` by itself (spike row 6). Spans go to the console (`SimpleSpanProcessor`) or to OTLP over protobuf (`BatchSpanProcessor`). amqplib joins in WP-5.",
+      "how": "An explicit instrumentation list: `HttpInstrumentation`, `ExpressInstrumentation`, `PgInstrumentation`, `PinoInstrumentation({ disableLogSending: true })` and `AmqplibInstrumentation`. `HttpInstrumentation` gets a hook that redacts the client address, peer address and user agent on incoming spans. Traces only: `metricReaders: []` and `logRecordProcessors: []`, because sdk-node otherwise starts OTLP metric and log exporters to `:4318` by itself (spike row 6). Spans go to the console (`SimpleSpanProcessor`) or to OTLP over protobuf (`BatchSpanProcessor`). Since WP-5 `AmqplibInstrumentation` too: traceparent in RabbitMQ headers on publish, the trace continued on consume (section 8).",
       "why": "WP-3 decision F1: an explicit list, not the auto-instrumentation bundle, so the project knows what is patched. Decision S2: no Nest controller spans, because `instrumentation-nestjs-core` does not declare Nest 12 yet; HTTP and Express spans already carry `http.route`.",
       "files": ["packages/platform-nest/src/telemetry/create-sdk.ts"]
     },
@@ -1142,7 +1438,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "label": "pnpm dev:up", "sub": "Postgres 18 + pgvector, RabbitMQ 4", "kind": "check", "status": "real", "wp": "WP-1",
       "what": "Local dependencies in Docker; the apps run on the host.",
       "how": "`infra/compose/compose.dev.yml`: pgvector on Postgres 18 and RabbitMQ with the management UI, ports bound to 127.0.0.1, healthchecks so `--wait` returns when ready.",
-      "why": "ADR-027 and ADR-029. api's readiness check connects to Postgres (`content_dev`); RabbitMQ waits for WP-5. The Postgres image tag is shared with the integration tests.",
+      "why": "ADR-027 and ADR-029. api's readiness check connects to Postgres (`content_dev`). Since WP-5 RabbitMQ loads vhost `dev`, its users, exchanges, queues and policies from `infra/rabbitmq/definitions.json`. The Postgres image tag is shared with the integration tests.",
       "files": ["infra/compose/compose.dev.yml"]
     },
     "c-build": {
@@ -1326,6 +1622,146 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "how": "Since step 8, `domain-imports-only-domain` flags every import outside the module's `domain/` folder except Node built-ins, npm packages included.",
       "why": "Before the fix a domain file could import `@nestjs/common` and pass; widening the rules to `templates/` found it.",
       "files": [".dependency-cruiser.cjs"]
+    },
+    "e-request": {
+      "label": "POST /dev/ping", "sub": "api · PingService", "kind": "step", "status": "real", "wp": "WP-5 step 6",
+      "what": "A development-only request starts the trace.",
+      "how": "`DevPingModule` is imported only when NODE_ENV=development; the heartbeat in api-worker calls the same `PingService` every 5 minutes.",
+      "why": "Decision W1 c: an instant trace for the demo, and a synthetic check that keeps proving the path in every environment.",
+      "files": ["apps/api/src/modules/ping/"]
+    },
+    "e-outbox": {
+      "label": "INSERT messaging.outbox", "sub": "same transaction as the change", "kind": "step", "status": "real", "wp": "WP-5 step 5",
+      "what": "The event is saved as a row, with the request's traceparent inside the envelope.",
+      "how": "`inTransaction(pool, tx => addToOutbox(tx, systemPingV1, data, \"jadero/api\"))`; `createEnvelope` checks the data against the contract first.",
+      "why": "ADR-012: the transactional outbox removes the dual write; the broker leaves the request path.",
+      "files": ["packages/messaging/src/outbox/outbox.ts", "packages/messaging/src/outbox/envelope.ts"]
+    },
+    "e-relay": {
+      "label": "OutboxRelay", "sub": "api-worker · every 1 s", "kind": "step", "status": "real", "wp": "WP-5 step 5",
+      "what": "Claims up to 50 due rows, publishes each with its trace restored, marks them published.",
+      "how": "FOR UPDATE SKIP LOCKED; publisher confirm with a 5 s timeout; a failure counts the attempt and backs the row off 1 s doubling to 60 s.",
+      "why": "Decision L1: polling is enough for a few events a day; the claim keeps two relays from publishing the same row.",
+      "files": ["packages/messaging/src/outbox/outbox-relay.ts", "apps/api/src/worker.ts"]
+    },
+    "e-route": {
+      "label": "jadero.events", "sub": "topic exchange", "kind": "step", "status": "real", "wp": "WP-5 step 4",
+      "what": "Routes system.ping.v1 to every bound queue; nothing bound means jadero.unrouted, never a silent drop.",
+      "how": "Topology generated from packages/messaging/src/topology into infra/rabbitmq/definitions.json; queue settings are policies.",
+      "why": "Decision T4: one reviewed source, services without configure rights.",
+      "files": ["infra/rabbitmq/definitions.json", "packages/messaging/src/topology/definitions.ts"]
+    },
+    "e-consume": {
+      "label": "RabbitMqMessageBus", "sub": "agent consumer · prefetch 4", "kind": "step", "status": "real", "wp": "WP-5 step 4",
+      "what": "Parses the envelope, checks the contract, runs the handler, applies the outcome.",
+      "how": "`dispatch` then `dispose`: done acks, retry copies to the wait queue through agent.retry and acks, dead copies to the DLQ with the reason.",
+      "why": "Decision P1 and R1: one failure policy, no handler can loop.",
+      "files": ["packages/messaging/src/rabbitmq-message-bus.ts", "packages/messaging/src/dispatch.ts"]
+    },
+    "e-inbox": {
+      "label": "idempotent()", "sub": "inbox + effects, one transaction", "kind": "step", "status": "real", "wp": "WP-5 step 5",
+      "what": "Inserts (consumer, event_id); only a new row runs the effect (the broker_heartbeat upsert).",
+      "how": "`INSERT ... ON CONFLICT DO NOTHING RETURNING`; a failing effect rolls back the inbox row too.",
+      "why": "Decision I1: at-least-once delivery made safe; keyed by consumer so two consumers in one database stay independent.",
+      "files": ["packages/messaging/src/inbox/idempotent.ts", "apps/agent/src/modules/heartbeat/heartbeat.consumer.ts"]
+    },
+    "e-ack": {
+      "label": "ack", "sub": "after the commit", "kind": "step", "status": "real", "wp": "WP-5 step 4",
+      "what": "The message leaves the queue only after the effects committed.",
+      "how": "A crash before the ack redelivers it; the inbox absorbs the repeat.",
+      "why": "The ack is the consumer's commit point (ADR-012).",
+      "files": ["packages/messaging/src/rabbitmq-message-bus.ts"]
+    },
+    "d-p1": {
+      "label": "P1 · thin port", "sub": "handlers return an outcome", "kind": "rule", "status": "real", "wp": "WP-5",
+      "what": "MessageBus is an abstract class; handlers return done, retry or dead and never ack.",
+      "how": "In-memory and RabbitMQ adapters pass the same contract suite.",
+      "why": "One place for the failure policy; consumer tests run without a broker.",
+      "files": ["packages/messaging/src/message-bus.ts"]
+    },
+    "d-t4": {
+      "label": "T4 · topology as code", "sub": "generates definitions.json", "kind": "rule", "status": "real", "wp": "WP-5",
+      "what": "A typed module describes exchanges, queues, policies, users and permissions.",
+      "how": "`pnpm --filter @jadero/messaging topology`; a test fails when the JSON is stale.",
+      "why": "Least privilege and no drift between code and broker.",
+      "files": ["packages/messaging/src/topology/"]
+    },
+    "d-r1": {
+      "label": "R1 · consumer-routed retries", "sub": "10 s, 1 min, 10 min, DLQ", "kind": "rule", "status": "real", "wp": "WP-5",
+      "what": "A failed delivery is copied to its own queue's wait queue, then acked.",
+      "how": "Wait queues have a TTL policy and dead-letter back through the service's retry exchange.",
+      "why": "Exact tiers, retries never reach other consumers.",
+      "files": ["packages/messaging/src/outcome.ts"]
+    },
+    "d-s1": {
+      "label": "S1 · SqlExecutor seam", "sub": "pg now, Drizzle in WP-10", "kind": "rule", "status": "real", "wp": "WP-5",
+      "what": "Outbox and inbox take the caller's transaction as a minimal executor.",
+      "how": "A pg.PoolClient fits as is; sql/0001_messaging.sql is applied by each service's migrate script.",
+      "why": "WP-10 adds Drizzle without rewriting messaging.",
+      "files": ["packages/messaging/src/sql/sql-executor.ts"]
+    },
+    "d-e1": {
+      "label": "E1 · one trace", "sub": "structured CloudEvents", "kind": "rule", "status": "real", "wp": "WP-5",
+      "what": "The envelope is the body; the relay restores the stored traceparent before publishing.",
+      "how": "AmqplibInstrumentation injects it into headers and continues it on consume.",
+      "why": "ADR-010: a trace runs from the request to the consumer without gaps.",
+      "files": ["packages/platform-nest/src/telemetry/create-sdk.ts"]
+    },
+    "d-w1": {
+      "label": "W1 · process types", "sub": "api-worker, agent consumer", "kind": "rule", "status": "real", "wp": "WP-5",
+      "what": "Background work runs in its own process with its own readiness.",
+      "how": "api: Postgres only; api-worker and the agent consumer: Postgres and RabbitMQ.",
+      "why": "A broker outage never takes api out of rotation.",
+      "files": ["apps/api/src/worker.module.ts", "apps/agent/src/consumer.module.ts"]
+    },
+    "g-outbox": {
+      "label": "messaging.outbox", "sub": "table in content_dev", "kind": "file", "status": "real", "wp": "WP-5 step 5",
+      "what": "One row per event to publish, written in the same transaction as the change that caused it.",
+      "how": "Columns: id (the CloudEvents id), type, routing_key, envelope (jsonb, exactly what goes on the wire), attempts, next_attempt_at, last_error (error kind only), published_at. A partial index on unsent rows keeps the relay's poll cheap; published rows are deleted after 7 days by the daily cleanup.",
+      "why": "ADR-012: the event commits with the change or not at all (transactional outbox). api never talks to RabbitMQ.",
+      "files": ["packages/messaging/sql/0001_messaging.sql"]
+    },
+    "g-unrouted": {
+      "label": "jadero.unrouted", "sub": "alternate exchange + queue", "kind": "step", "status": "real", "wp": "WP-5 step 4",
+      "what": "Where a message goes when no binding matches its routing key, instead of being dropped.",
+      "how": "`jadero.events` and every service's retry exchange name it as `alternate-exchange`. Without it RabbitMQ would confirm the publish and discard the message.",
+      "why": "Decision T4: a typo in a routing key or a queue missing from the topology must be visible, not silent.",
+      "files": ["packages/messaging/src/topology/definitions.ts"]
+    },
+    "g-queue": {
+      "label": "agent.system.ping", "sub": "quorum queue · delivery limit 20", "kind": "step", "status": "real", "wp": "WP-5 step 4",
+      "what": "agent's queue for the ping; its own copy of every system.ping.v1.",
+      "how": "Declared in definitions.json; a policy sets at-least-once dead-lettering to `jadero.dlx` and the delivery limit. Bound to `jadero.events` by `system.ping.v1` and to `agent.retry` by its own name, so expired retries come back here only.",
+      "why": "One queue per consumer and purpose (ADR-029): a slow or failing consumer never affects another consumer's copy.",
+      "files": ["packages/messaging/src/topology/jadero.ts", "infra/rabbitmq/definitions.json"]
+    },
+    "g-retry": {
+      "label": "agent.retry → wait queues", "sub": "10 s · 1 min · 10 min, then back up", "kind": "step", "status": "real", "wp": "WP-5 step 4",
+      "what": "The service's retry exchange and its three wait queues.",
+      "how": "The consumer publishes a copy with `x-jadero-attempt` to `agent.system.ping.retry.<tier>` through `agent.retry`, then acks the original. A wait queue has no consumer; its TTL policy dead-letters the copy back through `agent.retry` to `agent.system.ping`.",
+      "why": "Decision R1: growing delays without timers in code, and a retry never reaches another consumer's queue.",
+      "files": ["packages/messaging/src/rabbitmq-message-bus.ts", "packages/messaging/src/topology/definitions.ts"]
+    },
+    "g-dlq": {
+      "label": "agent.system.ping.dlq", "sub": "after the last tier", "kind": "step", "status": "real", "wp": "WP-5 step 4",
+      "what": "Messages that failed four times, or failed in a way retrying cannot fix (a payload that breaks the contract).",
+      "how": "The consumer copies them here with the reason in `x-jadero-dead-reason`; the broker also dead-letters here through `jadero.dlx` when the delivery limit is hit.",
+      "why": "ADR-012: a person decides; WP-50 archives them and adds a replay action, safe because consumers are idempotent.",
+      "files": ["packages/messaging/src/rabbitmq-message-bus.ts"]
+    },
+    "g-heartbeat": {
+      "label": "broker_heartbeat", "sub": "table in agent_dev", "kind": "file", "status": "real", "wp": "WP-5 step 6",
+      "what": "agent's read model of the ping: when the path last worked, per source.",
+      "how": "Upserted in the inbox's transaction; the upsert only moves forward in time, because delivery order is not guaranteed.",
+      "why": "ADR-029 rule 3: agent keeps its own read model fed by events. A future lag signal for WP-26 and the Under the hood page.",
+      "files": ["apps/agent/sql/0001_broker_heartbeat.sql", "apps/agent/src/modules/heartbeat/heartbeat.repository.ts"]
+    },
+    "ev-system-ping-v1": {
+      "label": "system.ping.v1", "sub": "api → agent.system.ping", "kind": "file", "status": "real", "wp": "WP-5",
+      "what": "A probe that crosses the whole messaging path. Data: `{ trigger: \"manual\" | \"heartbeat\" }`.",
+      "how": "Producer: api, through its outbox (`PingService`: `POST /dev/ping` in development, the heartbeat in api-worker every 5 minutes). Consumer: `agent.system.ping` (agent's consumer process) into `broker_heartbeat`. Type `dev.jadero.system.ping.v1`; schema, fixture and frozen compatibility snapshot in packages/contracts.",
+      "why": "Decision W1 c: proves outbox, relay, broker, consumer, inbox and the trace in every environment.",
+      "files": ["packages/contracts/src/events/system-ping.v1.ts", "packages/contracts/fixtures/system.ping.v1.json", "packages/contracts/compat/system.ping.v1.json"]
     }
   }
 }
@@ -1493,7 +1929,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
           byId[id].classList.toggle("hit", hit);
           byId[id].classList.toggle("dim", !hit);
         });
-        body.innerHTML = '<div class="ex-body"><div><div class="fig-title">Request</div><pre>' + esc(ex.request) + '</pre></div><div><div class="fig-title">Response</div><pre>' + esc(ex.response) + '</pre></div></div><p class="ex-note">' + fmt(ex.note) + "</p>";
+        body.innerHTML = '<div class="ex-body"><div><div class="fig-title">Request</div><pre>' + esc(ex.request) + '</pre></div><div><div class="fig-title">Response</div><pre>' + esc(ex.response) + "</pre></div></div>" + (ex.note ? '<p class="ex-note">' + fmt(ex.note) + "</p>" : "");
       }
       fig.examples.forEach((ex, i) => {
         var b = h("button", null, esc(ex.label)); b.type = "button";

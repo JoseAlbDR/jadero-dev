@@ -2,18 +2,23 @@
   "name": "@jadero/api",
   "version": "0.0.0",
   "private": true,
-  "description": "Content, auth, media and CV service (ADR-001). WP-3: the boot skeleton.",
+  "description": "Content, auth, media and CV service (ADR-001), with its api-worker process type (outbox relay, heartbeat).",
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "node --watch-path=dist --watch-path=../../packages/platform-nest/dist --watch-preserve-output --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js",
+    "dev": "node --watch-path=dist --watch-path=../../packages/platform-nest/dist --watch-path=../../packages/messaging/dist --watch-preserve-output --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js",
     "dev:build": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
     "start": "node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "test:int": "vitest run -c vitest.int.config.ts"
+    "test:int": "vitest run -c vitest.int.config.ts",
+    "dev:worker": "PORT=3011 SERVICE_NAME=api-worker OTEL_SERVICE_NAME=api-worker node --watch-path=dist --watch-path=../../packages/platform-nest/dist --watch-path=../../packages/messaging/dist --watch-preserve-output --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/worker.js",
+    "start:worker": "node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/worker.js",
+    "migrate": "node --env-file-if-exists=.env dist/migrate.js"
   },
   "dependencies": {
+    "@jadero/contracts": "workspace:*",
+    "@jadero/messaging": "workspace:*",
     "@jadero/platform-nest": "workspace:*",
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",

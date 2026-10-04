@@ -1,0 +1,41 @@
+{
+  "name": "@jadero/agent",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Knowledge, chat, guards and usage service (ADR-001). WP-5: the skeleton, with its consumer process type (agent-ingest from WP-20).",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "node --watch-path=dist --watch-path=../../packages/platform-nest/dist --watch-path=../../packages/messaging/dist --watch-preserve-output --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js",
+    "dev:build": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "start": "node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:int": "vitest run -c vitest.int.config.ts",
+    "dev:worker": "PORT=3012 SERVICE_NAME=agent-consumer OTEL_SERVICE_NAME=agent-consumer node --watch-path=dist --watch-path=../../packages/platform-nest/dist --watch-path=../../packages/messaging/dist --watch-preserve-output --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/consumer.js",
+    "start:consumer": "node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/consumer.js",
+    "migrate": "node --env-file-if-exists=.env dist/migrate.js"
+  },
+  "dependencies": {
+    "@jadero/contracts": "workspace:*",
+    "@jadero/messaging": "workspace:*",
+    "@jadero/platform-nest": "workspace:*",
+    "@nestjs/common": "catalog:",
+    "@nestjs/core": "catalog:",
+    "@nestjs/platform-express": "catalog:",
+    "pg": "catalog:",
+    "reflect-metadata": "catalog:",
+    "rxjs": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@jadero/config": "workspace:*",
+    "@nestjs/testing": "catalog:",
+    "@testcontainers/postgresql": "catalog:",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "testcontainers": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
