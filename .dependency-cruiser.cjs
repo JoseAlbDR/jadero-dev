@@ -37,7 +37,12 @@ module.exports = {
         "import only from the same module's domain/ folder and Node built-ins: no other layer, " +
         "no other module, no npm package.",
       severity: "error",
-      from: { path: "^(apps|packages|templates)/([^/]+)/src/modules/([^/]+)/domain/" },
+      // Tests next to domain code may import the test runner. Known gap: a domain file importing a
+      // workspace package (`@jadero/*`) resolves into its dist/, which the exclude below drops.
+      from: {
+        path: "^(apps|packages|templates)/([^/]+)/src/modules/([^/]+)/domain/",
+        pathNot: "\\.test\\.ts$",
+      },
       to: {
         pathNot: "^$1/$2/src/modules/$3/domain/",
         dependencyTypesNot: ["core"],
@@ -119,7 +124,8 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: "node_modules" },
-    exclude: { path: "(^|/)(dist|coverage|\\.turbo|\\.next)/" },
+    // Only the workspace's own build folders: npm packages that ship from dist/ stay visible.
+    exclude: { path: "^(apps|packages|templates)/[^/]+/(dist|coverage|\\.turbo|\\.next)/" },
     moduleSystems: ["es6", "cjs"],
     // Count `import type` too: a type-only import from infrastructure/ is still a layer violation.
     tsPreCompilationDeps: true,
