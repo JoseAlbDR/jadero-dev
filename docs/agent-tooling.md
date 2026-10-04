@@ -1,6 +1,6 @@
 # Agent tooling in this repo
 
-What Claude Code (or any agent that reads `AGENTS.md`) finds here, why each piece exists, and how the owner's framework (firstmate) can integrate it. Decided in ADR-028 (option D: a repo-local setup now, designed to map onto the framework's concepts; the framework's core plugin later if it adds value).
+What Claude Code (or any agent that reads `AGENTS.md`) finds here and why each piece exists. Decided in ADR-028 (option D: a repo-local setup). On 2026-10-04 the owner chose to run every work package in Claude Code sessions from this repo, cloud or local, and not to adopt their framework (firstmate); how a session runs is in `docs/sessions.md`.
 
 ## Files
 
@@ -20,10 +20,10 @@ What Claude Code (or any agent that reads `AGENTS.md`) finds here, why each piec
 | `.claude/skills/explain` | `/explain <topic>`: first principles plus a concrete trace with file:line and the ADR. | On demand |
 | `.claude/agents/reviewer.md` | Subagent with the review checklist: boundaries, messaging, AI and guards, OWASP LLM Top 10, testing gates, secrets, content rules, delivery, learning gate, docs. Reports, never fixes, never approves. | `@agent-reviewer`, or delegated by Claude before a PR review |
 | `docs/learning/` | Explainer template and the written explainers. | By the skills and the gate |
-| `docs/local-playbook.md` | The hands-on version of this flow for the owner's machine: setup, what a session looks like, daily loop, what to do when something blocks. | By the owner and firstmate |
+| `docs/local-playbook.md` | The hands-on version of this flow for the owner's machine: setup, what a session looks like, daily loop, what to do when something blocks. | By the owner and every session |
 | `.github/ISSUE_TEMPLATE`, `PULL_REQUEST_TEMPLATE.md`, `scripts/github/seed.mjs` | The tracking structure of ADR-041 (WP-49). | By people and by `gh` |
 
-Security guardrails (no pushes to the default branch, no deploys, no ssh, no real providers in tests) are stated as rules in `AGENTS.md` section 7 and enforced by the owner's framework and sandbox; this repo does not duplicate them as hooks.
+Security guardrails (no pushes to the default branch, no deploys, no ssh, no real providers in tests) are stated as rules in `AGENTS.md` section 7 and enforced by Claude Code's permission settings and sandbox; this repo does not duplicate them as hooks.
 
 ## How a learning WP runs with this tooling
 
@@ -34,11 +34,9 @@ Security guardrails (no pushes to the default branch, no deploys, no ssh, no rea
 5. `@agent-reviewer` on the PR; the owner reviews; squash merge closes the issue.
 A step the owner already knows: `fast_path: known` in the explainer, no full explainer, no explain-back (D-38).
 
-## Integration with the owner's framework (for firstmate)
+## Sessions
 
-Concepts map one to one by design (ADR-028 D): plan = `/wp` step list; approve = the owner's recorded decision; per-WP implement = the step log; review gate = `@agent-reviewer`; MR = PR with `Closes #`. What the framework adds if its core plugin is adopted later: its guard hooks and sandbox, its commit skill, retro and learn habits. What stays repo-local regardless: the learning gate (the framework has no equivalent), ADRs tracked in `docs/adr/` (the framework records decisions untracked), GitHub delivery (the framework assumes GitLab). Nothing here references the framework's paths or company material, so the repo can go public as is.
-
-If the framework runs the implementers, point them at `AGENTS.md`; it is tool-neutral and the rules files are plain Markdown. If the framework prefers its own skills, the four here can be dropped and only `learning-gate.sh` and `docs/learning/` need to stay.
+Every work package runs in a Claude Code session started in this repo. `docs/sessions.md` has what a session reads, the differences between a cloud and a local session, and the prompts to start a WP, resume one or do a chore.
 
 ## The delivery flow, end to end
 
