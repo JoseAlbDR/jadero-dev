@@ -26,6 +26,7 @@
     "@golevelup/nestjs-rabbitmq": "catalog:",
     "@jadero/contracts": "workspace:*",
     "@opentelemetry/api": "catalog:",
+    "@opentelemetry/core": "catalog:",
     "amqp-connection-manager": "catalog:"
   },
   "peerDependencies": {
@@ -40,7 +41,6 @@
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
     "@opentelemetry/context-async-hooks": "catalog:",
-    "@opentelemetry/core": "catalog:",
     "@testcontainers/postgresql": "catalog:",
     "@types/amqplib": "catalog:",
     "@types/node": "catalog:",

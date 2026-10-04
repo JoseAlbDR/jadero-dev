@@ -1,5 +1,6 @@
 import type { CloudEventEnvelope } from "@jadero/contracts";
-import { context, propagation } from "@opentelemetry/api";
+import { context, propagation, ROOT_CONTEXT } from "@opentelemetry/api";
+import { suppressTracing } from "@opentelemetry/core";
 import { errorKind } from "../error-kind.js";
 import type { MessagingLog } from "../log.js";
 import type { MessageBus } from "../message-bus.js";
@@ -73,6 +74,13 @@ export class OutboxRelay {
    * @returns how many rows were published and how many failed.
    */
   async runOnce(): Promise<RelayRun> {
+    // The poll runs every second, mostly finding nothing: its own queries (BEGIN, the claim,
+    // the UPDATEs, COMMIT) are not traced, or they would fill the trace backend with a trace per
+    // second. Only the publishes are, each inside the trace of the request that wrote its row.
+    return context.with(suppressTracing(context.active()), () => this.claimAndPublish());
+  }
+
+  private async claimAndPublish(): Promise<RelayRun> {
     return inTransaction(this.options.pool, async (tx) => {
       const { rows } = await tx.query<OutboxRow>(
         `SELECT id, routing_key, envelope, attempts FROM messaging.outbox
@@ -86,7 +94,8 @@ export class OutboxRelay {
         // On shutdown, finish the row in flight and leave the rest unclaimed for the next start.
         if (this.stopping) break;
         try {
-          const parent = propagation.extract(context.active(), {
+          // From the root context, not the active one, which has tracing suppressed.
+          const parent = propagation.extract(ROOT_CONTEXT, {
             traceparent: row.envelope.traceparent ?? "",
           });
           await context.with(parent, () =>

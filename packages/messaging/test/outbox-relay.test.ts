@@ -1,7 +1,7 @@
 import type { CloudEventEnvelope } from "@jadero/contracts";
 import { context, propagation } from "@opentelemetry/api";
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
-import { W3CTraceContextPropagator } from "@opentelemetry/core";
+import { isTracingSuppressed, W3CTraceContextPropagator } from "@opentelemetry/core";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   currentTraceparent,
@@ -32,10 +32,12 @@ function row(n: number, traceparent?: string) {
 /** A pool whose claim query returns the given rows once, and that records every statement. */
 function fakePool(rows: ReturnType<typeof row>[]) {
   const statements: string[] = [];
+  const suppressed: boolean[] = [];
   let claimed = false;
   const client: SqlClient = {
     async query<R>(text: string) {
       statements.push(text.trim().split(/\s+/)[0] ?? "");
+      suppressed.push(isTracingSuppressed(context.active()));
       if (text.includes("FOR UPDATE SKIP LOCKED") && !claimed) {
         claimed = true;
         return { rows: rows as unknown as R[], rowCount: rows.length };
@@ -45,16 +47,24 @@ function fakePool(rows: ReturnType<typeof row>[]) {
     release() {},
   };
   const pool: SqlPool = { connect: async () => client };
-  return { pool, statements };
+  return { pool, statements, suppressed };
 }
 
 class SpyBus extends InMemoryMessageBus {
-  readonly sent: { message: OutgoingMessage; traceparent: string | undefined }[] = [];
+  readonly sent: {
+    message: OutgoingMessage;
+    traceparent: string | undefined;
+    suppressed: boolean;
+  }[] = [];
   constructor(private readonly behavior: (n: number) => Promise<void> = async () => {}) {
     super();
   }
   override async publish(message: OutgoingMessage): Promise<void> {
-    this.sent.push({ message, traceparent: currentTraceparent() });
+    this.sent.push({
+      message,
+      traceparent: currentTraceparent(),
+      suppressed: isTracingSuppressed(context.active()),
+    });
     await this.behavior(this.sent.length);
   }
 }
@@ -77,6 +87,14 @@ describe("OutboxRelay", () => {
     // What the amqplib instrumentation would inject into the headers: the request's trace.
     expect(bus.sent[0]?.traceparent).toBe(TRACEPARENT);
     expect(bus.sent[1]?.traceparent).toBeUndefined();
+  });
+
+  it("does not trace its own poll queries, only the publishes (no span flood every second)", async () => {
+    const { pool, suppressed } = fakePool([row(1, TRACEPARENT)]);
+    const bus = new SpyBus();
+    await new OutboxRelay({ pool, bus: bus as MessageBus }).runOnce();
+    expect(suppressed.every(Boolean)).toBe(true);
+    expect(bus.sent[0]?.suppressed).toBe(false);
   });
 
   it("ends the batch at the first failed publish instead of waiting a timeout per row", async () => {
