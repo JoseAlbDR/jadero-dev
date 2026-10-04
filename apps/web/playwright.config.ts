@@ -1,4 +1,13 @@
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
+
+// `next build` reads `.env` and bakes SITE_URL into the pages; the tests must expect the same value,
+// so load the same file here. Variables already set in the shell win (loadEnvFile never overrides).
+const envFile = fileURLToPath(new URL(".env", import.meta.url));
+if (existsSync(envFile)) {
+  process.loadEnvFile(envFile);
+}
 
 const PORT = Number(process.env.E2E_PORT ?? 3210);
 

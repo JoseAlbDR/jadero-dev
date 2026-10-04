@@ -14,6 +14,8 @@ pnpm --filter @jadero/web start          # node .next/standalone/apps/web/server
 pnpm test:e2e                            # from the root: build, then Playwright and axe in Chrome
 ```
 
+`playwright.config.ts` loads `apps/web/.env` when it exists, so the tests expect the same `SITE_URL` the build baked into the pages (canonical and hreflang links). A `SITE_URL` exported in the shell wins over the file.
+
 ## Layout
 
 - `src/proxy.ts`: the next-intl middleware (Next 16 calls it proxy). A path without a locale gets a 307 to the cookie locale, else Accept-Language, else `en`.
