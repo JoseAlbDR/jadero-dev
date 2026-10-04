@@ -126,21 +126,34 @@ test.describe("theme (ADR-023)", () => {
 
 // WP-15 throwaway mockups: each direction must meet the same bar before the owner picks one.
 test.describe("design direction mockups (ADR-023)", () => {
-  for (const direction of ["terminal", "editorial", "bento"] as const) {
+  for (const direction of ["", "/terminal", "/editorial", "/bento"] as const) {
     for (const colorScheme of ["light", "dark"] as const) {
-      test(`${direction} has no WCAG 2.2 AA violations in ${colorScheme} mode`, async ({
+      test(`mockups${direction} has no WCAG 2.2 AA violations in ${colorScheme} mode`, async ({
         page,
       }) => {
         await page.emulateMedia({ colorScheme });
-        await page.goto(`/en/mockups/${direction}`);
+        await page.goto(`/en/mockups${direction}`);
         await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
           "content",
           "noindex, nofollow",
         );
+        // The dot grid and the aurora are decorative gradients axe cannot measure text against;
+        // hide them so contrast is checked on the solid surface instead of being skipped.
+        await page.addStyleTag({
+          content: ".mockup-dot-grid, .mockup-aurora { display: none !important; }",
+        });
         const results = await new AxeBuilder({ page })
           .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
           .analyze();
         expect(results.violations).toEqual([]);
+        // An axe crash (for example a color it cannot parse) lands in `incomplete`, not `violations`.
+        expect(results.incomplete.filter((r) => r.error)).toEqual([]);
+        // Every text node gets a contrast verdict; axe never measures symbol glyphs (the
+        // decorative arrows), which it reports as "nonBmp".
+        const unchecked = (
+          results.incomplete.find((r) => r.id === "color-contrast")?.nodes ?? []
+        ).filter((n) => n.any[0]?.data?.messageKey !== "nonBmp");
+        expect(unchecked.map((n) => n.html)).toEqual([]);
       });
     }
   }
