@@ -15,5 +15,6 @@ export interface ProblemDetails {
   readonly detail: string;
   readonly instance: string;
   readonly requestId?: string;
+  readonly traceId?: string;
   readonly errors?: readonly InvalidField[];
 }

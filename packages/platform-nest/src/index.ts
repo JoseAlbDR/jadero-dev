@@ -30,3 +30,8 @@ export {
   requestLogLevel,
 } from "./logging/logger-params.js";
 export { LoggingModule } from "./logging/logging.module.js";
+export { createTelemetrySdk } from "./telemetry/create-sdk.js";
+export { TelemetryModule } from "./telemetry/telemetry.module.js";
+export { type TelemetryEnv, telemetryEnv } from "./telemetry/telemetry-env.js";
+export { shutdownTelemetry } from "./telemetry/telemetry-state.js";
+export { currentTraceId } from "./telemetry/trace-id.js";

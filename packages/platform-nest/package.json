@@ -2,12 +2,16 @@
   "name": "@jadero/platform-nest",
   "version": "0.0.0",
   "private": true,
-  "description": "Bootstrap shared by the NestJS services: fail-fast config, structured logging, problem details, health checks, app wiring. Infrastructure only, no domain code. Compiled to dist/.",
+  "description": "Bootstrap shared by the NestJS services: fail-fast config, structured logging, problem details, health checks, OpenTelemetry, app wiring. Infrastructure only, no domain code. Compiled to dist/.",
   "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./instrumentation": {
+      "types": "./dist/telemetry/instrumentation.d.ts",
+      "default": "./dist/telemetry/instrumentation.js"
     }
   },
   "files": [
@@ -16,10 +20,19 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput"
   },
   "dependencies": {
     "@nestjs/terminus": "catalog:",
+    "@opentelemetry/api": "catalog:",
+    "@opentelemetry/exporter-trace-otlp-proto": "catalog:",
+    "@opentelemetry/instrumentation": "catalog:",
+    "@opentelemetry/instrumentation-express": "catalog:",
+    "@opentelemetry/instrumentation-http": "catalog:",
+    "@opentelemetry/instrumentation-pg": "catalog:",
+    "@opentelemetry/instrumentation-pino": "catalog:",
+    "@opentelemetry/sdk-node": "catalog:",
     "nestjs-pino": "catalog:",
     "pino": "catalog:",
     "pino-http": "catalog:",
@@ -37,6 +50,7 @@
     "@nestjs/core": "catalog:",
     "@nestjs/platform-express": "catalog:",
     "@nestjs/testing": "catalog:",
+    "@opentelemetry/context-async-hooks": "catalog:",
     "@types/express": "catalog:",
     "@types/node": "catalog:",
     "reflect-metadata": "catalog:",
