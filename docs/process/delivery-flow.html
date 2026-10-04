@@ -121,7 +121,7 @@ a { color: var(--accent); }
 <div class="stage"><div class="n">7</div><div>
 <h3>Open the PR</h3>
 <p class="who">Agent · board: In progress → In review (automatic)</p>
-<p>Title: the conventional commit that becomes the squash commit and the changelog line. Body from the template with <code>Closes #19</code> on the first line; the Project workflow "Pull request linked to issue" moves the card to In review. No attribution footers, model names or session links anywhere. CI runs lint, typecheck, unit, integration and the coverage gates of ADR-009.</p>
+<p>Title: the conventional commit that becomes the squash commit and the changelog line. Body from the template with <code>Closes #19</code> on the first line; the Project workflow "Pull request linked to issue" moves the card to In review. No attribution footers, model names or session links anywhere. CI (WP-6, not built yet) will run lint, typecheck, unit, integration and the coverage gates of ADR-009; until then <code>pnpm verify</code> is the check.</p>
 </div></div>
 
 <div class="stage"><div class="n">8</div><div>
@@ -151,9 +151,9 @@ a { color: var(--accent); }
 <div class="tablewrap"><table>
 <tr><th>Gate</th><th>Enforced by</th><th>Where</th></tr>
 <tr><td>Learning</td><td><code>.claude/hooks/learning-gate.sh</code> (PreToolUse on Edit and Write)</td><td>Local Claude Code session; firstmate implementers must honor the same rule by reading the explainer's front matter</td></tr>
-<tr><td>Done with my step?</td><td><code>pnpm verify</code> (lint, typecheck, unit, affected only)</td><td>Before every commit, and again after merging <code>main</code> into the branch, before pushing</td></tr>
-<tr><td>Is main green?</td><td><code>pnpm verify:all</code> (same tasks, every package; <code>verify</code> runs nothing on <code>main</code>)</td><td>On <code>main</code> after a pull, and in CI</td></tr>
-<tr><td>Architecture</td><td>dependency-cruiser rules (WP-1), restated in <code>AGENTS.md</code> section 4 and <code>.claude/rules/services.md</code></td><td>CI and <code>pnpm verify</code></td></tr>
+<tr><td>Done with my step?</td><td><code>pnpm verify</code> (lint, architecture check, typecheck, unit tests, affected only)</td><td>Before every commit, and again after merging <code>main</code> into the branch, before pushing</td></tr>
+<tr><td>Is main green?</td><td><code>pnpm verify:all</code> (same tasks, every package; <code>verify</code> runs nothing on <code>main</code>)</td><td>On <code>main</code> after a pull, and in CI once WP-6 lands</td></tr>
+<tr><td>Architecture</td><td>dependency-cruiser rules (WP-1), restated in <code>AGENTS.md</code> section 4 and <code>.claude/rules/services.md</code></td><td><code>pnpm verify</code> now, CI once WP-6 lands</td></tr>
 <tr><td>Quality</td><td>CI (WP-6) with the coverage gates of ADR-009; <code>@agent-reviewer</code></td><td>PR</td></tr>
 <tr><td>Content</td><td>ADR-031 rules in <code>AGENTS.md</code> section 7; the reviewer's point 7; gitleaks (WP-6)</td><td>Everything, since the repo becomes public</td></tr>
 <tr><td>Security</td><td>The owner's framework and sandbox. The repo states the rules; it does not duplicate the hooks.</td><td>Firstmate</td></tr>
@@ -233,7 +233,7 @@ a { color: var(--accent); }
 </ul>
 <h2 id="wp3">The WP-3 run</h2>
 <div class="card">
-<p>WP-3 (Service platform and API skeleton, issue #11) was the first WP to run the canonical flow: <code>/wp 3</code>, a self-contained explainer with all seven questions in one message, the owner's answers recorded on 2026-10-03 before any code, then eight steps, each with one scoped commit and two lines in the step log. No step was marked known. The PR review, the explain-back and the Recap come next.</p>
+<p>WP-3 (Service platform and API skeleton, issue #11) was the first WP to run the canonical flow: <code>/wp 3</code>, a self-contained explainer with all seven questions in one message, the owner's answers recorded on 2026-10-03 before any code, then eight steps, each with one scoped commit and two lines in the step log. No step was marked known. The PR was reviewed, the explain-back and the Recap are written, and the PR is merged.</p>
 </div>
 <h3>What went well</h3>
 <ul>

@@ -8,7 +8,7 @@ One paragraph: what changed and why, in terms of the WP and the ADRs it implemen
 
 ## How to verify
 
-- `pnpm verify` green (lint, typecheck, unit tests, affected only)
+- `pnpm verify` green (lint, architecture check, typecheck, unit tests, affected only)
 - Integration tests touched: 
 - Manual check, if any: 
 
