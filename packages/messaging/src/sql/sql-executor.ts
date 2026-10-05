@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-
 /** The result shape of a query: what `pg` returns, reduced to what messaging reads. */
 export interface SqlResult<R> {
   readonly rows: R[];
@@ -49,19 +47,4 @@ export async function inTransaction<T>(
     client.release(true);
     throw error;
   }
-}
-
-/** The DDL of the `messaging` schema (outbox and inbox), from `sql/0001_messaging.sql`. */
-export const MESSAGING_SCHEMA_SQL = readFileSync(
-  new URL("../../sql/0001_messaging.sql", import.meta.url),
-  "utf8",
-);
-
-/**
- * Creates the `messaging` schema in a service's database if it is missing. Until WP-10 brings
- * Drizzle migrations, each service calls this from its migrate step.
- * @param executor a connection to the service's own database.
- */
-export async function migrateMessagingSchema(executor: SqlExecutor): Promise<void> {
-  await executor.query(MESSAGING_SCHEMA_SQL);
 }

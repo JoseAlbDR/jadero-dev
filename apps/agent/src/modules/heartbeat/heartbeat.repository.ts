@@ -9,7 +9,7 @@ export interface HeartbeatRecord {
   readonly seenAt: string;
 }
 
-/** Writes `broker_heartbeat`, in the transaction the inbox opened (idempotent consumer). */
+/** Writes `heartbeat.broker_heartbeat`, in the transaction the inbox opened (idempotent consumer). */
 @Injectable()
 export class HeartbeatRepository {
   /**
@@ -20,12 +20,12 @@ export class HeartbeatRepository {
    */
   async record(tx: SqlExecutor, record: HeartbeatRecord): Promise<void> {
     await tx.query(
-      `INSERT INTO broker_heartbeat (source, last_event_id, last_trigger, last_seen_at)
+      `INSERT INTO heartbeat.broker_heartbeat (source, last_event_id, last_trigger, last_seen_at)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (source) DO UPDATE
          SET last_event_id = EXCLUDED.last_event_id, last_trigger = EXCLUDED.last_trigger,
              last_seen_at = EXCLUDED.last_seen_at
-       WHERE broker_heartbeat.last_seen_at < EXCLUDED.last_seen_at`,
+       WHERE heartbeat.broker_heartbeat.last_seen_at < EXCLUDED.last_seen_at`,
       [record.source, record.eventId, record.trigger, record.seenAt],
     );
   }

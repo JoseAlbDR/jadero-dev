@@ -14,7 +14,6 @@
     "test:int": "vitest run -c vitest.int.config.ts",
     "dev:worker": "PORT=3012 SERVICE_NAME=agent-consumer OTEL_SERVICE_NAME=agent-consumer node --watch-path=dist --watch-path=../../packages/platform-nest/dist --watch-path=../../packages/messaging/dist --watch-preserve-output --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/consumer.js",
     "start:consumer": "node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/consumer.js",
-    "migrate": "node --env-file-if-exists=.env dist/migrate-raw-sql.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env dist/migrate.js"
   },
@@ -25,6 +24,7 @@
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
     "@nestjs/platform-express": "catalog:",
+    "drizzle-orm": "catalog:",
     "pg": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",

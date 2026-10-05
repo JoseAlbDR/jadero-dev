@@ -2,17 +2,20 @@
   "name": "@jadero/messaging",
   "version": "0.0.0",
   "private": true,
-  "description": "Messaging infrastructure shared by the services (ADR-012, ADR-029): the MessageBus port with in-memory and RabbitMQ adapters, the retry and dead-letter policy, the outbox relay and the inbox. Infrastructure only, no domain code. Compiled to dist/.",
+  "description": "Messaging infrastructure shared by the services (ADR-012, ADR-029): the MessageBus port with in-memory and RabbitMQ adapters, the retry and dead-letter policy, the outbox relay and the inbox, plus the outbox and inbox tables as Drizzle schema (`@jadero/messaging/schema`). Infrastructure only, no domain code. Compiled to dist/.",
   "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/schema.d.ts",
+      "default": "./dist/schema.js"
     }
   },
   "files": [
-    "dist",
-    "sql"
+    "dist"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -32,6 +35,7 @@
   "peerDependencies": {
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
+    "drizzle-orm": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
     "zod": "catalog:"
@@ -46,6 +50,8 @@
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "amqplib": "catalog:",
+    "drizzle-kit": "catalog:",
+    "drizzle-orm": "catalog:",
     "pg": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",

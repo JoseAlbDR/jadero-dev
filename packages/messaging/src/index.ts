@@ -40,8 +40,6 @@ export {
 } from "./rabbitmq-message-bus.js";
 export {
   inTransaction,
-  MESSAGING_SCHEMA_SQL,
-  migrateMessagingSchema,
   type SqlClient,
   type SqlExecutor,
   type SqlPool,

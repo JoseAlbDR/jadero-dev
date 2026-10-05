@@ -1,12 +1,7 @@
-import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { systemPingV1 } from "@jadero/contracts";
-import {
-  createEnvelope,
-  InMemoryMessageBus,
-  MessageBus,
-  migrateMessagingSchema,
-} from "@jadero/messaging";
-import { PG_POOL } from "@jadero/platform-nest";
+import { createEnvelope, InMemoryMessageBus, MessageBus } from "@jadero/messaging";
+import { PG_POOL, runMigrations } from "@jadero/platform-nest";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import pg from "pg";
@@ -23,11 +18,14 @@ const bus = new InMemoryMessageBus();
 beforeAll(async () => {
   const database = await createTestDatabase();
   drop = database.drop;
+  // agent's own migrations, as the deploy's one-off step applies them (WP-10 D2): the inbox and
+  // heartbeat.broker_heartbeat come from drizzle/, never from hand-written test DDL.
+  await runMigrations({
+    service: "agent",
+    url: database.url,
+    migrationsFolder: fileURLToPath(new URL("../drizzle", import.meta.url)),
+  });
   pool = new pg.Pool({ connectionString: database.url, max: 4 });
-  await migrateMessagingSchema(pool);
-  await pool.query(
-    readFileSync(new URL("../sql/0001_broker_heartbeat.sql", import.meta.url), "utf8"),
-  );
   const config = toAgentConsumerConfig(
     agentConsumerEnv.parse({
       PORT: "3012",
@@ -62,7 +60,7 @@ describe("agent consumer: system.ping.v1 (idempotent consumer)", () => {
       expect(rows[0].n).toBe(1);
     });
     const { rows } = await pool.query(
-      "SELECT source, last_event_id, last_trigger FROM broker_heartbeat",
+      "SELECT source, last_event_id, last_trigger FROM heartbeat.broker_heartbeat",
     );
     expect(rows).toEqual([
       { source: "jadero/api", last_event_id: envelope.id, last_trigger: "heartbeat" },
@@ -85,7 +83,7 @@ describe("agent consumer: system.ping.v1 (idempotent consumer)", () => {
       );
       expect(rows[0].n).toBe(1);
     });
-    const { rows } = await pool.query("SELECT last_event_id FROM broker_heartbeat");
+    const { rows } = await pool.query("SELECT last_event_id FROM heartbeat.broker_heartbeat");
     expect(rows).toEqual([{ last_event_id: newer.id }]);
   });
 });
