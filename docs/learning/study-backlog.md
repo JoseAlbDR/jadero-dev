@@ -19,6 +19,8 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 ### Theme: transaction boundaries and atomicity
 - Why the outbox cannot be a central service: the outbox row must commit in the same Postgres transaction as the business change; a network call is the dual write again. WP-10, weak (Q1 discussion). `docs/learning/wp-10.md`, Decision.
 - Unit of work versus TypeORM's `EntityManager`; reads that feed a write inside the transaction, lost update, optimistic concurrency. WP-10, interesting (Q2 discussion). Decision.
+- The inbox row and the consumer's effect commit or roll back together; a separate inbox commit turns a retry into a dropped duplicate (idempotency without atomicity loses messages). WP-10, weak (step 5 check question). Step log.
+- When a port pays for itself: layered versus hexagonal, speculative generality, fakes that drift without a contract suite. WP-10, interesting (step 5 layered decision). Decision.
 
 ### Theme: migrations as append-only history
 - An edited applied migration is skipped silently; schema drift between environments. WP-10, weak (step 3 check question). Step log.
