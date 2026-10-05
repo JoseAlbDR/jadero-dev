@@ -20,6 +20,18 @@ export class Widget {
     return new Widget(id, Widget.checkedName(name));
   }
 
+  /**
+   * Rebuilds a widget that was already stored (reconstitution): the repository's way back from a
+   * row to the aggregate. It does not re-check the name rule: the stored name passed it when the
+   * widget was saved, and a rule that tightens later must not make existing rows unreadable.
+   * @param id the stored identity.
+   * @param name the stored name.
+   * @returns the widget as it was saved.
+   */
+  static reconstitute(id: string, name: string): Widget {
+    return new Widget(id, name);
+  }
+
   /** The current name. */
   get name(): string {
     return this.currentName;

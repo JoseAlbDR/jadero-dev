@@ -9,8 +9,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@jadero/platform-nest": "workspace:*",
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
+    "drizzle-orm": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
     "zod": "catalog:"
