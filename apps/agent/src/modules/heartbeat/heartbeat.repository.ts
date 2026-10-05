@@ -1,23 +1,32 @@
 import type { Database } from "@jadero/platform-nest";
+import { Injectable } from "@nestjs/common";
 import { sql } from "drizzle-orm";
-import { type HeartbeatRecord, HeartbeatRepository } from "../application/heartbeat.repository.js";
-import { brokerHeartbeat } from "./heartbeat.schema.js";
+import { brokerHeartbeat } from "./infrastructure/heartbeat.schema.js";
 
-/** Writes `heartbeat.broker_heartbeat` through Drizzle, on the connection it was built with. */
-export class DrizzleHeartbeatRepository extends HeartbeatRepository {
-  /** @param db Drizzle bound to the unit of work's transaction. */
-  constructor(private readonly db: Database) {
-    super();
-  }
+/** One ping as `agent` records it. */
+export interface HeartbeatRecord {
+  readonly source: string;
+  readonly eventId: string;
+  readonly trigger: string;
+  readonly seenAt: string;
+}
 
+/**
+ * Writes `heartbeat.broker_heartbeat` through Drizzle. A plain class with no port: the heartbeat is
+ * a layered module with no rules (ADR-003, WP-10 D5). It holds no connection; each call takes the
+ * Drizzle instance of the caller's transaction, so the write commits with the inbox row.
+ */
+@Injectable()
+export class HeartbeatRepository {
   /**
    * Upserts the last ping per source. Delivery order is not guaranteed (a retried or redelivered
    * ping can arrive after a newer one), so the update runs only when the stored ping is older:
    * `ON CONFLICT (source) DO UPDATE ... WHERE last_seen_at < excluded.last_seen_at`.
+   * @param db Drizzle bound to the consumer's open transaction (`withTransaction`'s `db`).
    * @param record the ping.
    */
-  async record(record: HeartbeatRecord): Promise<void> {
-    await this.db
+  async record(db: Database, record: HeartbeatRecord): Promise<void> {
+    await db
       .insert(brokerHeartbeat)
       .values({
         source: record.source,

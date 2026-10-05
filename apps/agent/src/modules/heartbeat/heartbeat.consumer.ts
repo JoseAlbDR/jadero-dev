@@ -5,8 +5,9 @@ import {
   done,
   type HandlerOutcome,
   MessageBus,
+  recordInInbox,
 } from "@jadero/messaging";
-import { PG_POOL, PinoLogger } from "@jadero/platform-nest";
+import { PG_POOL, PinoLogger, withTransaction } from "@jadero/platform-nest";
 import {
   type BeforeApplicationShutdown,
   Inject,
@@ -16,7 +17,7 @@ import {
   type OnModuleInit,
 } from "@nestjs/common";
 import { Pool } from "pg";
-import { HeartbeatUnitOfWork } from "./application/heartbeat.unit-of-work.js";
+import { HeartbeatRepository } from "./heartbeat.repository.js";
 
 /** How often inbox rows past their retention (30 days, decision I1) are deleted. */
 export const INBOX_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -26,7 +27,8 @@ export const HEARTBEAT_QUEUE = "agent.system.ping";
 
 /**
  * Consumes `system.ping.v1` on `agent.system.ping` (WP-5): the inbox insert and the heartbeat
- * upsert run in one unit of work (WP-10 Q2 B), so a duplicate delivery changes nothing (idempotent
+ * upsert run in one transaction through platform-nest's `withTransaction` (a layered module, no
+ * unit of work port: ADR-003, WP-10 D5), so a duplicate delivery changes nothing (idempotent
  * consumer, ADR-012). Subscribes on init, starts consuming once the app is up and cleans the inbox
  * daily, stops before the pool closes.
  */
@@ -38,10 +40,10 @@ export class HeartbeatConsumer
 
   constructor(
     private readonly bus: MessageBus,
-    // Only for the daily inbox cleanup: maintenance outside any use case, one statement that
-    // needs no transaction. Every write of a delivery goes through the unit of work.
+    // Each delivery checks out one connection for its transaction; the daily inbox cleanup runs one
+    // statement on the pool, outside any transaction.
     @Inject(PG_POOL) private readonly pool: Pool,
-    private readonly uow: HeartbeatUnitOfWork,
+    private readonly heartbeats: HeartbeatRepository,
     private readonly log: PinoLogger,
   ) {
     log.setContext("HeartbeatConsumer");
@@ -67,9 +69,9 @@ export class HeartbeatConsumer
     envelope,
     queue,
   }: Delivery<EnvelopeOf<typeof systemPingV1>>): Promise<HandlerOutcome> {
-    const first = await this.uow.run(async ({ inbox, heartbeats }) => {
-      if (!(await inbox.record(queue, envelope))) return false;
-      await heartbeats.record({
+    const first = await withTransaction(this.pool, async ({ db, executor }) => {
+      if (!(await recordInInbox(executor, queue, envelope))) return false;
+      await this.heartbeats.record(db, {
         source: envelope.source,
         eventId: envelope.id,
         trigger: envelope.data.trigger,

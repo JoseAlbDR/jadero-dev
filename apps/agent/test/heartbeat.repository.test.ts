@@ -1,13 +1,13 @@
 import { drizzleOn } from "@jadero/platform-nest";
 import type { PoolClient } from "pg";
 import { describe, expect, it } from "vitest";
-import { DrizzleHeartbeatRepository } from "../src/modules/heartbeat/infrastructure/drizzle-heartbeat.repository.js";
+import { HeartbeatRepository } from "../src/modules/heartbeat/heartbeat.repository.js";
 
 /**
- * The SQL the Drizzle adapter sends, captured on a fake client. The behavior on real Postgres
+ * The SQL the repository sends, captured on a fake client. The behavior on real Postgres
  * (older never over newer) is proven by heartbeat.int.test.ts; this pins the statement's shape.
  */
-describe("DrizzleHeartbeatRepository (statement shape)", () => {
+describe("HeartbeatRepository (statement shape)", () => {
   it("upserts per source and updates only when the stored ping is older", async () => {
     const sent: { text: string; values: unknown[] }[] = [];
     const client = {
@@ -16,7 +16,7 @@ describe("DrizzleHeartbeatRepository (statement shape)", () => {
         return { rows: [], rowCount: 1, fields: [], command: "INSERT", oid: 0 };
       },
     } as unknown as PoolClient;
-    await new DrizzleHeartbeatRepository(drizzleOn(client)).record({
+    await new HeartbeatRepository().record(drizzleOn(client), {
       source: "jadero/api",
       eventId: "0199a8b0-0000-7000-8000-000000000001",
       trigger: "heartbeat",
