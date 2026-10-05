@@ -95,6 +95,27 @@ git log origin/main..HEAD, tell me in three lines where we are and which step is
 go and continue with /step (or /wrap-wp N when the steps are done).
 ```
 
+## Prompt: resume a work package whose explainer waits for a decision
+
+```
+Resume WP-N in jadero-dev on branch wp/N-<slug>. /wp N and /learn-step N are done:
+docs/learning/wp-N.md exists with decision: pending. git pull. Present the explainer to me in the chat
+as /learn-step says (decisions, implementation choices, open questions with the recommendations after
+them), stop and wait for my answers, challenge them when you disagree. Then record the decision and
+continue with /step N 2.
+```
+
+## Prompt: study a release
+
+Run locally, where the `teach` skill is in the owner's profile, in a folder outside the repo or in `study/`.
+
+```
+/teach Release R<n> of jadero.dev v2. Mission: understand in depth the open themes of R<n> in
+docs/learning/study-backlog.md (read them, and the step log entries they link to, as the evidence of
+what I got wrong). Cover the themes in one mission, two to four themes, the weak lines first. At the
+end, tell me which lines I can mark studied and which stay open.
+```
+
 ## Prompt: a chore outside a work package
 
 ```

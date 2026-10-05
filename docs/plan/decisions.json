@@ -1,6 +1,6 @@
 {
   "title": "jadero.dev v2: plan review",
-  "summary": "The build plan for jadero.dev v2, a multilingual (es, en, de) portfolio that proves broad engineering skills: backend architecture, reliability and messaging, testing, CI/CD and infrastructure, security, frontend craft, engineering process and applied AI. It supports an internal move to the agentic team and stands equally for any future role. The backend is a modular monolith plus a few services where isolation pays, with RabbitMQ between them, deployed by CI/CD to the owner's Hetzner CX33; the ask-me agent, RAG and MCP work is one strong showcase among those pillars. Each card is one decision with options, trade-offs and a recommendation; full reasoning lives in the ADRs of report.md, and nothing gets built until these are decided (WP-0). Owner review (2026-10-03): all 76 decisions are recorded (55 decided, 21 decided with a change from the owner's notes or the second-pass audit); the open follow-ups were settled in conversation on 2026-10-03 and the plan ships as releases R0 to R7 without dates (owner-review-followups.md, section 6).",
+  "summary": "The build plan for jadero.dev v2, a multilingual (es, en, de) portfolio that proves broad engineering skills: backend architecture, reliability and messaging, testing, CI/CD and infrastructure, security, frontend craft, engineering process and applied AI. It stands equally for any role. The backend is a modular monolith plus a few services where isolation pays, with RabbitMQ between them, deployed by CI/CD to the owner's Hetzner CX33; the ask-me agent, RAG and MCP work is one strong showcase among those pillars. Each card is one decision with options, trade-offs and a recommendation; full reasoning lives in the ADRs of report.md, and nothing gets built until these are decided (WP-0). Owner review (2026-10-03): all 76 decisions are recorded (55 decided, 21 decided with a change from the owner's notes or the second-pass audit); the open follow-ups were settled in conversation on 2026-10-03 and the plan ships as releases R0 to R7 without dates (owner-review-followups.md, section 6).",
   "areas": [
     {
       "id": "foundation",
@@ -70,7 +70,7 @@
     {
       "id": "narrative",
       "name": "Positioning and narrative",
-      "intro": "How the site presents the owner: a broad engineering profile with applied AI as one strong pillar, so the site serves an internal move and any future role equally."
+      "intro": "How the site presents the owner: a broad engineering profile with applied AI as one strong pillar, so the site serves any role equally."
     }
   ],
   "decisions": [
@@ -1510,7 +1510,7 @@
       "adr": "ADR-020",
       "learn": "OWASP LLM Top 10 2025, defense in depth, canary tokens, untrusted-content policy.",
       "status": "decided-with-change",
-      "ownerNote": "Open to Python to try another language, since the agentic team uses it a lot; wants the pros and cons of building everything vs using a Python library.",
+      "ownerNote": "Open to Python to try another language, since it is common in applied AI; wants the pros and cons of building everything vs using a Python library.",
       "ownerPick": "a",
       "followup": "F-7",
       "previousRecommendation": "a",
@@ -1874,12 +1874,12 @@
       "area": "content",
       "title": "Portfolio content inventory",
       "question": "Which projects appear, and how are the brainstorm and the code triage reconciled?",
-      "context": "The brainstorm listed projects from memory; the later triage read the code and marked several as course copies. Presenting course work as original work hurts credibility with technical reviewers. confluence-agent was work for the current employer, so it is not a personal project.",
+      "context": "The brainstorm listed projects from memory; the later triage read the code and marked several as course copies. Presenting course work as original work hurts credibility with technical reviewers. an internal RAG tool was work for the current employer, so it is not a personal project.",
       "options": [
         {
           "id": "a",
           "label": "Follow the triage",
-          "description": "Drop Nest-Microservices from selected projects; Teslo-shop and the-wild-oasis only in the early archive labeled as course work; confluence-agent at most as an owner-approved public-level bullet under the current role.",
+          "description": "Drop Nest-Microservices from selected projects; Teslo-shop and the-wild-oasis only in the early archive labeled as course work; an internal RAG tool at most as an owner-approved public-level bullet under the current role.",
           "pros": [
             "Every claim survives a code read"
           ],
@@ -4091,7 +4091,7 @@
       "area": "narrative",
       "title": "Site positioning",
       "question": "What should the site say the owner is, in one sentence?",
-      "context": "Positioning is the one sentence a visitor remembers after ten seconds. The site serves several audiences: the internal agentic team, hiring managers at product companies looking for backend or platform engineers, recruiters who skim, and peers who read the code. A positioning tied to one team narrows every other door, while the evidence can still show depth in each area.",
+      "context": "Positioning is the one sentence a visitor remembers after ten seconds. The site serves several audiences: internal teams at the current employer, hiring managers at product companies looking for backend or platform engineers, recruiters who skim, and peers who read the code. A positioning tied to one team narrows every other door, while the evidence can still show depth in each area.",
       "options": [
         {
           "id": "a",
@@ -4111,7 +4111,7 @@
           "label": "Agentic AI engineer",
           "description": "The site leads with AI agents as the identity.",
           "pros": [
-            "Sharp for the agentic team"
+            "Sharp for an AI team"
           ],
           "cons": [
             "Narrows every other door",
@@ -4133,7 +4133,7 @@
         }
       ],
       "recommendation": "a",
-      "why": "It matches the owner's stated intent: the move to the agentic team stays well supported by the AI pillar, while the same page works for any backend or platform role. Draft wording updated after the owner's note (F-13): backend engineer, not full-stack.",
+      "why": "It matches the owner's stated intent: an AI role stays well supported by the AI pillar, while the same page works for any backend or platform role. Draft wording updated after the owner's note (F-13): backend engineer, not full-stack.",
       "adr": "report section 2A",
       "learn": "Positioning, audience analysis.",
       "status": "decided-with-change",
@@ -4311,7 +4311,7 @@
           "label": "AI-led order",
           "description": "LangChainAssistant and the framework first.",
           "pros": [
-            "Strongest signal for the agentic team"
+            "Strongest signal for an AI team"
           ],
           "cons": [
             "Couples the site to one move"
@@ -5047,7 +5047,7 @@
         "WP-41"
       ],
       "deliverable": "apps/guard-classifier: FastAPI service with Prompt Guard 2 86M (multilingual, CPU), uv, ruff and pytest, its own image and release line, capped at about 500 MB; a PromptGuardClassifier adapter behind GuardClassifierPort in agent, called with a timeout and a cockatiel circuit breaker that falls back to the Haiku classifier; adversarial and false-positive evals in es, en and de decide which adapter stays (D-25 e). Replaces the ONNX-in-Node experiment.",
-      "learns": "A polyglot service behind a port, running a classifier model in production, fallback and circuit breaking in the chat path, Python tooling used by the agentic team.",
+      "learns": "A polyglot service behind a port, running a classifier model in production, fallback and circuit breaking in the chat path, Python tooling common in applied AI.",
       "milestone": "R7"
     },
     {
@@ -5294,7 +5294,7 @@
     },
     {
       "id": "M-39",
-      "what": "Before making the repo public (D-29): review docs/plan/ working notes (owner-marks.json, owner-intent.md, brainstorm.md, TASK.md) and delete or redact what you do not want public (local machine paths, planning chatter). No history rewrite is required; the owner judged the content non-proprietary.",
+      "what": "Before making the repo public (D-29): review the docs/plan/ working notes (owner-marks.json, owner-intent.md, brainstorm.md, TASK.md, knowledge-entry-format.md, report.md, decisions.json, owner-review-followups.md) and the archived copies in docs/artifacts/v2-plan/ (owner-marks.json, data.json), and delete or redact what you do not want public (local machine paths, employer-internal tool names, planning chatter). A first pass was done on 2026-10-04 in the going-public cleanup PR; WP-28 re-checks. No history rewrite is required; the owner judged the content non-proprietary.",
       "when": "WP-28 (R1)",
       "why": "Planning notes are not covered by the content rules of ADR-031, and gitleaks does not catch prose."
     },

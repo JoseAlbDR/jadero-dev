@@ -55,4 +55,4 @@ the guard module is one of the strongest pieces of the cover-letter story: each 
 
 ## Owner review (2026-10-03, F-7; decided e in the second pass, WP-55)
 
-the owner is open to Python, which the agentic team uses. Proposed option E: build A for launch, then add a small Python `guard-classifier` service (FastAPI + Prompt Guard 2, multilingual including es and de) after launch as a second `GuardClassifierPort` adapter, behind a timeout and a circuit breaker that falls back to the Haiku classifier; the adversarial and false-positive evals pick the winner. It replaces the Prompt Guard 2 ONNX-in-Node experiment, and the chat never depends on Python.
+the owner is open to Python, which is common in applied AI. Proposed option E: build A for launch, then add a small Python `guard-classifier` service (FastAPI + Prompt Guard 2, multilingual including es and de) after launch as a second `GuardClassifierPort` adapter, behind a timeout and a circuit breaker that falls back to the Haiku classifier; the adversarial and false-positive evals pick the winner. It replaces the Prompt Guard 2 ONNX-in-Node experiment, and the chat never depends on Python.

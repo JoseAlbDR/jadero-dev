@@ -8,6 +8,7 @@ Personal site of the owner: a multilingual (es, en, de) portfolio with an ask-me
 - `docs/plan/report.md`: the narrative plan (architecture, traces, work packages, releases R0 to R7). On a conflict, the ADR file wins.
 - `docs/plan/decisions.json`: the 76 owner decisions as data; ids never change.
 - `docs/learning/`: one explainer per learning WP (the learning gate, section 5).
+- `docs/learning/study-backlog.md`: the topics the WPs showed are weak, interesting or worth deeper study, grouped by theme and release, for one `/teach` run per closed release.
 - `docs/journal/`: the agent-drafted journal post of each learning WP, corrected by the owner (ADR-034), until the content module imports them.
 - `docs/sessions.md`: how a Claude Code session (cloud or local) runs a work package, and the prompts to start the next WP (backend or frontend), resume one or do a chore.
 - `docs/architecture/code-map.html`: the interactive map of the code (apps, packages, modules, what is injected where, boot and request paths). Updated by every WP that changes them, and by every new event (event catalog and flow graph in its messaging section); also published as an artifact.
