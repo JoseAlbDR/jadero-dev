@@ -21,7 +21,7 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 - Unit of work versus TypeORM's `EntityManager`; reads that feed a write inside the transaction, lost update, optimistic concurrency. WP-10, interesting (Q2 discussion). Decision.
 - The inbox row and the consumer's effect commit or roll back together; a separate inbox commit turns a retry into a dropped duplicate (idempotency without atomicity loses messages). WP-10, weak (step 5 check question). Step log.
 - When a port pays for itself: layered versus hexagonal, speculative generality, fakes that drift without a contract suite. WP-10, interesting (step 5 layered decision). Decision.
-- Fakes versus mocks, and test double drift: a fake is trustworthy only in what the shared contract suite checks; the rest belongs to integration tests (test pyramid). WP-10, weak (step 6 check question). Step log.
+- Fakes versus mocks, and test double drift: a fake is trustworthy only in what the shared contract suite checks; the rest belongs to integration tests (test pyramid). WP-10, weak on the remedy, the risk was right (step 6 check question). Step log.
 
 ### Theme: migrations as append-only history
 - An edited applied migration is skipped silently; schema drift between environments. WP-10, weak (step 3 check question). Step log.
