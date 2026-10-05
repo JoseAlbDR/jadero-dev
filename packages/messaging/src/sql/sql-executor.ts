@@ -27,6 +27,13 @@ export interface SqlPool {
 /**
  * Runs `work` in one transaction on a pooled connection: commit when it resolves, roll back and
  * rethrow when it throws.
+ *
+ * Apps use platform-nest's `withTransaction` (WP-10 D6); this stays for the outbox relay,
+ * `idempotent` and this package's own tests (messaging must not import platform-nest). The two
+ * release differently: after a rollback this one always destroys the connection
+ * (`release(true)`), even when the rollback succeeded and the connection is healthy, while
+ * `withTransaction` destroys it only when `ROLLBACK` itself fails. So every error in `work` here
+ * costs one reconnect.
  * @param pool the service's pool.
  * @param work what to run; receives the transaction's executor.
  * @returns what `work` returned.

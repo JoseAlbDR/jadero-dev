@@ -50,8 +50,9 @@ export function journalOrderProblems(journal: MigrationJournal): string[] {
 }
 
 /**
- * Checks a service's migration folder as committed: the journal parses, its order holds, every
- * entry has its SQL file, and no SQL file is missing from the journal (Drizzle would never run it).
+ * Checks a service's migration folder as committed: the journal is JSON with drizzle-kit's shape,
+ * its order holds, every entry has its SQL file, and no SQL file is missing from the journal
+ * (Drizzle would never run it).
  * A folder with neither a journal nor SQL files is valid: the service has no migrations yet.
  * @param folder absolute path of the service's `drizzle/` folder.
  * @returns one line per problem; empty when the folder is consistent.
@@ -66,7 +67,14 @@ export function migrationFolderProblems(folder: string): string[] {
   if (!existsSync(journalPath)) {
     return sqlFiles.map((name) => `${name}: no meta/_journal.json, so it is never applied`);
   }
-  const parsed = migrationJournal.safeParse(JSON.parse(readFileSync(journalPath, "utf8")));
+  let raw: unknown;
+  try {
+    raw = JSON.parse(readFileSync(journalPath, "utf8"));
+  } catch {
+    // The same one-line problem as a wrong shape; the parser's message adds nothing useful.
+    return ["meta/_journal.json: invalid JSON"];
+  }
+  const parsed = migrationJournal.safeParse(raw);
   if (!parsed.success) {
     return parsed.error.issues.map((issue) => `meta/_journal.json: ${issue.message}`);
   }

@@ -80,6 +80,12 @@ describe("migrationFolderProblems", () => {
     expect(problems.length).toBeGreaterThan(0);
     expect(problems.every((line) => line.startsWith("meta/_journal.json: "))).toBe(true);
   });
+
+  it("turns a journal that is not JSON into one problem line instead of a parser stack trace", () => {
+    const dir = folder({ journal: journal(), sql: [] });
+    writeFileSync(join(dir, "meta", "_journal.json"), "{ not json");
+    expect(migrationFolderProblems(dir)).toEqual(["meta/_journal.json: invalid JSON"]);
+  });
 });
 
 describe("runMigrations", () => {
@@ -92,6 +98,18 @@ describe("runMigrations", () => {
       runMigrations({ service: "probe", url: URL, migrationsFolder: dir }),
     ).rejects.toThrow(
       "probe: migration folder is inconsistent: 0001_m: when 100 is not after 0000_m (200)",
+    );
+  });
+
+  it("refuses a journal that is not JSON with the same one-line MigrationError", async () => {
+    const dir = folder({ journal: journal(), sql: [] });
+    writeFileSync(join(dir, "meta", "_journal.json"), "{ not json");
+    const error = await runMigrations({ service: "probe", url: URL, migrationsFolder: dir }).catch(
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(MigrationError);
+    expect((error as Error).message).toBe(
+      "probe: migration folder is inconsistent: meta/_journal.json: invalid JSON",
     );
   });
 

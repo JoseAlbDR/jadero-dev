@@ -2,6 +2,8 @@ import {
   type DynamicModule,
   Inject,
   Injectable,
+  Logger,
+  type LoggerService,
   Module,
   type OnApplicationShutdown,
 } from "@nestjs/common";
@@ -42,6 +44,33 @@ export function poolConfig(options: Pick<DatabaseModuleOptions, "url" | "poolMax
 }
 
 /**
+ * Builds the service's pool and attaches its `error` listener. `pg-pool` re-emits an error on an
+ * idle client (a Postgres restart, a connection killed by the server or the network) as the pool's
+ * own `error` event; an `EventEmitter` with no `error` listener throws, so without this the whole
+ * process (api, api-worker, the agent consumer) crashes on an outage it would survive. The pool has
+ * already removed that client, so the next query opens a new connection; the readiness check
+ * reports the outage while it lasts. The log line carries only the error code: the message can
+ * name the host, the database or the user.
+ * @param options the service's database URL and pool size.
+ * @param logger where the warning goes; the platform's logger (pino behind Nest's `Logger`) by default.
+ * @returns the `pg` pool, connected lazily.
+ */
+export function createPool(
+  options: Pick<DatabaseModuleOptions, "url" | "poolMax">,
+  logger: Pick<LoggerService, "warn"> = new Logger("DatabaseModule"),
+): Pool {
+  const pool = new Pool(poolConfig(options));
+  pool.on("error", (error: unknown) => {
+    const code = (error as { code?: unknown } | null)?.code;
+    logger.warn(
+      { code: typeof code === "string" ? code : "unknown" },
+      "idle database connection failed; the pool discarded it",
+    );
+  });
+  return pool;
+}
+
+/**
  * Closes the pool after the HTTP server has closed, so requests still in flight during a
  * graceful shutdown can finish their queries (WP-3 "Lifecycle and graceful shutdown").
  */
@@ -74,7 +103,7 @@ export class DatabaseModule {
       module: DatabaseModule,
       global: true,
       providers: [
-        { provide: PG_POOL, useFactory: () => new Pool(poolConfig(options)) },
+        { provide: PG_POOL, useFactory: () => createPool(options) },
         {
           provide: DRIZZLE,
           // The same options as a transaction's Drizzle (`withTransaction`): `casing: "snake_case"`.

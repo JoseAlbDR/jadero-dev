@@ -5,6 +5,7 @@ import { Pool } from "pg";
 import { describe, expect, it, vi } from "vitest";
 import {
   CONNECT_TIMEOUT_MS,
+  createPool,
   DatabaseModule,
   poolConfig,
   QUERY_TIMEOUT_MS,
@@ -97,6 +98,38 @@ describe("DatabaseModule", () => {
   it("fails the readiness check when nothing answers", async () => {
     const moduleRef = await boot();
     await expect(moduleRef.get(PostgresReadinessCheck).check()).rejects.toThrow();
+    await moduleRef.close();
+  });
+
+  it("survives an idle client's error: warns with the code only, never the message", async () => {
+    const warn = vi.fn();
+    const pool = createPool({ url: URL, poolMax: 1 }, { warn });
+    const error = Object.assign(
+      new Error("terminating connection due to administrator command at 10.0.0.5 for probe"),
+      { code: "57P01" },
+    );
+    expect(() => pool.emit("error", error)).not.toThrow();
+    expect(warn).toHaveBeenCalledOnce();
+    expect(warn).toHaveBeenCalledWith({ code: "57P01" }, expect.any(String));
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("10.0.0.5");
+    await pool.end();
+  });
+
+  it("logs an unknown code when the error has none", async () => {
+    const warn = vi.fn();
+    const pool = createPool({ url: URL, poolMax: 1 }, { warn });
+    pool.emit("error", new Error("socket hang up"));
+    expect(warn).toHaveBeenCalledWith({ code: "unknown" }, expect.any(String));
+    await pool.end();
+  });
+
+  it("gives the module's pool the listener, so an idle error does not crash the process", async () => {
+    const moduleRef = await boot();
+    const pool = moduleRef.get<Pool>(PG_POOL);
+    expect(pool.listenerCount("error")).toBe(1);
+    expect(() =>
+      pool.emit("error", Object.assign(new Error("x"), { code: "ECONNRESET" })),
+    ).not.toThrow();
     await moduleRef.close();
   });
 });
