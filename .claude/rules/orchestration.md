@@ -21,6 +21,10 @@ The main session keeps only what needs its context: teaching, decisions, challen
 | A design choice is made or changed | `/adr <title>` |
 | A `chore/` PR changes a generic process file (`docs/process/project-kit.md`, "How it stays in sync") | port it to `project-kit`, or add a line to `docs/process/kit-backlog.md` |
 | The last step of a learning WP | the journal draft in `/wrap-wp` (an agent writes `docs/journal/wp-N.md`, the owner corrects) |
+| A step is closed (check question answered and logged, branch pushed) | print the ready-to-copy `/compact` line of `/step` step 7, so the main session does not carry finished steps |
+| A release milestone is closed | the owner runs `/teach` once on that release's themes in `docs/learning/study-backlog.md` (`docs/sessions.md`, "Study a release") |
+
+Context budget: a new WP starts in a fresh session (or after `/clear`); within a WP, compact after each closed step. WP-10 showed why: work from an earlier session carried into the WP pushed the main context past 400k tokens.
 
 Context rule: the main session does not read library sources, files over about 300 lines (the code map, the process pages, `docs/plan/report.md` whole) or generated artifacts (`dist/`, lockfiles, `infra/rabbitmq/definitions.json`, the AsyncAPI output). It asks an agent and reads the report. Reading one ADR, one explainer section or a short source file to check a claim is fine.
 
