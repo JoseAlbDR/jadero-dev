@@ -5,9 +5,9 @@ import {
   Module,
   type OnApplicationShutdown,
 } from "@nestjs/common";
-import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool, type PoolConfig } from "pg";
 import { type Database, DRIZZLE, PG_POOL } from "./database.tokens.js";
+import { drizzleOn } from "./transaction.js";
 
 /** How long an application query may run before `pg` cancels it on the client side. */
 export const QUERY_TIMEOUT_MS = 5000;
@@ -77,13 +77,8 @@ export class DatabaseModule {
         { provide: PG_POOL, useFactory: () => new Pool(poolConfig(options)) },
         {
           provide: DRIZZLE,
-          useFactory: (pool: Pool): Database<TSchema> =>
-            drizzle<TSchema>({
-              client: pool,
-              // Must match drizzle.config.ts, or queries use the wrong column names.
-              casing: "snake_case",
-              ...(options.schema ? { schema: options.schema } : {}),
-            }),
+          // The same options as a transaction's Drizzle (`withTransaction`): `casing: "snake_case"`.
+          useFactory: (pool: Pool): Database<TSchema> => drizzleOn<TSchema>(pool, options.schema),
           inject: [PG_POOL],
         },
         PoolCloser,

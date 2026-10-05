@@ -2,10 +2,14 @@ import { MessageBus, RabbitMqMessageBus } from "@jadero/messaging";
 import { PinoLogger } from "@jadero/platform-nest";
 import { Logger, Module } from "@nestjs/common";
 import { AgentConsumerConfig } from "../../config/agent-config.js";
+import { HeartbeatUnitOfWork } from "./application/heartbeat.unit-of-work.js";
 import { HeartbeatConsumer } from "./heartbeat.consumer.js";
-import { HeartbeatRepository } from "./heartbeat.repository.js";
+import { DrizzleHeartbeatUnitOfWork } from "./infrastructure/drizzle-heartbeat.unit-of-work.js";
 
-/** The consumer process's messaging: the RabbitMQ bus as `MessageBus`, and the ping consumer. */
+/**
+ * The consumer process's messaging: the RabbitMQ bus as `MessageBus`, and the ping consumer with
+ * its unit of work port bound to the Postgres adapter.
+ */
 @Module({
   providers: [
     {
@@ -23,7 +27,7 @@ import { HeartbeatRepository } from "./heartbeat.repository.js";
       },
       inject: [AgentConsumerConfig, PinoLogger],
     },
-    HeartbeatRepository,
+    { provide: HeartbeatUnitOfWork, useClass: DrizzleHeartbeatUnitOfWork },
     HeartbeatConsumer,
   ],
   exports: [MessageBus],

@@ -27,6 +27,15 @@ export {
   runMigrations,
 } from "./database/migrations.js";
 export { PostgresReadinessCheck } from "./database/postgres.readiness-check.js";
+export {
+  type ConnectionSource,
+  drizzleOn,
+  type QueryExecutor,
+  type QueryResultShape,
+  type TransactionOptions,
+  type TransactionScope,
+  withTransaction,
+} from "./database/transaction.js";
 export { ProblemDetailsFilter } from "./errors/problem-details.filter.js";
 export {
   type InvalidField,
