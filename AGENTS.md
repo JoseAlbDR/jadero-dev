@@ -64,7 +64,7 @@ Aim of the learning: the owner orchestrates agents and challenges their proposal
 
 ### How the owner learns (applies to every session, local or cloud)
 
-Refined with the owner on 2026-10-04 (WP-5); every agent follows it, and this file is where it lives, because the owner works from several machines and sessions do not share memory.
+Refined with the owner on 2026-10-04 (WP-5) and confirmed after WP-10 (2026-10-06): the start-of-WP explainer with decisions and recommendations, the challenge of each answer, the check question with its context first, and the compact line after each step are the flow to keep. Every agent follows it, and this file is where it lives, because the owner works from several machines and sessions do not share memory.
 
 - **Decisions, why and alternatives.** For every design choice: the problem, a concrete example from this project, the decision and why, the alternatives with why they were discarded here and when each would win, then the pattern names. Diagrams when they help. The goal is that the owner can make the call alone in another project.
 - **Explain before asking.** Everything needed to answer a question comes right before it, in plain words, in the chat. Never a question that needs reading elsewhere first.
