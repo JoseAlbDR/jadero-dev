@@ -125,10 +125,10 @@ flowchart LR
   MQ -->|content.published| APW[api-worker process]
   MQ -->|contact.received| CTM[contact mailer consumer]
   APW -->|revalidateTag webhook| WEB
-  API --> DBA[(db jadero_content)]
-  AG --> DBG[(db jadero_agent, pgvector)]
+  API --> DBA[("db content_{env}")]
+  AG --> DBG[("db agent_{env}, pgvector")]
   AGI --> DBG
-  CT --> DBC[(db jadero_contact)]
+  CT --> DBC[("db contact_{env}")]
   AG -->|chat, guard, rerank| LLM[AI providers]
   AGI -->|embeddings| LLM
   AG -->|traces| LS[LangSmith EU]
@@ -149,9 +149,9 @@ Key properties:
 |---|---|---|---|---|
 | `web` | `web` | nothing (stateless, Next cache) | pages, i18n, SEO | `api` (server-side reads) |
 | `admin` | none at runtime (static files on nginx) | nothing | forms, tables, dashboards | `api`, `agent`, `contact` admin endpoints through nginx |
-| `api` | `api` (HTTP), `api-worker` (outbox relay, PDF CV, revalidation) | `jadero_content` | platform, auth, content, media, cv | publishes `content.*` events |
-| `agent` | `agent` (HTTP + SSE), `agent-ingest` (event consumer), later `mcp` | `jadero_agent` (content read model, chunks, vectors, checkpoints, usage) | knowledge, chat graph, guards, usage | consumes `content.*`; AI providers |
-| `contact` | `contact` (HTTP + mail consumer; split later if needed) | `jadero_contact` | submissions, notifications | publishes and consumes `contact.*`; mail provider |
+| `api` | `api` (HTTP), `api-worker` (outbox relay, PDF CV, revalidation) | `content_<env>` (`content_dev`, `content_staging`, `content_prod`; ADR-027) | platform, auth, content, media, cv | publishes `content.*` events |
+| `agent` | `agent` (HTTP + SSE), `agent-ingest` (event consumer), later `mcp` | `agent_<env>` (content read model, chunks, vectors, checkpoints, usage) | knowledge, chat graph, guards, usage | consumes `content.*`; AI providers |
+| `contact` | `contact` (HTTP + mail consumer; split later if needed) | `contact_<env>` | submissions, notifications | publishes and consumes `contact.*`; mail provider |
 
 **Process types** (the pattern behind `api-worker` and `agent-ingest`): one codebase and one image per service, started with different commands. Slow or failure-prone background work gets its own process, memory limit and restart policy, so it cannot block or crash the request path, without creating a new service that would need its own data and contracts.
 

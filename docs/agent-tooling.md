@@ -91,7 +91,7 @@ Fixed:
 Open, for the owner:
 
 - The `@nestjs/observe` question of ADR-010 is settled by WP-3 decision F1 (`NodeSDK` with an explicit list, no new ADR). Whether the broker belongs in `api`'s readiness check was settled by WP-5: `api` checks Postgres only, `api-worker` and the agent consumer check Postgres and the broker.
-- `docs/plan/report.md` names databases `jadero_content`; the dev init script uses the ADR-027 pattern `content_dev`. The report should follow the ADR.
+- Closed in WP-10 step 8: `docs/plan/report.md` named the databases `jadero_content`, `jadero_agent` and `jadero_contact`; it now uses the ADR-027 pattern `<context>_<env>` (`content_dev`), like the dev init script and `.env.example`.
 - A learning WP run without the owner present is the exception, not the pattern. WP-1 ran in the cloud; its explain-back and the first `pnpm dev:up` were done afterwards on the owner's machine and are recorded in `docs/learning/wp-1.md`.
 
 ## Model and effort
