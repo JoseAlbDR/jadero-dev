@@ -10,6 +10,7 @@
     "test:int": "vitest run -c vitest.int.config.ts"
   },
   "dependencies": {
+    "@jadero/messaging": "workspace:*",
     "@jadero/platform-nest": "workspace:*",
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",

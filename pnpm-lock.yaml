@@ -644,6 +644,9 @@ importers:
 
   templates/nest-module:
     dependencies:
+      '@jadero/messaging':
+        specifier: workspace:*
+        version: link:../../packages/messaging
       '@jadero/platform-nest':
         specifier: workspace:*
         version: link:../../packages/platform-nest
