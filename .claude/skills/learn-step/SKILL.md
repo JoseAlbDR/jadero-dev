@@ -10,7 +10,7 @@ Learning gate for WP-$wp (step: $step, or the whole WP if empty).
 ## Who does what (orchestrator pattern, `.claude/rules/orchestration.md`)
 
 The main session delegates the drafting and keeps the teaching:
-1. Launch the `explainer-writer` agent in the foreground, on the WP branch in the main checkout (never in a worktree: the learning gate and the WP branch live there), with the WP number, the step (if any) and anything the owner already said. It reads the sources below, checks the facts, writes the file as this skill defines it, commits, pushes and returns the chat version.
+1. Launch the `explainer-writer` agent (it runs in the background; wait for its notification, nothing else touches git meanwhile), on the WP branch in the main checkout (never in a worktree: the learning gate and the WP branch live there), with the WP number, the step (if any) and anything the owner already said. It reads the sources below, checks the facts, writes the file as this skill defines it, commits, pushes and returns the chat version.
 2. Check its report before presenting: the file exists on the branch with `decision: pending`, the decisions match the ADRs it names (open one ADR when a claim looks off), facts marked **verify** are listed, and nothing departs from an ADR without saying so. Ask the `researcher` agent about any fact you doubt.
 3. Present the chat version in the main session (section "In the chat" below), then lead the dialogue and record the decision yourself.
 The rest of this skill is the specification the agent writes to and the main session checks against.
