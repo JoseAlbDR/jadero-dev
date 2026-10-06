@@ -41,7 +41,7 @@ The template binds the in-memory adapters so it boots without a database. In a s
 
 ### Contract suites
 
-`application/widget.repository.contract.ts` and `application/widgets.unit-of-work.contract.ts` export `widgetRepositoryContract(name, make)` and `widgetsUnitOfWorkContract(name, make)`. Every adapter runs them: the in-memory fakes and the use-case test's own fakes in `pnpm verify`, the Drizzle adapters on real Postgres in `pnpm test:int`. A fake that passes the same suite as the real adapter can be trusted in use-case tests (ADR-009).
+`application/widget.repository.contract.ts` and `application/widgets.unit-of-work.contract.ts` export `widgetRepositoryContract(name, make)` and `widgetsUnitOfWorkContract(name, make)`. Every adapter runs them: the in-memory fakes and the use-case test's own fakes in `pnpm verify`, the Drizzle adapters on real Postgres in `pnpm test:int` (`test/widgets.int.test.ts`: the table is generated from the schema file by drizzle-kit's diff, in a database owned by an ordinary role, as in production). A fake that passes the same suite as the real adapter can be trusted in use-case tests (ADR-009).
 
 ### Layered: no port
 
