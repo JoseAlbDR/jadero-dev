@@ -14,7 +14,9 @@ export interface WidgetsUnitOfWorkFixture {
 
 /**
  * The contract every `WidgetsUnitOfWork` adapter passes (ADR-009, WP-10 D6): committed work is
- * visible afterwards, work that throws leaves nothing and its error reaches the caller unchanged.
+ * visible afterwards, work that throws leaves nothing and its error reaches the caller unchanged,
+ * and a reader outside the work sees none of its writes before the commit (isolation: a fake that
+ * writes straight to storage and undoes on throw fails here).
  * The in-memory fake runs it in `pnpm verify`, the Drizzle adapter on Postgres in `pnpm test:int`.
  * @param name the adapter's name, shown in the test report.
  * @param make builds a unit of work and a reader over empty storage for each test.
@@ -56,6 +58,18 @@ export function widgetsUnitOfWorkContract(
         }),
       ).rejects.toBe(failure);
       expect(await widgets.findById(widget.id)).toBeUndefined();
+    });
+
+    it("hides the work's writes from a reader outside it until the commit", async () => {
+      const { unitOfWork, widgets } = await make();
+      const widget = Widget.create(randomUUID(), "lamp");
+      let seenOutside: Widget | undefined;
+      await unitOfWork.run(async (scope) => {
+        await scope.widgets.save(widget);
+        seenOutside = await widgets.findById(widget.id);
+      });
+      expect(seenOutside).toBeUndefined();
+      expect(await widgets.findById(widget.id)).toEqual(widget);
     });
   });
 }
