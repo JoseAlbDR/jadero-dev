@@ -129,8 +129,8 @@ commits to a PR after saying it is ready.
 - Orchestrator pattern (`.claude/rules/orchestration.md`): the main session teaches and decides; agents draft, build, map and research, each reporting in under 300 words. Parallel agents that touch git run in their own worktree (`isolation: "worktree"`): in WP-5, three background agents in one checkout switched branches under each other.
 
 - A request for a report or a check changes nothing until the owner says go; then one PR per agreed change.
-- Compact after the decision is recorded and after the review; keep branch, WP, explainer path, step list with done marks and open findings.
-- One session per WP is enough when compacting at those two points; a new session resumes with the prompt above.
+- Compact after the decision is recorded and after each closed step, with the ready-to-copy `/compact` line `/step` prints (step 7); it keeps branch, WP, last commit, next step, the decision and the open items.
+- One session per WP is enough when compacting at those points; a new session resumes with the prompt above.
 
 ## A dedicated local profile
 
@@ -186,4 +186,4 @@ Check this machine and profile for jadero-dev and report each item as ok or fail
 
 ## Context between work packages
 
-Everything a session needs lives in the repo: the explainer (decision, step log, recap), the PR, the code map. Start each work package with a fresh context (`/clear` or a new session) and the start prompt above; inside a work package, compact after the decision is recorded and after the review, or start a new session with the resume prompt.
+Everything a session needs lives in the repo: the explainer (decision, step log, recap), the PR, the code map. Start each work package with a fresh context (`/clear` or a new session) and the start prompt above; inside a work package, compact after the decision is recorded and after each closed step (the `/compact` line `/step` prints), or start a new session with the resume prompt.
