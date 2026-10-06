@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RandomIdGenerator } from "./random-id-generator.js";
+import { UuidV7IdGenerator } from "./uuid-v7-id-generator.js";
 
-describe("RandomIdGenerator", () => {
+describe("UuidV7IdGenerator", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
   it("generates UUIDv7: version nibble 7, RFC 9562 variant", () => {
-    const id = new RandomIdGenerator().next();
+    const id = new UuidV7IdGenerator().next();
     expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   });
 
@@ -16,7 +16,7 @@ describe("RandomIdGenerator", () => {
     // moved by one millisecond between the two calls.
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-06T10:00:00.000Z"));
-    const generator = new RandomIdGenerator();
+    const generator = new UuidV7IdGenerator();
     const first = generator.next();
     vi.setSystemTime(new Date("2026-10-06T10:00:00.001Z"));
     const second = generator.next();

@@ -9,7 +9,7 @@ import { IdGenerator } from "../application/id-generator.js";
  * millisecond are not ordered among themselves.
  */
 @Injectable()
-export class RandomIdGenerator extends IdGenerator {
+export class UuidV7IdGenerator extends IdGenerator {
   /**
    * @returns a new UUIDv7 for the current time.
    */

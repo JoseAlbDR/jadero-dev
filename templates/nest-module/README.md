@@ -19,7 +19,7 @@ Two module shapes for the Nest services (ADR-003, WP-3 decision G3). The files a
 
 ### Hexagonal: repository and unit of work
 
-`application/` holds two ports, both abstract classes and DI tokens (ADR-003): `WidgetRepository` (`findById`, `save`) and `WidgetsUnitOfWork` (`run(work)`). `infrastructure/` holds two adapters for each: Drizzle (`DrizzleWidgetRepository`, `DrizzleWidgetsUnitOfWork`) and in-memory fakes (`InMemoryWidgetRepository`, `InMemoryWidgetsUnitOfWork`). The table is `infrastructure/widget.schema.ts`, in a Postgres schema named after the module; the service's `drizzle.config.ts` glob picks it up and `db:generate` writes the migration. Ids come from the `IdGenerator` port; its adapter `RandomIdGenerator` gives UUIDv7 (`uuidv7` from `@jadero/messaging`, the generator of the event ids), so new rows land at the end of the primary key index.
+`application/` holds two ports, both abstract classes and DI tokens (ADR-003): `WidgetRepository` (`findById`, `save`) and `WidgetsUnitOfWork` (`run(work)`). `infrastructure/` holds two adapters for each: Drizzle (`DrizzleWidgetRepository`, `DrizzleWidgetsUnitOfWork`) and in-memory fakes (`InMemoryWidgetRepository`, `InMemoryWidgetsUnitOfWork`). The table is `infrastructure/widget.schema.ts`, in a Postgres schema named after the module; the service's `drizzle.config.ts` glob picks it up and `db:generate` writes the migration. Ids come from the `IdGenerator` port; its adapter `UuidV7IdGenerator` gives UUIDv7 (`uuidv7` from `@jadero/messaging`, the generator of the event ids), so new rows land at the end of the primary key index.
 
 The unit of work rule (ADR-012, WP-10 Decision):
 

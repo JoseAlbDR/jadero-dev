@@ -10,7 +10,7 @@ import { WidgetsUnitOfWork } from "../src/modules/widgets/application/widgets.un
 import { WidgetsModule } from "../src/modules/widgets/index.js";
 import { DrizzleWidgetRepository } from "../src/modules/widgets/infrastructure/drizzle-widget.repository.js";
 import { DrizzleWidgetsUnitOfWork } from "../src/modules/widgets/infrastructure/drizzle-widgets.unit-of-work.js";
-import { RandomIdGenerator } from "../src/modules/widgets/infrastructure/random-id-generator.js";
+import { UuidV7IdGenerator } from "../src/modules/widgets/infrastructure/uuid-v7-id-generator.js";
 
 describe("template wiring", () => {
   it("resolves both modules' providers, the hexagonal one through its port tokens", async () => {
@@ -32,7 +32,7 @@ describe("template wiring", () => {
         CreateWidget,
         { provide: WidgetRepository, useClass: DrizzleWidgetRepository },
         { provide: WidgetsUnitOfWork, useClass: DrizzleWidgetsUnitOfWork },
-        { provide: IdGenerator, useClass: RandomIdGenerator },
+        { provide: IdGenerator, useClass: UuidV7IdGenerator },
       ],
     })
     class DrizzleWidgetsModule {}

@@ -5,7 +5,7 @@ import { WidgetRepository } from "./application/widget.repository.js";
 import { WidgetsUnitOfWork } from "./application/widgets.unit-of-work.js";
 import { InMemoryWidgetRepository } from "./infrastructure/in-memory-widget.repository.js";
 import { InMemoryWidgetsUnitOfWork } from "./infrastructure/in-memory-widgets.unit-of-work.js";
-import { RandomIdGenerator } from "./infrastructure/random-id-generator.js";
+import { UuidV7IdGenerator } from "./infrastructure/uuid-v7-id-generator.js";
 import { WidgetsController } from "./presentation/widgets.controller.js";
 
 /**
@@ -22,7 +22,7 @@ import { WidgetsController } from "./presentation/widgets.controller.js";
     InMemoryWidgetRepository,
     { provide: WidgetRepository, useExisting: InMemoryWidgetRepository },
     { provide: WidgetsUnitOfWork, useClass: InMemoryWidgetsUnitOfWork },
-    { provide: IdGenerator, useClass: RandomIdGenerator },
+    { provide: IdGenerator, useClass: UuidV7IdGenerator },
   ],
 })
 export class WidgetsModule {}

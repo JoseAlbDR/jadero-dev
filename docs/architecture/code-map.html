@@ -1637,7 +1637,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "m-w-module": {
       "label": "WidgetsModule", "sub": "hexagonal · binds adapters to ports", "kind": "module", "status": "real", "wp": "WP-3 step 8",
       "what": "The wiring: the only place that knows which adapter backs each port.",
-      "how": "Declares `WidgetsController`, provides `CreateWidget`, `{ provide: WidgetRepository, useClass: InMemoryWidgetRepository }` and `{ provide: IdGenerator, useClass: RandomIdGenerator }`. A wiring test boots it.",
+      "how": "Declares `WidgetsController`, provides `CreateWidget`, `{ provide: WidgetRepository, useClass: InMemoryWidgetRepository }` and `{ provide: IdGenerator, useClass: UuidV7IdGenerator }`. A wiring test boots it.",
       "why": "Swap the in-memory adapter for a Drizzle one here and nothing else changes (composition root).",
       "files": ["templates/nest-module/src/modules/widgets/widgets.module.ts", "templates/nest-module/test/wiring.test.ts"]
     },
@@ -1677,11 +1677,11 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["templates/nest-module/src/modules/widgets/infrastructure/in-memory-widget.repository.ts"]
     },
     "m-w-randomid": {
-      "label": "RandomIdGenerator", "sub": "infrastructure/ · adapter", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
+      "label": "UuidV7IdGenerator", "sub": "infrastructure/ · adapter", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
       "what": "Production ids.",
-      "how": "Extends `IdGenerator` and returns `randomUUID()` from `node:crypto`.",
-      "why": "Randomness stays at the edge, behind a port.",
-      "files": ["templates/nest-module/src/modules/widgets/infrastructure/random-id-generator.ts"]
+      "how": "Extends `IdGenerator` and returns `uuidv7()` from `@jadero/messaging`, the generator of the event ids (WP-10 step 8).",
+      "why": "Id generation stays at the edge, behind a port; time-ordered ids append to the primary key index.",
+      "files": ["templates/nest-module/src/modules/widgets/infrastructure/uuid-v7-id-generator.ts"]
     },
     "m-w-widget": {
       "label": "Widget", "sub": "domain/ · aggregate", "kind": "domain", "status": "real", "wp": "WP-3 step 8",
