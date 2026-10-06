@@ -9,8 +9,8 @@
     "pnpm": ">=11 <12"
   },
   "scripts": {
-    "verify": "turbo run lint depcruise typecheck test test:scripts --affected",
-    "verify:all": "turbo run lint depcruise typecheck test test:scripts",
+    "verify": "turbo run lint depcruise typecheck test test:scripts --affected && pnpm check:migrations",
+    "verify:all": "turbo run lint depcruise typecheck test test:scripts && pnpm check:migrations",
     "lint": "biome ci .",
     "lint:fix": "biome check --write .",
     "depcruise": "depcruise --config .dependency-cruiser.cjs apps packages templates",
@@ -19,7 +19,10 @@
     "test:int": "turbo run test:int",
     "test:e2e": "turbo run test:e2e",
     "test:scripts": "node --test \"scripts/**/*.test.mjs\"",
+    "check:migrations": "node scripts/check-migrations.mjs",
     "build": "turbo run build",
+    "db:generate": "turbo run db:generate",
+    "db:migrate": "turbo run db:migrate",
     "dev": "turbo run dev dev:worker --concurrency=20",
     "dev:up": "docker compose -f infra/compose/compose.dev.yml up -d --wait",
     "dev:down": "docker compose -f infra/compose/compose.dev.yml down",

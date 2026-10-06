@@ -3,11 +3,13 @@ import { z } from "zod";
 
 /**
  * The environment `api` reads at boot: the platform variables, `SERVICE_NAME` defaulting to `api`,
- * and its own database (`content_dev` in development, ADR-029).
+ * and its own database (`content_dev` in development, ADR-029) with its pool size.
  */
 export const apiEnv = platformEnv.extend({
   SERVICE_NAME: z.string().min(1).default("api"),
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+  // Room for a readiness check, the relay's batch and the heartbeat at once (api-worker too).
+  DATABASE_POOL_MAX: z.coerce.number<string>().int().min(1).default(4),
 });
 
 /** The parsed `api` environment. */
@@ -23,6 +25,7 @@ export abstract class ApiConfig {
   abstract readonly logLevel: ApiEnv["LOG_LEVEL"];
   abstract readonly serviceName: string;
   abstract readonly databaseUrl: string;
+  abstract readonly databasePoolMax: number;
 }
 
 /**
@@ -37,6 +40,7 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
     logLevel: env.LOG_LEVEL,
     serviceName: env.SERVICE_NAME,
     databaseUrl: env.DATABASE_URL,
+    databasePoolMax: env.DATABASE_POOL_MAX,
   };
 }
 

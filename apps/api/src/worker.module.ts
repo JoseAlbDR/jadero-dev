@@ -1,7 +1,12 @@
-import { HealthModule, LoggingModule, TelemetryModule } from "@jadero/platform-nest";
+import {
+  DatabaseModule,
+  HealthModule,
+  LoggingModule,
+  PostgresReadinessCheck,
+  TelemetryModule,
+} from "@jadero/platform-nest";
 import { type DynamicModule, Module } from "@nestjs/common";
 import { ApiConfig, ApiWorkerConfig } from "./config/api-config.js";
-import { PostgresModule, PostgresReadinessCheck } from "./modules/platform/index.js";
 import { BrokerReadinessCheck, RelayModule } from "./modules/relay/index.js";
 
 /**
@@ -25,8 +30,9 @@ export class WorkerModule {
           level: config.logLevel,
           pretty: config.nodeEnv === "development",
         }),
+        DatabaseModule.forRoot({ url: config.databaseUrl, poolMax: config.databasePoolMax }),
         HealthModule.forRoot({
-          imports: [PostgresModule, RelayModule],
+          imports: [RelayModule],
           checks: [PostgresReadinessCheck, BrokerReadinessCheck],
         }),
         TelemetryModule,

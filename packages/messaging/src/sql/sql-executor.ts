@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-
 /** The result shape of a query: what `pg` returns, reduced to what messaging reads. */
 export interface SqlResult<R> {
   readonly rows: R[];
@@ -29,6 +27,13 @@ export interface SqlPool {
 /**
  * Runs `work` in one transaction on a pooled connection: commit when it resolves, roll back and
  * rethrow when it throws.
+ *
+ * Apps use platform-nest's `withTransaction` (WP-10 D6); this stays for the outbox relay,
+ * `idempotent` and this package's own tests (messaging must not import platform-nest). The two
+ * release differently: after a rollback this one always destroys the connection
+ * (`release(true)`), even when the rollback succeeded and the connection is healthy, while
+ * `withTransaction` destroys it only when `ROLLBACK` itself fails. So every error in `work` here
+ * costs one reconnect.
  * @param pool the service's pool.
  * @param work what to run; receives the transaction's executor.
  * @returns what `work` returned.
@@ -49,19 +54,4 @@ export async function inTransaction<T>(
     client.release(true);
     throw error;
   }
-}
-
-/** The DDL of the `messaging` schema (outbox and inbox), from `sql/0001_messaging.sql`. */
-export const MESSAGING_SCHEMA_SQL = readFileSync(
-  new URL("../../sql/0001_messaging.sql", import.meta.url),
-  "utf8",
-);
-
-/**
- * Creates the `messaging` schema in a service's database if it is missing. Until WP-10 brings
- * Drizzle migrations, each service calls this from its migrate step.
- * @param executor a connection to the service's own database.
- */
-export async function migrateMessagingSchema(executor: SqlExecutor): Promise<void> {
-  await executor.query(MESSAGING_SCHEMA_SQL);
 }

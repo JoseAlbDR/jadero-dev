@@ -1,6 +1,13 @@
-import { systemPingV1 } from "@jadero/contracts";
-import { cleanupInbox, idempotent, MessageBus } from "@jadero/messaging";
-import { PinoLogger } from "@jadero/platform-nest";
+import { type EnvelopeOf, systemPingV1 } from "@jadero/contracts";
+import {
+  cleanupInbox,
+  type Delivery,
+  done,
+  type HandlerOutcome,
+  MessageBus,
+  recordInInbox,
+} from "@jadero/messaging";
+import { PG_POOL, PinoLogger, withTransaction } from "@jadero/platform-nest";
 import {
   type BeforeApplicationShutdown,
   Inject,
@@ -10,7 +17,6 @@ import {
   type OnModuleInit,
 } from "@nestjs/common";
 import { Pool } from "pg";
-import { PG_POOL } from "../platform/index.js";
 import { HeartbeatRepository } from "./heartbeat.repository.js";
 
 /** How often inbox rows past their retention (30 days, decision I1) are deleted. */
@@ -21,9 +27,10 @@ export const HEARTBEAT_QUEUE = "agent.system.ping";
 
 /**
  * Consumes `system.ping.v1` on `agent.system.ping` (WP-5): the inbox insert and the heartbeat
- * upsert run in one transaction, so a duplicate delivery changes nothing (idempotent consumer,
- * ADR-012). Subscribes on init, starts consuming once the app is up and cleans the inbox daily,
- * stops before the pool closes.
+ * upsert run in one transaction through platform-nest's `withTransaction` (a layered module, no
+ * unit of work port: ADR-003, WP-10 D5), so a duplicate delivery changes nothing (idempotent
+ * consumer, ADR-012). Subscribes on init, starts consuming once the app is up and cleans the inbox
+ * daily, stops before the pool closes.
  */
 @Injectable()
 export class HeartbeatConsumer
@@ -33,6 +40,8 @@ export class HeartbeatConsumer
 
   constructor(
     private readonly bus: MessageBus,
+    // Each delivery checks out one connection for its transaction; the daily inbox cleanup runs one
+    // statement on the pool, outside any transaction.
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly heartbeats: HeartbeatRepository,
     private readonly log: PinoLogger,
@@ -45,19 +54,33 @@ export class HeartbeatConsumer
     this.bus.subscribe({
       queue: HEARTBEAT_QUEUE,
       contract: systemPingV1,
-      handle: idempotent<typeof systemPingV1>(
-        this.pool,
-        (tx, { envelope }) =>
-          this.heartbeats.record(tx, {
-            source: envelope.source,
-            eventId: envelope.id,
-            trigger: envelope.data.trigger,
-            seenAt: envelope.time,
-          }),
-        ({ envelope, queue }) =>
-          this.log.debug({ event_id: envelope.id, queue }, "duplicate ignored"),
-      ),
+      handle: (delivery) => this.handle(delivery),
     });
+  }
+
+  /**
+   * Handles one delivery: records it in the inbox and, the first time only, the heartbeat, both in
+   * one transaction. A duplicate commits nothing new and logs at debug; a failure rolls back both
+   * and the bus retries the delivery from scratch.
+   * @param delivery the event and the queue it came from.
+   * @returns `done`, for a first delivery and a duplicate alike.
+   */
+  async handle({
+    envelope,
+    queue,
+  }: Delivery<EnvelopeOf<typeof systemPingV1>>): Promise<HandlerOutcome> {
+    const first = await withTransaction(this.pool, async ({ db, executor }) => {
+      if (!(await recordInInbox(executor, queue, envelope))) return false;
+      await this.heartbeats.record(db, {
+        source: envelope.source,
+        eventId: envelope.id,
+        trigger: envelope.data.trigger,
+        seenAt: envelope.time,
+      });
+      return true;
+    });
+    if (!first) this.log.debug({ event_id: envelope.id, queue }, "duplicate ignored");
+    return done();
   }
 
   /** Nest lifecycle hook: starts consuming (never waits for the broker) and the daily inbox cleanup. */

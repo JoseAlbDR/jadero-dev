@@ -9,11 +9,11 @@ import {
   idempotent,
   inTransaction,
   type MessageBus,
-  migrateMessagingSchema,
   OutboxRelay,
   type OutgoingMessage,
 } from "../src/index.js";
 import { createTestDatabase } from "./setup/test-database.js";
+import { messagingDdl } from "./support/messaging-ddl.js";
 
 let pool: pg.Pool;
 let drop: () => Promise<void>;
@@ -22,8 +22,8 @@ beforeAll(async () => {
   const database = await createTestDatabase();
   drop = database.drop;
   pool = new pg.Pool({ connectionString: database.url, max: 6 });
-  await migrateMessagingSchema(pool);
-  await migrateMessagingSchema(pool); // idempotent: safe on every migrate
+  // The tables as `@jadero/messaging/schema` generates them, the DDL every service's migration holds.
+  for (const statement of await messagingDdl()) await pool.query(statement);
   await pool.query("CREATE TABLE heartbeat (source text PRIMARY KEY, seen integer NOT NULL)");
 });
 

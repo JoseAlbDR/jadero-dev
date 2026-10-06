@@ -29,6 +29,10 @@ export async function recordInInbox(
  * insert and the effects, so they commit together or not at all. A duplicate delivery finds its
  * row and skips the effects; an effect that throws rolls back the inbox row too, and the bus
  * retries it later from scratch.
+ *
+ * No app calls it today: apps write the inbox row with {@link recordInInbox} inside
+ * platform-nest's `withTransaction`. It stays for this package's tests and as the reference shape;
+ * it runs on `inTransaction`, which destroys the connection after every rollback (see there).
  * @param pool the consumer service's own database.
  * @param effects what the event does, inside the transaction.
  * @param onDuplicate called when a delivery was already applied (for a debug log line).

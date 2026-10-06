@@ -20,6 +20,8 @@ const KNOWN_CONFIG_FILES = [
   // Next.js App Router entry files: the framework loads them by file name, nothing imports them.
   "^apps/web/src/app/(.*/|)(page|layout|not-found|global-not-found|error|global-error|loading|template|default|forbidden|unauthorized|route|sitemap|robots|manifest|icon|apple-icon|opengraph-image|twitter-image)\\.tsx?$",
   "^apps/web/src/(proxy|instrumentation)\\.ts$",
+  // Drizzle schema files: drizzle-kit loads them by path from drizzle.config.ts (WP-10).
+  "^apps/[^/]+/src/(db|modules/[^/]+/infrastructure)/[^/]+\\.schema\\.ts$",
 ];
 
 module.exports = {
@@ -85,6 +87,19 @@ module.exports = {
           "(^|/)node_modules/(@nestjs/[^/]+|@langchain/langgraph-checkpoint-postgres|drizzle-orm|pg|pg-[^/]+|postgres|kysely|mysql2|better-sqlite3|@electric-sql/pglite|@types/pg)/",
           "^(@nestjs/[^/]+|@langchain/langgraph-checkpoint-postgres|drizzle-orm|pg|pg-[^/]+|postgres|kysely|mysql2|better-sqlite3|@electric-sql/pglite)(/|$)",
         ],
+      },
+    },
+    {
+      name: "messaging-drizzle-only-in-schema",
+      comment:
+        "WP-10 Q1 A: packages/messaging exports the outbox and inbox tables as Drizzle schema from " +
+        "src/schema.ts (`@jadero/messaging/schema`) and nothing else in it imports drizzle-orm: the " +
+        "relay and the inbox run raw SQL through SqlExecutor, so the bus, the relay and the inbox " +
+        "work on any pg connection and drizzle-orm stays a peer only the schema subpath needs.",
+      severity: "error",
+      from: { path: "^packages/messaging/src/", pathNot: "^packages/messaging/src/schema\\.ts$" },
+      to: {
+        path: ["(^|/)node_modules/drizzle-orm/", "^drizzle-orm(/|$)"],
       },
     },
     {

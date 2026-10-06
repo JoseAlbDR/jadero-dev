@@ -255,7 +255,7 @@ a { color: var(--accent); }
 <h3>Still open after the trials</h3>
 <ul>
 <li>ADR-010 on observability: the <code>@nestjs/observe</code> question is settled by WP-3 decision F1 (<code>NodeSDK</code> with an explicit list, no new ADR). The broker in <code>api</code>'s readiness check is still questionable with an outbox; WP-5 decides.</li>
-<li>The plan report names databases <code>jadero_content</code>; the code follows ADR-027's <code>content_dev</code>. The report should follow the ADR.</li>
+<li>Closed in WP-10 step 8: the plan report named the databases <code>jadero_content</code>, <code>jadero_agent</code> and <code>jadero_contact</code>; it now uses ADR-027's pattern <code>&lt;context&gt;_&lt;env&gt;</code> (<code>content_dev</code>), like the dev init script and <code>.env.example</code>.</li>
 <li>The Project views are a manual step.</li>
 </ul>
 </main>

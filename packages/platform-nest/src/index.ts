@@ -8,6 +8,34 @@ export {
   parseConfig,
 } from "./config/load-config.js";
 export { type PlatformEnv, platformEnv } from "./config/platform-env.js";
+export {
+  CONNECT_TIMEOUT_MS,
+  DatabaseModule,
+  type DatabaseModuleOptions,
+  poolConfig,
+  QUERY_TIMEOUT_MS,
+} from "./database/database.module.js";
+export { type Database, DRIZZLE, PG_POOL } from "./database/database.tokens.js";
+export {
+  journalOrderProblems,
+  MIGRATION_CONNECT_TIMEOUT_MS,
+  MigrationError,
+  type MigrationJournal,
+  migrationFolderProblems,
+  migrationJournal,
+  type RunMigrationsOptions,
+  runMigrations,
+} from "./database/migrations.js";
+export { PostgresReadinessCheck } from "./database/postgres.readiness-check.js";
+export {
+  type ConnectionSource,
+  drizzleOn,
+  type QueryExecutor,
+  type QueryResultShape,
+  type TransactionOptions,
+  type TransactionScope,
+  withTransaction,
+} from "./database/transaction.js";
 export { ProblemDetailsFilter } from "./errors/problem-details.filter.js";
 export {
   type InvalidField,

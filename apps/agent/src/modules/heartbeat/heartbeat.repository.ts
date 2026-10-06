@@ -1,5 +1,7 @@
-import type { SqlExecutor } from "@jadero/messaging";
+import type { Database } from "@jadero/platform-nest";
 import { Injectable } from "@nestjs/common";
+import { sql } from "drizzle-orm";
+import { brokerHeartbeat } from "./infrastructure/heartbeat.schema.js";
 
 /** One ping as `agent` records it. */
 export interface HeartbeatRecord {
@@ -9,24 +11,37 @@ export interface HeartbeatRecord {
   readonly seenAt: string;
 }
 
-/** Writes `broker_heartbeat`, in the transaction the inbox opened (idempotent consumer). */
+/**
+ * Writes `heartbeat.broker_heartbeat` through Drizzle. A plain class with no port: the heartbeat is
+ * a layered module with no rules (ADR-003, WP-10 D5). It holds no connection; each call takes the
+ * Drizzle instance of the caller's transaction, so the write commits with the inbox row.
+ */
 @Injectable()
 export class HeartbeatRepository {
   /**
    * Upserts the last ping per source. Delivery order is not guaranteed (a retried or redelivered
-   * ping can arrive after a newer one), so an older ping never overwrites a newer one.
-   * @param tx the consumer's open transaction.
+   * ping can arrive after a newer one), so the update runs only when the stored ping is older:
+   * `ON CONFLICT (source) DO UPDATE ... WHERE last_seen_at < excluded.last_seen_at`.
+   * @param db Drizzle bound to the consumer's open transaction (`withTransaction`'s `db`).
    * @param record the ping.
    */
-  async record(tx: SqlExecutor, record: HeartbeatRecord): Promise<void> {
-    await tx.query(
-      `INSERT INTO broker_heartbeat (source, last_event_id, last_trigger, last_seen_at)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (source) DO UPDATE
-         SET last_event_id = EXCLUDED.last_event_id, last_trigger = EXCLUDED.last_trigger,
-             last_seen_at = EXCLUDED.last_seen_at
-       WHERE broker_heartbeat.last_seen_at < EXCLUDED.last_seen_at`,
-      [record.source, record.eventId, record.trigger, record.seenAt],
-    );
+  async record(db: Database, record: HeartbeatRecord): Promise<void> {
+    await db
+      .insert(brokerHeartbeat)
+      .values({
+        source: record.source,
+        lastEventId: record.eventId,
+        lastTrigger: record.trigger,
+        lastSeenAt: new Date(record.seenAt),
+      })
+      .onConflictDoUpdate({
+        target: brokerHeartbeat.source,
+        set: {
+          lastEventId: sql.raw("excluded.last_event_id"),
+          lastTrigger: sql.raw("excluded.last_trigger"),
+          lastSeenAt: sql.raw("excluded.last_seen_at"),
+        },
+        setWhere: sql`${brokerHeartbeat.lastSeenAt} < excluded.last_seen_at`,
+      });
   }
 }

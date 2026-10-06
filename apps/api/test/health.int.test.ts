@@ -1,7 +1,7 @@
+import { PG_POOL } from "@jadero/platform-nest";
 import type { INestApplication } from "@nestjs/common";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { PG_POOL } from "../src/modules/platform/index.js";
 import { bootApi } from "./setup/boot.js";
 import { createTestDatabase } from "./setup/test-database.js";
 

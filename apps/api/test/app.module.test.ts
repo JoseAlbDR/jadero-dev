@@ -28,6 +28,7 @@ describe("api config", () => {
       logLevel: "info",
       serviceName: "api",
       databaseUrl: "postgres://content:content@127.0.0.1:5432/content_dev",
+      databasePoolMax: 4,
     });
   });
 
