@@ -285,7 +285,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 <script type="application/json" id="map-data">
 {
   "meta": {
-    "lastUpdated": "after WP-5 and WP-15 · focus, layers and event explorer, 2026-10-04",
+    "lastUpdated": "after WP-10 · data layer, 2026-10-06",
     "kinds": {
       "app": "deployable app", "pkg": "library package", "module": "Nest module", "provider": "provider",
       "token": "DI token", "ext": "external library", "global": "app-level wiring", "env": "environment",
@@ -300,7 +300,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "figures": [
         {
           "type": "graph", "title": "Workspace packages and their workspace:* dependencies", "viewBox": [1000, 720],
-          "caption": "api depends on platform-nest at runtime and on config for its tsconfig and Vitest base; platform-nest and the module template depend on config the same way. The template is a workspace package so pnpm verify checks it, but nothing deploys it. Red dotted arrows are imports that dependency-cruiser forbids.",
+          "caption": "api depends on platform-nest at runtime and on config for its tsconfig and Vitest base; platform-nest and the module template depend on config the same way. Since WP-10 the template also depends on platform-nest (the database tokens and `withTransaction`) and on messaging (`uuidv7`). The template is a workspace package so pnpm verify checks it, but nothing deploys it. Red dotted arrows are imports that dependency-cruiser forbids.",
           "lanes": [
             { "x": 8, "y": 30, "w": 984, "h": 150, "label": "apps/ · deployables" },
             { "x": 8, "y": 262, "w": 984, "h": 250, "label": "packages/ · libraries" },
@@ -320,6 +320,8 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             { "from": "ws-api", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "labelAt": [156, 250] },
             { "from": "ws-platform", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev" },
             { "from": "ws-template", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "labelAt": [222, 560] },
+            { "from": "ws-template", "to": "ws-platform", "label": "workspace:*", "kind": "dep", "hideLabel": true },
+            { "from": "ws-template", "to": "ws-messaging", "label": "workspace:*", "kind": "dep", "via": [[300, 592], [500, 592], [500, 392]], "hideLabel": true },
             { "points": [[590, 256], [590, 186]], "label": "packages never import apps", "kind": "forbidden", "ref": "rule-shared-no-apps", "labelAt": [590, 222] },
             { "from": "ws-ai", "to": "ext-nest-db", "label": "never", "kind": "forbidden", "ref": "rule-ai-agent-no-nest" },
             { "from": "ws-agent-pkg", "to": "ext-nest-db", "label": "never", "kind": "forbidden", "ref": "rule-ai-agent-no-nest" },
@@ -338,26 +340,26 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
         {
           "type": "cards", "title": "Rules dependency-cruiser enforces (pnpm depcruise)",
           "caption": "Every import under apps/, packages/ and templates/ is checked against these rules in pnpm verify. Red edge: error. Amber edge: warning.",
-          "cards": ["rule-shared-no-apps", "rule-no-cross-service", "rule-ai-agent-no-nest", "rule-no-domain-in-packages", "rule-no-circular", "rule-domain-only-domain", "rule-app-not-infra", "rule-through-index", "rule-no-orphans"]
+          "cards": ["rule-shared-no-apps", "rule-no-cross-service", "rule-ai-agent-no-nest", "rule-no-domain-in-packages", "rule-no-circular", "rule-domain-only-domain", "rule-app-not-infra", "rule-through-index", "rule-no-orphans", "rule-messaging-drizzle"]
         }
       ]
     },
     {
       "id": "di", "eyebrow": "2 · Runtime", "title": "Inside api: modules and injection",
-      "intro": "What Nest builds from AppModule.forRoot(config): the modules it imports, the providers they offer, who injects what, and the app-level wiring configureApp adds outside any module. Left column: logging. Middle: health from platform-nest. Right: config and api's own Postgres pool.",
+      "intro": "What Nest builds from AppModule.forRoot(config): the modules it imports, the providers they offer, who injects what, and the app-level wiring configureApp adds outside any module. Left column: telemetry and logging. Middle: health from platform-nest. Right: config and the database connection from platform-nest (pool and Drizzle).",
       "figures": [
         {
           "type": "graph", "title": "Nest module and DI graph of api", "viewBox": [1000, 780],
-          "caption": "LoggingModule provides the nestjs-pino Logger (through LoggerModule); configureApp consumes it with app.get(Logger) and hands it to app.useLogger. ApiConfig and ReadinessCheck are abstract classes used as DI tokens; PG_POOL and READINESS_CHECKS are symbol tokens. HealthModule comes from platform-nest; api plugs its Postgres check into it. TelemetryModule, also from platform-nest, flushes the spans of the last requests when the app closes. Dashed boxes are planned.",
+          "caption": "LoggingModule provides the nestjs-pino Logger (through LoggerModule); configureApp consumes it with app.get(Logger) and hands it to app.useLogger. ApiConfig and ReadinessCheck are abstract classes used as DI tokens; PG_POOL, DRIZZLE and READINESS_CHECKS are symbol tokens. DatabaseModule (platform-nest, global) gets the URL and pool size from the config as plain options, so no provider injects ApiConfig for it; api-worker and agent import the same module. HealthModule comes from platform-nest; api lists PostgresReadinessCheck in it. TelemetryModule, also from platform-nest, flushes the spans of the last requests when the app closes. Dashed boxes are planned.",
           "lanes": [
             { "x": 8, "y": 10, "w": 984, "h": 606, "label": "DI container · built by NestFactory.create" },
             { "x": 8, "y": 640, "w": 984, "h": 130, "label": "configureApp(app) · app-level, outside any module" }
           ],
           "place": {
-            "di-appmodule": [300, 40, 320, 56], "apiconfig": [680, 40, 300, 56], "di-telemetry": [680, 150, 300, 56],
-            "di-logging": [20, 150, 250, 56], "di-health": [300, 150, 320, 56],
-            "di-loggermodule": [20, 260, 250, 56], "di-terminus": [300, 260, 150, 56], "di-shutdownstate": [480, 260, 140, 56], "di-postgresmodule": [680, 260, 300, 56],
-            "di-logger": [20, 370, 120, 56], "di-pinologger": [150, 370, 120, 56], "di-healthcontroller": [300, 370, 320, 56], "di-pgpool": [680, 370, 300, 56],
+            "di-telemetry": [20, 40, 250, 56], "di-appmodule": [300, 40, 320, 56], "apiconfig": [680, 40, 300, 56],
+            "di-logging": [20, 150, 250, 56], "di-health": [300, 150, 320, 56], "di-postgresmodule": [680, 150, 300, 56],
+            "di-loggermodule": [20, 260, 250, 56], "di-terminus": [300, 260, 150, 56], "di-shutdownstate": [480, 260, 140, 56], "di-pgpool": [680, 260, 130, 56], "di-drizzle": [850, 260, 130, 56],
+            "di-logger": [20, 370, 120, 56], "di-pinologger": [150, 370, 120, 56], "di-healthcontroller": [300, 370, 320, 56],
             "di-feature": [150, 480, 145, 56], "di-healthbodyfilter": [300, 480, 150, 56], "di-readinesschecks": [460, 480, 160, 56], "di-prc": [660, 480, 190, 56], "di-poolcloser": [860, 480, 120, 56],
             "di-readinesscheck": [460, 556, 160, 46],
             "g-uselogger": [20, 688, 210, 60], "g-pipe": [250, 688, 230, 60], "g-filter": [540, 688, 200, 60], "g-shutdown": [770, 688, 210, 60]
@@ -366,13 +368,13 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             { "from": "di-appmodule", "to": "apiconfig", "label": "provides", "kind": "provides" },
             { "from": "di-appmodule", "to": "di-logging", "label": "imports forRoot(...)", "kind": "imports", "labelAt": [317, 118] },
             { "from": "di-appmodule", "to": "di-health", "label": "imports", "kind": "imports" },
-            { "from": "di-appmodule", "to": "di-telemetry", "label": "imports", "kind": "imports", "labelAt": [652, 124] },
+            { "from": "di-appmodule", "to": "di-telemetry", "label": "imports", "kind": "imports", "hideLabel": true },
+            { "from": "di-appmodule", "to": "di-postgresmodule", "label": "imports forRoot(...)", "kind": "imports" },
             { "from": "di-logging", "to": "di-loggermodule", "label": "imports, re-exports", "kind": "imports" },
             { "from": "di-loggermodule", "to": "di-logger", "label": "provides", "kind": "provides" },
             { "from": "di-loggermodule", "to": "di-pinologger", "label": "provides", "kind": "provides" },
             { "from": "di-health", "to": "di-terminus", "label": "imports", "kind": "imports" },
             { "from": "di-health", "to": "di-shutdownstate", "label": "provides", "kind": "provides" },
-            { "from": "di-health", "to": "di-postgresmodule", "label": "imports (options)", "kind": "imports" },
             { "from": "di-health", "to": "di-healthcontroller", "label": "controller", "kind": "provides", "hideLabel": true },
             { "from": "di-healthcontroller", "to": "di-terminus", "label": "injects", "kind": "injects" },
             { "from": "di-healthcontroller", "to": "di-shutdownstate", "label": "injects", "kind": "injects" },
@@ -381,7 +383,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             { "from": "di-readinesschecks", "to": "di-prc", "label": "lists", "kind": "provides", "hideLabel": true },
             { "from": "di-prc", "to": "di-readinesscheck", "label": "extends", "kind": "extends" },
             { "from": "di-postgresmodule", "to": "di-pgpool", "label": "provides", "kind": "provides" },
-            { "from": "di-pgpool", "to": "apiconfig", "label": "injects", "kind": "injects", "via": [[992, 398], [992, 68]], "labelAt": [962, 232] },
+            { "from": "di-postgresmodule", "to": "di-drizzle", "label": "provides", "kind": "provides" },
+            { "from": "di-postgresmodule", "to": "di-poolcloser", "label": "provides", "kind": "provides", "via": [[988, 178], [988, 508]], "hideLabel": true },
+            { "from": "di-drizzle", "to": "di-pgpool", "label": "injects", "kind": "injects", "hideLabel": true },
             { "from": "di-prc", "to": "di-pgpool", "label": "injects", "kind": "injects" },
             { "from": "di-poolcloser", "to": "di-pgpool", "label": "injects", "kind": "injects" },
             { "from": "di-feature", "to": "di-pinologger", "label": "injects", "kind": "injects" },
@@ -395,24 +399,25 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     {
       "id": "modules", "eyebrow": "3 · Modules", "title": "Two module shapes to copy",
-      "intro": "templates/nest-module holds one module of each shape ADR-003 allows. Copy the layered one where there are no rules worth protecting, the hexagonal one where there are. Both are type-checked, tested and held to the rules in pnpm verify, so the shape you copy is one the tools accept.",
+      "intro": "templates/nest-module holds one module of each shape ADR-003 allows. Copy the layered one where there are no rules worth protecting, the hexagonal one where there are. Both are type-checked, tested and held to the rules in pnpm verify, so the shape you copy is one the tools accept. Since WP-10 the hexagonal one shows how a transaction reaches the repositories: a unit of work port (WP-10 Q2 B); a layered module calls `withTransaction` directly.",
       "figures": [
         {
-          "type": "graph", "title": "notes (layered) and widgets (hexagonal) in templates/nest-module/src/modules", "viewBox": [1000, 600],
-          "caption": "Left: three classes in one folder, no ports. Right: the use case depends on two ports (abstract classes, which are also the DI tokens), the module file binds an adapter to each, and the domain is plain TypeScript. Red dotted arrows are imports dependency-cruiser rejects; click their labels for the rule.",
+          "type": "graph", "title": "notes (layered) and widgets (hexagonal) in templates/nest-module/src/modules", "viewBox": [1100, 740],
+          "caption": "Left: three classes in one folder, no ports. Right: the use case depends on two ports (abstract classes, which are also the DI tokens): the unit of work, which hands it repositories bound to one transaction, and the id generator. The module file binds the in-memory adapters, so the template boots without a database; a service binds the Drizzle row instead and nothing else changes. One contract suite per port runs against both rows. The domain is plain TypeScript. Red dotted arrows are imports dependency-cruiser rejects; click their labels for the rule.",
           "lanes": [
-            { "x": 8, "y": 10, "w": 334, "h": 580, "label": "layered · notes/" },
-            { "x": 352, "y": 10, "w": 640, "h": 580, "label": "hexagonal · widgets/" }
+            { "x": 8, "y": 10, "w": 232, "h": 720, "label": "layered · notes/" },
+            { "x": 250, "y": 10, "w": 842, "h": 720, "label": "hexagonal · widgets/" }
           ],
           "place": {
-            "m-notes-index": [30, 44, 290, 50], "m-notes-module": [30, 144, 290, 56], "m-notes-controller": [30, 250, 290, 56],
-            "m-notes-service": [30, 356, 290, 56], "m-notes-repo": [30, 462, 290, 56],
-            "m-w-index": [370, 44, 200, 50], "m-w-module": [600, 44, 380, 56],
-            "m-w-controller": [370, 140, 200, 56],
-            "m-w-usecase": [370, 240, 200, 56], "m-w-repo-port": [600, 240, 180, 56], "m-w-id-port": [800, 240, 180, 56],
-            "m-w-inmem": [586, 350, 208, 56], "m-w-randomid": [805, 350, 170, 56],
-            "m-w-widget": [370, 440, 200, 56], "m-w-error": [600, 440, 180, 56],
-            "m-ext-npm": [370, 530, 200, 48]
+            "m-notes-index": [22, 44, 204, 50], "m-notes-module": [22, 144, 204, 56], "m-notes-controller": [22, 250, 204, 56],
+            "m-notes-service": [22, 356, 204, 56], "m-notes-repo": [22, 462, 204, 56],
+            "m-w-index": [266, 44, 170, 50], "m-w-module": [463, 44, 623, 56],
+            "m-w-controller": [266, 140, 170, 56],
+            "m-w-usecase": [266, 240, 170, 56], "m-w-uow-port": [463, 240, 215, 56], "m-w-repo-port": [706, 240, 207, 56], "m-w-id-port": [936, 240, 152, 56],
+            "m-w-inmem-uow": [463, 350, 215, 56], "m-w-inmem": [706, 350, 207, 56], "m-w-randomid": [936, 350, 152, 56],
+            "m-w-drizzle-uow": [463, 460, 215, 56], "m-w-drizzle-repo": [706, 460, 207, 56], "m-w-schema": [936, 460, 152, 56],
+            "m-w-widget": [266, 570, 170, 56], "m-w-error": [463, 570, 215, 50], "m-w-platform": [706, 570, 380, 56],
+            "m-ext-npm": [266, 670, 170, 48]
           },
           "edges": [
             { "from": "m-notes-index", "to": "m-notes-module", "label": "re-exports", "kind": "imports" },
@@ -420,24 +425,33 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             { "from": "m-notes-controller", "to": "m-notes-service", "label": "injects", "kind": "injects" },
             { "from": "m-notes-service", "to": "m-notes-repo", "label": "injects", "kind": "injects" },
             { "from": "m-w-index", "to": "m-w-module", "label": "re-exports", "kind": "imports", "hideLabel": true },
-            { "from": "m-w-module", "to": "m-w-controller", "label": "declares", "kind": "provides", "labelAt": [630, 120] },
-            { "from": "m-w-module", "to": "m-w-repo-port", "label": "binds", "kind": "provides", "labelAt": [740, 170] },
-            { "from": "m-w-module", "to": "m-w-id-port", "label": "binds", "kind": "provides", "labelAt": [840, 170] },
+            { "from": "m-w-module", "to": "m-w-controller", "label": "declares", "kind": "provides" },
+            { "from": "m-w-module", "to": "m-w-uow-port", "label": "binds", "kind": "provides" },
+            { "from": "m-w-module", "to": "m-w-repo-port", "label": "binds", "kind": "provides" },
+            { "from": "m-w-module", "to": "m-w-id-port", "label": "binds", "kind": "provides" },
             { "from": "m-w-controller", "to": "m-w-usecase", "label": "injects", "kind": "injects" },
-            { "from": "m-w-usecase", "to": "m-w-repo-port", "label": "injects", "kind": "injects", "hideLabel": true },
-            { "from": "m-w-usecase", "to": "m-w-id-port", "label": "injects", "kind": "injects", "via": [[470, 318], [890, 318]], "hideLabel": true },
-            { "from": "m-w-inmem", "to": "m-w-repo-port", "label": "extends", "kind": "extends" },
-            { "from": "m-w-randomid", "to": "m-w-id-port", "label": "extends", "kind": "extends" },
-            { "from": "m-w-usecase", "to": "m-w-widget", "label": "Widget.create", "kind": "imports", "labelAt": [470, 412] },
+            { "from": "m-w-usecase", "to": "m-w-uow-port", "label": "injects", "kind": "injects", "hideLabel": true },
+            { "from": "m-w-usecase", "to": "m-w-id-port", "label": "injects", "kind": "injects", "via": [[351, 320], [1011, 320]], "hideLabel": true },
+            { "from": "m-w-inmem-uow", "to": "m-w-uow-port", "label": "extends", "kind": "extends", "labelAt": [610, 334] },
+            { "from": "m-w-inmem", "to": "m-w-repo-port", "label": "extends", "kind": "extends", "labelAt": [850, 334] },
+            { "from": "m-w-randomid", "to": "m-w-id-port", "label": "extends", "kind": "extends", "labelAt": [1040, 334] },
+            { "from": "m-w-inmem-uow", "to": "m-w-inmem", "label": "injects", "kind": "injects", "hideLabel": true },
+            { "from": "m-w-drizzle-uow", "to": "m-w-uow-port", "label": "extends", "kind": "extends", "via": [[450, 488], [450, 284]], "hideLabel": true },
+            { "from": "m-w-drizzle-repo", "to": "m-w-repo-port", "label": "extends", "kind": "extends", "via": [[692, 488], [692, 284]], "hideLabel": true },
+            { "from": "m-w-drizzle-uow", "to": "m-w-drizzle-repo", "label": "builds on the transaction", "kind": "flow", "hideLabel": true },
+            { "from": "m-w-drizzle-repo", "to": "m-w-schema", "label": "imports", "kind": "imports", "hideLabel": true },
+            { "from": "m-w-drizzle-uow", "to": "m-w-platform", "label": "PG_POOL, withTransaction", "kind": "injects", "labelAt": [640, 545] },
+            { "from": "m-w-drizzle-repo", "to": "m-w-platform", "label": "DRIZZLE", "kind": "injects", "labelAt": [870, 545] },
+            { "from": "m-w-usecase", "to": "m-w-widget", "label": "Widget.create", "kind": "imports" },
             { "from": "m-w-widget", "to": "m-w-error", "label": "throws", "kind": "throws", "hideLabel": true },
-            { "from": "m-w-usecase", "to": "m-w-inmem", "label": "never", "kind": "forbidden", "ref": "rule-app-not-infra", "labelAt": [600, 333] },
+            { "from": "m-w-usecase", "to": "m-w-inmem-uow", "label": "never", "kind": "forbidden", "ref": "rule-app-not-infra", "labelAt": [470, 334] },
             { "from": "m-w-widget", "to": "m-ext-npm", "label": "never", "kind": "forbidden", "ref": "rule-domain-only-domain" }
           ]
         },
         {
           "type": "cards", "title": "Rules that hold the shapes in place",
-          "caption": "Breaking any of these fails pnpm verify, in apps/, packages/ and templates/ alike.",
-          "cards": ["rule-domain-only-domain", "rule-app-not-infra", "rule-through-index", "rule-no-circular"]
+          "caption": "Breaking any of the four rules fails pnpm verify, in apps/, packages/ and templates/ alike. The contract suites keep a fake honest: it passes the same tests as the real adapter.",
+          "cards": ["rule-domain-only-domain", "rule-app-not-infra", "rule-through-index", "rule-no-circular", "m-w-contracts"]
         }
       ]
     },
@@ -548,7 +562,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
         {
           "type": "cards", "title": "Checks and when they run",
           "caption": "pnpm verify is the single \"am I done\" command; lefthook runs Biome and commitlint at commit time.",
-          "cards": ["c-verify", "c-build", "c-biome", "c-depcruise", "c-typecheck", "c-vitest", "c-testint", "c-e2e", "c-precommit", "c-commitlint", "c-compose"]
+          "cards": ["c-verify", "c-build", "c-biome", "c-depcruise", "c-typecheck", "c-vitest", "c-migrations", "c-testint", "c-e2e", "c-precommit", "c-commitlint", "c-compose"]
         }
       ]
     },
@@ -777,7 +791,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
               "hops": [
                 {
                   "edge": 0,
-                  "caption": "api (`POST /dev/ping`, or the heartbeat in api-worker) builds the CloudEvents envelope, checks it against the Zod contract and inserts it into `messaging.outbox` in `content_dev`, in the same transaction as the change. The envelope stores the request's `traceparent`. api answers 202; RabbitMQ is not touched."
+                  "caption": "api (`POST /dev/ping`, or the heartbeat in api-worker) builds the CloudEvents envelope, checks it against the Zod contract and inserts it into `messaging.outbox` in `content_dev` with `addToOutbox(executor, ...)` inside `withTransaction`, on the transaction's connection, never the pool. The envelope stores the request's `traceparent`. api answers 202; RabbitMQ is not touched."
                 },
                 {
                   "edge": 1,
@@ -797,7 +811,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
                 },
                 {
                   "edge": 6,
-                  "caption": "`idempotent()` inserts `(consumer, event_id)` into `messaging.inbox` in `agent_dev` with `ON CONFLICT DO NOTHING RETURNING`. One row back: the first time, run the effects. No row: a duplicate, skip them."
+                  "caption": "`HeartbeatConsumer` opens `withTransaction` and `recordInInbox(executor, queue, envelope)` inserts `(consumer, event_id)` into `messaging.inbox` in `agent_dev` with `ON CONFLICT DO NOTHING RETURNING`. One row back: the first time, run the effects. No row: a duplicate, skip them."
                 },
                 {
                   "edge": 7,
@@ -896,27 +910,123 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
           ]
         }
       ]
+    },
+    {
+      "id": "data", "eyebrow": "9 · Data", "title": "The data layer: one database per service, one transaction per use case",
+      "intro": "WP-10: every service gets its pool and Drizzle from platform-nest's DatabaseModule, every write goes through one transaction on one connection, and every schema change is a generated, reviewed SQL migration that a one-off step applies to that service's own database before it starts. The outbox and inbox rows are written inside the same transaction as the change, so an event commits with it or not at all.",
+      "figures": [
+        {
+          "type": "graph", "title": "Who injects PG_POOL and DRIZZLE, and where each transaction starts", "viewBox": [1000, 570],
+          "caption": "Top: what DatabaseModule.forRoot provides in every process (global), and the transaction helper. Below, one lane per caller. Each transaction checks out one connection from PG_POOL through withTransaction; the outbox and inbox rows go on that transaction's executor, never on the pool. The relay and the inbox cleanup work on the pool outside any use case transaction. DRIZZLE serves display reads only. Pick a box under Focus to see its arrows.",
+          "lanes": [
+            { "x": 8, "y": 10, "w": 984, "h": 120, "label": "platform-nest · DatabaseModule.forRoot, global in each process" },
+            { "x": 8, "y": 200, "w": 320, "h": 360, "label": "api · api-worker · content_dev" },
+            { "x": 340, "y": 200, "w": 320, "h": 360, "label": "agent consumer · agent_dev" },
+            { "x": 672, "y": 200, "w": 320, "h": 360, "label": "template widgets · in a service" }
+          ],
+          "place": {
+            "di-pgpool": [24, 50, 180, 56], "db-withtx": [380, 50, 240, 56], "di-drizzle": [796, 50, 180, 56],
+            "db-ping": [24, 240, 140, 56], "e-relay": [176, 240, 140, 56], "g-outbox": [24, 380, 292, 52],
+            "db-hbconsumer": [356, 240, 288, 56], "db-hbrepo": [480, 360, 164, 56], "db-inbox": [356, 480, 136, 52], "g-heartbeat": [500, 480, 144, 52],
+            "m-w-drizzle-uow": [688, 240, 288, 56], "m-w-drizzle-repo": [688, 360, 288, 56], "m-w-schema": [688, 480, 288, 52]
+          },
+          "edges": [
+            { "from": "db-ping", "to": "di-pgpool", "label": "injects", "kind": "injects", "labelAt": [106, 150] },
+            { "from": "e-relay", "to": "di-pgpool", "label": "injects", "kind": "injects", "labelAt": [164, 150] },
+            { "from": "db-hbconsumer", "to": "di-pgpool", "label": "injects", "kind": "injects", "labelAt": [260, 150] },
+            { "from": "m-w-drizzle-uow", "to": "di-pgpool", "label": "injects", "kind": "injects", "labelAt": [462, 170] },
+            { "from": "m-w-drizzle-repo", "to": "di-drizzle", "label": "injects (display reads)", "kind": "injects", "via": [[984, 388], [984, 78]], "labelAt": [918, 150] },
+            { "from": "db-ping", "to": "db-withtx", "label": "withTransaction", "kind": "consumes", "labelAt": [346, 150] },
+            { "from": "db-hbconsumer", "to": "db-withtx", "label": "withTransaction", "kind": "consumes", "labelAt": [500, 150] },
+            { "from": "m-w-drizzle-uow", "to": "db-withtx", "label": "withTransaction", "kind": "consumes", "labelAt": [626, 150] },
+            { "from": "db-ping", "to": "g-outbox", "label": "addToOutbox(executor)", "kind": "flow", "labelAt": [88, 340] },
+            { "from": "e-relay", "to": "g-outbox", "label": "claim on the pool", "kind": "consumes", "labelAt": [250, 350] },
+            { "from": "db-hbconsumer", "to": "db-inbox", "label": "recordInInbox(executor)", "kind": "flow", "via": [[424, 340]], "labelAt": [420, 450] },
+            { "from": "db-hbconsumer", "to": "db-hbrepo", "label": "record(db)", "kind": "flow" },
+            { "from": "db-hbrepo", "to": "g-heartbeat", "label": "upsert", "kind": "flow" },
+            { "from": "m-w-drizzle-uow", "to": "m-w-drizzle-repo", "label": "new DrizzleWidgetRepository(db)", "kind": "flow" },
+            { "from": "m-w-drizzle-repo", "to": "m-w-schema", "label": "insert, select", "kind": "flow" }
+          ]
+        },
+        {
+          "type": "steps", "title": "withTransaction, step by step",
+          "steps": ["db-tx-connect", "db-tx-begin", "db-tx-work", "db-tx-commit", "db-tx-rollback", "db-tx-release"],
+          "examples": [
+            { "id": "ex-tx-ping", "label": "Ping commits", "path": ["db-tx-connect", "db-tx-begin", "db-tx-work", "db-tx-commit", "db-tx-release"],
+              "request": "POST /dev/ping (api, development only)",
+              "response": "BEGIN\nINSERT INTO messaging.outbox (id, type, routing_key, envelope) VALUES ($1, $2, $3, $4)\nCOMMIT\nHTTP/1.1 202 Accepted",
+              "note": "Exactly one unsent row for system.ping.v1. Source: apps/api/test/outbox.int.test.ts, suite 4 (atomic outbox)." },
+            { "id": "ex-tx-throw", "label": "Work throws", "path": ["db-tx-connect", "db-tx-begin", "db-tx-work", "db-tx-rollback", "db-tx-release"],
+              "request": "work writes the outbox row, then throws",
+              "response": "ROLLBACK\nno outbox row; the same error is rethrown",
+              "note": "The event leaves with the change or not at all. Source: apps/api/test/outbox.int.test.ts, suite 3 (rollback)." },
+            { "id": "ex-tx-pool", "label": "Outbox on the pool (the bug)", "path": ["db-tx-connect", "db-tx-begin", "db-tx-work", "db-tx-rollback"],
+              "request": "inside work: addToOutbox(pool, ...) instead of addToOutbox(executor, ...)",
+              "response": "the row goes on a second connection and autocommits\nROLLBACK cannot undo it; the relay publishes a phantom event",
+              "note": "Why the rule says executor, never the pool. The second test of the rollback suite shows the row surviving. Source: apps/api/test/outbox.int.test.ts, .claude/rules/services.md." },
+            { "id": "ex-tx-dup", "label": "Duplicate delivery", "path": ["db-tx-connect", "db-tx-begin", "db-tx-work", "db-tx-commit", "db-tx-release"],
+              "request": "agent consumer: the same system.ping.v1 arrives twice",
+              "response": "INSERT INTO messaging.inbox ... ON CONFLICT DO NOTHING RETURNING: no row\nno upsert; COMMIT; done (ack)",
+              "note": "Effects exactly once. When the upsert fails, the inbox row rolls back too and the redelivery is processed. Source: apps/agent/test/heartbeat.int.test.ts." },
+            { "id": "ex-tx-broken", "label": "ROLLBACK fails", "path": ["db-tx-connect", "db-tx-begin", "db-tx-work", "db-tx-rollback", "db-tx-release"],
+              "request": "work throws, and the connection dies before ROLLBACK",
+              "response": "client.release(rollbackError): pg destroys the connection\nthe work's original error is rethrown",
+              "note": "A broken connection never goes back to the pool. Source: packages/platform-nest/test/transaction.test.ts." }
+          ]
+        },
+        {
+          "type": "steps", "title": "From a schema file to a migrated database, per service",
+          "steps": ["db-mig-schema", "db-mig-config", "db-mig-generate", "db-mig-sql", "db-mig-check", "db-mig-build", "db-mig-run", "db-mig-boot"],
+          "examples": [
+            { "id": "ex-mig-column", "label": "Add a column", "path": ["db-mig-schema", "db-mig-config", "db-mig-generate", "db-mig-sql", "db-mig-check", "db-mig-build", "db-mig-run", "db-mig-boot"],
+              "request": "add a column to heartbeat.schema.ts; pnpm --filter @jadero/agent db:generate",
+              "response": "drizzle/0002_<name>.sql: ALTER TABLE \"heartbeat\".\"broker_heartbeat\" ADD COLUMN ...\npnpm --filter @jadero/agent db:migrate\nagent: migrations applied",
+              "note": "Review the SQL in the PR; the deploy runs the same step before the new version starts. Source: docs/learning/wp-10.md, Trace 1." },
+            { "id": "ex-mig-forgot", "label": "Forgot db:generate", "path": ["db-mig-schema", "db-mig-check"],
+              "request": "schema file changed, no new migration committed",
+              "response": "migrations.test.ts fails: the schema files and the last snapshot disagree, so db:generate would write a migration",
+              "note": "The drift test in pnpm verify. Source: apps/api/test/migrations.test.ts." },
+            { "id": "ex-mig-edit", "label": "Edit an applied migration", "path": ["db-mig-sql", "db-mig-check"],
+              "request": "a branch changes apps/api/drizzle/0000_messaging.sql",
+              "response": "pnpm check:migrations fails: main already has this migration; write a new one",
+              "note": "Drizzle would skip the edit in every database that already ran it. Source: scripts/check-migrations.mjs." },
+            { "id": "ex-mig-down", "label": "Database down at deploy", "path": ["db-mig-build", "db-mig-run"],
+              "request": "node dist/migrate.js while Postgres does not answer",
+              "response": "api: cannot reach its database (DATABASE_URL): ECONNREFUSED\nexit code 1",
+              "note": "The deploy stops; the old version keeps serving. The message names a code, never the URL. Source: packages/platform-nest/src/database/migrations.ts." },
+            { "id": "ex-mig-super", "label": "Needs a superuser", "path": ["db-mig-run"],
+              "request": "a migration runs CREATE EXTENSION for an untrusted extension, as the service's ordinary role",
+              "response": "api: migration failed, nothing applied: permission denied ... (42501)\nthe whole batch rolls back; exit code 1",
+              "note": "Extensions are created by provisioning, outside migrations. Source: apps/api/test/migrations.int.test.ts (Trace 2c)." }
+          ]
+        },
+        {
+          "type": "cards", "title": "Decisions this layer rests on",
+          "caption": "From docs/learning/wp-10.md; click a card for the reasoning.",
+          "cards": ["db-d-q1", "db-d-q2", "db-d-d6", "db-d-d2", "db-d-d3", "db-d-d4"]
+        }
+      ]
     }
   ],
   "nodes": {
     "ws-api": {
       "label": "api", "sub": "@jadero/api", "kind": "app", "status": "real", "wp": "WP-3",
-      "what": "The content, auth, media and CV service. Today it is the boot skeleton (validated config, logging, problem+json errors with request and trace ids, health endpoints, OpenTelemetry traces, a Postgres pool) plus, since WP-5, the outbox in content_dev, `POST /dev/ping` in development, and its second process type `api-worker` (`dist/worker.js`: outbox relay and heartbeat; section 8). No feature modules yet.",
-      "how": "`start` and `dev` run `node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js`, so tracing starts before any import of `main.js`. `main.ts` then validates the environment, builds `AppModule.forRoot(config)`, applies `configureApp` from platform-nest and listens on `PORT`. Runtime dependency on `@jadero/platform-nest`; dev dependency on `@jadero/config` for its tsconfig and Vitest base. Its own runtime dependencies are Nest, Express, `pg`, rxjs, reflect-metadata and zod; Testcontainers is a dev dependency for `pnpm test:int`.",
-      "why": "ADR-001 splits the backend into services, and ADR-029 says each one owns its database and talks to the others only through events. api comes first because the site's content lives there. Feature modules join from WP-10 (database) and WP-12 (content).",
-      "files": ["apps/api/package.json", "apps/api/AGENTS.md", "apps/api/src/main.ts", "apps/api/src/app.module.ts", "apps/api/src/config/api-config.ts", "apps/api/src/modules/platform/"]
+      "what": "The content, auth, media and CV service. Today it is the boot skeleton (validated config, logging, problem+json errors with request and trace ids, health endpoints, OpenTelemetry traces, the database connection from platform-nest) plus, since WP-5, the outbox in content_dev, `POST /dev/ping` in development, and its second process type `api-worker` (`dist/worker.js`: outbox relay and heartbeat; section 8). Since WP-10 its schema lives in Drizzle files and its migrations in `drizzle/` (section 9). No feature modules yet.",
+      "how": "`start` and `dev` run `node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js`, so tracing starts before any import of `main.js`. `main.ts` then validates the environment, builds `AppModule.forRoot(config)`, applies `configureApp` from platform-nest and listens on `PORT`. `db:generate` runs drizzle-kit over `drizzle.config.ts`; `db:migrate` runs `dist/migrate.js`, the one-off step that applies `drizzle/` to content_dev. Runtime dependencies on `@jadero/platform-nest`, `@jadero/messaging` and `@jadero/contracts`; dev dependency on `@jadero/config` for its tsconfig and Vitest base. Its own runtime dependencies are Nest, Express, `pg`, `drizzle-orm`, rxjs, reflect-metadata and zod; drizzle-kit and Testcontainers are dev dependencies.",
+      "why": "ADR-001 splits the backend into services, and ADR-029 says each one owns its database and talks to the others only through events. api comes first because the site's content lives there. Feature modules join from WP-12 (content).",
+      "files": ["apps/api/package.json", "apps/api/AGENTS.md", "apps/api/src/main.ts", "apps/api/src/app.module.ts", "apps/api/src/config/api-config.ts", "apps/api/drizzle.config.ts", "apps/api/src/migrate.ts"]
     },
     "ws-platform": {
       "label": "platform-nest", "sub": "@jadero/platform-nest", "kind": "pkg", "status": "real", "wp": "WP-3",
-      "what": "The bootstrap every NestJS service shares: fail-fast config, structured logging, RFC 9457 errors, the health module, the OpenTelemetry entry and one `configureApp`. Infrastructure only, no domain code.",
-      "how": "Compiled with tsc to `dist/` and exposed through two `exports` entries: `.` for everything Nest uses, and `./instrumentation` for the file `node --import` loads before the app. Nest packages, rxjs and zod are peer dependencies, so the app supplies the single copy of `@nestjs/core`. `@nestjs/terminus`, nestjs-pino, pino, pino-http, pino-pretty and the OpenTelemetry SDK, OTLP exporter and five instrumentations (http, express, pg, pino, amqplib) are its own dependencies, which is why api never lists them.",
-      "why": "AGENTS.md rule 5: shared packages hold infrastructure, never domain code. One boot path means api, agent and contact log, validate and fail the same way. WP-3 decision C (default kept) puts the health module here too, with checks registered per service.",
-      "files": ["packages/platform-nest/package.json", "packages/platform-nest/src/index.ts", "packages/platform-nest/src/telemetry/"]
+      "what": "The bootstrap every NestJS service shares: fail-fast config, structured logging, RFC 9457 errors, the health module, the OpenTelemetry entry, one `configureApp` and, since WP-10, the database connection (`DatabaseModule`, `withTransaction`, `runMigrations`). Infrastructure only, no domain code.",
+      "how": "Compiled with tsc to `dist/` and exposed through two `exports` entries: `.` for everything Nest uses, and `./instrumentation` for the file `node --import` loads before the app. Nest packages, rxjs and zod are peer dependencies, so the app supplies the single copy of `@nestjs/core`. `@nestjs/terminus`, nestjs-pino, pino, pino-http, pino-pretty, the OpenTelemetry SDK, OTLP exporter and five instrumentations (http, express, pg, pino, amqplib), and since WP-10 `pg` and `drizzle-orm`, are its own dependencies, which is why api never lists them. `src/database/` holds `DatabaseModule.forRoot` (the `PG_POOL` and `DRIZZLE` tokens, the pool closer), `PostgresReadinessCheck`, `withTransaction` and `runMigrations`; section 9 shows them.",
+      "why": "AGENTS.md rule 5: shared packages hold infrastructure, never domain code. One boot path means api, agent and contact log, validate and fail the same way. WP-3 decision C (default kept) puts the health module here too, with checks registered per service. WP-10 Q1 A moved the two copies of `postgres.module.ts` (api and agent) here before contact made a third.",
+      "files": ["packages/platform-nest/package.json", "packages/platform-nest/src/index.ts", "packages/platform-nest/src/telemetry/", "packages/platform-nest/src/database/"]
     },
     "ws-template": {
       "label": "nest-module", "sub": "@jadero/template-nest-module", "kind": "template", "status": "real", "wp": "WP-3 step 8",
       "what": "Copyable module shapes for the Nest services: a layered `notes` module and a hexagonal `widgets` module. A workspace package that nothing imports and nothing deploys.",
-      "how": "Real TypeScript with its own `typecheck` and `test` scripts, so `pnpm verify` type-checks it, runs its tests and checks it against the dependency-cruiser rules. It has no `build`. Nest, rxjs and zod are normal dependencies here because no app consumes it. Section 3 shows both shapes.",
+      "how": "Real TypeScript with its own `typecheck`, `test` and `test:int` scripts, so `pnpm verify` type-checks it, runs its tests and checks it against the dependency-cruiser rules, and `pnpm test:int` runs the Drizzle adapters on real Postgres. It has no `build`. Nest, rxjs and zod are normal dependencies here because no app consumes it; since WP-10 it also depends on `@jadero/platform-nest` and `@jadero/messaging`. Section 3 shows both shapes.",
       "why": "WP-3 decision G3: a checked folder instead of documentation or a generator. The cheapest shape to copy should be the right one, and a template the tools check cannot drift from what the rules accept. Widening the rules to `templates/` is what found the gap in `domain-imports-only-domain`.",
       "files": ["templates/nest-module/package.json", "templates/nest-module/README.md", "templates/nest-module/src/modules/", "pnpm-workspace.yaml"]
     },
@@ -930,9 +1040,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "ws-agent-app": {
       "label": "agent", "sub": "@jadero/agent", "kind": "app", "status": "real", "wp": "WP-5",
       "what": "The knowledge, chat, guards and usage service. Today it is the skeleton: an HTTP process with health checks and a consumer process that reads system.ping.v1 into its own broker_heartbeat table through the inbox.",
-      "how": "Two process types from one codebase: `dist/main.js` (HTTP, port 3002, ready when its database answers) and `dist/consumer.js` (port 3012 for health only, ready when Postgres and RabbitMQ answer; `agent-ingest` from WP-20). `HeartbeatConsumer` subscribes to `agent.system.ping` with `idempotent()`, so the inbox insert and the upsert share one transaction. `pnpm --filter @jadero/agent migrate` creates the messaging schema and its tables.",
+      "how": "Two process types from one codebase: `dist/main.js` (HTTP, port 3002, ready when its database answers) and `dist/consumer.js` (port 3012 for health only, ready when Postgres and RabbitMQ answer; `agent-ingest` from WP-20). `HeartbeatConsumer` subscribes to `agent.system.ping` and runs `recordInInbox` and the heartbeat upsert inside one `withTransaction`. `pnpm --filter @jadero/agent db:migrate` applies `drizzle/` to agent_dev: `0000_enable_vector` (a no-op where provisioning created `vector`) and `0001_messaging_and_heartbeat` (the inbox and `heartbeat.broker_heartbeat`).",
       "why": "ADR-029: agent owns agent_dev and learns about other services only from events; the agent never calls api. The consumer is its own process so a slow or failing consumer never takes the chat down (report section 3.2).",
-      "files": ["apps/agent/AGENTS.md", "apps/agent/src/main.ts", "apps/agent/src/consumer.ts", "apps/agent/src/modules/heartbeat/", "apps/agent/sql/0001_broker_heartbeat.sql"]
+      "files": ["apps/agent/AGENTS.md", "apps/agent/src/main.ts", "apps/agent/src/consumer.ts", "apps/agent/src/modules/heartbeat/", "apps/agent/drizzle/", "apps/agent/src/migrate.ts"]
     },
     "ws-contact": {
       "label": "contact", "sub": "planned · WP-11", "kind": "app", "status": "planned", "wp": "WP-11",
@@ -971,10 +1081,10 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     "ws-messaging": {
       "label": "messaging", "sub": "@jadero/messaging", "kind": "pkg", "status": "real", "wp": "WP-5",
-      "what": "The MessageBus port with RabbitMQ and in-memory adapters, the shared retry and dead-letter policy, the topology that generates infra/rabbitmq/definitions.json, the transactional outbox with its relay, and the inbox.",
-      "how": "Handlers return done, retry or dead; `dispatch` and `dispose` decide for both adapters (retries at 10 s, 1 min, 10 min through the service's retry exchange, then the DLQ). `addToOutbox(tx, ...)` joins the caller's transaction through the `SqlExecutor` seam; `OutboxRelay` claims rows with FOR UPDATE SKIP LOCKED and publishes with confirms; `idempotent(pool, effects)` is the inbox. A nine-behavior contract suite runs against both adapters.",
-      "why": "ADR-012 and ADR-029: no lost events (outbox), no repeated effects (inbox), no hot loops (consumer-routed retries), one failure policy for every service.",
-      "files": ["packages/messaging/src/message-bus.ts", "packages/messaging/src/rabbitmq-message-bus.ts", "packages/messaging/src/outbox/", "packages/messaging/src/inbox/", "packages/messaging/src/topology/", "packages/messaging/sql/0001_messaging.sql"]
+      "what": "The MessageBus port with RabbitMQ and in-memory adapters, the shared retry and dead-letter policy, the topology that generates infra/rabbitmq/definitions.json, the transactional outbox with its relay, the inbox, and (WP-10) the outbox and inbox tables as Drizzle schema.",
+      "how": "Handlers return done, retry or dead; `dispatch` and `dispose` decide for both adapters (retries at 10 s, 1 min, 10 min through the service's retry exchange, then the DLQ). `addToOutbox(executor, ...)` and `recordInInbox(executor, ...)` join the caller's transaction through the `SqlExecutor` seam; apps pass `withTransaction`'s `executor`. `OutboxRelay` claims rows with FOR UPDATE SKIP LOCKED and publishes with confirms. `@jadero/messaging/schema` exports `outbox` and `inbox` for each service's drizzle-kit, and `uuidv7()` makes the event ids. A nine-behavior contract suite runs against both adapters.",
+      "why": "ADR-012 and ADR-029: no lost events (outbox), no repeated effects (inbox), no hot loops (consumer-routed retries), one failure policy for every service. WP-10 Q1 A: the table definitions live next to the only code that reads them, and each service still migrates its own copy.",
+      "files": ["packages/messaging/src/message-bus.ts", "packages/messaging/src/rabbitmq-message-bus.ts", "packages/messaging/src/outbox/", "packages/messaging/src/inbox/", "packages/messaging/src/topology/", "packages/messaging/src/schema.ts"]
     },
     "ws-ai": {
       "label": "ai", "sub": "planned · WP-19", "kind": "pkg", "status": "planned", "wp": "WP-19",
@@ -1077,7 +1187,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "di-appmodule": {
       "label": "AppModule.forRoot(config)", "sub": "root dynamic module · global", "kind": "module", "status": "real", "wp": "WP-3 step 3",
       "what": "The root module of api, built around an already validated configuration.",
-      "how": "A static `forRoot(config)` returns a `DynamicModule` with `global: true`. It imports `LoggingModule.forRoot({ serviceName, level, pretty })` from the config (pretty only when `nodeEnv` is development), `HealthModule.forRoot({ imports: [PostgresModule], checks: [PostgresReadinessCheck] })` and `TelemetryModule`, provides `ApiConfig` with `useValue: config` and exports it, so any module (PostgresModule included) can inject it without importing AppModule.",
+      "how": "A static `forRoot(config)` returns a `DynamicModule` with `global: true`. It imports `LoggingModule.forRoot({ serviceName, level, pretty })` from the config (pretty only when `nodeEnv` is development), `DatabaseModule.forRoot({ url: config.databaseUrl, poolMax: config.databasePoolMax })`, `HealthModule.forRoot({ checks: [PostgresReadinessCheck] })`, `TelemetryModule` and, in development only, `DevPingModule`. It provides `ApiConfig` with `useValue: config` and exports it, so any module can inject it without importing AppModule.",
       "why": "Because the config is parsed before the module is built, a bad environment never reaches a module (WP-3 decision B2). `forRoot` takes the config as an argument instead of reading `process.env`, which keeps the environment read in one place (ADR-043).",
       "files": ["apps/api/src/app.module.ts", "apps/api/test/app.module.test.ts", "apps/api/test/setup/boot.ts"]
     },
@@ -1098,7 +1208,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "di-health": {
       "label": "HealthModule.forRoot({ imports, checks })", "sub": "platform-nest · Terminus", "kind": "module", "status": "real", "wp": "WP-3 step 6",
       "what": "`/health/live` and `/health/ready`, the same in every service, with each service bringing its own readiness checks.",
-      "how": "`forRoot(options)` imports `TerminusModule.forRoot({ logger: false })` plus the modules in `options.imports`, declares `HealthController`, provides `ShutdownState` (with the optional `drainMs`, default 0, as `SHUTDOWN_DRAIN_MS`) and every class in `options.checks`, and builds `READINESS_CHECKS` with a factory that collects the check instances into an array. api calls it as `HealthModule.forRoot({ imports: [PostgresModule], checks: [PostgresReadinessCheck] })`.",
+      "how": "`forRoot(options)` imports `TerminusModule.forRoot({ logger: false })` plus the modules in `options.imports`, declares `HealthController`, provides `ShutdownState` (with the optional `drainMs`, default 0, as `SHUTDOWN_DRAIN_MS`) and every class in `options.checks`, and builds `READINESS_CHECKS` with a factory that collects the check instances into an array. api calls it as `HealthModule.forRoot({ checks: [PostgresReadinessCheck] })`: the check finds `PG_POOL` because `DatabaseModule` is global, so no `imports` are needed (api-worker passes `imports: [RelayModule]` for its broker check).",
       "why": "WP-3 decision C: endpoints and status codes must be identical for Docker Compose and Uptime Kuma, while the checks are service specific. Terminus does the response shape (ADR-010).",
       "files": ["packages/platform-nest/src/health/health.module.ts", "packages/platform-nest/test/health.test.ts", "apps/api/src/app.module.ts"]
     },
@@ -1145,32 +1255,32 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/platform-nest/src/health/readiness-check.ts"]
     },
     "di-postgresmodule": {
-      "label": "PostgresModule", "sub": "api · src/modules/platform", "kind": "module", "status": "real", "wp": "WP-3 step 6",
-      "what": "api's connection to its own Postgres database.",
-      "how": "Provides `PG_POOL` and the private `PoolCloser`, exports `PG_POOL`. It is passed to `HealthModule` through `options.imports` so the readiness check can inject the pool. Exposed through the module's `index.ts`.",
-      "why": "WP-3 decision D1: the `pg` driver, which WP-10 inherits when Drizzle arrives. A layered module under `src/modules/platform/` as ADR-003 lists for platform concerns. ADR-029: api reads only its own database (`content_dev` in dev).",
-      "files": ["apps/api/src/modules/platform/postgres.module.ts", "apps/api/src/modules/platform/index.ts"]
+      "label": "DatabaseModule.forRoot(options)", "sub": "platform-nest · global · url, poolMax, schema?", "kind": "module", "status": "real", "wp": "WP-10 step 2",
+      "what": "A service's connection to its own database: one `pg` pool and Drizzle over it, as the DI tokens `PG_POOL` and `DRIZZLE`.",
+      "how": "`forRoot({ url, poolMax, schema? })` returns a global dynamic module that provides `PG_POOL` (`createPool`), `DRIZZLE` (`drizzleOn(pool, schema)`, `casing: \"snake_case\"`) and the private `PoolCloser`, and exports both tokens. The root module of each process imports it once: api's `AppModule`, `WorkerModule` (api-worker) and agent's `AppModule` and `ConsumerModule`. Global, so every feature module and `HealthModule` can inject the tokens without importing it.",
+      "why": "WP-10 Q1 A: api and agent each had a `postgres.module.ts` that differed in four lines, and contact would have made three. The plumbing is bootstrap infrastructure like health and config, so it lives in platform-nest; each service passes only its own URL and pool size (ADR-029 rule 1, ADR-043). The driver stays `pg` (WP-3 decision D1), now under Drizzle (ADR-005).",
+      "files": ["packages/platform-nest/src/database/database.module.ts", "packages/platform-nest/src/database/database.tokens.ts", "packages/platform-nest/test/database.test.ts"]
     },
     "di-pgpool": {
-      "label": "PG_POOL", "sub": "symbol token · useFactory(ApiConfig)", "kind": "token", "status": "real", "wp": "WP-3 step 6",
-      "what": "The `pg` connection pool.",
-      "how": "`useFactory: (config: ApiConfig) => new Pool({ connectionString: config.databaseUrl, max: 4, connectionTimeoutMillis: 1000, query_timeout: 1000 })` with `inject: [ApiConfig]`. `query_timeout` frees the connection when a readiness check times out. The pool connects lazily, so api boots while the database is down and readiness reports it. Consumers use `@Inject(PG_POOL)` because `Pool` is a class from a library, not our token.",
-      "why": "A symbol token keeps the pool out of string keys and makes the binding explicit. A pool of 4 leaves room for a readiness check, the relay's batch and the heartbeat at once in `api-worker` (WP-5) until WP-10 sizes it for real queries.",
-      "files": ["apps/api/src/modules/platform/postgres.module.ts", "apps/api/src/modules/platform/postgres.tokens.ts"]
+      "label": "PG_POOL", "sub": "pg Pool · createPool", "kind": "token", "status": "real", "wp": "WP-10 step 2",
+      "what": "The `pg` connection pool to the service's own database.",
+      "how": "`useFactory: () => createPool(options)`: `new Pool({ connectionString: url, max: poolMax, connectionTimeoutMillis: 1000, query_timeout: 5000 })` plus an `error` listener that logs only the error code, so an idle connection dropped by Postgres does not crash the process. It connects lazily, so the service boots while the database is down and readiness reports it. Consumers use `@Inject(PG_POOL)`: `PostgresReadinessCheck`, `PoolCloser`, and every caller of `withTransaction` (section 9).",
+      "why": "A symbol token keeps the pool out of string keys and makes the binding explicit. The size is config (`DATABASE_POOL_MAX`: 4 in api, 6 in agent, where the consumer's prefetch of 4 holds one connection per delivery), not code.",
+      "files": ["packages/platform-nest/src/database/database.module.ts", "packages/platform-nest/src/database/database.tokens.ts", "apps/api/src/config/api-config.ts"]
     },
     "di-prc": {
-      "label": "PostgresReadinessCheck", "sub": "SELECT 1 · name: database", "kind": "provider", "status": "real", "wp": "WP-3 step 6",
-      "what": "api's readiness check for its database.",
-      "how": "Extends `ReadinessCheck`, injects `PG_POOL` and runs `SELECT 1`. The controller applies the timeout. With Postgres down, `/health/ready` answers 503 with `database: { status: down, message: unavailable }`.",
-      "why": "Readiness covers the database (ADR-010). The check lives in api because only api knows which database it owns.",
-      "files": ["apps/api/src/modules/platform/postgres.readiness-check.ts", "apps/api/test/health.test.ts", "apps/api/test/health.int.test.ts"]
+      "label": "PostgresReadinessCheck", "sub": "platform-nest · SELECT 1", "kind": "provider", "status": "real", "wp": "WP-10 step 2",
+      "what": "The readiness check for the service's own database.",
+      "how": "Extends `ReadinessCheck`, injects `PG_POOL` and runs `SELECT 1` with a per-query `query_timeout` equal to the controller's `CHECK_TIMEOUT_MS`, so a hung check frees its connection when the controller gives up. With Postgres down, `/health/ready` answers 503 with `database: { status: down, message: unavailable }`.",
+      "why": "Readiness covers the database (ADR-010). It moved from api and agent to platform-nest with the pool (WP-10 Q1 A): every service checks its own database the same way.",
+      "files": ["packages/platform-nest/src/database/postgres.readiness-check.ts", "apps/api/test/health.test.ts", "apps/api/test/health.int.test.ts"]
     },
     "di-poolcloser": {
-      "label": "PoolCloser", "sub": "closes the pool", "kind": "provider", "status": "real", "wp": "WP-3 step 6",
+      "label": "PoolCloser", "sub": "closes the pool", "kind": "provider", "status": "real", "wp": "WP-10 step 2",
       "what": "Closes the pool when the app shuts down.",
-      "how": "A private provider of PostgresModule that implements `onApplicationShutdown` and calls `pool.end()`. That hook runs after the HTTP server has closed.",
+      "how": "A private provider of DatabaseModule that implements `onApplicationShutdown` and calls `pool.end()`. That hook runs after the HTTP server has closed.",
       "why": "Closing in `onModuleDestroy` would break queries of requests still in flight. The integration test checks the app closes cleanly.",
-      "files": ["apps/api/src/modules/platform/postgres.module.ts"]
+      "files": ["packages/platform-nest/src/database/database.module.ts"]
     },
     "di-loggermodule": {
       "label": "LoggerModule", "sub": "nestjs-pino · global", "kind": "ext", "status": "real", "wp": "WP-3 step 4",
@@ -1201,11 +1311,11 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/platform-nest/src/telemetry/telemetry.module.ts", "packages/platform-nest/src/telemetry/telemetry-state.ts", "apps/api/src/app.module.ts", "packages/platform-nest/test/telemetry.test.ts"]
     },
     "di-feature": {
-      "label": "feature providers", "sub": "planned · WP-10 on", "kind": "provider", "status": "planned", "wp": "WP-10 on",
+      "label": "feature providers", "sub": "planned · WP-12 on", "kind": "provider", "status": "planned", "wp": "WP-12 on",
       "what": "The services, repositories and use cases that feature modules will add.",
-      "how": "They inject `ApiConfig` and `PinoLogger` by constructor type, and `PG_POOL` with `@Inject` after importing PostgresModule (WP-10 puts Drizzle on top). The test already injects `ApiConfig` this way with `NeedsConfig` inside a separate `FeatureModule`. The arrow to ApiConfig is left out of the drawing to keep it readable.",
-      "why": "Shows the two tokens any feature can rely on today.",
-      "files": ["apps/api/test/app.module.test.ts"]
+      "how": "They inject `ApiConfig` and `PinoLogger` by constructor type, `PG_POOL` (to open transactions with `withTransaction` or a unit of work) and `DRIZZLE` (for display reads) with `@Inject`, from the global DatabaseModule. The only one today is `PingService` in the development-only `DevPingModule` (section 9). The test already injects `ApiConfig` this way with `NeedsConfig` inside a separate `FeatureModule`. The arrows to ApiConfig and the tokens are left out of the drawing to keep it readable.",
+      "why": "Shows the tokens any feature can rely on today.",
+      "files": ["apps/api/test/app.module.test.ts", "apps/api/src/modules/ping/"]
     },
     "g-uselogger": {
       "label": "app.useLogger(...)", "sub": "consumes nestjs-pino Logger", "kind": "global", "status": "real", "wp": "WP-3 step 4",
@@ -1418,11 +1528,11 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["turbo.json"]
     },
     "c-verify": {
-      "label": "pnpm verify", "sub": "turbo run lint depcruise typecheck test test:scripts --affected", "kind": "check", "status": "real", "wp": "WP-1",
+      "label": "pnpm verify", "sub": "turbo run lint depcruise typecheck test test:scripts --affected && pnpm check:migrations", "kind": "check", "status": "real", "wp": "WP-1",
       "what": "The single \"am I done\" command, run before every commit and again after merging main.",
-      "how": "Turborepo runs Biome, dependency-cruiser, typecheck and unit tests for affected packages only, cached. `pnpm verify:all` runs everything (on main and, from WP-6, in CI).",
+      "how": "Turborepo runs Biome, dependency-cruiser, typecheck and unit tests for affected packages only, cached; then `pnpm check:migrations` runs outside Turborepo, because its input is git history, which no cache key sees. `pnpm verify:all` runs everything (on main and, from WP-6, in CI).",
       "why": "One command, one answer (AGENTS.md section 3).",
-      "files": ["package.json", "turbo.json"]
+      "files": ["package.json", "turbo.json", "scripts/check-migrations.mjs"]
     },
     "c-biome": {
       "label": "Biome", "sub": "biome ci . · format and lint", "kind": "check", "status": "real", "wp": "WP-1",
@@ -1455,9 +1565,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "c-testint": {
       "label": "pnpm test:int", "sub": "Testcontainers · needs Docker", "kind": "check", "status": "real", "wp": "WP-3 step 6",
       "what": "Integration tests against real containers, kept out of `pnpm verify`.",
-      "how": "`turbo run test:int` runs each package's `vitest.int.config.ts`, built from `integrationConfig()`: only `test/**/*.int.test.ts`, longer timeouts, and a global setup. api's global setup first calls `useDockerContextHost()`, then starts one `pgvector/pgvector:0.8.7-pg18` container per run and provides its URL; each test file creates and drops its own database. A unit test keeps that tag equal to `compose.dev.yml`.",
+      "how": "`turbo run test:int` runs each package's `vitest.int.config.ts`, built from `integrationConfig()`: only `test/**/*.int.test.ts`, longer timeouts, and a global setup. The global setup of api, agent, messaging and the module template first calls `useDockerContextHost()`, then starts one `pgvector/pgvector:0.8.7-pg18` container per run and provides its URL; each test file creates and drops its own database. A unit test keeps that tag equal to `compose.dev.yml`. Since WP-10 they prove the data layer: migrations from zero as an ordinary role, the repository and unit of work contracts on Drizzle, rollback and the atomic outbox.",
       "why": "WP-3 decision H: one container per run, one database per file, so files run in parallel without sharing rows. `pnpm verify` stays fast and Docker-free; CI runs these from WP-6. Testcontainers looks only at `DOCKER_HOST`, `~/.testcontainers.properties` and `/var/run/docker.sock`, not at the Docker CLI context that OrbStack, Colima and Docker Desktop use on macOS. `useDockerContextHost()` asks `docker context inspect` and sets `DOCKER_HOST` when none is set, so `pnpm test:int` works wherever `pnpm dev:up` works.",
-      "files": ["apps/api/vitest.int.config.ts", "apps/api/test/setup/postgres.global-setup.ts", "apps/api/test/setup/docker-host.ts", "apps/api/test/docker-host.test.ts", "apps/api/test/setup/test-database.ts", "apps/api/test/images.test.ts", "packages/config/vitest/base.js"]
+      "files": ["apps/api/vitest.int.config.ts", "apps/api/test/setup/postgres.global-setup.ts", "apps/api/test/setup/docker-host.ts", "apps/api/test/setup/test-database.ts", "apps/api/test/outbox.int.test.ts", "apps/api/test/migrations.int.test.ts", "templates/nest-module/test/widgets.int.test.ts", "packages/config/vitest/base.js"]
     },
     "c-e2e": {
       "label": "pnpm test:e2e", "sub": "Playwright · axe · standalone build", "kind": "check", "status": "real", "wp": "WP-4",
@@ -1616,14 +1726,14 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "m-notes-service": {
       "label": "NotesService", "sub": "application service", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
       "what": "The one class the controller calls. It trims and stores.",
-      "how": "Injects `NotesRepository` by class. Tested with the real in-memory repository, since there is no port to fake.",
+      "how": "Injects `NotesRepository` by class. Tested with the real in-memory repository, since there is no port to fake. In a service that writes, it injects `PG_POOL` and wraps the write in `withTransaction(pool, ({ db, executor }) => ...)` directly, with no unit of work port: that is what `PingService` and `HeartbeatConsumer` do.",
       "why": "Keeps the controller thin even in a simple module.",
       "files": ["templates/nest-module/src/modules/notes/notes.service.ts", "templates/nest-module/src/modules/notes/notes.service.test.ts"]
     },
     "m-notes-repo": {
-      "label": "NotesRepository", "sub": "in-memory map · Drizzle from WP-10", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
+      "label": "NotesRepository", "sub": "in-memory map · Drizzle in apps", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
       "what": "Storage for notes.",
-      "how": "A `Map` keeps the template runnable. In a real module this is the Drizzle repository.",
+      "how": "A `Map` keeps the template runnable. In a service it is a plain Drizzle class with no port, like agent's `HeartbeatRepository`: display reads on `DRIZZLE`, writes on the `db` of the transaction the service opened with `withTransaction` (WP-10 D5, step 5 option B).",
       "why": "One implementation, injected directly by class.",
       "files": ["templates/nest-module/src/modules/notes/notes.repository.ts"]
     },
@@ -1637,12 +1747,12 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "m-w-module": {
       "label": "WidgetsModule", "sub": "hexagonal · binds adapters to ports", "kind": "module", "status": "real", "wp": "WP-3 step 8",
       "what": "The wiring: the only place that knows which adapter backs each port.",
-      "how": "Declares `WidgetsController`, provides `CreateWidget`, `{ provide: WidgetRepository, useClass: InMemoryWidgetRepository }` and `{ provide: IdGenerator, useClass: UuidV7IdGenerator }`. A wiring test boots it.",
-      "why": "Swap the in-memory adapter for a Drizzle one here and nothing else changes (composition root).",
+      "how": "Declares `WidgetsController`, provides `CreateWidget`, `InMemoryWidgetRepository` with `{ provide: WidgetRepository, useExisting: InMemoryWidgetRepository }`, `{ provide: WidgetsUnitOfWork, useClass: InMemoryWidgetsUnitOfWork }` and `{ provide: IdGenerator, useClass: UuidV7IdGenerator }`. Both in-memory ports share one store, so a read outside `run` sees what `run` committed. A service binds `DrizzleWidgetRepository` and `DrizzleWidgetsUnitOfWork` instead (README, \"Bind the Drizzle adapters in a service\"). A wiring test boots it.",
+      "why": "Swap the in-memory adapters for the Drizzle ones here and nothing else changes (composition root).",
       "files": ["templates/nest-module/src/modules/widgets/widgets.module.ts", "templates/nest-module/test/wiring.test.ts"]
     },
     "m-w-controller": {
-      "label": "WidgetsController", "sub": "presentation/ · POST /widgets", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
+      "label": "WidgetsController", "sub": "presentation · POST /widgets", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
       "what": "The HTTP edge: validates the shape, calls one use case, maps domain errors to HTTP.",
       "how": "`@Body({ schema })` checks `{ name: string }` (400 on a bad shape). It calls `CreateWidget.execute` and turns `WidgetNameInvalid` into `UnprocessableEntityException`, which ProblemDetailsFilter renders as a 422 problem.",
       "why": "Shape errors (400) and rule errors (422) stay distinct: the shape is the boundary's job, the rule is the domain's.",
@@ -1651,16 +1761,16 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "m-w-usecase": {
       "label": "CreateWidget", "sub": "application/ · use case", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
       "what": "One use case per class: it orchestrates the domain and the ports and holds no rules of its own.",
-      "how": "Injects `WidgetRepository` and `IdGenerator` by their abstract classes, calls `Widget.create(ids.next(), name)` and saves it. Its test declares its own fakes of both ports.",
-      "why": "Depends on ports only (rule `application-never-imports-infrastructure`), so it tests with fakes and no database (ADR-009).",
+      "how": "Injects `WidgetsUnitOfWork` and `IdGenerator` by their abstract classes, calls `Widget.create(ids.next(), name)` and saves it inside `uow.run(async ({ widgets }) => widgets.save(widget))`. A second write (the outbox row of an event) would go in the same `run`, so both commit or neither does. Its test declares its own fakes of both ports.",
+      "why": "Depends on ports only (rule `application-never-imports-infrastructure`), so it tests with fakes and no database (ADR-009). It owns the transaction boundary (ADR-012, WP-10 D6).",
       "files": ["templates/nest-module/src/modules/widgets/application/create-widget.use-case.ts", "templates/nest-module/src/modules/widgets/application/create-widget.use-case.test.ts"]
     },
     "m-w-repo-port": {
       "label": "WidgetRepository", "sub": "port · abstract class", "kind": "token", "status": "real", "wp": "WP-3 step 8",
       "what": "What the use cases need from storage: `findById` and `save`.",
-      "how": "An abstract class in `application/`. It is the TypeScript type and the DI token at once, like `ApiConfig`.",
+      "how": "An abstract class in `application/`. It is the TypeScript type and the DI token at once, like `ApiConfig`. Since WP-10 the use case gets it from the unit of work's scope for anything it writes; a use case that only displays widgets injects it and reads outside a transaction.",
       "why": "Ports are abstract classes (ADR-003, AGENTS.md rule 4).",
-      "files": ["templates/nest-module/src/modules/widgets/application/widget.repository.ts"]
+      "files": ["templates/nest-module/src/modules/widgets/application/widget.repository.ts", "templates/nest-module/src/modules/widgets/application/widget.repository.contract.ts"]
     },
     "m-w-id-port": {
       "label": "IdGenerator", "sub": "port · abstract class", "kind": "token", "status": "real", "wp": "WP-3 step 8",
@@ -1672,9 +1782,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "m-w-inmem": {
       "label": "InMemoryWidgetRepository", "sub": "infrastructure/ · adapter", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
       "what": "An adapter for the repository port that keeps the template runnable.",
-      "how": "Extends `WidgetRepository` with a `Map`. In a service a Drizzle adapter replaces it and gets a Testcontainers test.",
+      "how": "Extends `WidgetRepository` with a `Map` of rows (a copy in and out, like a database). Passes `widgetRepositoryContract`, the same suite the Drizzle adapter passes in `pnpm test:int`, so use-case tests can trust it.",
       "why": "Adapters live in `infrastructure/` and are bound only in the module file.",
-      "files": ["templates/nest-module/src/modules/widgets/infrastructure/in-memory-widget.repository.ts"]
+      "files": ["templates/nest-module/src/modules/widgets/infrastructure/in-memory-widget.repository.ts", "templates/nest-module/src/modules/widgets/infrastructure/in-memory-widget.repository.test.ts"]
     },
     "m-w-randomid": {
       "label": "UuidV7IdGenerator", "sub": "infrastructure/ · adapter", "kind": "provider", "status": "real", "wp": "WP-3 step 8",
@@ -1714,9 +1824,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "e-outbox": {
       "label": "INSERT messaging.outbox", "sub": "same transaction as the change", "kind": "step", "status": "real", "wp": "WP-5 step 5",
       "what": "The event is saved as a row, with the request's traceparent inside the envelope.",
-      "how": "`inTransaction(pool, tx => addToOutbox(tx, systemPingV1, data, \"jadero/api\"))`; `createEnvelope` checks the data against the contract first.",
-      "why": "ADR-012: the transactional outbox removes the dual write; the broker leaves the request path.",
-      "files": ["packages/messaging/src/outbox/outbox.ts", "packages/messaging/src/outbox/envelope.ts"]
+      "how": "`withTransaction(pool, ({ executor }) => addToOutbox(executor, systemPingV1, { trigger }, \"jadero/api\"))` in `PingService`; `createEnvelope` checks the data against the contract first. The row goes on the transaction's `executor`, never on the pool: a write on another pool connection autocommits and survives a rollback, and the relay would publish a phantom event (`outbox.int.test.ts` proves both).",
+      "why": "ADR-012: the transactional outbox removes the dual write; the broker leaves the request path. WP-10 D6: the use case owns the transaction and the outbox row is one of its writes.",
+      "files": ["apps/api/src/modules/ping/ping.service.ts", "packages/messaging/src/outbox/outbox.ts", "packages/platform-nest/src/database/transaction.ts", "apps/api/test/outbox.int.test.ts"]
     },
     "e-relay": {
       "label": "OutboxRelay", "sub": "api-worker · every 1 s", "kind": "step", "status": "real", "wp": "WP-5 step 5",
@@ -1740,11 +1850,11 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/messaging/src/rabbitmq-message-bus.ts", "packages/messaging/src/dispatch.ts"]
     },
     "e-inbox": {
-      "label": "idempotent()", "sub": "inbox + effects, one transaction", "kind": "step", "status": "real", "wp": "WP-5 step 5",
+      "label": "recordInInbox()", "sub": "inbox + upsert, one transaction", "kind": "step", "status": "real", "wp": "WP-5 step 5",
       "what": "Inserts (consumer, event_id); only a new row runs the effect (the broker_heartbeat upsert).",
-      "how": "`INSERT ... ON CONFLICT DO NOTHING RETURNING`; a failing effect rolls back the inbox row too.",
-      "why": "Decision I1: at-least-once delivery made safe; keyed by consumer so two consumers in one database stay independent.",
-      "files": ["packages/messaging/src/inbox/idempotent.ts", "apps/agent/src/modules/heartbeat/heartbeat.consumer.ts"]
+      "how": "Inside `withTransaction`: `recordInInbox(executor, queue, envelope)` runs `INSERT ... ON CONFLICT DO NOTHING RETURNING`; only a new row runs `HeartbeatRepository.record(db, ...)` on the same transaction's Drizzle. A failing upsert rolls back the inbox row too, so the redelivery is processed (`heartbeat.int.test.ts`).",
+      "why": "Decision I1: at-least-once delivery made safe; keyed by consumer so two consumers in one database stay independent. WP-10 D5: the heartbeat is a layered module, so it calls `withTransaction` directly, with no unit of work port.",
+      "files": ["packages/messaging/src/inbox/idempotent.ts", "apps/agent/src/modules/heartbeat/heartbeat.consumer.ts", "apps/agent/test/heartbeat.int.test.ts"]
     },
     "e-ack": {
       "label": "ack", "sub": "after the commit", "kind": "step", "status": "real", "wp": "WP-5 step 4",
@@ -1775,11 +1885,11 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/messaging/src/outcome.ts"]
     },
     "d-s1": {
-      "label": "S1 · SqlExecutor seam", "sub": "pg now, Drizzle in WP-10", "kind": "rule", "status": "real", "wp": "WP-5",
+      "label": "S1 · SqlExecutor seam", "sub": "raw SQL on the caller's connection", "kind": "rule", "status": "real", "wp": "WP-5",
       "what": "Outbox and inbox take the caller's transaction as a minimal executor.",
-      "how": "A pg.PoolClient fits as is; sql/0001_messaging.sql is applied by each service's migrate script.",
-      "why": "WP-10 adds Drizzle without rewriting messaging.",
-      "files": ["packages/messaging/src/sql/sql-executor.ts"]
+      "how": "A `pg.PoolClient` fits as is, and so does `withTransaction`'s `executor` from platform-nest (structurally the same interface, since messaging must not import platform-nest). The tables are Drizzle schema in `@jadero/messaging/schema`, migrated by each service (WP-10 Q1 A).",
+      "why": "WP-10 added Drizzle without rewriting messaging: the relay and the inbox kept their raw SQL.",
+      "files": ["packages/messaging/src/sql/sql-executor.ts", "packages/platform-nest/src/database/transaction.ts"]
     },
     "d-e1": {
       "label": "E1 · one trace", "sub": "structured CloudEvents", "kind": "rule", "status": "real", "wp": "WP-5",
@@ -1800,7 +1910,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "what": "One row per event to publish, written in the same transaction as the change that caused it.",
       "how": "Columns: id (the CloudEvents id), type, routing_key, envelope (jsonb, exactly what goes on the wire), attempts, next_attempt_at, last_error (error kind only), published_at. A partial index on unsent rows keeps the relay's poll cheap; published rows are deleted after 7 days by the daily cleanup.",
       "why": "ADR-012: the event commits with the change or not at all (transactional outbox). api never talks to RabbitMQ.",
-      "files": ["packages/messaging/sql/0001_messaging.sql"]
+      "files": ["packages/messaging/src/schema.ts", "apps/api/drizzle/0000_messaging.sql"]
     },
     "g-unrouted": {
       "label": "jadero.unrouted", "sub": "alternate exchange + queue", "kind": "step", "status": "real", "wp": "WP-5 step 4",
@@ -1833,9 +1943,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "g-heartbeat": {
       "label": "broker_heartbeat", "sub": "table in agent_dev", "kind": "file", "status": "real", "wp": "WP-5 step 6",
       "what": "agent's read model of the ping: when the path last worked, per source.",
-      "how": "Upserted in the inbox's transaction; the upsert only moves forward in time, because delivery order is not guaranteed.",
+      "how": "A Drizzle table (`heartbeat.broker_heartbeat`). Upserted in the inbox's transaction; the upsert only moves forward in time (`WHERE last_seen_at < excluded.last_seen_at`), because delivery order is not guaranteed.",
       "why": "ADR-029 rule 3: agent keeps its own read model fed by events. A future lag signal for WP-26 and the Under the hood page.",
-      "files": ["apps/agent/sql/0001_broker_heartbeat.sql", "apps/agent/src/modules/heartbeat/heartbeat.repository.ts"]
+      "files": ["apps/agent/src/modules/heartbeat/infrastructure/heartbeat.schema.ts", "apps/agent/src/modules/heartbeat/heartbeat.repository.ts", "apps/agent/drizzle/0001_messaging_and_heartbeat.sql"]
     },
     "ev-system-ping-v1": {
       "label": "system.ping.v1", "sub": "api → agent.system.ping", "kind": "file", "status": "real", "wp": "WP-5",
@@ -1843,6 +1953,251 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "how": "Producer: api, through its outbox (`PingService`: `POST /dev/ping` in development, the heartbeat in api-worker every 5 minutes). Consumer: `agent.system.ping` (agent's consumer process) into `broker_heartbeat`. Type `dev.jadero.system.ping.v1`; schema, fixture and frozen compatibility snapshot in packages/contracts.",
       "why": "Decision W1 c: proves outbox, relay, broker, consumer, inbox and the trace in every environment.",
       "files": ["packages/contracts/src/events/system-ping.v1.ts", "packages/contracts/fixtures/system.ping.v1.json", "packages/contracts/compat/system.ping.v1.json"]
+    },
+    "rule-messaging-drizzle": {
+      "label": "messaging uses Drizzle only in its schema", "sub": "messaging-drizzle-only-in-schema · error", "kind": "rule", "status": "real", "wp": "WP-10",
+      "what": "In `packages/messaging`, only `src/schema.ts` may import `drizzle-orm`.",
+      "how": "From `^packages/messaging/src/` (except `schema.ts`) to `drizzle-orm` is an error. The schema file is published as `@jadero/messaging/schema`; the bus, the relay and the inbox keep their raw SQL on the `SqlExecutor` seam.",
+      "why": "WP-10 Q1 A shares the outbox and inbox table definitions from messaging, so each service's drizzle-kit writes their DDL into its own migrations. The rule keeps that from growing into Drizzle everywhere: the relay and the inbox still work on any `pg` connection, and `drizzle-orm` stays a peer only the schema subpath needs.",
+      "files": [".dependency-cruiser.cjs", "packages/messaging/src/schema.ts", "packages/messaging/package.json"]
+    },
+    "di-drizzle": {
+      "label": "DRIZZLE", "sub": "drizzleOn(pool)", "kind": "token", "status": "real", "wp": "WP-10 step 2",
+      "what": "Drizzle over the pool, for queries outside a transaction.",
+      "how": "`useFactory: (pool) => drizzleOn(pool, options.schema)` with `inject: [PG_POOL]`; typed as `Database<TSchema>`. `drizzleOn` is the same builder `withTransaction` uses on its checked-out client, so a query reads the same column names (`casing: \"snake_case\"`) inside and outside a transaction. In api nothing injects it yet; in the template `DrizzleWidgetRepository` does, for display reads.",
+      "why": "ADR-005: Drizzle behind repositories. Reads that only display data run on the pool and never hold a transaction (WP-10 Decision, the rule from the discussion); writes take the transaction's Drizzle instead.",
+      "files": ["packages/platform-nest/src/database/database.module.ts", "packages/platform-nest/src/database/transaction.ts"]
+    },
+    "m-w-uow-port": {
+      "label": "WidgetsUnitOfWork", "sub": "port · abstract class · run(work)", "kind": "token", "status": "real", "wp": "WP-10 step 6",
+      "what": "The port of the module's transactions: `run(work)` hands `work` a scope of repositories bound to one transaction.",
+      "how": "An abstract class in `application/` with one method, `run<T>(work: (scope: WidgetsScope) => Promise<T>)`. `WidgetsScope` holds `widgets: WidgetRepository`; a module with an event adds the outbox write to the scope. Commits when `work` resolves; discards everything and rethrows the same error when it throws.",
+      "why": "WP-10 Q2 B: ports stay free of storage types (`save(widget)`, no `tx` argument), the boundary is visible in the use case, and the fake is a few lines. The ambient alternative (AsyncLocalStorage, `nestjs-cls`) was turned down because a repository called outside the transaction would silently autocommit.",
+      "files": ["templates/nest-module/src/modules/widgets/application/widgets.unit-of-work.ts", "templates/nest-module/src/modules/widgets/application/widgets.unit-of-work.contract.ts"]
+    },
+    "m-w-inmem-uow": {
+      "label": "InMemoryWidgetsUnitOfWork", "sub": "infrastructure/ · staged writes", "kind": "provider", "status": "real", "wp": "WP-10 step 6",
+      "what": "The fake unit of work, bound by the template so it boots without a database.",
+      "how": "Injects `InMemoryWidgetRepository` (the committed rows) and hands `work` a staged repository: writes go to a staged copy, reads see the staged rows first (read your own writes). When `work` resolves the staged rows are copied into the store; when it throws they are dropped.",
+      "why": "Passes `widgetsUnitOfWorkContract`, the same suite as the Drizzle adapter, so a use-case test that rolls back on the fake rolls back on Postgres too.",
+      "files": ["templates/nest-module/src/modules/widgets/infrastructure/in-memory-widgets.unit-of-work.ts", "templates/nest-module/src/modules/widgets/infrastructure/in-memory-widgets.unit-of-work.test.ts"]
+    },
+    "m-w-drizzle-uow": {
+      "label": "DrizzleWidgetsUnitOfWork", "sub": "infrastructure/ · in a service", "kind": "provider", "status": "real", "wp": "WP-10 step 6",
+      "what": "The real unit of work: one Postgres transaction per `run`.",
+      "how": "Injects `PG_POOL` and runs `withTransaction(pool, ({ db }) => work({ widgets: new DrizzleWidgetRepository(db) }), { schema })`. `withTransaction` checks out one connection and sends `BEGIN`, `COMMIT` or `ROLLBACK`; nothing here does it by hand. An outbox write would take `withTransaction`'s `executor` into the scope: same connection, same commit.",
+      "why": "WP-10 Q2 B with A inside the adapter: the connection is passed explicitly to Drizzle and to `addToOutbox`, the same explicit style WP-5 already used, with no hidden state. Proved on real Postgres by `widgets.int.test.ts`.",
+      "files": ["templates/nest-module/src/modules/widgets/infrastructure/drizzle-widgets.unit-of-work.ts", "templates/nest-module/test/widgets.int.test.ts"]
+    },
+    "m-w-drizzle-repo": {
+      "label": "DrizzleWidgetRepository", "sub": "infrastructure/ · in a service", "kind": "provider", "status": "real", "wp": "WP-10 step 6",
+      "what": "The real repository: `findById` and `save` in SQL through Drizzle.",
+      "how": "Holds one Drizzle instance: the pool's (`@Inject(DRIZZLE)`) when Nest injects it for display reads, the transaction's when `DrizzleWidgetsUnitOfWork` builds it inside `run`. `save` is an upsert on `widgets.widgets`; rows map back to the aggregate with `Widget.reconstitute`. Uses only the query builder, never the relational `db.query` API.",
+      "why": "ADR-005: Drizzle behind repositories, in `infrastructure/` only. Passes the same contract suite as the in-memory fake, on real Postgres in `pnpm test:int` (WP-10 D7 suite 2).",
+      "files": ["templates/nest-module/src/modules/widgets/infrastructure/drizzle-widget.repository.ts", "templates/nest-module/test/widgets.int.test.ts"]
+    },
+    "m-w-schema": {
+      "label": "widget.schema.ts", "sub": "table widgets.widgets", "kind": "file", "status": "real", "wp": "WP-10 step 6",
+      "what": "The table definition the Drizzle adapter queries.",
+      "how": "`pgSchema(\"widgets\").table(\"widgets\", { id: uuid, name: text, ... })`. In a service, schema files live in `src/modules/*/infrastructure/*.schema.ts`, which `drizzle.config.ts` reads by path; they are never exported from the module's `index.ts`. The template has no migrations: its integration test creates the table from `test/support/widgets-ddl.ts`.",
+      "why": "One schema per module keeps a module's tables its own inside the service's database (section 9 shows the migration flow).",
+      "files": ["templates/nest-module/src/modules/widgets/infrastructure/widget.schema.ts", "templates/nest-module/test/support/widgets-ddl.ts"]
+    },
+    "m-w-platform": {
+      "label": "@jadero/platform-nest", "sub": "PG_POOL · DRIZZLE · withTransaction", "kind": "pkg", "status": "real", "wp": "WP-10 step 2",
+      "what": "Where the Drizzle adapters get their connection.",
+      "how": "`DatabaseModule.forRoot` in the service's root module provides `PG_POOL` and `DRIZZLE` globally; `withTransaction(pool, work)` runs `work` on one checked-out connection. Sections 2 and 9 show them.",
+      "why": "WP-10 Q1 A: one implementation of the pool, Drizzle and the transaction helper for every service.",
+      "files": ["packages/platform-nest/src/database/database.module.ts", "packages/platform-nest/src/database/transaction.ts"]
+    },
+    "m-w-contracts": {
+      "label": "Contract suites", "sub": "one per port · fake and Drizzle adapter", "kind": "check", "status": "real", "wp": "WP-10 step 6",
+      "what": "`widgetRepositoryContract(make)` and `widgetsUnitOfWorkContract(make)`: the behaviors every adapter of a port must have.",
+      "how": "Each is a function that registers Vitest cases against an adapter factory. The in-memory adapters run them in `pnpm verify`; the Drizzle adapters run them in `pnpm test:int` on Postgres from Testcontainers. The unit of work suite checks commit, read your own write, and rollback with the same error rethrown.",
+      "why": "WP-10 D5 and D7: a fake that passes the same suite as the real adapter can be trusted in every use-case test, so most tests stay fast and Docker-free.",
+      "files": ["templates/nest-module/src/modules/widgets/application/widget.repository.contract.ts", "templates/nest-module/src/modules/widgets/application/widgets.unit-of-work.contract.ts", "templates/nest-module/test/widgets.int.test.ts"]
+    },
+    "c-migrations": {
+      "label": "pnpm check:migrations", "sub": "append-only migrations · in pnpm verify", "kind": "check", "status": "real", "wp": "WP-10 step 3",
+      "what": "Fails when a branch edits or deletes a migration that `main` already has.",
+      "how": "Compares the merge base with `origin/main` (else `main`) against the working tree for files under `apps/<service>/drizzle/`: a new file passes unless main has one of that name with other content; `meta/_journal.json` may only grow, main's entries first and unchanged; any other change fails. Without either base (a shallow clone) it prints a notice and passes.",
+      "why": "Drizzle's migrator applies only journal entries newer than the last applied one and never compares the stored hash, so an edited migration is skipped in every database that already ran it and applied in every new one: schema drift by environment. The fix is always a new migration (WP-10, step 3 check question).",
+      "files": ["scripts/check-migrations.mjs", "scripts/check-migrations.test.mjs", "package.json"]
+    },
+    "db-withtx": {
+      "label": "withTransaction(pool, work)", "sub": "platform-nest · one connection", "kind": "provider", "status": "real", "wp": "WP-10 step 4",
+      "what": "The helper every transaction in a service goes through: a unit of work over one pooled connection.",
+      "how": "Checks out a client, sends `BEGIN`, calls `work({ db, executor })` with Drizzle and a raw executor both bound to that client, then `COMMIT` when `work` resolves, or `ROLLBACK` and rethrow when it throws. The client always goes back to the pool; when `ROLLBACK` itself fails it is released with the error, so `pg` destroys the broken connection. Isolation is Postgres's default, `READ COMMITTED`. A plain function, not a provider: callers inject `PG_POOL` and pass it in.",
+      "why": "WP-10 D6: the use case owns the transaction, and the outbox row is one of its writes. Q2: hexagonal modules call it through a unit of work port, layered ones call it directly. Nobody sends `BEGIN` by hand.",
+      "files": ["packages/platform-nest/src/database/transaction.ts", "packages/platform-nest/test/transaction.test.ts"]
+    },
+    "db-ping": {
+      "label": "PingService", "sub": "api · outbox writer", "kind": "provider", "status": "real", "wp": "WP-5 step 6 · WP-10 step 5",
+      "what": "Writes one `system.ping.v1` to api's outbox, for `POST /dev/ping` and api-worker's heartbeat.",
+      "how": "Injects `PG_POOL`, then `withTransaction(this.pool, ({ executor }) => addToOutbox(executor, systemPingV1, { trigger }, \"jadero/api\"))`. Returns the event id. Provided by `PingModule`; `DevPingModule` adds the controller in development only.",
+      "why": "A layered module with no rules (ADR-003, WP-10 D5): no unit of work port, the transaction helper directly.",
+      "files": ["apps/api/src/modules/ping/ping.service.ts", "apps/api/src/modules/ping/ping.module.ts", "apps/api/test/outbox.int.test.ts"]
+    },
+    "db-hbconsumer": {
+      "label": "HeartbeatConsumer", "sub": "agent consumer · system.ping.v1", "kind": "provider", "status": "real", "wp": "WP-5 step 6 · WP-10 step 5",
+      "what": "Applies each `system.ping.v1` delivery once: the inbox row and the heartbeat upsert in one transaction.",
+      "how": "Injects `MessageBus`, `PG_POOL`, `HeartbeatRepository` and `PinoLogger`. `handle` runs `withTransaction(pool, async ({ db, executor }) => ...)`: `recordInInbox(executor, queue, envelope)`, and only when that inserted a row, `heartbeats.record(db, ...)`. The daily inbox cleanup runs one statement on the pool, outside any transaction.",
+      "why": "Idempotent consumer (ADR-012): a duplicate commits nothing new; a failure rolls back both writes and the bus retries the delivery from scratch.",
+      "files": ["apps/agent/src/modules/heartbeat/heartbeat.consumer.ts", "apps/agent/test/heartbeat.int.test.ts"]
+    },
+    "db-hbrepo": {
+      "label": "HeartbeatRepository", "sub": "agent · Drizzle, no port", "kind": "provider", "status": "real", "wp": "WP-10 step 5",
+      "what": "Writes `heartbeat.broker_heartbeat` through Drizzle.",
+      "how": "A plain class with no port. It holds no connection: `record(db, record)` takes the Drizzle instance of the caller's transaction, so the upsert commits with the inbox row.",
+      "why": "WP-10 D5 and the step 5 decision (option B): layered modules keep a plain Drizzle class, and their repositories take the transaction's `db` as an argument.",
+      "files": ["apps/agent/src/modules/heartbeat/heartbeat.repository.ts", "apps/agent/test/heartbeat.repository.test.ts"]
+    },
+    "db-inbox": {
+      "label": "messaging.inbox", "sub": "table in agent_dev", "kind": "file", "status": "real", "wp": "WP-5 step 5 · WP-10 step 4",
+      "what": "One row per event a consumer has applied, keyed by `(consumer, event_id)`.",
+      "how": "Defined once in `@jadero/messaging/schema`; agent's `src/db/messaging.schema.ts` re-exports only the inbox, so its drizzle-kit writes the DDL into agent's own migration. Rows older than 30 days are deleted daily.",
+      "why": "WP-10 Q1 A: the definition is shared, the table is not: each service migrates its own copy in its own database (ADR-029 rule 1).",
+      "files": ["packages/messaging/src/schema.ts", "apps/agent/src/db/messaging.schema.ts", "apps/agent/drizzle/0001_messaging_and_heartbeat.sql"]
+    },
+    "db-tx-connect": {
+      "label": "pool.connect()", "sub": "check out one client", "kind": "step", "status": "real", "wp": "WP-10 step 4",
+      "what": "Takes one connection out of `PG_POOL` for the whole transaction.",
+      "how": "Waits up to 1 s (`connectionTimeoutMillis`) when the pool is full or the database does not answer, then throws; nothing has started, so there is nothing to roll back.",
+      "why": "Everything in one transaction must run on one connection; a second connection is a second, autocommitting session.",
+      "files": ["packages/platform-nest/src/database/transaction.ts"]
+    },
+    "db-tx-begin": {
+      "label": "BEGIN", "sub": "READ COMMITTED", "kind": "step", "status": "real", "wp": "WP-10 step 4",
+      "what": "Opens the transaction on the checked-out client.",
+      "how": "`client.query(\"BEGIN\")`. When it fails the client is released and `work` never runs.",
+      "why": "WP-10 D6: Postgres's default isolation; concurrent edits of one aggregate get a version column in WP-12, not a stricter level.",
+      "files": ["packages/platform-nest/src/database/transaction.ts"]
+    },
+    "db-tx-work": {
+      "label": "work({ db, executor })", "sub": "the use case's writes", "kind": "step", "status": "real", "wp": "WP-10 step 4",
+      "what": "Runs the caller's writes on the transaction's connection.",
+      "how": "`db` is Drizzle on the client (`drizzleOn(client, schema)`, the same options as `DRIZZLE`), `executor` the same client for raw SQL: `addToOutbox(executor, ...)`, `recordInInbox(executor, ...)`. Everything inside must use the scope, never the pool and never `db.transaction()`.",
+      "why": "Explicit connection passing (Q2 A inside the adapters): no hidden state, and a write that escapes the scope is caught by the rollback test.",
+      "files": ["packages/platform-nest/src/database/transaction.ts", "apps/api/test/outbox.int.test.ts"]
+    },
+    "db-tx-commit": {
+      "label": "COMMIT", "sub": "work resolved", "kind": "step", "status": "real", "wp": "WP-10 step 4",
+      "what": "Makes every write of `work` visible at once.",
+      "how": "After `COMMIT` the client is released and `withTransaction` returns what `work` returned. When `COMMIT` itself fails it rolls back and releases.",
+      "why": "The outbox row and the state change become visible together or not at all (ADR-012).",
+      "files": ["packages/platform-nest/src/database/transaction.ts"]
+    },
+    "db-tx-rollback": {
+      "label": "ROLLBACK", "sub": "work threw", "kind": "step", "status": "real", "wp": "WP-10 step 4",
+      "what": "Discards every write of `work` and rethrows the same error.",
+      "how": "`client.query(\"ROLLBACK\")`, then the original error goes up to the caller (the HTTP filter, or the bus, which retries the delivery). When `ROLLBACK` fails, the client is released with that error so `pg` destroys it.",
+      "why": "D7 suite 3: a throw after both writes leaves no domain row and no outbox row.",
+      "files": ["packages/platform-nest/src/database/transaction.ts", "apps/api/test/outbox.int.test.ts", "apps/agent/test/heartbeat.int.test.ts"]
+    },
+    "db-tx-release": {
+      "label": "client.release()", "sub": "back to the pool", "kind": "step", "status": "real", "wp": "WP-10 step 4",
+      "what": "Returns the connection, on every path.",
+      "how": "`release()` after `COMMIT` or a clean `ROLLBACK`; `release(error)` after a failed one, which destroys the connection instead of reusing it.",
+      "why": "A leaked client would shrink the pool until every request waits; a broken one handed to the next caller would fail it.",
+      "files": ["packages/platform-nest/src/database/transaction.ts", "packages/platform-nest/test/transaction.test.ts"]
+    },
+    "db-mig-schema": {
+      "label": "*.schema.ts", "sub": "the source of truth", "kind": "step", "status": "real", "wp": "WP-10 step 3",
+      "what": "The tables of a service, as Drizzle definitions in TypeScript.",
+      "how": "One file per module in `src/modules/<module>/infrastructure/<name>.schema.ts` (agent: `heartbeat.schema.ts`), plus `src/db/messaging.schema.ts`, which re-exports only the messaging tables the service uses (api: the outbox; agent: the inbox). Never exported from a module's `index.ts`; dependency-cruiser lets drizzle-kit load them by path.",
+      "why": "ADR-005: the schema is TypeScript, the migration is generated SQL. ADR-027: one database per service, with its own Postgres schemas inside.",
+      "files": ["apps/agent/src/modules/heartbeat/infrastructure/heartbeat.schema.ts", "apps/api/src/db/messaging.schema.ts", "apps/agent/src/db/messaging.schema.ts"]
+    },
+    "db-mig-config": {
+      "label": "drizzle-kit config", "sub": "drizzle.config.ts per service", "kind": "step", "status": "real", "wp": "WP-10 step 3",
+      "what": "Tells drizzle-kit which schema files to read and where to write.",
+      "how": "`dialect: \"postgresql\"`, `schema: [\"./src/modules/*/infrastructure/*.schema.ts\", \"./src/db/messaging.schema.ts\"]`, `out: \"./drizzle\"`, `casing: \"snake_case\"` (must match `DatabaseModule`). No `dbCredentials`: `generate` needs no database, and `push` and `studio` are never used.",
+      "why": "A dev tool's config, never in the image.",
+      "files": ["apps/api/drizzle.config.ts", "apps/agent/drizzle.config.ts"]
+    },
+    "db-mig-generate": {
+      "label": "pnpm db:generate", "sub": "drizzle-kit generate", "kind": "step", "status": "real", "wp": "WP-10 step 3",
+      "what": "Turns the difference between the schema files and the last snapshot into a new SQL migration.",
+      "how": "Per service: `pnpm --filter @jadero/api db:generate`. Turborepo builds the workspace packages first (`^build`), because `messaging.schema.ts` imports `@jadero/messaging/schema` from `dist`. Writes `drizzle/NNNN_<name>.sql`, `meta/NNNN_snapshot.json` and a new `meta/_journal.json` entry.",
+      "why": "WP-10 D3: generated SQL, reviewed in the PR; never `drizzle-kit push`.",
+      "files": ["apps/api/package.json", "turbo.json"]
+    },
+    "db-mig-sql": {
+      "label": "SQL migration", "sub": "drizzle/NNNN_*.sql · never edited", "kind": "step", "status": "real", "wp": "WP-10 step 3",
+      "what": "The migration the PR reviews and the deploy applies.",
+      "how": "api: `0000_messaging.sql` (schema `messaging`, the outbox and its partial index). agent: `0000_enable_vector.sql` (a custom migration, `CREATE EXTENSION IF NOT EXISTS vector`) and `0001_messaging_and_heartbeat.sql`. Expand only: no `DROP` in the release that needs the change, no down migrations, no `CREATE INDEX CONCURRENTLY` (all pending migrations run in one transaction), no superuser.",
+      "why": "WP-10 D3: every migration is backward compatible, so a rollback is \"run the previous image\". The expand/contract of events, applied to tables.",
+      "files": ["apps/api/drizzle/0000_messaging.sql", "apps/agent/drizzle/0000_enable_vector.sql", "apps/agent/drizzle/0001_messaging_and_heartbeat.sql"]
+    },
+    "db-mig-check": {
+      "label": "pnpm verify", "sub": "drift test · append-only check", "kind": "step", "status": "real", "wp": "WP-10 step 3",
+      "what": "Catches a forgotten `db:generate` and an edited migration before the commit.",
+      "how": "Each service's `migrations.test.ts` (a unit test) checks the journal order and that every entry has its SQL file, then runs drizzle-kit against the schema files and fails unless it finds no schema changes. `pnpm check:migrations` fails when the branch edits or deletes a migration `main` already has.",
+      "why": "Drizzle's migrator applies only journal entries newer than the last applied one and never compares hashes, so both mistakes would pass silently and drift environments apart.",
+      "files": ["apps/api/test/migrations.test.ts", "apps/api/test/setup/pending-schema-changes.ts", "scripts/check-migrations.mjs"]
+    },
+    "db-mig-build": {
+      "label": "pnpm build", "sub": "dist/migrate.js", "kind": "step", "status": "real", "wp": "WP-10 step 3",
+      "what": "Compiles the migrate entry with the rest of the service.",
+      "how": "`src/migrate.ts` becomes `dist/migrate.js`; the `drizzle/` folder ships next to it, read through `new URL(\"../drizzle\", import.meta.url)`. Per-app `turbo.json` makes `db:migrate` depend on `build`.",
+      "why": "The same image runs the service and its migrations, so they never disagree on the folder.",
+      "files": ["apps/api/src/migrate.ts", "apps/api/turbo.json"]
+    },
+    "db-mig-run": {
+      "label": "pnpm db:migrate", "sub": "node dist/migrate.js · runMigrations", "kind": "step", "status": "real", "wp": "WP-10 step 3",
+      "what": "The one-off migrate step: applies every pending migration to the service's own database, then exits.",
+      "how": "Reads only `DATABASE_URL`. `runMigrations` checks the folder (journal shape and order, every SQL file listed), opens a pool of one connection, fails fast when `SELECT 1` does not answer within 5 s, then runs Drizzle's `migrate()`, all pending migrations in one transaction, and closes the pool. Any failure is a `MigrationError` whose message carries an error code, never the URL, and exit code 1.",
+      "why": "WP-10 D2: never at boot. The deploy (WP-9) runs it once and starts the new version only on exit 0, so a failed migration leaves the old version serving. Runs as an ordinary role, never a superuser.",
+      "files": ["apps/api/src/migrate.ts", "apps/agent/src/migrate.ts", "packages/platform-nest/src/database/migrations.ts", "apps/api/test/migrations.int.test.ts"]
+    },
+    "db-mig-boot": {
+      "label": "service starts", "sub": "never migrates", "kind": "step", "status": "real", "wp": "WP-10 step 3",
+      "what": "The service boots against a database that is already migrated.",
+      "how": "`main.js` builds `DatabaseModule` and connects lazily; readiness reports the database. Nothing at boot runs DDL.",
+      "why": "Several replicas booting at once never race on a migration, and a bad migration never crash-loops the service.",
+      "files": ["apps/api/src/main.ts"]
+    },
+    "db-d-q1": {
+      "label": "Q1 A · shared plumbing", "sub": "DatabaseModule in platform-nest", "kind": "rule", "status": "real", "wp": "WP-10",
+      "what": "The pool, Drizzle, readiness, shutdown and the transaction helper live in platform-nest; the outbox and inbox tables in `@jadero/messaging/schema`.",
+      "how": "Each service passes its URL and pool size, includes only the messaging tables it uses in its drizzle-kit config, and generates, reviews and applies its own migration to its own database.",
+      "why": "The plumbing was the same in every service and two copies already existed. Sharing the table definitions is not sharing tables: database per service stays intact.",
+      "files": ["packages/platform-nest/src/database/", "packages/messaging/src/schema.ts", "docs/learning/wp-10.md"]
+    },
+    "db-d-q2": {
+      "label": "Q2 B · unit of work", "sub": "hexagonal: port · layered: helper", "kind": "rule", "status": "real", "wp": "WP-10",
+      "what": "Hexagonal modules declare a unit of work port whose `run(work)` hands out repositories bound to one transaction; layered modules call `withTransaction` directly.",
+      "how": "Inside the Drizzle adapter the connection is passed explicitly (option A). Constructor-injected repositories are for display reads only, outside any transaction; a read that feeds a write runs inside `run`.",
+      "why": "The boundary is visible in the use case and ports stay free of storage types. Ambient transactions (AsyncLocalStorage) were turned down: a repository called outside them silently autocommits.",
+      "files": ["templates/nest-module/src/modules/widgets/application/widgets.unit-of-work.ts", "docs/learning/wp-10.md"]
+    },
+    "db-d-d2": {
+      "label": "D2 · one-off migrate step", "sub": "per service, never at boot", "kind": "rule", "status": "real", "wp": "WP-10",
+      "what": "Each service owns its `drizzle/` folder and applies it only to its own database, in a step that runs before the new version starts.",
+      "how": "`node dist/migrate.js` in the deploy, `pnpm db:migrate` in development; a failure exits 1 and stops the deploy.",
+      "why": "Migrations at boot race between replicas and turn a bad migration into a crash loop; one shared set would break database per service.",
+      "files": ["apps/api/src/migrate.ts", "packages/platform-nest/src/database/migrations.ts"]
+    },
+    "db-d-d3": {
+      "label": "D3 · generated SQL, expand only", "sub": "reviewed in the PR, no down migrations", "kind": "rule", "status": "real", "wp": "WP-10",
+      "what": "drizzle-kit generates the SQL and the PR reviews it; a change ships as expand now, contract in a later release.",
+      "how": "Applied migrations are never edited (`pnpm check:migrations`); the schema files and the last snapshot must agree (the drift test).",
+      "why": "Every migration stays backward compatible, so a rollback is the previous image, never a down migration.",
+      "files": ["scripts/check-migrations.mjs", "apps/api/drizzle/"]
+    },
+    "db-d-d4": {
+      "label": "D4 · one database per service", "sub": "content_dev, agent_dev · own role", "kind": "rule", "status": "real", "wp": "WP-10",
+      "what": "One Postgres instance, one database and one role per service and environment; only agent's database has `vector`.",
+      "how": "Each service's `DATABASE_URL` points at its own database; `vector` is created by provisioning, and agent's first migration only checks it.",
+      "why": "ADR-029 rule 1 and ADR-027: no service reads another's tables, and a migration never needs a superuser.",
+      "files": ["apps/api/.env.example", "apps/agent/.env.example", "apps/agent/drizzle/0000_enable_vector.sql"]
+    },
+    "db-d-d6": {
+      "label": "D6 · the use case owns the transaction", "sub": "the outbox row shares it", "kind": "rule", "status": "real", "wp": "WP-10",
+      "what": "One use case, one transaction, opened by the application layer; the outbox row is one of its writes.",
+      "how": "Outbox and inbox rows are written on the transaction's executor, never on the pool. `outbox.int.test.ts` proves a rollback leaves no row, and shows that a write on a second connection survives it.",
+      "why": "A write on another pool connection autocommits, so a rolled-back change would still publish its event (a phantom event).",
+      "files": ["packages/platform-nest/src/database/transaction.ts", "apps/api/test/outbox.int.test.ts", ".claude/rules/services.md"]
     }
   }
 }
