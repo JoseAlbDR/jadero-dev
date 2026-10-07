@@ -12,7 +12,11 @@ declare module "vitest" {
 
 let container: StartedPostgreSqlContainer | undefined;
 
-/** Starts one Postgres container for the whole `pnpm test:int` run (WP-3 decision H). */
+/**
+ * Starts one Postgres container for the whole `pnpm test:int` run (WP-3 decision H). A package
+ * names this file in its `vitest.int.config.ts` (`@jadero/testing/postgres-global-setup`).
+ * @param project the Vitest project, to provide the superuser URL to the test files.
+ */
 export async function setup(project: TestProject): Promise<void> {
   useDockerContextHost();
   container = await new PostgreSqlContainer(POSTGRES_IMAGE).start();

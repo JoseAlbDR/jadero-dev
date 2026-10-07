@@ -258,12 +258,12 @@ importers:
       '@jadero/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@jadero/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
       '@nestjs/testing':
         specifier: 'catalog:'
         version: 12.1.2(@nestjs/common@12.1.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(@nestjs/core@12.1.2)(@nestjs/platform-express@12.1.2)
-      '@testcontainers/postgresql':
-        specifier: 'catalog:'
-        version: 12.2.0(supports-color@7.2.0)
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.1
@@ -273,9 +273,6 @@ importers:
       drizzle-kit:
         specifier: 'catalog:'
         version: 0.31.11
-      testcontainers:
-        specifier: 'catalog:'
-        version: 12.2.0(supports-color@7.2.0)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -322,12 +319,12 @@ importers:
       '@jadero/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@jadero/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
       '@nestjs/testing':
         specifier: 'catalog:'
         version: 12.1.2(@nestjs/common@12.1.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(@nestjs/core@12.1.2)(@nestjs/platform-express@12.1.2)
-      '@testcontainers/postgresql':
-        specifier: 'catalog:'
-        version: 12.2.0(supports-color@7.2.0)
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.1
@@ -337,9 +334,6 @@ importers:
       drizzle-kit:
         specifier: 'catalog:'
         version: 0.31.11
-      testcontainers:
-        specifier: 'catalog:'
-        version: 12.2.0(supports-color@7.2.0)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -462,6 +456,9 @@ importers:
       '@jadero/config':
         specifier: workspace:*
         version: link:../config
+      '@jadero/testing':
+        specifier: workspace:*
+        version: link:../testing
       '@nestjs/common':
         specifier: 'catalog:'
         version: 12.1.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0)
@@ -471,9 +468,6 @@ importers:
       '@opentelemetry/context-async-hooks':
         specifier: 'catalog:'
         version: 2.11.0(@opentelemetry/api@1.9.1)
-      '@testcontainers/postgresql':
-        specifier: 'catalog:'
-        version: 12.2.0(supports-color@7.2.0)
       '@types/amqplib':
         specifier: 'catalog:'
         version: 0.10.8
@@ -608,6 +602,37 @@ importers:
         specifier: 'catalog:'
         version: 4.6.5
 
+  packages/testing:
+    dependencies:
+      '@testcontainers/postgresql':
+        specifier: 'catalog:'
+        version: 12.2.0
+      pg:
+        specifier: 'catalog:'
+        version: 8.23.1
+    devDependencies:
+      '@jadero/config':
+        specifier: workspace:*
+        version: link:../config
+      '@jadero/platform-nest':
+        specifier: workspace:*
+        version: link:../platform-nest
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.1
+      '@types/pg':
+        specifier: 'catalog:'
+        version: 8.23.1
+      drizzle-kit:
+        specifier: 'catalog:'
+        version: 0.31.11
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@24.19.1)(jsdom@30.1.1)(vite@8.3.2(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
   packages/ui:
     dependencies:
       class-variance-authority:
@@ -672,15 +697,15 @@ importers:
       '@jadero/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@jadero/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
       '@nestjs/platform-express':
         specifier: 'catalog:'
         version: 12.1.2(@nestjs/common@12.1.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(@nestjs/core@12.1.2)(supports-color@7.2.0)
       '@nestjs/testing':
         specifier: 'catalog:'
         version: 12.1.2(@nestjs/common@12.1.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(@nestjs/core@12.1.2)(@nestjs/platform-express@12.1.2)
-      '@testcontainers/postgresql':
-        specifier: 'catalog:'
-        version: 12.2.0(supports-color@7.2.0)
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.1
@@ -693,9 +718,6 @@ importers:
       pg:
         specifier: 'catalog:'
         version: 8.23.1
-      testcontainers:
-        specifier: 'catalog:'
-        version: 12.2.0(supports-color@7.2.0)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -8175,7 +8197,7 @@ snapshots:
       postcss: 8.5.28
       tailwindcss: 4.3.3
 
-  '@testcontainers/postgresql@12.2.0(supports-color@7.2.0)':
+  '@testcontainers/postgresql@12.2.0':
     dependencies:
       testcontainers: 12.2.0(supports-color@7.2.0)
     transitivePeerDependencies:

@@ -3,9 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { MigrationError, migrationJournal, runMigrations } from "@jadero/platform-nest";
+import { createTestDatabase, type TestDatabase } from "@jadero/testing";
 import pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
-import { createTestDatabase, type TestDatabase } from "./setup/test-database.js";
 
 // WP-10 D7 suite 1: api's committed drizzle/ applied to an empty database by the deploy's own
 // entry (runMigrations), as an ordinary owner role like production (D4), never the superuser.

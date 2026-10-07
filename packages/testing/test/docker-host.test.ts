@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { useDockerContextHost } from "./setup/docker-host.js";
+import { useDockerContextHost } from "../src/docker-host.js";
 
 describe("useDockerContextHost", () => {
   it("keeps a DOCKER_HOST that is already set", () => {

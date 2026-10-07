@@ -1,9 +1,9 @@
 import { PG_POOL } from "@jadero/platform-nest";
+import { createTestDatabase } from "@jadero/testing";
 import type { INestApplication } from "@nestjs/common";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bootApi } from "./setup/boot.js";
-import { createTestDatabase } from "./setup/test-database.js";
 
 // WP-3 trace 1 against a real Postgres (pgvector image, the same tag as compose.dev.yml).
 describe("api health against a real Postgres", () => {

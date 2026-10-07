@@ -1,0 +1,56 @@
+{
+  "name": "@jadero/testing",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Integration test helpers shared by the services and packages (WP-12 step 1): the Postgres global setup for Vitest, a per-file test database owned by an ordinary role, the Docker host detection for Testcontainers, the test image tags and the drizzle-kit schema drift check (`@jadero/testing/drizzle`). A dev dependency only, never imported by production code. Infrastructure only, no domain code. Compiled to dist/.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./postgres-global-setup": {
+      "types": "./dist/postgres.global-setup.d.ts",
+      "default": "./dist/postgres.global-setup.js"
+    },
+    "./drizzle": {
+      "types": "./dist/pending-schema-changes.d.ts",
+      "default": "./dist/pending-schema-changes.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput"
+  },
+  "dependencies": {
+    "@testcontainers/postgresql": "catalog:",
+    "pg": "catalog:"
+  },
+  "peerDependencies": {
+    "@jadero/platform-nest": "workspace:*",
+    "drizzle-kit": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "@jadero/platform-nest": {
+      "optional": true
+    },
+    "drizzle-kit": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@jadero/config": "workspace:*",
+    "@jadero/platform-nest": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "drizzle-kit": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

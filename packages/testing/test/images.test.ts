@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { POSTGRES_IMAGE } from "./setup/images.js";
+import { POSTGRES_IMAGE } from "../src/images.js";
 
 describe("test images", () => {
   it("use the same Postgres tag as the dev stack, so dev and tests cannot drift", () => {

@@ -1,4 +1,5 @@
 import { systemPingV1 } from "@jadero/contracts";
+import { createTestDatabase } from "@jadero/testing";
 import pg from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -12,7 +13,6 @@ import {
   OutboxRelay,
   type OutgoingMessage,
 } from "../src/index.js";
-import { createTestDatabase } from "./setup/test-database.js";
 import { messagingDdl } from "./support/messaging-ddl.js";
 
 let pool: pg.Pool;

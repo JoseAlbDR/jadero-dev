@@ -19,7 +19,7 @@ Status today: the repo foundation (WP-1), the service platform (WP-3: `packages/
 
 ## 2. Map (target layout, ADR-001)
 
-`apps/web` Next.js 16 public site · `apps/admin` static SPA · `apps/api` NestJS content, auth, media, cv (+ `api-worker`) · `apps/agent` NestJS knowledge, chat, guards, usage (+ `agent-ingest`) · `apps/contact` NestJS form and mail · `apps/mcp` stateless MCP edge (R4) · `packages/contracts` Zod DTOs and events · `packages/messaging` bus port, RabbitMQ and in-memory adapters, outbox, inbox · `packages/platform-nest` service bootstrap only (config, logging, errors, health, telemetry; no domain code) · `packages/ai` AI ports and adapters · `packages/agent` LangGraph graph, no Nest · `packages/ui`, `packages/cv`, `packages/config` · `infra/` compose, nginx, rabbitmq, scripts · `.github/workflows/`.
+`apps/web` Next.js 16 public site · `apps/admin` static SPA · `apps/api` NestJS content, auth, media, cv (+ `api-worker`) · `apps/agent` NestJS knowledge, chat, guards, usage (+ `agent-ingest`) · `apps/contact` NestJS form and mail · `apps/mcp` stateless MCP edge (R4) · `packages/contracts` Zod DTOs and events · `packages/messaging` bus port, RabbitMQ and in-memory adapters, outbox, inbox · `packages/platform-nest` service bootstrap only (config, logging, errors, health, telemetry; no domain code) · `packages/ai` AI ports and adapters · `packages/agent` LangGraph graph, no Nest · `packages/testing` integration test helpers (Postgres global setup, per-file test databases, Docker host; dev dependency only) · `packages/ui`, `packages/cv`, `packages/config` · `infra/` compose, nginx, rabbitmq, scripts · `.github/workflows/`.
 
 ## 3. Commands
 

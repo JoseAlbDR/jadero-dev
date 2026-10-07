@@ -2,9 +2,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { migrationJournal, runMigrations } from "@jadero/platform-nest";
+import { createTestDatabase } from "@jadero/testing";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createTestDatabase } from "./setup/test-database.js";
 
 // WP-10 D7 suite 1: agent's committed drizzle/ applied to an empty database by the deploy's own
 // entry (runMigrations), as an ordinary owner role like production (D4). `vector` was created by
@@ -17,7 +17,9 @@ let client: pg.Client;
 let drop: () => Promise<void>;
 
 beforeAll(async () => {
-  const database = await createTestDatabase();
+  // As provisioning does for every `agent_*` database (ADR-027), the superuser creates `vector`
+  // first, because it is not a trusted extension; the agent's first migration only asserts it.
+  const database = await createTestDatabase({ superuserExtensions: ["vector"] });
   drop = database.drop;
   await runMigrations({ service: "agent", url: database.url, migrationsFolder: folder });
   await runMigrations({ service: "agent", url: database.url, migrationsFolder: folder });

@@ -2,11 +2,11 @@ import { fileURLToPath } from "node:url";
 import { systemPingV1 } from "@jadero/contracts";
 import { addToOutbox } from "@jadero/messaging";
 import { PG_POOL, runMigrations, withTransaction } from "@jadero/platform-nest";
+import { createTestDatabase } from "@jadero/testing";
 import type { INestApplication } from "@nestjs/common";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { bootApi } from "./setup/boot.js";
-import { createTestDatabase } from "./setup/test-database.js";
 
 // WP-10 D7 suites 3 and 4 where the outbox lives today (api): the outbox row commits with the
 // transaction that writes it and disappears with its rollback (ADR-012, D6). The domain-row

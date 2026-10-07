@@ -2,6 +2,16 @@ import { randomBytes } from "node:crypto";
 import pg from "pg";
 import { inject } from "vitest";
 
+/** Options of {@link createTestDatabase}. */
+export interface TestDatabaseOptions {
+  /**
+   * Extensions the container's superuser creates in the new database before handing it over, as
+   * provisioning does in production (ADR-027): `agent` passes `["vector"]`, because `vector` is not
+   * a trusted extension and an ordinary role cannot create it. Plain lowercase names only.
+   */
+  readonly superuserExtensions?: readonly string[];
+}
+
 /** A per-file test database and how to remove it. */
 export interface TestDatabase {
   /** Connects as the database's owner role, never as the container's superuser. */
@@ -26,12 +36,19 @@ async function asSuperuser(url: string, statement: string): Promise<void> {
  * without sharing rows. Like production (WP-10 "Tests run migrations as a non-superuser", D4), it
  * is owned by a fresh ordinary role (LOGIN, no superuser, no CREATEDB, no CREATEROLE) and the URL
  * connects as that role: a migration that needs a superuser fails here, not in the deploy
- * (Trace 2c). The role's password is random and never printed. As provisioning does for every
- * `agent_*` database (ADR-027), the superuser creates `vector` before handing the database over,
- * because it is not a trusted extension; the agent's first migration only asserts it.
+ * (Trace 2c). The role's password is random and never printed. Each of
+ * `options.superuserExtensions` is created by the superuser inside the new database first, the way
+ * provisioning creates `vector` for every `agent_*` database; the service's migration only asserts it.
+ * Needs the Postgres global setup (`@jadero/testing/postgres-global-setup`) in the Vitest config.
+ * @param options extensions the superuser creates before the owner role takes over.
  * @returns the owner's connection URL and a function that drops the database and the role.
+ * @throws when an extension name is not a plain lowercase identifier.
  */
-export async function createTestDatabase(): Promise<TestDatabase> {
+export async function createTestDatabase(options: TestDatabaseOptions = {}): Promise<TestDatabase> {
+  const extensions = options.superuserExtensions ?? [];
+  // The names go into the SQL text, so only plain identifiers pass.
+  const unsafe = extensions.find((extension) => !/^[a-z_][a-z0-9_]*$/.test(extension));
+  if (unsafe !== undefined) throw new Error(`Not a plain extension name: ${unsafe}`);
   const adminUrl = inject("postgresAdminUrl");
   // Hex only, so the names and the password are safe inside the SQL text.
   const suffix = randomBytes(12).toString("hex");
@@ -43,9 +60,16 @@ export async function createTestDatabase(): Promise<TestDatabase> {
     `CREATE ROLE ${role} LOGIN PASSWORD '${password}' NOSUPERUSER NOCREATEDB NOCREATEROLE`,
   );
   await asSuperuser(adminUrl, `CREATE DATABASE ${name} OWNER ${role}`);
-  const superuserInDatabase = new URL(adminUrl);
-  superuserInDatabase.pathname = `/${name}`;
-  await asSuperuser(superuserInDatabase.toString(), "CREATE EXTENSION IF NOT EXISTS vector");
+  if (extensions.length > 0) {
+    const superuserInDatabase = new URL(adminUrl);
+    superuserInDatabase.pathname = `/${name}`;
+    for (const extension of extensions) {
+      await asSuperuser(
+        superuserInDatabase.toString(),
+        `CREATE EXTENSION IF NOT EXISTS ${extension}`,
+      );
+    }
+  }
   const url = new URL(adminUrl);
   url.username = role;
   url.password = password;
