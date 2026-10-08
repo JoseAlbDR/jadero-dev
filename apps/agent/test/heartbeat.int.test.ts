@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { systemPingV1 } from "@jadero/contracts";
 import { createEnvelope, done, InMemoryMessageBus, MessageBus } from "@jadero/messaging";
 import { PG_POOL, runMigrations } from "@jadero/platform-nest";
-import { createTestDatabase } from "@jadero/testing";
+import { createTestDatabase, provisionedExtensions } from "@jadero/testing";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import pg from "pg";
@@ -18,8 +18,11 @@ const bus = new InMemoryMessageBus();
 
 beforeAll(async () => {
   // As provisioning does for every `agent_*` database (ADR-027), the superuser creates `vector`
-  // first, because it is not a trusted extension; the agent's first migration only asserts it.
-  const database = await createTestDatabase({ superuserExtensions: ["vector"] });
+  // first, because it is not a trusted extension; the agent's first migration only asserts it. The
+  // list is read from the provisioning script itself, so the tests cannot drift from it (step 1b).
+  const database = await createTestDatabase({
+    superuserExtensions: provisionedExtensions("agent_dev"),
+  });
   drop = database.drop;
   // agent's own migrations, as the deploy's one-off step applies them (WP-10 D2): the inbox and
   // heartbeat.broker_heartbeat come from drizzle/, never from hand-written test DDL.

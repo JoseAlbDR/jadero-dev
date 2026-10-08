@@ -28,6 +28,8 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 - An edited applied migration is skipped silently; schema drift between environments. WP-10, weak (step 3 check question). Step log.
 - `drizzle-kit generate` diffs schema files against the last snapshot and never reads the database; the runtime migrator keeps `drizzle.__drizzle_migrations`. WP-10, weak (step 4 check question). Step log.
 
+- Untrusted Postgres extensions: who creates them (provisioning as superuser) versus who asserts them (the service's migration as owner); environment parity between the test harness and provisioning; least privilege for migration roles. WP-12, weak (step 1 check question). `docs/learning/wp-12.md`, Step log.
+
 ### Theme: ordering and pagination
 - Keyset (cursor) pagination with `(created_at, id)` and a composite index; why time-ordered ids are a storage optimization, not a meaningful order; `now()` is the transaction start, so `created_at` order is not commit order. WP-10, interesting (step 8 check question). Step log.
 

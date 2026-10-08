@@ -6,8 +6,9 @@ import { inject } from "vitest";
 export interface TestDatabaseOptions {
   /**
    * Extensions the container's superuser creates in the new database before handing it over, as
-   * provisioning does in production (ADR-027): `agent` passes `["vector"]`, because `vector` is not
-   * a trusted extension and an ordinary role cannot create it. Plain lowercase names only.
+   * provisioning does in production (ADR-027): `agent` passes `provisionedExtensions("agent_dev")`,
+   * read from the provisioning script, which gives `["vector"]`: `vector` is not a trusted
+   * extension and an ordinary role cannot create it. Plain lowercase names only.
    */
   readonly superuserExtensions?: readonly string[];
 }
