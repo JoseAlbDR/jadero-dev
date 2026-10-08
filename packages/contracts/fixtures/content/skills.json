@@ -1,0 +1,11 @@
+{
+  "items": [
+    { "locale": "en", "name": "PostgreSQL", "category": "Databases", "projectSlugs": ["jobs-hub"] },
+    {
+      "locale": "en",
+      "name": "Retrieval-augmented generation",
+      "category": "Applied AI",
+      "projectSlugs": []
+    }
+  ]
+}

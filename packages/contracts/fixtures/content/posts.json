@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "slug": "why-an-outbox",
+      "locale": "en",
+      "title": "Why an outbox",
+      "excerpt": "Publishing an event and committing a row are two writes; the outbox makes them one.",
+      "tags": ["messaging"],
+      "publishedAt": "2026-11-03T10:12:00.000Z",
+      "alternates": { "es": "por-que-un-outbox", "en": "why-an-outbox" }
+    }
+  ],
+  "nextCursor": "WyIyMDI2LTExLTAzVDEwOjEyOjAwLjAwMFoiLCIwMWExNTg4OS1mYTgwLTdjM2EtOWQyZS01ZjZhN2I4YzlkMGUiXQ"
+}

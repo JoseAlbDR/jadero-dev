@@ -1,0 +1,24 @@
+{
+  "items": [
+    {
+      "locale": "en",
+      "organization": "Example Co",
+      "role": "Backend engineer",
+      "period": { "from": "2024-09", "to": null },
+      "locationType": "remote",
+      "stackTags": ["NestJS", "PostgreSQL", "RabbitMQ"],
+      "bullets": [
+        {
+          "id": "backend-10",
+          "text": "Built an outbox relay so events leave the database exactly when the change commits.",
+          "entryIds": ["kb-outbox-relay"]
+        },
+        {
+          "id": "backend-11",
+          "text": "Moved slow reports to a background worker.",
+          "entryIds": []
+        }
+      ]
+    }
+  ]
+}

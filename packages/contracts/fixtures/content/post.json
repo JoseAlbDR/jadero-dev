@@ -1,0 +1,10 @@
+{
+  "slug": "por-que-un-outbox",
+  "locale": "es",
+  "title": "Por qué un outbox",
+  "excerpt": "Publicar un evento y guardar una fila son dos escrituras; el outbox las hace una.",
+  "tags": ["messaging"],
+  "publishedAt": "2026-11-03T10:12:00.000Z",
+  "alternates": { "es": "por-que-un-outbox", "en": "why-an-outbox" },
+  "body": "## El problema\n\nUn texto de ejemplo."
+}
