@@ -87,5 +87,11 @@ allowBuilds:
   protobufjs: false
   ssh2: false
 
+# drizzle-kit (dev only) -> @esbuild-kit/esm-loader -> @esbuild-kit/core-utils pins esbuild 0.18, which has the
+# dev-server advisory GHSA-67mh-4wv8-2f99 (any website can read responses from `esbuild serve`). Nothing here runs
+# `esbuild serve`, but the lockfile should not carry it: core-utils only calls `transform`, which 0.25 keeps.
+overrides:
+  "@esbuild-kit/core-utils>esbuild": ^0.25.0
+
 # Fail the install, instead of warning, when Node or pnpm is outside the root `engines` range.
 engineStrict: true
