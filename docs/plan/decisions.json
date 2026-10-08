@@ -4339,6 +4339,64 @@
       "decidedBy": "owner",
       "decidedAt": "2026-10-02",
       "change": "Starts with the four personal case studies; work for the current employer appears through the timeline and approved knowledge entries; a public-level case study from the current role is decided once entries exist."
+    },
+    {
+      "id": "D-77",
+      "area": "security",
+      "title": "Security headers and stack disclosure",
+      "question": "Where are the HTTP security headers set, and who removes the headers that disclose the stack?",
+      "context": "No ADR or work package owned CSP, HSTS, nosniff, Referrer-Policy, Permissions-Policy, framing control, nginx's version or Express's X-Powered-By. nginx serves the static admin SPA and proxies the rest; web renders HTML per request; the Nest services answer JSON. A nonce-based CSP can only be built by whoever renders the HTML.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Everything at the edge",
+          "description": "nginx sets every header for every host.",
+          "pros": [
+            "One place to review",
+            "Covers the static admin SPA"
+          ],
+          "cons": [
+            "No nonce-based CSP for Next.js pages",
+            "Services disclose X-Powered-By when reached without nginx"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Everything in the apps",
+          "description": "Helmet in each Nest service, headers in Next.js.",
+          "pros": [
+            "Tested in TypeScript",
+            "Safe without nginx"
+          ],
+          "cons": [
+            "nginx still discloses its version",
+            "HSTS and the admin SPA need the edge anyway"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Split by who can know the value, one owner per header",
+          "description": "nginx: server_tokens off, hidden upstream headers, HSTS, nosniff, Referrer-Policy, Permissions-Policy, the admin SPA's static CSP. web: nonce-based CSP. platform-nest: Helmet for JSON APIs and x-powered-by disabled.",
+          "pros": [
+            "Each header set where its value can be correct",
+            "No duplicates by rule",
+            "Services safe without nginx"
+          ],
+          "cons": [
+            "Three places to look, so the split is written down and tested in each"
+          ]
+        }
+      ],
+      "recommendation": "c",
+      "why": "Only the HTML renderer can build a nonce CSP, only the edge can hide nginx's version and set HSTS for the domain, and the shared platform makes every service safe by default.",
+      "adr": "ADR-047",
+      "learn": "Security headers, CSP with nonces, gateway offloading, defense in depth.",
+      "status": "proposed",
+      "ownerNote": "Raised by the owner in WP-12 step 2 (2026-10-09): the app has to be secure; strip nginx defaults and disclosing headers.",
+      "decidedOption": null,
+      "decidedBy": null,
+      "decidedAt": null,
+      "change": null
     }
   ],
   "workPackages": [
