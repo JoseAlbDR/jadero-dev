@@ -4343,14 +4343,14 @@
     {
       "id": "D-77",
       "area": "security",
-      "title": "Security headers and stack disclosure",
-      "question": "Where are the HTTP security headers set, and who removes the headers that disclose the stack?",
-      "context": "No ADR or work package owned CSP, HSTS, nosniff, Referrer-Policy, Permissions-Policy, framing control, nginx's version or Express's X-Powered-By. nginx serves the static admin SPA and proxies the rest; web renders HTML per request; the Nest services answer JSON. A nonce-based CSP can only be built by whoever renders the HTML.",
+      "title": "HTTP hardening at the edge and in the apps",
+      "question": "Where are the HTTP security headers set, who removes the headers that disclose the stack, and who owns CORS, request body limits, the blocking of internal endpoints and open-redirect protection?",
+      "context": "No ADR or work package owned CSP, HSTS, nosniff, Referrer-Policy, Permissions-Policy, framing control, nginx's version or Express's X-Powered-By. nginx serves the static admin SPA and proxies the rest; web renders HTML per request; the Nest services answer JSON. A nonce-based CSP can only be built by whoever renders the HTML. The 2026-10-09 security gap audit added four concerns with no owner: CORS (same origin per audience, ADR-002, makes it unnecessary; CORS only relaxes the browser's same-origin policy and does not stop non-browser clients), request body limits (Express's JSON default of 100kb is implicit and untested), internal endpoints (web's revalidation route, the endpoints the MCP edge calls) reachable from public hosts, and redirects whose target comes from user input.",
       "options": [
         {
           "id": "a",
           "label": "Everything at the edge",
-          "description": "nginx sets every header for every host.",
+          "description": "nginx sets every header, the body limits and the CORS policy for every host.",
           "pros": [
             "One place to review",
             "Covers the static admin SPA"
@@ -4363,7 +4363,7 @@
         {
           "id": "b",
           "label": "Everything in the apps",
-          "description": "Helmet in each Nest service, headers in Next.js.",
+          "description": "Helmet, CORS policy and body limits in each Nest service; headers and redirects in Next.js.",
           "pros": [
             "Tested in TypeScript",
             "Safe without nginx"
@@ -4376,7 +4376,7 @@
         {
           "id": "c",
           "label": "Split by who can know the value, one owner per header",
-          "description": "nginx: server_tokens off, hidden upstream headers, HSTS, nosniff, Referrer-Policy, Permissions-Policy, the admin SPA's static CSP. web: nonce-based CSP. platform-nest: Helmet for JSON APIs and x-powered-by disabled.",
+          "description": "nginx: server_tokens off, hidden upstream headers, HSTS, nosniff, Referrer-Policy, Permissions-Policy, the admin SPA's static CSP, no Access-Control-* headers, client_max_body_size per location, internal routes denied on public hosts. web: nonce-based CSP. platform-nest: Helmet for JSON APIs, x-powered-by disabled, no enableCors, an explicit JSON body limit. Internal endpoints also require signed requests; redirect targets from user input are relative or on an allowlist; opening CORS needs a new ADR; the MCP edge validates Origin.",
           "pros": [
             "Each header set where its value can be correct",
             "No duplicates by rule",
@@ -4388,9 +4388,9 @@
         }
       ],
       "recommendation": "c",
-      "why": "Only the HTML renderer can build a nonce CSP, only the edge can hide nginx's version and set HSTS for the domain, and the shared platform makes every service safe by default.",
+      "why": "Only the HTML renderer can build a nonce CSP, only the edge can hide nginx's version and set HSTS for the domain, and the shared platform makes every service safe by default. CORS stays closed because no browser call is cross-origin, and each limit or check sits where it can be tested.",
       "adr": "ADR-047",
-      "learn": "Security headers, CSP with nonces, gateway offloading, defense in depth.",
+      "learn": "Security headers, CSP with nonces, CORS and the same-origin policy, resource limits, open redirects, gateway offloading, defense in depth.",
       "status": "proposed",
       "ownerNote": "Raised by the owner in WP-12 step 2 (2026-10-09): the app has to be secure; strip nginx defaults and disclosing headers.",
       "decidedOption": null,
@@ -4480,7 +4480,7 @@
         "WP-4",
         "WP-5"
       ],
-      "deliverable": "ci.yml with caching, affected runs per service, Postgres and RabbitMQ service containers, event contract tests, coverage gates, gitleaks, PR title lint.",
+      "deliverable": "ci.yml with caching, affected runs per service, Postgres and RabbitMQ service containers, event contract tests, coverage gates, gitleaks, PR title lint. Supply chain (2026-10-09 audit): a security workflow (OSV-Scanner or pnpm audit) gates PRs; Renovate with grouped updates and minimumReleaseAge in pnpm-workspace.yaml; every GitHub Action pinned by commit SHA and every workflow with least-privilege permissions:.",
       "learns": "GitHub Actions model; why affected runs are safe.",
       "milestone": "R0"
     },
@@ -4492,7 +4492,7 @@
       "dependsOn": [
         "WP-6"
       ],
-      "deliverable": "One multi-stage non-root image per service, release-please with one component per service, GHCR push, SBOM, Trivy.",
+      "deliverable": "One multi-stage non-root image per service, release-please with one component per service, GHCR push, SBOM, Trivy. Hardening (2026-10-09 audit): images pinned by digest; containers run non-root with cap_drop: [ALL], security_opt: no-new-privileges and a read-only root filesystem where possible; deploys authenticate with OIDC or scoped tokens, never long-lived broad tokens.",
       "learns": "Image layers, least-privilege containers, semver per service.",
       "milestone": "R0"
     },
@@ -4504,7 +4504,7 @@
       "dependsOn": [
         "WP-0"
       ],
-      "deliverable": "Cloud Firewall, Tailscale, deploy user + forced command, ops compose (Postgres with a database per service, RabbitMQ with vhosts, Umami, Uptime Kuma), nginx vhosts + certificates, backups with a passed restore drill. Second pass (D-7 d): install the op CLI and store the read-only 1Password service-account token on the server (mode 600).",
+      "deliverable": "Cloud Firewall, Tailscale, deploy user + forced command, ops compose (Postgres with a database per service, RabbitMQ with vhosts, Umami, Uptime Kuma), nginx vhosts + certificates, backups with a passed restore drill. Second pass (D-7 d): install the op CLI and store the read-only 1Password service-account token on the server (mode 600). Hardening (2026-10-09 audit): the nginx part of ADR-047 (headers, no version, no CORS, body limits, internal routes denied); TLS 1.2 and 1.3 only with modern ciphers and OCSP stapling where supported; CAA records; Umami and Uptime Kuma first-run admin accounts set from secrets and RabbitMQ's guest user removed; a written decision, made at WP time, whether service-to-service and service-to-Postgres traffic stays on the private Docker network without TLS (accepted risk, single host) or uses sslmode; smoke checks for the headers, the blocked internal routes and no version in Server.",
       "learns": "Docker networking vs host firewall, least-privilege SSH, backup vs restore.",
       "milestone": "R0"
     },
@@ -4542,7 +4542,7 @@
         "WP-5",
         "WP-10"
       ],
-      "deliverable": "apps/contact: form endpoint with Zod, Turnstile and honeypot, per-IP limit, store-and-forward with outbox, mailer consumer behind MailPort, circuit breaker, retry tiers, dead-letter queue and replay; the form on web.",
+      "deliverable": "apps/contact: form endpoint with Zod, Turnstile and honeypot, per-IP limit, store-and-forward with outbox, mailer consumer behind MailPort, circuit breaker, retry tiers, dead-letter queue and replay; the form on web. Mail safety (2026-10-09 audit): DMARC next to SPF and DKIM (manual DNS action); user input never goes into mail headers except a validated Reply-To; the subject is built from fixed text.",
       "learns": "A complete small microservice end to end; circuit breaker; anti-spam rules.",
       "milestone": "R1"
     },
@@ -4566,7 +4566,7 @@
       "dependsOn": [
         "WP-12"
       ],
-      "deliverable": "Better Auth with GitHub allow-list, sessions, CSRF, audit log, auth rate limits, nginx auth_request and the signed internal header.",
+      "deliverable": "Better Auth with GitHub allow-list, sessions, CSRF, audit log, auth rate limits, nginx auth_request and the signed internal header. Security (2026-10-09 audit): alerts on repeated failed or unauthorized admin logins; a retention period for the audit log; the redirect allowlist of ADR-047 for Better Auth's callback and returnTo, with a test per redirecting route.",
       "learns": "OAuth code + PKCE, sessions vs JWT, cookie flags, CSRF, gateway auth.",
       "milestone": "R1"
     },
@@ -4604,7 +4604,7 @@
         "WP-12",
         "WP-15"
       ],
-      "deliverable": "Home built around the positioning and the proof-pillar strip with its evidence map (D-73, D-74), home, experience timeline with CV bullets and Ask about this, work-log pages for approved entries, case studies, projects, early archive, stack and skills, blog; safe Markdown; SEO; nginx stale cache; accessibility and performance budgets met. Second pass (D-52): work-log pages carry a per-entry indexable flag (default true) mapped to a noindex meta tag when false.",
+      "deliverable": "Home built around the positioning and the proof-pillar strip with its evidence map (D-73, D-74), home, experience timeline with CV bullets and Ask about this, work-log pages for approved entries, case studies, projects, early archive, stack and skills, blog; safe Markdown; SEO; nginx stale cache; accessibility and performance budgets met. Second pass (D-52): work-log pages carry a per-entry indexable flag (default true) mapped to a noindex meta tag when false. Security (2026-10-09 audit): the nonce-based CSP of ADR-047; the open-redirect rule of ADR-047 for locale redirects and cutover 301s; fonts self-hosted, no requests to third-party font CDNs.",
       "learns": "",
       "milestone": "R1"
     },
@@ -4617,7 +4617,7 @@
         "WP-13",
         "WP-14"
       ],
-      "deliverable": "Static SPA on admin.jadero.dev: forms on shared contracts, translation tabs, structured knowledge-entry editor with approval checklist and private denylist, CV-to-entry linking with coverage view, preview, publish, media, contact inbox, dashboard stub. Full entry lifecycle (D-65): list with status, upload, edit as a new draft revision, re-import, withdraw, delete, export to the file format.",
+      "deliverable": "Static SPA on admin.jadero.dev: forms on shared contracts, translation tabs, structured knowledge-entry editor with approval checklist and private denylist, CV-to-entry linking with coverage view, preview, publish, media, contact inbox, dashboard stub. Full entry lifecycle (D-65): list with status, upload, edit as a new draft revision, re-import, withdraw, delete, export to the file format. Upload safety (2026-10-09 audit): media uploads have a maximum size and a MIME allowlist checked by magic bytes, not by extension or the client's Content-Type; SVG refused (or sanitized if ever needed); files served with X-Content-Type-Options: nosniff and a safe Content-Disposition.",
       "learns": "",
       "milestone": "R1"
     },
@@ -4678,7 +4678,7 @@
       "dependsOn": [
         "WP-21"
       ],
-      "deliverable": "StateGraph, nodes, bounded subgraph, tools on the read model, prompts as files, PostgresSaver, SSE endpoint, citations; model A/B experiment; prompt-cache measurement. Checkpoints encrypted at rest with an AES-256-GCM serializer (D-17). Second pass (D-17): checkpoint encryption moved to optional WP-56; WP-22 ships PostgresSaver with the 24-hour purge only.",
+      "deliverable": "StateGraph, nodes, bounded subgraph, tools on the read model, prompts as files, PostgresSaver, SSE endpoint, citations; model A/B experiment; prompt-cache measurement. Checkpoints encrypted at rest with an AES-256-GCM serializer (D-17). Second pass (D-17): checkpoint encryption moved to optional WP-56; WP-22 ships PostgresSaver with the 24-hour purge only. Cookie (2026-10-09 audit): the chat cookie is Secure, HttpOnly, SameSite=Strict and signed; Strict because the chat's own requests are same-site and nothing needs the cookie on a cross-site navigation.",
       "learns": "LangGraph state, reducers, edges, checkpoints; tool calling; streaming; prompt design.",
       "milestone": "R2"
     },
@@ -4726,7 +4726,7 @@
       "dependsOn": [
         "WP-23"
       ],
-      "deliverable": "OTel export with trace propagation through RabbitMQ, logging conventions, monitors per service, dead-letter and queue-depth alerts, external backstop, admin usage page. Release R1 covers web, api, api-worker, contact and the broker; the agent monitors, usage page and dead-letter alerts for agent queues are added in R2 with WP-23.",
+      "deliverable": "OTel export with trace propagation through RabbitMQ, logging conventions, monitors per service, dead-letter and queue-depth alerts, external backstop, admin usage page. Release R1 covers web, api, api-worker, contact and the broker; the agent monitors, usage page and dead-letter alerts for agent queues are added in R2 with WP-23. Security alerts (2026-10-09 audit): alert rules on security events from the audit log, such as repeated failed admin logins and spikes in guard blocks.",
       "learns": "Logs, metrics, traces; context propagation across a broker.",
       "milestone": "R1"
     },
@@ -4762,7 +4762,7 @@
         "WP-50",
         "WP-51"
       ],
-      "deliverable": "Owner writes the CV and knowledge entries and approves them per locale, translations reviewed, red-team audit, accessibility and performance checks, privacy notice, gitleaks history scan, repo public. Second pass (D-75 e): the R1 pass covers the site, admin, contact and content (no agent items: no red-team audit, no eval gates); it also reviews docs/plan/ working notes (owner-marks.json, owner-intent.md, brainstorm.md, TASK.md: local machine paths and planning chatter) and removes what the owner does not want public before D-29; the agent items repeat as a QA pass at the end of R2.",
+      "deliverable": "Owner writes the CV and knowledge entries and approves them per locale, translations reviewed, red-team audit, accessibility and performance checks, privacy notice, gitleaks history scan, repo public. Second pass (D-75 e): the R1 pass covers the site, admin, contact and content (no agent items: no red-team audit, no eval gates); it also reviews docs/plan/ working notes (owner-marks.json, owner-intent.md, brainstorm.md, TASK.md: local machine paths and planning chatter) and removes what the owner does not want public before D-29; the agent items repeat as a QA pass at the end of R2. Privacy (2026-10-09 audit): the privacy notice lists every cookie and browser storage key (locale cookie, theme preference, chat cookie, admin session) with purpose and lifetime and names the legal basis of each processing; no consent banner while each one is strictly necessary or a preference the user set and analytics (Umami) stays cookieless; any new third-party embed needs a privacy review first; verify whether a personal site served in German needs a legal notice (Impressum).",
       "learns": "",
       "milestone": "R1"
     },
@@ -4774,7 +4774,7 @@
       "dependsOn": [
         "WP-28"
       ],
-      "deliverable": "jadero.dev switched, redirects, pm2 services and reCAPTCHA retired, old site archived. Second pass (D-75 e): cutover happens in R1 without the agent; the home shows positioning, pillars, case studies and timeline, and the Ask-me entry point ships with R2.",
+      "deliverable": "jadero.dev switched, redirects, pm2 services and reCAPTCHA retired, old site archived. Second pass (D-75 e): cutover happens in R1 without the agent; the home shows positioning, pillars, case studies and timeline, and the Ask-me entry point ships with R2. DNS (2026-10-09 audit): dangling DNS records of the retired site deleted, so no subdomain can be taken over.",
       "learns": "",
       "milestone": "R1"
     },
@@ -4860,7 +4860,7 @@
         "WP-11",
         "WP-21"
       ],
-      "deliverable": "mcp process type of agent: search_experience, get_entry, list_projects, list_skills, get_cv, CV and ADR resources, request_intro with a confirmation link, limits, a connect-from-Claude page. Launch scope; supersedes WP-30. Second pass (D-59 b): built as apps/mcp, a stateless MCP edge service on mcp.jadero.dev that calls internal endpoints of agent (search), api (CV, entries) and contact (request_intro, D-61 adjusted); no process type inside agent. Release R4.",
+      "deliverable": "mcp process type of agent: search_experience, get_entry, list_projects, list_skills, get_cv, CV and ADR resources, request_intro with a confirmation link, limits, a connect-from-Claude page. Launch scope; supersedes WP-30. Second pass (D-59 b): built as apps/mcp, a stateless MCP edge service on mcp.jadero.dev that calls internal endpoints of agent (search), api (CV, entries) and contact (request_intro, D-61 adjusted); no process type inside agent. Release R4. Security (2026-10-09 audit): Origin validated on the MCP endpoint and the internal endpoints protected (denied at nginx, signed requests) per ADR-047.",
       "learns": "MCP tools, resources and transports; out-of-band human confirmation.",
       "milestone": "R4"
     },
