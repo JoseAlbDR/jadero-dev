@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { locale } from "./locale.js";
 import { cvBulletId, knowledgeEntryId } from "./params.js";
-import { period, tags } from "./shared.js";
+import { period, publishedText, tags } from "./shared.js";
 
 /**
  * One published CV bullet (ADR-031 Layer A), in its parent's language. `entryIds` are the approved
@@ -26,8 +26,8 @@ export const locationType = z.enum(["remote", "hybrid", "onsite"]);
  */
 export const experienceItemDto = z.object({
   locale,
-  organization: z.string().min(1),
-  role: z.string().min(1),
+  organization: publishedText,
+  role: publishedText,
   period,
   locationType,
   stackTags: tags,

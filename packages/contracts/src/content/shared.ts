@@ -38,5 +38,12 @@ export type Period = z.infer<typeof period>;
  */
 export const httpsUrl = z.url({ protocol: /^https$/ });
 
+/**
+ * A text a published page needs: at least one character that is not whitespace. The content domain
+ * refuses to publish a revision whose required text is blank, and the public DTO is never weaker
+ * than that rule (`apps/api/test/content-documents.contract.test.ts` keeps the two equal).
+ */
+export const publishedText = z.string().regex(/\S/, { message: "Must not be blank" });
+
 /** A free list of display tags (`NestJS`, `PostgreSQL`): non-empty strings. */
 export const tags = z.array(z.string().min(1).max(60));

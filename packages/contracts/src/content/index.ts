@@ -61,6 +61,7 @@ export {
   httpsUrl,
   type Period,
   period,
+  publishedText,
   tags,
   yearMonth,
 } from "./shared.js";

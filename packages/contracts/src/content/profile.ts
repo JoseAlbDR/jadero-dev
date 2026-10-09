@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { locale } from "./locale.js";
+import { publishedText } from "./shared.js";
 
 /** The kind of a profile link, which picks its icon and label in `web`. */
 export const profileLinkKind = z.enum(["email", "github", "linkedin", "website"]);
@@ -17,9 +18,9 @@ export const profileLink = z.object({
  */
 export const profileDto = z.object({
   locale,
-  name: z.string().min(1),
-  headline: z.string().min(1),
-  summary: z.string(),
+  name: publishedText,
+  headline: publishedText,
+  summary: publishedText,
   links: z.array(profileLink),
 });
 

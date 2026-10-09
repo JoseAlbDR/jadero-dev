@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { locale } from "./locale.js";
 import { projectKind, slug } from "./params.js";
-import { alternates, httpsUrl, tags } from "./shared.js";
+import { alternates, httpsUrl, publishedText, tags } from "./shared.js";
 
 /**
  * One project in a list: what a card needs, without the body. `slug` is the localized slug of the
@@ -11,7 +11,7 @@ export const projectSummaryDto = z.object({
   slug,
   locale,
   kind: projectKind,
-  title: z.string().min(1),
+  title: publishedText,
   summary: z.string(),
   stackTags: tags,
   featured: z.boolean(),
@@ -32,7 +32,7 @@ export type ProjectListDto = z.infer<typeof projectListDto>;
  * (ADR-011); `web` renders it with `rehype-sanitize`.
  */
 export const projectDto = projectSummaryDto.extend({
-  body: z.string(),
+  body: publishedText,
   repoUrl: httpsUrl.nullable(),
   demoUrl: httpsUrl.nullable(),
 });

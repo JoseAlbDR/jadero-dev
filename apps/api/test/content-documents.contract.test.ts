@@ -29,8 +29,8 @@ import { type SkillDocument, skillRules } from "../src/modules/content/domain/sk
 /**
  * The domain may not import the contracts (rule domain-imports-only-domain), so it keeps its own
  * copy of the publish rules. This file is where the two meet: a document the domain calls complete
- * must parse as the public DTO, and the fields the domain requires must be exactly the ones the DTO
- * requires, plus the body each type requires on purpose (a page with no body is not a page).
+ * must parse as the public DTO, and the fields the domain requires at publish must be exactly the
+ * ones the DTO refuses when blank: the contract is never weaker than the domain, nor stricter.
  */
 interface Case<TDoc extends object> {
   readonly type: string;
@@ -40,10 +40,8 @@ interface Case<TDoc extends object> {
   readonly toDto: (doc: TDoc) => unknown;
   /** Only what completeness needs; every optional field empty. */
   readonly minimal: TDoc;
-  /** Each text field emptied, by name. */
-  readonly blank: Record<string, (doc: TDoc) => TDoc>;
-  /** Fields the domain requires although the DTO accepts them empty. */
-  readonly requiredOnPurpose: readonly string[];
+  /** Each text field set to a given value, by name. */
+  readonly blank: Record<string, (doc: TDoc, value: string) => TDoc>;
 }
 
 function suite<TDoc extends object>(c: Case<TDoc>): void {
@@ -54,14 +52,15 @@ function suite<TDoc extends object>(c: Case<TDoc>): void {
       expect(c.dto.safeParse(c.toDto(c.minimal)).success).toBe(true);
     });
 
-    it("requires exactly the fields the DTO requires, plus the body on purpose", () => {
-      const domainRequires = Object.keys(c.blank).filter(
-        (field) => !c.rules.isComplete(c.blank[field]?.(c.minimal) as TDoc),
+    it.each(["", " \n"])("requires the same fields as the DTO when a field is %j", (value) => {
+      const fields = Object.keys(c.blank);
+      const variant = (field: string) => c.blank[field]?.(c.minimal, value) as TDoc;
+      const domainRequires = fields.filter((field) => !c.rules.isComplete(variant(field)));
+      const dtoRequires = fields.filter(
+        (field) => !c.dto.safeParse(c.toDto(variant(field))).success,
       );
-      const dtoRequires = Object.keys(c.blank).filter(
-        (field) => !c.dto.safeParse(c.toDto(c.blank[field]?.(c.minimal) as TDoc)).success,
-      );
-      expect(domainRequires.sort()).toEqual([...dtoRequires, ...c.requiredOnPurpose].sort());
+      expect(domainRequires.length).toBeGreaterThan(0);
+      expect(dtoRequires).toEqual(domainRequires);
     });
   });
 }
@@ -81,12 +80,11 @@ suite<ProjectDocument>({
     demoUrl: null,
   },
   blank: {
-    slug: (d) => ({ ...d, slug: "" }),
-    title: (d) => ({ ...d, title: "" }),
-    summary: (d) => ({ ...d, summary: "" }),
-    body: (d) => ({ ...d, body: "" }),
+    slug: (d, v) => ({ ...d, slug: v }),
+    title: (d, v) => ({ ...d, title: v }),
+    summary: (d, v) => ({ ...d, summary: v }),
+    body: (d, v) => ({ ...d, body: v }),
   },
-  requiredOnPurpose: ["body"],
 });
 
 suite<PostDocument>({
@@ -101,12 +99,11 @@ suite<PostDocument>({
   }),
   minimal: { slug: "sample-post", title: "Sample", excerpt: "", body: "Body.", tags: [] },
   blank: {
-    slug: (d) => ({ ...d, slug: "" }),
-    title: (d) => ({ ...d, title: "" }),
-    excerpt: (d) => ({ ...d, excerpt: "" }),
-    body: (d) => ({ ...d, body: "" }),
+    slug: (d, v) => ({ ...d, slug: v }),
+    title: (d, v) => ({ ...d, title: v }),
+    excerpt: (d, v) => ({ ...d, excerpt: v }),
+    body: (d, v) => ({ ...d, body: v }),
   },
-  requiredOnPurpose: ["body"],
 });
 
 suite<ProfileDocument>({
@@ -116,11 +113,10 @@ suite<ProfileDocument>({
   toDto: (doc) => ({ ...doc, locale: "en" }),
   minimal: { name: "Sample Person", headline: "Engineer", summary: "Summary.", links: [] },
   blank: {
-    name: (d) => ({ ...d, name: "" }),
-    headline: (d) => ({ ...d, headline: "" }),
-    summary: (d) => ({ ...d, summary: "" }),
+    name: (d, v) => ({ ...d, name: v }),
+    headline: (d, v) => ({ ...d, headline: v }),
+    summary: (d, v) => ({ ...d, summary: v }),
   },
-  requiredOnPurpose: ["summary"],
 });
 
 suite<ExperienceItemDocument>({
@@ -136,11 +132,10 @@ suite<ExperienceItemDocument>({
     stackTags: [],
   },
   blank: {
-    organization: (d) => ({ ...d, organization: "" }),
-    role: (d) => ({ ...d, role: "" }),
-    "period.from": (d) => ({ ...d, period: { ...d.period, from: "" } }),
+    organization: (d, v) => ({ ...d, organization: v }),
+    role: (d, v) => ({ ...d, role: v }),
+    "period.from": (d, v) => ({ ...d, period: { ...d.period, from: v } }),
   },
-  requiredOnPurpose: [],
 });
 
 suite<SkillDocument>({
@@ -150,10 +145,9 @@ suite<SkillDocument>({
   toDto: (doc) => ({ ...doc, locale: "en" }),
   minimal: { name: "Messaging", category: "backend", projectSlugs: [] },
   blank: {
-    name: (d) => ({ ...d, name: "" }),
-    category: (d) => ({ ...d, category: "" }),
+    name: (d, v) => ({ ...d, name: v }),
+    category: (d, v) => ({ ...d, category: v }),
   },
-  requiredOnPurpose: [],
 });
 
 describe("domain field formats agree with the contract", () => {

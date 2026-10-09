@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { locale } from "./locale.js";
 import { slug } from "./params.js";
-import { alternates, tags } from "./shared.js";
+import { alternates, publishedText, tags } from "./shared.js";
 
 /** One post in a list: what a card needs, without the body. */
 export const postSummaryDto = z.object({
   slug,
   locale,
-  title: z.string().min(1),
+  title: publishedText,
   excerpt: z.string(),
   tags,
   publishedAt: z.iso.datetime(),
@@ -30,7 +30,7 @@ export const postPageDto = z.object({
 export type PostPageDto = z.infer<typeof postPageDto>;
 
 /** `GET /content/:locale/posts/:slug`: one published post; `body` is raw Markdown (ADR-011). */
-export const postDto = postSummaryDto.extend({ body: z.string() });
+export const postDto = postSummaryDto.extend({ body: publishedText });
 
 /** A public post page. */
 export type PostDto = z.infer<typeof postDto>;

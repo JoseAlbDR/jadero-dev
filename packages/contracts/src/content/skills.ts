@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { locale } from "./locale.js";
 import { slug } from "./params.js";
+import { publishedText } from "./shared.js";
 
 /**
  * One published skill. `category` is a localized display string ("IA aplicada", "applied AI");
@@ -9,8 +10,8 @@ import { slug } from "./params.js";
  */
 export const skillDto = z.object({
   locale,
-  name: z.string().min(1),
-  category: z.string().min(1),
+  name: publishedText,
+  category: publishedText,
   projectSlugs: z.array(slug),
 });
 
