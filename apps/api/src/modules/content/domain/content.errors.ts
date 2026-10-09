@@ -144,3 +144,22 @@ export class StoredStateInvalid extends Error {
     this.name = "StoredStateInvalid";
   }
 }
+
+/**
+ * A save named a version the item is no longer at (D5, optimistic concurrency): someone saved it
+ * since this caller loaded it (the lost update it prevents), or a create (`expectedVersion` 0) named
+ * an id that already exists. The unit of work rolls back everything the work wrote. Maps to 409.
+ */
+export class ConcurrentModification extends Error {
+  constructor(
+    readonly itemId: string,
+    readonly expectedVersion: number,
+  ) {
+    super(
+      expectedVersion === 0
+        ? `Item ${itemId} already exists.`
+        : `Item ${itemId} is no longer at version ${expectedVersion}.`,
+    );
+    this.name = "ConcurrentModification";
+  }
+}
