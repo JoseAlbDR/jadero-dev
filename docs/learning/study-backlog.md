@@ -36,3 +36,6 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 ### Theme: process health and startup
 - Liveness versus readiness probes (the owner had them swapped). WP-10, weak (step 2 check question). Step log.
 - Fail fast at boot versus lazy connection plus readiness, and when each wins. WP-10, recommended. Step log.
+
+### Theme: state machines and approval
+- Approval bound to a revision: the state describes the latest revision, the pointer what is live, and a withdraw acts on the entry (pointer cleared), not on the newest draft; undoing an edit is a new revision, never a withdraw (the owner thought withdraw discarded the draft and the visitor would see it). WP-12, weak (step 4 check question). Step log.
