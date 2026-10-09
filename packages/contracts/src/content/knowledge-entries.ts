@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { cvBulletId, knowledgeEntryId, slug } from "./params.js";
-import { period, tags } from "./shared.js";
+import { period, publishedText, tags } from "./shared.js";
 
 /** The entry's `type`, the list of the agreed entry format (ADR-031 alignment). */
 export const knowledgeEntryType = z.enum([
@@ -48,7 +48,7 @@ const REQUIRED_SECTIONS: readonly KnowledgeEntrySectionKey[] = [
 /** One prose section: its key and its body as raw Markdown. */
 export const knowledgeEntrySection = z.object({
   key: knowledgeEntrySectionKey,
-  body: z.string().min(1),
+  body: publishedText,
 });
 
 /**
@@ -83,7 +83,7 @@ export const knowledgeEntrySections = z
  */
 const entryMetadata = {
   id: knowledgeEntryId,
-  title: z.string().min(1),
+  title: publishedText,
   type: knowledgeEntryType,
   domain: slug,
   period,
@@ -96,7 +96,7 @@ const entryMetadata = {
 /** One approved entry in the work-log list: its metadata and its Summary. */
 export const knowledgeEntrySummaryDto = z.object({
   ...entryMetadata,
-  summary: z.string().min(1),
+  summary: publishedText,
 });
 
 /** A work-log card. */
@@ -118,7 +118,7 @@ export const knowledgeEntryDto = z.object({
   cvBullet: cvBulletId.nullable(),
   related: z.array(knowledgeEntryId),
   sections: knowledgeEntrySections,
-  questions: z.array(z.string().min(1)).min(1),
+  questions: z.array(publishedText).min(1),
 });
 
 /** A public work-log page. */

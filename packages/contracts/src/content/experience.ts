@@ -10,7 +10,7 @@ import { period, publishedText, tags } from "./shared.js";
  */
 export const cvBulletDto = z.object({
   id: cvBulletId,
-  text: z.string().min(1),
+  text: publishedText,
   entryIds: z.array(knowledgeEntryId),
 });
 
