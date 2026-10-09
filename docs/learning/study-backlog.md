@@ -22,6 +22,7 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 - The inbox row and the consumer's effect commit or roll back together; a separate inbox commit turns a retry into a dropped duplicate (idempotency without atomicity loses messages). WP-10, weak (step 5 check question), solid 2026-10-07 (explain-back Q1). Step log.
 - When a port pays for itself: layered versus hexagonal, speculative generality, fakes that drift without a contract suite. WP-10, interesting (step 5 layered decision). Decision.
 - Fakes versus mocks, and test double drift: a fake is trustworthy only in what the shared contract suite checks; the rest belongs to integration tests (test pyramid). WP-10, weak on the remedy, the risk was right (step 6 check question). Step log.
+- Which invariants belong in the database (keys, FKs, single-row checks, anything racy as check-then-act) and which stay in the domain (state-dependent, cross-table, inside a document), and what a trigger would cost; the owner wanted a constraint for a rule a CHECK cannot read. WP-12, weak (step 5a check question). `docs/learning/wp-12.md`, Step log.
 - Extracting a module into its own service: no cross-module foreign keys, no transaction across databases, events and read models instead, eventual consistency and sagas. WP-10, weak (explain-back Q3). Recap.
 
 ### Theme: migrations as append-only history
