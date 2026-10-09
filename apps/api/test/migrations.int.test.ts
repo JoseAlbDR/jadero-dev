@@ -45,7 +45,7 @@ describe("api migrations from zero, as an ordinary role", () => {
     ).toEqual([{ rolsuper: false, rolcreatedb: false }]);
   });
 
-  it("create the outbox and record one row per journal entry; a second run applies nothing", async () => {
+  it("create the outbox and the content tables and record one row per journal entry; a second run applies nothing", async () => {
     const url = await emptyDatabase();
     await runMigrations({ service: "api", url, migrationsFolder: folder });
     await runMigrations({ service: "api", url, migrationsFolder: folder });
@@ -55,6 +55,27 @@ describe("api migrations from zero, as an ordinary role", () => {
        WHERE table_schema NOT IN ('pg_catalog', 'information_schema') ORDER BY 1`,
     );
     expect(tables.map((row) => row.name)).toEqual([
+      "content.cv_bullet_revisions",
+      "content.cv_bullet_translations",
+      "content.cv_bullets",
+      "content.experience_item_revisions",
+      "content.experience_item_translations",
+      "content.experience_items",
+      "content.knowledge_entries",
+      "content.knowledge_entry_provenance",
+      "content.knowledge_entry_revisions",
+      "content.post_revisions",
+      "content.post_translations",
+      "content.posts",
+      "content.profile",
+      "content.profile_revisions",
+      "content.profile_translations",
+      "content.project_revisions",
+      "content.project_translations",
+      "content.projects",
+      "content.skill_revisions",
+      "content.skill_translations",
+      "content.skills",
       "drizzle.__drizzle_migrations",
       "messaging.outbox",
     ]);
