@@ -6,7 +6,8 @@ import {
   RevisionNotOfItem,
 } from "./content.errors.js";
 import { LOCALES, type Locale, OPTIONAL_LOCALES, REQUIRED_LOCALES } from "./locale.js";
-import { Revision, type RevisionOrigin } from "./revision.js";
+import type { Revision, RevisionOrigin } from "./revision.js";
+import { RevisionHistory } from "./revision-history.js";
 
 /**
  * The publish state of one locale, derived from the pointers (D4), never stored: `missing` (no
@@ -92,12 +93,19 @@ export type LocalizedRevisionsView<TDoc extends object> = Pick<
   | "archivedAt"
 >;
 
-type Slot<TDoc extends object> = LocaleSnapshot<TDoc>;
+/** One locale in memory: its revision history and the published pointer into it. */
+interface Slot<TDoc extends object> {
+  readonly history: RevisionHistory<TDoc>;
+  readonly published: Revision<TDoc> | null;
+  readonly publishedAt: Date | null;
+  readonly firstPublishedAt: Date | null;
+}
 
 /**
  * The per-locale publish state machine of one content item (D4), shared by composition: every
- * aggregate holds one and supplies its document type and rules. It keeps per locale the latest and
- * the published revision, not the history (D1), appends revisions whose fields are well formed, and
+ * aggregate holds one and supplies its document type and rules. It keeps per locale a
+ * `RevisionHistory` holding the latest and the published revision, not the whole history (D1),
+ * appends revisions whose fields are well formed, and
  * guards publish: each named locale has a complete revision of this item; afterwards es and en are
  * both published; de left out is a warning. Archiving only hides: it changes no revision or pointer.
  */
@@ -137,8 +145,13 @@ export class LocalizedRevisions<TDoc extends object> {
     for (const locale of LOCALES) {
       const stored = snapshot.locales[locale];
       if (stored) {
+        const revisions =
+          stored.published && stored.published.id !== stored.latest.id
+            ? [stored.published, stored.latest]
+            : [stored.latest];
         slots.set(locale, {
-          ...stored,
+          history: RevisionHistory.reconstitute(itemId, locale, { revisions }),
+          published: stored.published,
           publishedAt: copy(stored.publishedAt),
           firstPublishedAt: copy(stored.firstPublishedAt),
         });
@@ -156,7 +169,7 @@ export class LocalizedRevisions<TDoc extends object> {
     const slot = this.slots.get(locale);
     if (!slot) return "missing";
     if (!slot.published) return "draft";
-    return slot.published.id === slot.latest.id ? "published" : "changed";
+    return slot.published.id === slot.history.latest()?.id ? "published" : "changed";
   }
 
   /**
@@ -165,7 +178,7 @@ export class LocalizedRevisions<TDoc extends object> {
    * @returns the revision, or null when the locale is `missing`.
    */
   latest(locale: Locale): Revision<TDoc> | null {
-    return this.slots.get(locale)?.latest ?? null;
+    return this.slots.get(locale)?.history.latest() ?? null;
   }
 
   /**
@@ -240,23 +253,17 @@ export class LocalizedRevisions<TDoc extends object> {
     const invalid = this.rules.invalidFields(document);
     if (invalid.length > 0) throw new FieldFormatInvalid(this.itemId, locale, invalid);
 
-    const slot = this.slots.get(locale);
-    const revision = Revision.create({
-      id: revisionId,
-      itemId: this.itemId,
-      locale,
-      number: (slot?.latest.number ?? 0) + 1,
-      origin,
-      document,
-      createdAt: at,
-    });
-    this.slots.set(locale, {
-      latest: revision,
-      published: slot?.published ?? null,
-      publishedAt: slot?.publishedAt ?? null,
-      firstPublishedAt: slot?.firstPublishedAt ?? null,
-    });
-    return revision;
+    let slot = this.slots.get(locale);
+    if (!slot) {
+      slot = {
+        history: RevisionHistory.empty(this.itemId, locale),
+        published: null,
+        publishedAt: null,
+        firstPublishedAt: null,
+      };
+      this.slots.set(locale, slot);
+    }
+    return slot.history.append(document, origin, revisionId, at);
   }
 
   /**
@@ -332,13 +339,9 @@ export class LocalizedRevisions<TDoc extends object> {
 
   /** The given revision, when it is one this aggregate can know: same item, same locale, not newer. */
   private known(locale: Locale, revision: Revision<TDoc>): Revision<TDoc> {
-    const latest = this.latest(locale);
-    const belongs =
-      revision.itemId === this.itemId &&
-      revision.locale === locale &&
-      latest !== null &&
-      (revision.number < latest.number || revision.id === latest.id);
-    if (!belongs) throw new RevisionNotOfItem(this.itemId, locale, revision.id);
+    if (!this.slots.get(locale)?.history.belongs(revision)) {
+      throw new RevisionNotOfItem(this.itemId, locale, revision.id);
+    }
     return revision;
   }
 

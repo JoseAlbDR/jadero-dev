@@ -1,4 +1,10 @@
-import { invalidEntries, isFilled, isTag, isYearMonth } from "./field-formats.js";
+import {
+  invalidEntries,
+  invalidPeriodFields,
+  isCompletePeriod,
+  isFilled,
+  isTag,
+} from "./field-formats.js";
 import type { Locale } from "./locale.js";
 import {
   type DocumentRules,
@@ -38,21 +44,12 @@ export interface ExperienceItemDocument {
  * `experienceItemDto` requires (an organization, a role, a start).
  */
 export const experienceItemRules: DocumentRules<ExperienceItemDocument> = {
-  invalidFields: (doc) => {
-    const { from, to } = doc.period;
-    const fromInvalid = isFilled(from) && !isYearMonth(from);
-    const toInvalid = to !== null && (!isYearMonth(to) || (isYearMonth(from) && to < from));
-    return [
-      ...(fromInvalid ? ["period.from"] : []),
-      ...(toInvalid ? ["period.to"] : []),
-      ...invalidEntries("stackTags", doc.stackTags, isTag),
-    ];
-  },
+  invalidFields: (doc) => [
+    ...invalidPeriodFields(doc.period),
+    ...invalidEntries("stackTags", doc.stackTags, isTag),
+  ],
   isComplete: (doc) =>
-    isFilled(doc.organization) &&
-    isFilled(doc.role) &&
-    isYearMonth(doc.period.from) &&
-    (doc.period.to === null || (isYearMonth(doc.period.to) && doc.period.from <= doc.period.to)),
+    isFilled(doc.organization) && isFilled(doc.role) && isCompletePeriod(doc.period),
 };
 
 /** The layout fields of an experience item, kept on the root (Q1 B). */

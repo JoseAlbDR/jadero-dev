@@ -1,4 +1,5 @@
 const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const ENTRY_ID = /^kb-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const YEAR_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 /**
@@ -63,4 +64,48 @@ export function invalidEntries(
   valid: (value: string) => boolean,
 ): string[] {
   return values.flatMap((value, index) => (valid(value) ? [] : [`${field}[${index}]`]));
+}
+
+/**
+ * Tells whether a string is a CV bullet id: kebab-case, at most 80 characters (`backend-10`), the
+ * contract's `cvBulletId`.
+ * @param value the candidate id.
+ * @returns true when it fits.
+ */
+export function isCvBulletId(value: string): boolean {
+  return value.length <= 80 && KEBAB.test(value);
+}
+
+/**
+ * Tells whether a string is a knowledge entry id: `kb-` and a kebab-case name, at most 120
+ * characters (`kb-outbox-relay`), the contract's `knowledgeEntryId`.
+ * @param value the candidate id.
+ * @returns true when it fits.
+ */
+export function isKnowledgeEntryId(value: string): boolean {
+  return value.length <= 120 && ENTRY_ID.test(value);
+}
+
+/**
+ * The malformed parts of a month-precision period: a start that is filled but not `YYYY-MM`, an end
+ * that is not `YYYY-MM` or is before the start. An empty start is absent (a draft), not malformed.
+ * @param period the span; `to: null` while it lasts.
+ * @returns `period.from` and or `period.to`, empty when well formed.
+ */
+export function invalidPeriodFields(period: { from: string; to: string | null }): string[] {
+  const { from, to } = period;
+  const fromInvalid = isFilled(from) && !isYearMonth(from);
+  const toInvalid = to !== null && (!isYearMonth(to) || (isYearMonth(from) && to < from));
+  return [...(fromInvalid ? ["period.from"] : []), ...(toInvalid ? ["period.to"] : [])];
+}
+
+/**
+ * Tells whether a period is publishable: a `YYYY-MM` start, and an end that is null or a `YYYY-MM`
+ * not before the start (the contract's `period`).
+ * @param period the span.
+ * @returns true when complete.
+ */
+export function isCompletePeriod(period: { from: string; to: string | null }): boolean {
+  const { from, to } = period;
+  return isYearMonth(from) && (to === null || (isYearMonth(to) && from <= to));
 }

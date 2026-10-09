@@ -1,5 +1,9 @@
 import {
+  cvBulletDto,
+  cvBulletId,
   experienceItemDto,
+  knowledgeEntryDto,
+  knowledgeEntryId,
   postDto,
   profileDto,
   projectDto,
@@ -10,16 +14,24 @@ import {
 } from "@jadero/contracts";
 import { describe, expect, it } from "vitest";
 import type { z } from "zod";
+import { type CvBulletDocument, cvBulletRules } from "../src/modules/content/domain/cv-bullet.js";
 import {
   type ExperienceItemDocument,
   experienceItemRules,
 } from "../src/modules/content/domain/experience-item.js";
 import {
+  isCvBulletId,
+  isKnowledgeEntryId,
   isSlug,
   isTag,
   isUrlWith,
   isYearMonth,
 } from "../src/modules/content/domain/field-formats.js";
+import {
+  type KnowledgeEntryDocument,
+  type KnowledgeEntrySectionKey,
+  knowledgeEntryRules,
+} from "../src/modules/content/domain/knowledge-entry.js";
 import type { DocumentRules } from "../src/modules/content/domain/localized-revisions.js";
 import { type PostDocument, postRules } from "../src/modules/content/domain/post.js";
 import { type ProfileDocument, profileRules } from "../src/modules/content/domain/profile.js";
@@ -30,7 +42,9 @@ import { type SkillDocument, skillRules } from "../src/modules/content/domain/sk
  * The domain may not import the contracts (rule domain-imports-only-domain), so it keeps its own
  * copy of the publish rules. This file is where the two meet: a document the domain calls complete
  * must parse as the public DTO, and the fields the domain requires at publish must be exactly the
- * ones the DTO refuses when blank: the contract is never weaker than the domain, nor stricter.
+ * ones the DTO refuses when blank: the contract is never weaker than the domain, nor stricter. For
+ * knowledge entries "publish" is approval, and the private fields (D-67) are in no DTO and in no
+ * completeness rule.
  */
 interface Case<TDoc extends object> {
   readonly type: string;
@@ -150,6 +164,93 @@ suite<SkillDocument>({
   },
 });
 
+suite<CvBulletDocument>({
+  type: "CvBullet",
+  rules: cvBulletRules,
+  dto: cvBulletDto,
+  toDto: (doc) => ({ ...doc, id: "backend-10", entryIds: [] }),
+  minimal: { text: "Built the outbox relay." },
+  blank: {
+    text: (d, v) => ({ ...d, text: v }),
+  },
+});
+
+/** Sets the body of one section of a document. */
+function withSection(
+  doc: KnowledgeEntryDocument,
+  key: KnowledgeEntrySectionKey,
+  body: string,
+): KnowledgeEntryDocument {
+  return { ...doc, sections: doc.sections.map((s) => (s.key === key ? { key, body } : s)) };
+}
+
+const minimalEntry: KnowledgeEntryDocument = {
+  title: "Sample entry",
+  type: "feature",
+  domain: "messaging",
+  period: { from: "2025-03", to: null },
+  role: "lead",
+  sections: [
+    { key: "summary", body: "Summary." },
+    { key: "problem", body: "Problem." },
+    { key: "whatHeBuilt", body: "What he built." },
+    { key: "lessons", body: "Lessons." },
+  ],
+  questions: ["What was built?"],
+  stack: [],
+  patterns: [],
+  related: [],
+  cvBullet: null,
+  indexable: true,
+  sources: [],
+  conflicts: "",
+  publicNames: [],
+  confidence: "medium",
+};
+
+const entryToDto = (doc: KnowledgeEntryDocument) => ({ ...doc, id: "kb-sample-entry" });
+
+suite<KnowledgeEntryDocument>({
+  type: "KnowledgeEntry",
+  rules: knowledgeEntryRules,
+  dto: knowledgeEntryDto,
+  toDto: entryToDto,
+  minimal: minimalEntry,
+  blank: {
+    title: (d, v) => ({ ...d, title: v }),
+    domain: (d, v) => ({ ...d, domain: v }),
+    "period.from": (d, v) => ({ ...d, period: { ...d.period, from: v } }),
+    "sections.summary": (d, v) => withSection(d, "summary", v),
+    "sections.problem": (d, v) => withSection(d, "problem", v),
+    "sections.whatHeBuilt": (d, v) => withSection(d, "whatHeBuilt", v),
+    "sections.lessons": (d, v) => withSection(d, "lessons", v),
+    "questions[0]": (d, v) => ({ ...d, questions: [v] }),
+    sources: (d, v) => ({ ...d, sources: [v] }),
+    conflicts: (d, v) => ({ ...d, conflicts: v }),
+    publicNames: (d, v) => ({ ...d, publicNames: [v] }),
+  },
+});
+
+describe("KnowledgeEntry documents against the public contract, beyond blank fields", () => {
+  it.each`
+    case                       | doc
+    ${"no Summary section"}    | ${{ ...minimalEntry, sections: minimalEntry.sections.slice(1) }}
+    ${"sections out of order"} | ${{ ...minimalEntry, sections: [...minimalEntry.sections].reverse() }}
+    ${"no question"}           | ${{ ...minimalEntry, questions: [] }}
+  `("the domain and the DTO both refuse $case", ({ doc }) => {
+    expect(knowledgeEntryRules.isComplete(doc)).toBe(false);
+    expect(knowledgeEntryDto.safeParse(entryToDto(doc)).success).toBe(false);
+  });
+
+  it("the private fields never reach the DTO", () => {
+    const doc = { ...minimalEntry, sources: ["notes"], conflicts: "x", publicNames: ["Acme"] };
+    const parsed = knowledgeEntryDto.parse(entryToDto(doc));
+    for (const key of ["sources", "conflicts", "publicNames", "confidence"]) {
+      expect(parsed).not.toHaveProperty(key);
+    }
+  });
+});
+
 describe("domain field formats agree with the contract", () => {
   it.each(["portal-de-empleo", "a1", "", "Upper", "two--hyphens", "-lead", "a_b", "a".repeat(121)])(
     "slug %j",
@@ -157,6 +258,32 @@ describe("domain field formats agree with the contract", () => {
       expect(isSlug(value)).toBe(slug.safeParse(value).success);
     },
   );
+
+  it.each([
+    "backend-10",
+    "a",
+    "",
+    "Backend-10",
+    "backend_10",
+    "a--b",
+    "a".repeat(80),
+    "a".repeat(81),
+  ])("CV bullet id %j", (value) => {
+    expect(isCvBulletId(value)).toBe(cvBulletId.safeParse(value).success);
+  });
+
+  it.each([
+    "kb-outbox-relay",
+    "kb-a",
+    "kb-",
+    "outbox",
+    "kb-Outbox",
+    "kb--a",
+    `kb-${"a".repeat(117)}`,
+    `kb-${"a".repeat(118)}`,
+  ])("knowledge entry id %j", (value) => {
+    expect(isKnowledgeEntryId(value)).toBe(knowledgeEntryId.safeParse(value).success);
+  });
 
   it.each(["2025-03", "2025-13", "2025-3", "25-03", ""])("year and month %j", (value) => {
     expect(isYearMonth(value)).toBe(yearMonth.safeParse(value).success);
