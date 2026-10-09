@@ -1,6 +1,8 @@
 import { SlugInvalid } from "./content.errors.js";
+import { invalidEntries, isFilled, isSlug, isTag, isUrlWith } from "./field-formats.js";
 import type { Locale } from "./locale.js";
 import {
+  type DocumentRules,
   LocalizedRevisions,
   type LocalizedRevisionsSnapshot,
   type LocalizedRevisionsView,
@@ -8,7 +10,6 @@ import {
   type PublishTarget,
 } from "./localized-revisions.js";
 import type { Revision, RevisionOrigin } from "./revision.js";
-import { isFilled, isSlug } from "./slug.js";
 
 /** The kind of a project (ADR-011): a long case study, a regular project or an early one. */
 export type ProjectKind = "case_study" | "project" | "early";
@@ -30,18 +31,19 @@ export interface ProjectDocument {
 }
 
 /**
- * Whether a project document can be published: a localized slug, a title, a summary and a body.
- * @param document one locale's revision content.
- * @returns true when every required field is filled.
+ * The rules of a project document. Format on save: a localized slug that is a slug, tags of 1 to 60
+ * characters, HTTPS repository and demo URLs. Complete for publish: what `projectDto` requires (a
+ * localized slug and a title) plus a body, the page itself.
  */
-export function isProjectComplete(document: ProjectDocument): boolean {
-  return (
-    isSlug(document.slug) &&
-    isFilled(document.title) &&
-    isFilled(document.summary) &&
-    isFilled(document.body)
-  );
-}
+export const projectRules: DocumentRules<ProjectDocument> = {
+  invalidFields: (doc) => [
+    ...(isFilled(doc.slug) && !isSlug(doc.slug) ? ["slug"] : []),
+    ...invalidEntries("stackTags", doc.stackTags, isTag),
+    ...(doc.repoUrl !== null && !isUrlWith(doc.repoUrl, ["https"]) ? ["repoUrl"] : []),
+    ...(doc.demoUrl !== null && !isUrlWith(doc.demoUrl, ["https"]) ? ["demoUrl"] : []),
+  ],
+  isComplete: (doc) => isSlug(doc.slug) && isFilled(doc.title) && isFilled(doc.body),
+};
 
 /** The layout fields of a project, kept on the root and changed without a revision (Q1 B). */
 export interface ProjectLayout {
@@ -89,7 +91,7 @@ export class Project implements ProjectLayout {
    */
   static create(layout: ProjectLayout): Project {
     if (!isSlug(layout.slug)) throw new SlugInvalid(layout.slug);
-    return new Project(layout, 0, LocalizedRevisions.empty(layout.id, isProjectComplete));
+    return new Project(layout, 0, LocalizedRevisions.empty(layout.id, projectRules));
   }
 
   /**
@@ -100,7 +102,7 @@ export class Project implements ProjectLayout {
     return new Project(
       stored,
       stored.version,
-      LocalizedRevisions.reconstitute(stored.id, isProjectComplete, stored.translations),
+      LocalizedRevisions.reconstitute(stored.id, projectRules, stored.translations),
     );
   }
 
@@ -118,6 +120,7 @@ export class Project implements ProjectLayout {
    * @param at the save time.
    * @returns the new revision.
    * @throws {InvalidTransition} when the project is archived.
+   * @throws {FieldFormatInvalid} when a field holds a malformed value.
    */
   saveRevision(
     locale: Locale,

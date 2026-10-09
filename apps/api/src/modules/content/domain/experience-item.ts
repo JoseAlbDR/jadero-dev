@@ -1,5 +1,7 @@
+import { invalidEntries, isFilled, isTag, isYearMonth } from "./field-formats.js";
 import type { Locale } from "./locale.js";
 import {
+  type DocumentRules,
   LocalizedRevisions,
   type LocalizedRevisionsSnapshot,
   type LocalizedRevisionsView,
@@ -7,7 +9,6 @@ import {
   type PublishTarget,
 } from "./localized-revisions.js";
 import type { Revision, RevisionOrigin } from "./revision.js";
-import { isFilled } from "./slug.js";
 
 /** Where the work happened. */
 export type LocationType = "remote" | "hybrid" | "onsite";
@@ -31,19 +32,28 @@ export interface ExperienceItemDocument {
   readonly stackTags: readonly string[];
 }
 
-const YEAR_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
-
 /**
- * Whether an experience document can be published: an organization, a role and a valid period
- * (`YYYY-MM`, the end not before the start).
- * @param document one locale's revision content.
- * @returns true when every required field is filled.
+ * The rules of an experience document. Format on save: a start that is `YYYY-MM` when given, an end
+ * that is `YYYY-MM` and not before the start, tags of 1 to 60 characters. Complete for publish: what
+ * `experienceItemDto` requires (an organization, a role, a start).
  */
-export function isExperienceItemComplete(document: ExperienceItemDocument): boolean {
-  const { from, to } = document.period;
-  const validPeriod = YEAR_MONTH.test(from) && (to === null || (YEAR_MONTH.test(to) && from <= to));
-  return isFilled(document.organization) && isFilled(document.role) && validPeriod;
-}
+export const experienceItemRules: DocumentRules<ExperienceItemDocument> = {
+  invalidFields: (doc) => {
+    const { from, to } = doc.period;
+    const fromInvalid = isFilled(from) && !isYearMonth(from);
+    const toInvalid = to !== null && (!isYearMonth(to) || (isYearMonth(from) && to < from));
+    return [
+      ...(fromInvalid ? ["period.from"] : []),
+      ...(toInvalid ? ["period.to"] : []),
+      ...invalidEntries("stackTags", doc.stackTags, isTag),
+    ];
+  },
+  isComplete: (doc) =>
+    isFilled(doc.organization) &&
+    isFilled(doc.role) &&
+    isYearMonth(doc.period.from) &&
+    (doc.period.to === null || (isYearMonth(doc.period.to) && doc.period.from <= doc.period.to)),
+};
 
 /** The layout fields of an experience item, kept on the root (Q1 B). */
 export interface ExperienceItemLayout {
@@ -76,11 +86,7 @@ export class ExperienceItem implements ExperienceItemLayout {
    * @param layout the identity, chosen by the use case, and the display order.
    */
   static create(layout: ExperienceItemLayout): ExperienceItem {
-    return new ExperienceItem(
-      layout,
-      0,
-      LocalizedRevisions.empty(layout.id, isExperienceItemComplete),
-    );
+    return new ExperienceItem(layout, 0, LocalizedRevisions.empty(layout.id, experienceItemRules));
   }
 
   /**
@@ -91,7 +97,7 @@ export class ExperienceItem implements ExperienceItemLayout {
     return new ExperienceItem(
       stored,
       stored.version,
-      LocalizedRevisions.reconstitute(stored.id, isExperienceItemComplete, stored.translations),
+      LocalizedRevisions.reconstitute(stored.id, experienceItemRules, stored.translations),
     );
   }
 
@@ -109,6 +115,7 @@ export class ExperienceItem implements ExperienceItemLayout {
    * @param at the save time.
    * @returns the new revision.
    * @throws {InvalidTransition} when the item is archived.
+   * @throws {FieldFormatInvalid} when a field holds a malformed value.
    */
   saveRevision(
     locale: Locale,

@@ -30,7 +30,7 @@ export class RequiredLocalesMissing extends Error {
 
 /**
  * The action is not a transition of the publish state machine from the current state (an archived
- * item, a revision that is already the published one). Maps to 409.
+ * item, a publish that names a locale twice). Maps to 409.
  */
 export class InvalidTransition extends Error {
   constructor(
@@ -55,6 +55,21 @@ export class RevisionNotOfItem extends Error {
   ) {
     super(`Revision ${revisionId} is not a ${locale} revision of item ${itemId}.`);
     this.name = "RevisionNotOfItem";
+  }
+}
+
+/**
+ * A saved document holds a value in the wrong format (a slug with spaces, a URL that is not HTTPS).
+ * Empty fields are allowed in a draft; malformed ones never reach storage. Maps to 422.
+ */
+export class FieldFormatInvalid extends Error {
+  constructor(
+    readonly itemId: string,
+    readonly locale: Locale,
+    readonly fields: readonly string[],
+  ) {
+    super(`Item ${itemId} in ${locale} has malformed fields: ${fields.join(", ")}.`);
+    this.name = "FieldFormatInvalid";
   }
 }
 

@@ -1,6 +1,8 @@
 import { SlugInvalid } from "./content.errors.js";
+import { invalidEntries, isFilled, isSlug, isTag } from "./field-formats.js";
 import type { Locale } from "./locale.js";
 import {
+  type DocumentRules,
   LocalizedRevisions,
   type LocalizedRevisionsSnapshot,
   type LocalizedRevisionsView,
@@ -8,7 +10,6 @@ import {
   type PublishTarget,
 } from "./localized-revisions.js";
 import type { Revision, RevisionOrigin } from "./revision.js";
-import { isFilled, isSlug } from "./slug.js";
 
 /** One locale of a post, the content of a revision (Q1 B). Text may be empty in a draft. */
 export interface PostDocument {
@@ -22,18 +23,17 @@ export interface PostDocument {
 }
 
 /**
- * Whether a post document can be published: a localized slug, a title, an excerpt and a body.
- * @param document one locale's revision content.
- * @returns true when every required field is filled.
+ * The rules of a post document. Format on save: a localized slug that is a slug, tags of 1 to 60
+ * characters. Complete for publish: what `postDto` requires (a localized slug and a title) plus a
+ * body, the post itself.
  */
-export function isPostComplete(document: PostDocument): boolean {
-  return (
-    isSlug(document.slug) &&
-    isFilled(document.title) &&
-    isFilled(document.excerpt) &&
-    isFilled(document.body)
-  );
-}
+export const postRules: DocumentRules<PostDocument> = {
+  invalidFields: (doc) => [
+    ...(isFilled(doc.slug) && !isSlug(doc.slug) ? ["slug"] : []),
+    ...invalidEntries("tags", doc.tags, isTag),
+  ],
+  isComplete: (doc) => isSlug(doc.slug) && isFilled(doc.title) && isFilled(doc.body),
+};
 
 /** The layout fields of a post, kept on the root (Q1 B). */
 export interface PostLayout {
@@ -49,8 +49,9 @@ export interface StoredPost extends PostLayout {
 }
 
 /**
- * The post aggregate (D1). A post's status and publish time are its locales' states and
- * `publishedAt` (ADR-011's `status` and `publishedAt`), not fields of their own.
+ * The post aggregate (D1). A post's status and publish time are its locales' states and publish
+ * times (ADR-011's `status` and `publishedAt`), not fields of their own. The feed orders by
+ * `firstPublishedAt`, so fixing a published post does not move it to the top.
  */
 export class Post implements PostLayout {
   readonly id: string;
@@ -72,7 +73,7 @@ export class Post implements PostLayout {
    */
   static create(layout: PostLayout): Post {
     if (!isSlug(layout.slug)) throw new SlugInvalid(layout.slug);
-    return new Post(layout, 0, LocalizedRevisions.empty(layout.id, isPostComplete));
+    return new Post(layout, 0, LocalizedRevisions.empty(layout.id, postRules));
   }
 
   /**
@@ -83,7 +84,7 @@ export class Post implements PostLayout {
     return new Post(
       stored,
       stored.version,
-      LocalizedRevisions.reconstitute(stored.id, isPostComplete, stored.translations),
+      LocalizedRevisions.reconstitute(stored.id, postRules, stored.translations),
     );
   }
 
@@ -101,6 +102,7 @@ export class Post implements PostLayout {
    * @param at the save time.
    * @returns the new revision.
    * @throws {InvalidTransition} when the post is archived.
+   * @throws {FieldFormatInvalid} when a field holds a malformed value.
    */
   saveRevision(
     locale: Locale,

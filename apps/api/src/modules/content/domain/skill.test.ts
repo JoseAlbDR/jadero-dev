@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { isSkillComplete, Skill, type SkillDocument } from "./skill.js";
+import { FieldFormatInvalid } from "./content.errors.js";
+import { Skill, type SkillDocument, skillRules } from "./skill.js";
 
 const AT = new Date("2026-11-03T10:12:00.000Z");
 
@@ -9,14 +10,20 @@ function doc(over: Partial<SkillDocument> = {}): SkillDocument {
 
 describe("Skill", () => {
   it.each`
-    case                    | document                                     | expected
-    ${"complete"}           | ${doc()}                                     | ${true}
-    ${"no projects"}        | ${doc({ projectSlugs: [] })}                 | ${true}
-    ${"no name"}            | ${doc({ name: "" })}                         | ${false}
-    ${"no category"}        | ${doc({ category: " " })}                    | ${false}
-    ${"a bad project slug"} | ${doc({ projectSlugs: ["Sample Project"] })} | ${false}
+    case             | document                     | expected
+    ${"complete"}    | ${doc()}                     | ${true}
+    ${"no projects"} | ${doc({ projectSlugs: [] })} | ${true}
+    ${"no name"}     | ${doc({ name: "" })}         | ${false}
+    ${"no category"} | ${doc({ category: " " })}    | ${false}
   `("is complete: $expected when $case", ({ document, expected }) => {
-    expect(isSkillComplete(document)).toBe(expected);
+    expect(skillRules.isComplete(document)).toBe(expected);
+  });
+
+  it("refuses to save a project slug that is not a slug", () => {
+    const document = doc({ projectSlugs: ["sample-project", "Sample Project"] });
+    expect(skillRules.invalidFields(document)).toEqual(["projectSlugs[1]"]);
+    const skill = Skill.create({ id: "s-1", sortOrder: 3 });
+    expect(() => skill.saveRevision("es", document, "owner", "r", AT)).toThrow(FieldFormatInvalid);
   });
 
   it("creates, saves, publishes and archives", () => {

@@ -1,5 +1,7 @@
+import { invalidEntries, isFilled, isSlug } from "./field-formats.js";
 import type { Locale } from "./locale.js";
 import {
+  type DocumentRules,
   LocalizedRevisions,
   type LocalizedRevisionsSnapshot,
   type LocalizedRevisionsView,
@@ -7,7 +9,6 @@ import {
   type PublishTarget,
 } from "./localized-revisions.js";
 import type { Revision, RevisionOrigin } from "./revision.js";
-import { isFilled, isSlug } from "./slug.js";
 
 /** One locale of a skill, the content of a revision (Q1 B). Text may be empty in a draft. */
 export interface SkillDocument {
@@ -19,15 +20,13 @@ export interface SkillDocument {
 }
 
 /**
- * Whether a skill document can be published: a name, a category, and slugs that are slugs.
- * @param document one locale's revision content.
- * @returns true when every required field is filled.
+ * The rules of a skill document. Format on save: project slugs that are slugs. Complete for publish:
+ * what `skillDto` requires (a name and a category).
  */
-export function isSkillComplete(document: SkillDocument): boolean {
-  return (
-    isFilled(document.name) && isFilled(document.category) && document.projectSlugs.every(isSlug)
-  );
-}
+export const skillRules: DocumentRules<SkillDocument> = {
+  invalidFields: (doc) => invalidEntries("projectSlugs", doc.projectSlugs, isSlug),
+  isComplete: (doc) => isFilled(doc.name) && isFilled(doc.category),
+};
 
 /** The layout fields of a skill, kept on the root (Q1 B). */
 export interface SkillLayout {
@@ -60,7 +59,7 @@ export class Skill implements SkillLayout {
    * @param layout the identity, chosen by the use case, and the display order.
    */
   static create(layout: SkillLayout): Skill {
-    return new Skill(layout, 0, LocalizedRevisions.empty(layout.id, isSkillComplete));
+    return new Skill(layout, 0, LocalizedRevisions.empty(layout.id, skillRules));
   }
 
   /**
@@ -71,7 +70,7 @@ export class Skill implements SkillLayout {
     return new Skill(
       stored,
       stored.version,
-      LocalizedRevisions.reconstitute(stored.id, isSkillComplete, stored.translations),
+      LocalizedRevisions.reconstitute(stored.id, skillRules, stored.translations),
     );
   }
 
@@ -89,6 +88,7 @@ export class Skill implements SkillLayout {
    * @param at the save time.
    * @returns the new revision.
    * @throws {InvalidTransition} when the skill is archived.
+   * @throws {FieldFormatInvalid} when a field holds a malformed value.
    */
   saveRevision(
     locale: Locale,

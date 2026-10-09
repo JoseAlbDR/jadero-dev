@@ -1,4 +1,5 @@
 import {
+  FieldFormatInvalid,
   InvalidTransition,
   LocaleIncomplete,
   RequiredLocalesMissing,
@@ -14,14 +15,35 @@ import { Revision, type RevisionOrigin } from "./revision.js";
  */
 export type LocaleState = "missing" | "draft" | "published" | "changed";
 
-/** Tells whether a document has every field a public page needs; each aggregate supplies its own. */
-export type Completeness<TDoc extends object> = (document: TDoc) => boolean;
+/**
+ * The two checks an item type supplies for its documents. Format is checked on every save, so a
+ * malformed value is never stored; completeness only on publish, so a draft may be partial.
+ */
+export interface DocumentRules<TDoc extends object> {
+  /**
+   * The fields that hold a value in the wrong format (`slug`, `stackTags[1]`). An empty text is
+   * absent, not malformed: drafts may leave fields empty.
+   * @param document one locale's content.
+   * @returns the field paths, empty when the document can be saved.
+   */
+  invalidFields(document: TDoc): readonly string[];
+  /**
+   * Whether every field the public contract requires for a page of this type is filled, so the
+   * revision can be published.
+   * @param document one locale's content.
+   * @returns true when the document is complete.
+   */
+  isComplete(document: TDoc): boolean;
+}
 
 /** One locale as stored: its latest revision and, once published, the published one and when. */
 export interface LocaleSnapshot<TDoc extends object> {
   readonly latest: Revision<TDoc>;
   readonly published: Revision<TDoc> | null;
+  /** When the published pointer last moved (a publish or a rollback). */
   readonly publishedAt: Date | null;
+  /** When the locale was first published; never changed afterwards. */
+  readonly firstPublishedAt: Date | null;
 }
 
 /** What a repository reads back for an item: the locales that have revisions, and the archive mark. */
@@ -44,36 +66,45 @@ export interface PublishWarning {
   readonly locale: Locale;
 }
 
-/** What a publish changed; WP-14 turns it into outbox rows in the same unit of work. */
+/**
+ * What a publish changed; WP-14 turns `published` into outbox rows in the same unit of work. An
+ * empty `published` is an empty change set: nothing moved, so the use case has nothing to save and
+ * no version to bump.
+ */
 export interface PublishResult {
   readonly itemId: string;
+  /** The locales whose pointer moved, with the revision it points at now. */
   readonly published: readonly { readonly locale: Locale; readonly revisionId: string }[];
+  /** The named locales whose target revision was already the published one: no-ops. */
+  readonly alreadyPublished: readonly Locale[];
   readonly warnings: readonly PublishWarning[];
 }
 
 /** The read side of the state machine, which an aggregate exposes; writes go through the aggregate. */
 export type LocalizedRevisionsView<TDoc extends object> = Pick<
   LocalizedRevisions<TDoc>,
-  "stateOf" | "latest" | "published" | "publishedAt" | "isComplete" | "archivedAt"
+  | "stateOf"
+  | "latest"
+  | "published"
+  | "publishedAt"
+  | "firstPublishedAt"
+  | "isComplete"
+  | "archivedAt"
 >;
 
-interface Slot<TDoc extends object> {
-  readonly latest: Revision<TDoc>;
-  readonly published: Revision<TDoc> | null;
-  readonly publishedAt: Date | null;
-}
+type Slot<TDoc extends object> = LocaleSnapshot<TDoc>;
 
 /**
  * The per-locale publish state machine of one content item (D4), shared by composition: every
- * aggregate holds one and supplies its document type and completeness rule. It keeps per locale the
- * latest and the published revision, not the history (D1), appends revisions, and guards publish:
- * each named locale has a complete revision of this item; afterwards es and en are both published;
- * de left out is a warning. Archiving hides every locale and ends the machine.
+ * aggregate holds one and supplies its document type and rules. It keeps per locale the latest and
+ * the published revision, not the history (D1), appends revisions whose fields are well formed, and
+ * guards publish: each named locale has a complete revision of this item; afterwards es and en are
+ * both published; de left out is a warning. Archiving only hides: it changes no revision or pointer.
  */
 export class LocalizedRevisions<TDoc extends object> {
   private constructor(
     private readonly itemId: string,
-    private readonly complete: Completeness<TDoc>,
+    private readonly rules: DocumentRules<TDoc>,
     private readonly slots: Map<Locale, Slot<TDoc>>,
     private archivedOn: Date | null,
   ) {}
@@ -81,33 +112,39 @@ export class LocalizedRevisions<TDoc extends object> {
   /**
    * The machine of a new item: every locale `missing`, not archived.
    * @param itemId the item's identity, which every revision must carry.
-   * @param isComplete the item type's completeness rule.
+   * @param rules the item type's format and completeness rules.
    */
   static empty<TDoc extends object>(
     itemId: string,
-    isComplete: Completeness<TDoc>,
+    rules: DocumentRules<TDoc>,
   ): LocalizedRevisions<TDoc> {
-    return new LocalizedRevisions(itemId, isComplete, new Map(), null);
+    return new LocalizedRevisions(itemId, rules, new Map(), null);
   }
 
   /**
    * Rebuilds the machine from stored pointers. Nothing is re-checked: the database's foreign keys
    * prove each pointer names a revision of the same item and locale.
    * @param itemId the item's identity.
-   * @param isComplete the item type's completeness rule.
+   * @param rules the item type's format and completeness rules.
    * @param snapshot the locales that have revisions, and the archive mark.
    */
   static reconstitute<TDoc extends object>(
     itemId: string,
-    isComplete: Completeness<TDoc>,
+    rules: DocumentRules<TDoc>,
     snapshot: LocalizedRevisionsSnapshot<TDoc>,
   ): LocalizedRevisions<TDoc> {
     const slots = new Map<Locale, Slot<TDoc>>();
     for (const locale of LOCALES) {
       const stored = snapshot.locales[locale];
-      if (stored) slots.set(locale, { ...stored, publishedAt: copy(stored.publishedAt) });
+      if (stored) {
+        slots.set(locale, {
+          ...stored,
+          publishedAt: copy(stored.publishedAt),
+          firstPublishedAt: copy(stored.firstPublishedAt),
+        });
+      }
     }
-    return new LocalizedRevisions(itemId, isComplete, slots, copy(snapshot.archivedAt));
+    return new LocalizedRevisions(itemId, rules, slots, copy(snapshot.archivedAt));
   }
 
   /**
@@ -141,12 +178,22 @@ export class LocalizedRevisions<TDoc extends object> {
   }
 
   /**
-   * When the published pointer of a locale last moved.
+   * When the published pointer of a locale last moved, by a publish or a rollback.
    * @param locale the locale.
    * @returns the time, or null when the locale was never published.
    */
   publishedAt(locale: Locale): Date | null {
     return copy(this.slots.get(locale)?.publishedAt ?? null);
+  }
+
+  /**
+   * When a locale was first published: set once, never moved by later publishes or rollbacks, so
+   * a post's place in its feed does not change when a typo is fixed.
+   * @param locale the locale.
+   * @returns the time, or null when the locale was never published.
+   */
+  firstPublishedAt(locale: Locale): Date | null {
+    return copy(this.slots.get(locale)?.firstPublishedAt ?? null);
   }
 
   /**
@@ -157,7 +204,7 @@ export class LocalizedRevisions<TDoc extends object> {
    */
   isComplete(locale: Locale): boolean {
     const latest = this.latest(locale);
-    return latest !== null && this.complete(latest.document);
+    return latest !== null && this.rules.isComplete(latest.document);
   }
 
   /**
@@ -170,8 +217,9 @@ export class LocalizedRevisions<TDoc extends object> {
 
   /**
    * Appends a revision to a locale: numbered one above the latest, never changing an earlier one.
-   * The document may be incomplete (a draft); completeness is checked at publish. Moves the locale
-   * `missing` to `draft`, `draft` to `draft`, `published` to `changed`, `changed` to `changed`.
+   * Fields that hold a value must be well formed; empty ones are allowed (a draft), and
+   * completeness is checked at publish. Moves the locale `missing` to `draft`, `draft` to `draft`,
+   * `published` to `changed`, `changed` to `changed`.
    * @param locale the locale written.
    * @param document one locale's full item.
    * @param origin who wrote it (Q3 A).
@@ -179,6 +227,7 @@ export class LocalizedRevisions<TDoc extends object> {
    * @param at the save time, from the use case's clock.
    * @returns the new revision.
    * @throws {InvalidTransition} when the item is archived.
+   * @throws {FieldFormatInvalid} when a field holds a malformed value.
    */
   append(
     locale: Locale,
@@ -188,6 +237,9 @@ export class LocalizedRevisions<TDoc extends object> {
     at: Date,
   ): Revision<TDoc> {
     this.assertActive("save a revision of");
+    const invalid = this.rules.invalidFields(document);
+    if (invalid.length > 0) throw new FieldFormatInvalid(this.itemId, locale, invalid);
+
     const slot = this.slots.get(locale);
     const revision = Revision.create({
       id: revisionId,
@@ -202,6 +254,7 @@ export class LocalizedRevisions<TDoc extends object> {
       latest: revision,
       published: slot?.published ?? null,
       publishedAt: slot?.publishedAt ?? null,
+      firstPublishedAt: slot?.firstPublishedAt ?? null,
     });
     return revision;
   }
@@ -209,53 +262,55 @@ export class LocalizedRevisions<TDoc extends object> {
   /**
    * Moves the published pointer of each named locale, all or nothing. Guards, in order: the item is
    * not archived; each locale is named once; a given revision belongs to this item and locale; the
-   * revision to publish exists and is complete; it is not already the published one; afterwards es
-   * and en are both published. An optional locale left unpublished is a warning, not an error.
+   * revision to publish exists and is complete; afterwards es and en are both published. A locale
+   * whose target is already its published revision is a no-op, listed in `alreadyPublished`; an
+   * optional locale left unpublished is a warning, not an error.
    * @param targets the locales, each alone (its latest) or with an older revision (a rollback).
    * @param at the publish time, from the use case's clock.
-   * @returns the locales and revisions published, and the warnings.
-   * @throws {InvalidTransition} when archived, a locale is named twice or nothing would change.
+   * @returns the locales that moved, the no-ops, and the warnings.
+   * @throws {InvalidTransition} when archived or a locale is named twice.
    * @throws {RevisionNotOfItem} when a given revision is not one of this item and locale.
    * @throws {LocaleIncomplete} when a locale has no revision or the chosen one is incomplete.
    * @throws {RequiredLocalesMissing} when es or en would still be unpublished.
    */
   publish(targets: readonly PublishTarget<TDoc>[], at: Date): PublishResult {
     this.assertActive("publish");
-    if (targets.length === 0)
-      throw new InvalidTransition(this.itemId, "publish", "no locale named");
 
-    const chosen = new Map<Locale, Revision<TDoc>>();
+    const named = new Set<Locale>();
+    const moves = new Map<Locale, Revision<TDoc>>();
+    const alreadyPublished: Locale[] = [];
     for (const target of targets) {
       const locale = typeof target === "string" ? target : target.locale;
-      if (chosen.has(locale)) {
+      if (named.has(locale)) {
         throw new InvalidTransition(this.itemId, "publish", `${locale} is named twice`);
       }
+      named.add(locale);
       const revision =
         typeof target === "string" ? this.latest(locale) : this.known(locale, target.revision);
-      if (!revision || !this.complete(revision.document)) {
+      if (!revision || !this.rules.isComplete(revision.document)) {
         throw new LocaleIncomplete(this.itemId, locale);
       }
-      if (this.published(locale)?.id === revision.id) {
-        throw new InvalidTransition(
-          this.itemId,
-          "publish",
-          `revision ${revision.number} is already published in ${locale}`,
-        );
-      }
-      chosen.set(locale, revision);
+      if (this.published(locale)?.id === revision.id) alreadyPublished.push(locale);
+      else moves.set(locale, revision);
     }
 
-    const unpublishedAfter = (locale: Locale) => !chosen.has(locale) && !this.published(locale);
+    const unpublishedAfter = (locale: Locale) => !moves.has(locale) && !this.published(locale);
     const missing = REQUIRED_LOCALES.filter(unpublishedAfter);
     if (missing.length > 0) throw new RequiredLocalesMissing(this.itemId, missing);
 
-    for (const [locale, revision] of chosen) {
+    for (const [locale, revision] of moves) {
       const slot = this.slots.get(locale) as Slot<TDoc>;
-      this.slots.set(locale, { ...slot, published: revision, publishedAt: copy(at) });
+      this.slots.set(locale, {
+        ...slot,
+        published: revision,
+        publishedAt: copy(at),
+        firstPublishedAt: slot.firstPublishedAt ?? copy(at),
+      });
     }
     return {
       itemId: this.itemId,
-      published: [...chosen].map(([locale, revision]) => ({ locale, revisionId: revision.id })),
+      published: [...moves].map(([locale, revision]) => ({ locale, revisionId: revision.id })),
+      alreadyPublished,
       warnings: OPTIONAL_LOCALES.filter(unpublishedAfter).map((locale) => ({
         code: "optional-locale-unpublished",
         locale,
@@ -265,7 +320,8 @@ export class LocalizedRevisions<TDoc extends object> {
 
   /**
    * Archives the item: every locale is hidden at once (no per-locale unpublish, which could break
-   * D-20). The pointers stay, so the history is kept; the machine accepts no further change.
+   * D-20). It only sets the archive mark: every revision and pointer stays as it was, so a later
+   * restore is a transition with no data to rebuild. An archived item accepts no other change.
    * @param at the archive time, from the use case's clock.
    * @throws {InvalidTransition} when the item is already archived.
    */

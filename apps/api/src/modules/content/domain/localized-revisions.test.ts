@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  FieldFormatInvalid,
   InvalidTransition,
   LocaleIncomplete,
   RequiredLocalesMissing,
@@ -7,6 +8,7 @@ import {
 } from "./content.errors.js";
 import type { Locale } from "./locale.js";
 import {
+  type DocumentRules,
   type LocaleSnapshot,
   type LocaleState,
   LocalizedRevisions,
@@ -19,8 +21,14 @@ interface Doc {
 
 const ITEM = "item-1";
 const SAVED = new Date("2026-11-01T09:00:00.000Z");
+const FIRST = new Date("2026-10-20T08:00:00.000Z");
 const NOW = new Date("2026-11-03T10:12:00.000Z");
-const complete = (doc: Doc) => doc.title.trim().length > 0;
+
+/** A title is malformed when it holds `<`; it is complete when it is not blank. */
+const rules: DocumentRules<Doc> = {
+  invalidFields: (doc) => (doc.title.includes("<") ? ["title"] : []),
+  isComplete: (doc) => doc.title.trim().length > 0,
+};
 
 function rev(locale: Locale, number: number, title = `${locale} text ${number}`): Revision<Doc> {
   return Revision.reconstitute({
@@ -36,19 +44,28 @@ function rev(locale: Locale, number: number, title = `${locale} text ${number}`)
 
 /**
  * A stored locale in a given state: `draft` has r1 unpublished, `published` has r1 published and
- * latest, `changed` has r1 published and r2 latest.
+ * latest, `changed` has r1 published and r2 latest. Published locales were first published at FIRST.
  */
 function slot(locale: Locale, state: LocaleState): LocaleSnapshot<Doc> | undefined {
-  const at = new Date("2026-10-20T08:00:00.000Z");
   switch (state) {
     case "missing":
       return undefined;
     case "draft":
-      return { latest: rev(locale, 1), published: null, publishedAt: null };
+      return { latest: rev(locale, 1), published: null, publishedAt: null, firstPublishedAt: null };
     case "published":
-      return { latest: rev(locale, 1), published: rev(locale, 1), publishedAt: at };
+      return {
+        latest: rev(locale, 1),
+        published: rev(locale, 1),
+        publishedAt: FIRST,
+        firstPublishedAt: FIRST,
+      };
     case "changed":
-      return { latest: rev(locale, 2), published: rev(locale, 1), publishedAt: at };
+      return {
+        latest: rev(locale, 2),
+        published: rev(locale, 1),
+        publishedAt: FIRST,
+        firstPublishedAt: FIRST,
+      };
   }
 }
 
@@ -58,19 +75,48 @@ function machine(states: Partial<Record<Locale, LocaleState>>, archivedAt: Date 
     const stored = slot(locale, state);
     if (stored) locales[locale] = stored;
   }
-  return LocalizedRevisions.reconstitute<Doc>(ITEM, complete, { locales, archivedAt });
+  return LocalizedRevisions.reconstitute<Doc>(ITEM, rules, { locales, archivedAt });
+}
+
+/** es published at r2 (the latest), with r1 before it; en published. */
+function esPublishedAtTwo() {
+  return LocalizedRevisions.reconstitute<Doc>(ITEM, rules, {
+    locales: {
+      es: {
+        latest: rev("es", 2),
+        published: rev("es", 2),
+        publishedAt: SAVED,
+        firstPublishedAt: FIRST,
+      },
+      en: slot("en", "published") as LocaleSnapshot<Doc>,
+    },
+    archivedAt: null,
+  });
+}
+
+/** Every pointer and time of every locale, to prove an action changed none of them. */
+function pointers(m: LocalizedRevisions<Doc>) {
+  return (["es", "en", "de"] as const).map((locale) => ({
+    locale,
+    state: m.stateOf(locale),
+    latest: m.latest(locale)?.id ?? null,
+    published: m.published(locale)?.id ?? null,
+    publishedAt: m.publishedAt(locale),
+    firstPublishedAt: m.firstPublishedAt(locale),
+  }));
 }
 
 const BOTH_REQUIRED_PUBLISHED = { es: "published", en: "published" } as const;
 
 describe("LocalizedRevisions", () => {
   it("starts with every locale missing and not archived", () => {
-    const empty = LocalizedRevisions.empty<Doc>(ITEM, complete);
+    const empty = LocalizedRevisions.empty<Doc>(ITEM, rules);
     for (const locale of ["es", "en", "de"] as const) {
       expect(empty.stateOf(locale)).toBe("missing");
       expect(empty.latest(locale)).toBeNull();
       expect(empty.published(locale)).toBeNull();
       expect(empty.publishedAt(locale)).toBeNull();
+      expect(empty.firstPublishedAt(locale)).toBeNull();
       expect(empty.isComplete(locale)).toBe(false);
     }
     expect(empty.archivedAt()).toBeNull();
@@ -100,21 +146,29 @@ describe("LocalizedRevisions", () => {
     });
 
     it.each(["owner", "machine"] as const)("keeps the origin %s and the save time", (origin) => {
-      const m = LocalizedRevisions.empty<Doc>(ITEM, complete);
+      const m = LocalizedRevisions.empty<Doc>(ITEM, rules);
       const saved = m.append("de", { title: "Jobportal" }, origin, "de-1", NOW);
       expect(saved.origin).toBe(origin);
       expect(saved.createdAt).toEqual(NOW);
     });
 
     it("accepts an incomplete draft and reports it as incomplete", () => {
-      const m = LocalizedRevisions.empty<Doc>(ITEM, complete);
+      const m = LocalizedRevisions.empty<Doc>(ITEM, rules);
       m.append("es", { title: " " }, "owner", "es-1", NOW);
       expect(m.stateOf("es")).toBe("draft");
       expect(m.isComplete("es")).toBe(false);
     });
 
+    it("refuses a malformed field and stores nothing", () => {
+      const m = machine({ es: "published" });
+      const error = catchError(() => m.append("es", { title: "<b>" }, "owner", "es-2", NOW));
+      expect(error).toBeInstanceOf(FieldFormatInvalid);
+      expect((error as FieldFormatInvalid).fields).toEqual(["title"]);
+      expect(m.latest("es")?.id).toBe("es-r1");
+    });
+
     it("stores a frozen copy: neither the caller nor anyone else can change a revision", () => {
-      const m = LocalizedRevisions.empty<Doc>(ITEM, complete);
+      const m = LocalizedRevisions.empty<Doc>(ITEM, rules);
       const input = { title: "first" };
       const saved = m.append("es", input, "owner", "es-1", NOW);
       input.title = "changed later";
@@ -129,16 +183,27 @@ describe("LocalizedRevisions", () => {
     it.each`
       from           | outcome
       ${"missing"}   | ${LocaleIncomplete}
-      ${"draft"}     | ${"published"}
-      ${"published"} | ${InvalidTransition}
-      ${"changed"}   | ${"published"}
+      ${"draft"}     | ${"moved"}
+      ${"published"} | ${"no-op"}
+      ${"changed"}   | ${"moved"}
     `("de $from gives $outcome", ({ from, outcome }) => {
       const m = machine({ ...BOTH_REQUIRED_PUBLISHED, de: from });
-      if (typeof outcome === "string") {
+      if (outcome === "moved") {
         const result = m.publish(["de"], NOW);
-        expect(m.stateOf("de")).toBe(outcome);
+        expect(m.stateOf("de")).toBe("published");
         expect(result.published).toEqual([{ locale: "de", revisionId: m.latest("de")?.id }]);
+        expect(result.alreadyPublished).toEqual([]);
         expect(m.publishedAt("de")).toEqual(NOW);
+      } else if (outcome === "no-op") {
+        const before = pointers(m);
+        const result = m.publish(["de"], NOW);
+        expect(result).toEqual({
+          itemId: ITEM,
+          published: [],
+          alreadyPublished: ["de"],
+          warnings: [],
+        });
+        expect(pointers(m)).toEqual(before);
       } else {
         expect(() => m.publish(["de"], NOW)).toThrow(outcome);
         expect(m.stateOf("de")).toBe(from);
@@ -155,7 +220,42 @@ describe("LocalizedRevisions", () => {
     it("leaves the publish time of the other locales alone", () => {
       const m = machine({ es: "changed", en: "published" });
       m.publish(["es"], NOW);
-      expect(m.publishedAt("en")).toEqual(new Date("2026-10-20T08:00:00.000Z"));
+      expect(m.publishedAt("en")).toEqual(FIRST);
+    });
+
+    it("moves the changed locales and lists the no-ops next to them", () => {
+      const m = machine({ es: "published", en: "changed" });
+      const result = m.publish(["es", "en"], NOW);
+      expect(result.published).toEqual([{ locale: "en", revisionId: "en-r2" }]);
+      expect(result.alreadyPublished).toEqual(["es"]);
+      expect(result.warnings).toEqual([{ code: "optional-locale-unpublished", locale: "de" }]);
+      expect(m.publishedAt("es")).toEqual(FIRST);
+    });
+  });
+
+  describe("an empty change set", () => {
+    it.each`
+      case                              | targets
+      ${"no locale named"}              | ${[]}
+      ${"every named locale published"} | ${["es", "en", "de"]}
+    `("returns nothing published when $case", ({ targets }) => {
+      const m = machine({ ...BOTH_REQUIRED_PUBLISHED, de: "published" });
+      const before = pointers(m);
+      const result = m.publish(targets, NOW);
+      expect(result.published).toEqual([]);
+      expect(result.alreadyPublished).toEqual(targets);
+      expect(pointers(m)).toEqual(before);
+    });
+
+    it("still checks D-20 on the end state", () => {
+      const m = machine({ es: "published", en: "draft" });
+      expect(() => m.publish(["es"], NOW)).toThrow(RequiredLocalesMissing);
+      expect(() => m.publish([], NOW)).toThrow(RequiredLocalesMissing);
+    });
+
+    it("still reports de as a warning", () => {
+      const result = machine(BOTH_REQUIRED_PUBLISHED).publish(["es"], NOW);
+      expect(result.warnings).toEqual([{ code: "optional-locale-unpublished", locale: "de" }]);
     });
   });
 
@@ -203,20 +303,39 @@ describe("LocalizedRevisions", () => {
     });
   });
 
-  describe("rollback: publishing an older revision (D2)", () => {
-    /** es published at r2 (the latest), with r1 before it; en published. */
-    function publishedAtTwo() {
-      return LocalizedRevisions.reconstitute<Doc>(ITEM, complete, {
-        locales: {
-          es: { latest: rev("es", 2), published: rev("es", 2), publishedAt: SAVED },
-          en: slot("en", "published") as LocaleSnapshot<Doc>,
-        },
-        archivedAt: null,
-      });
-    }
+  describe("first and last publish times", () => {
+    it("sets both on the first publish", () => {
+      const m = machine({ es: "draft", en: "draft" });
+      m.publish(["es", "en"], NOW);
+      expect(m.firstPublishedAt("es")).toEqual(NOW);
+      expect(m.publishedAt("es")).toEqual(NOW);
+    });
 
+    it("moves only the last publish time on a later publish", () => {
+      const m = machine({ es: "changed", en: "published" });
+      m.publish(["es"], NOW);
+      expect(m.firstPublishedAt("es")).toEqual(FIRST);
+      expect(m.publishedAt("es")).toEqual(NOW);
+    });
+
+    it("moves only the last publish time on a rollback", () => {
+      const m = esPublishedAtTwo();
+      m.publish([{ locale: "es", revision: rev("es", 1) }], NOW);
+      expect(m.firstPublishedAt("es")).toEqual(FIRST);
+      expect(m.publishedAt("es")).toEqual(NOW);
+    });
+
+    it("moves neither on a no-op", () => {
+      const m = machine(BOTH_REQUIRED_PUBLISHED);
+      m.publish(["es"], NOW);
+      expect(m.firstPublishedAt("es")).toEqual(FIRST);
+      expect(m.publishedAt("es")).toEqual(FIRST);
+    });
+  });
+
+  describe("rollback: publishing an older revision (D2)", () => {
     it("moves published to changed: the pointer goes back, the latest stays", () => {
-      const m = publishedAtTwo();
+      const m = esPublishedAtTwo();
       const result = m.publish([{ locale: "es", revision: rev("es", 1) }], NOW);
       expect(m.stateOf("es")).toBe("changed");
       expect(m.published("es")?.number).toBe(1);
@@ -225,9 +344,14 @@ describe("LocalizedRevisions", () => {
     });
 
     it("keeps changed as changed when an even older revision is published", () => {
-      const m = LocalizedRevisions.reconstitute<Doc>(ITEM, complete, {
+      const m = LocalizedRevisions.reconstitute<Doc>(ITEM, rules, {
         locales: {
-          es: { latest: rev("es", 3), published: rev("es", 2), publishedAt: SAVED },
+          es: {
+            latest: rev("es", 3),
+            published: rev("es", 2),
+            publishedAt: SAVED,
+            firstPublishedAt: FIRST,
+          },
           en: slot("en", "published") as LocaleSnapshot<Doc>,
         },
         archivedAt: null,
@@ -243,15 +367,16 @@ describe("LocalizedRevisions", () => {
       expect(m.stateOf("es")).toBe("published");
     });
 
-    it("refuses the revision that is already published", () => {
+    it("treats the revision that is already published as a no-op", () => {
       const m = machine({ es: "changed", en: "published" });
-      expect(() => m.publish([{ locale: "es", revision: rev("es", 1) }], NOW)).toThrow(
-        InvalidTransition,
-      );
+      const result = m.publish([{ locale: "es", revision: rev("es", 1) }], NOW);
+      expect(result.alreadyPublished).toEqual(["es"]);
+      expect(result.published).toEqual([]);
+      expect(m.stateOf("es")).toBe("changed");
     });
 
     it("refuses an older revision that is incomplete", () => {
-      const m = publishedAtTwo();
+      const m = esPublishedAtTwo();
       expect(() => m.publish([{ locale: "es", revision: rev("es", 1, "") }], NOW)).toThrow(
         LocaleIncomplete,
       );
@@ -265,7 +390,7 @@ describe("LocalizedRevisions", () => {
       ${"newer than the latest"}            | ${rev("es", 3)}
       ${"numbered as the latest, other id"} | ${Revision.reconstitute({ ...rev("es", 2), id: "es-other" })}
     `("refuses a revision $case", ({ revision }) => {
-      const m = publishedAtTwo();
+      const m = esPublishedAtTwo();
       expect(() => m.publish([{ locale: "es", revision }], NOW)).toThrow(RevisionNotOfItem);
     });
 
@@ -277,26 +402,21 @@ describe("LocalizedRevisions", () => {
     });
   });
 
-  describe("malformed publish requests", () => {
-    it("refuses an empty list", () => {
-      expect(() => machine(BOTH_REQUIRED_PUBLISHED).publish([], NOW)).toThrow(InvalidTransition);
-    });
-
-    it("refuses a locale named twice", () => {
-      const m = machine({ es: "draft", en: "draft" });
-      expect(() => m.publish(["es", "en", { locale: "es", revision: rev("es", 1) }], NOW)).toThrow(
-        InvalidTransition,
-      );
-    });
+  it("refuses a locale named twice", () => {
+    const m = machine({ es: "draft", en: "draft" });
+    expect(() => m.publish(["es", "en", { locale: "es", revision: rev("es", 1) }], NOW)).toThrow(
+      InvalidTransition,
+    );
   });
 
   describe("archive", () => {
-    it("hides every locale at once and keeps the pointers", () => {
+    it("only sets the mark: every revision, pointer and time stays as it was", () => {
       const m = machine({ es: "published", en: "changed", de: "draft" });
+      const before = pointers(m);
       m.archive(NOW);
       expect(m.archivedAt()).toEqual(NOW);
-      expect(m.published("es")?.id).toBe("es-r1");
-      expect(m.stateOf("en")).toBe("changed");
+      expect(pointers(m)).toEqual(before);
+      expect(before.map((p) => p.published)).toEqual(["es-r1", "en-r1", null]);
     });
 
     it.each`
@@ -317,8 +437,10 @@ describe("LocalizedRevisions", () => {
     archivedAt.setFullYear(2000);
     (m.archivedAt() as Date).setFullYear(2001);
     (m.publishedAt("es") as Date).setFullYear(2001);
+    (m.firstPublishedAt("es") as Date).setFullYear(2001);
     expect(m.archivedAt()).toEqual(SAVED);
-    expect(m.publishedAt("es")).toEqual(new Date("2026-10-20T08:00:00.000Z"));
+    expect(m.publishedAt("es")).toEqual(FIRST);
+    expect(m.firstPublishedAt("es")).toEqual(FIRST);
   });
 });
 

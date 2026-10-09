@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { RequiredLocalesMissing } from "./content.errors.js";
-import { isProfileComplete, Profile, type ProfileDocument } from "./profile.js";
+import { FieldFormatInvalid, RequiredLocalesMissing } from "./content.errors.js";
+import { Profile, type ProfileDocument, profileRules } from "./profile.js";
 
 const AT = new Date("2026-11-03T10:12:00.000Z");
 
@@ -9,22 +9,40 @@ function doc(over: Partial<ProfileDocument> = {}): ProfileDocument {
     name: "Sample Person",
     headline: "Backend engineer",
     summary: "A placeholder summary.",
-    links: [{ kind: "github", url: "https://example.com/sample" }],
+    links: [
+      { kind: "github", url: "https://example.com/sample" },
+      { kind: "email", url: "mailto:sample@example.com" },
+    ],
     ...over,
   };
 }
 
 describe("Profile", () => {
   it.each`
-    case                    | document
-    ${"no name"}            | ${doc({ name: "" })}
-    ${"no headline"}        | ${doc({ headline: " " })}
-    ${"no summary"}         | ${doc({ summary: "" })}
-    ${"a link with no URL"} | ${doc({ links: [{ kind: "email", url: "" }] })}
-  `("is incomplete with $case", ({ document }) => {
-    expect(isProfileComplete(doc())).toBe(true);
-    expect(isProfileComplete(doc({ links: [] }))).toBe(true);
-    expect(isProfileComplete(document)).toBe(false);
+    case             | document                  | complete
+    ${"no links"}    | ${doc({ links: [] })}     | ${true}
+    ${"no name"}     | ${doc({ name: "" })}      | ${false}
+    ${"no headline"} | ${doc({ headline: " " })} | ${false}
+    ${"no summary"}  | ${doc({ summary: "" })}   | ${false}
+  `("is complete: $complete with $case", ({ document, complete }) => {
+    expect(profileRules.isComplete(doc())).toBe(true);
+    expect(profileRules.isComplete(document)).toBe(complete);
+  });
+
+  it.each`
+    url                      | fields
+    ${""}                    | ${["links[0].url"]}
+    ${"http://example.com"}  | ${["links[0].url"]}
+    ${"not a url"}           | ${["links[0].url"]}
+    ${"https://example.com"} | ${[]}
+  `("checks the link URL $url on save", ({ url, fields }) => {
+    const document = doc({ links: [{ kind: "website", url }] });
+    expect(profileRules.invalidFields(document)).toEqual(fields);
+    if (fields.length > 0) {
+      expect(() =>
+        Profile.create("profile").saveRevision("es", document, "owner", "r", AT),
+      ).toThrow(FieldFormatInvalid);
+    }
   });
 
   it("refuses to go public in Spanish alone", () => {

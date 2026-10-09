@@ -1,5 +1,7 @@
+import { isFilled, isUrlWith } from "./field-formats.js";
 import type { Locale } from "./locale.js";
 import {
+  type DocumentRules,
   LocalizedRevisions,
   type LocalizedRevisionsSnapshot,
   type LocalizedRevisionsView,
@@ -7,7 +9,6 @@ import {
   type PublishTarget,
 } from "./localized-revisions.js";
 import type { Revision, RevisionOrigin } from "./revision.js";
-import { isFilled } from "./slug.js";
 
 /** The kind of a profile link, which picks its icon and label in `web`. */
 export type ProfileLinkKind = "email" | "github" | "linkedin" | "website";
@@ -28,19 +29,17 @@ export interface ProfileDocument {
 }
 
 /**
- * Whether a profile document can be published: a name, a headline, a summary, and a URL on every
- * link. Links are optional.
- * @param document one locale's revision content.
- * @returns true when every required field is filled.
+ * The rules of a profile document. Format on save: every link URL is HTTPS or `mailto:`.
+ * Complete for publish: what `profileDto` requires (a name and a headline) plus the summary, the
+ * profile's body.
  */
-export function isProfileComplete(document: ProfileDocument): boolean {
-  return (
-    isFilled(document.name) &&
-    isFilled(document.headline) &&
-    isFilled(document.summary) &&
-    document.links.every((link) => isFilled(link.url))
-  );
-}
+export const profileRules: DocumentRules<ProfileDocument> = {
+  invalidFields: (doc) =>
+    doc.links.flatMap((link, index) =>
+      isUrlWith(link.url, ["https", "mailto"]) ? [] : [`links[${index}].url`],
+    ),
+  isComplete: (doc) => isFilled(doc.name) && isFilled(doc.headline) && isFilled(doc.summary),
+};
 
 /** The profile as a repository reads it back. */
 export interface StoredProfile {
@@ -65,7 +64,7 @@ export class Profile {
    * @param id the identity, chosen by the use case.
    */
   static create(id: string): Profile {
-    return new Profile(id, 0, LocalizedRevisions.empty(id, isProfileComplete));
+    return new Profile(id, 0, LocalizedRevisions.empty(id, profileRules));
   }
 
   /**
@@ -76,7 +75,7 @@ export class Profile {
     return new Profile(
       stored.id,
       stored.version,
-      LocalizedRevisions.reconstitute(stored.id, isProfileComplete, stored.translations),
+      LocalizedRevisions.reconstitute(stored.id, profileRules, stored.translations),
     );
   }
 
@@ -94,6 +93,7 @@ export class Profile {
    * @param at the save time.
    * @returns the new revision.
    * @throws {InvalidTransition} when the profile is archived.
+   * @throws {FieldFormatInvalid} when a field holds a malformed value.
    */
   saveRevision(
     locale: Locale,

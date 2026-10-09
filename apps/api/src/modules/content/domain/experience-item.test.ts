@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { FieldFormatInvalid } from "./content.errors.js";
 import {
   ExperienceItem,
   type ExperienceItemDocument,
-  isExperienceItemComplete,
+  experienceItemRules,
 } from "./experience-item.js";
 
 const AT = new Date("2026-11-03T10:12:00.000Z");
@@ -27,11 +28,28 @@ describe("ExperienceItem", () => {
     ${"no organization"}  | ${doc({ organization: " " })}                          | ${false}
     ${"no role"}          | ${doc({ role: "" })}                                   | ${false}
     ${"no start"}         | ${doc({ period: { from: "", to: null } })}             | ${false}
-    ${"month 13"}         | ${doc({ period: { from: "2024-13", to: null } })}      | ${false}
     ${"bad end"}          | ${doc({ period: { from: "2024-03", to: "2025" } })}    | ${false}
     ${"end before start"} | ${doc({ period: { from: "2024-03", to: "2023-12" } })} | ${false}
   `("is complete: $expected when $case", ({ document, expected }) => {
-    expect(isExperienceItemComplete(document)).toBe(expected);
+    expect(experienceItemRules.isComplete(document)).toBe(expected);
+  });
+
+  it.each`
+    period                                | stackTags | fields
+    ${{ from: "", to: null }}             | ${[]}     | ${[]}
+    ${{ from: "2024-13", to: null }}      | ${[]}     | ${["period.from"]}
+    ${{ from: "2024-03", to: "2025" }}    | ${[]}     | ${["period.to"]}
+    ${{ from: "2024-03", to: "2023-12" }} | ${[]}     | ${["period.to"]}
+    ${{ from: "", to: "2023-12" }}        | ${[""]}   | ${["stackTags[0]"]}
+  `("checks the format of $period and $stackTags on save", ({ period, stackTags, fields }) => {
+    const document = doc({ period, stackTags });
+    expect(experienceItemRules.invalidFields(document)).toEqual(fields);
+    const item = ExperienceItem.create({ id: "e-1", sortOrder: 1 });
+    if (fields.length > 0) {
+      expect(() => item.saveRevision("es", document, "owner", "r", AT)).toThrow(FieldFormatInvalid);
+    } else {
+      expect(item.saveRevision("es", document, "owner", "r", AT).number).toBe(1);
+    }
   });
 
   it("creates, saves, publishes and archives", () => {
