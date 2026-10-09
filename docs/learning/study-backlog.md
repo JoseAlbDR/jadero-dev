@@ -39,3 +39,6 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 
 ### Theme: state machines and approval
 - Approval bound to a revision: the state describes the latest revision, the pointer what is live, and a withdraw acts on the entry (pointer cleared), not on the newest draft; undoing an edit is a new revision, never a withdraw (the owner thought withdraw discarded the draft and the visitor would see it). WP-12, weak (step 4 check question). Step log.
+
+### Theme: domain modeling and architecture styles
+- DDD strategic versus tactical: bounded contexts, ubiquitous language and context map (services, `GLOSSARY.md`, events and read models) versus aggregates, value objects, repositories and domain events (the `content` module); rich versus anemic domain model, transaction script and active record, and when each wins; how DDD, hexagonal, light CQRS and event-driven coexist, and why trivial modules stay layered (ADR-003). WP-12, interesting (owner asked after step 4). Step log.
