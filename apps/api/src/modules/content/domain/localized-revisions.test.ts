@@ -13,7 +13,7 @@ import {
   type LocaleState,
   LocalizedRevisions,
 } from "./localized-revisions.js";
-import { Revision } from "./revision.js";
+import { Revision, type RevisionProps } from "./revision.js";
 
 interface Doc {
   title: string;
@@ -30,16 +30,25 @@ const rules: DocumentRules<Doc> = {
   isComplete: (doc) => doc.title.trim().length > 0,
 };
 
-function rev(locale: Locale, number: number, title = `${locale} text ${number}`): Revision<Doc> {
-  return Revision.reconstitute({
+function props(
+  locale: Locale,
+  number: number,
+  title = `${locale} text ${number}`,
+): RevisionProps<Doc> {
+  return {
     id: `${locale}-r${number}`,
     itemId: ITEM,
     locale,
     number,
     origin: "owner",
     document: { title },
+    provenance: null,
     createdAt: SAVED,
-  });
+  };
+}
+
+function rev(locale: Locale, number: number, title?: string): Revision<Doc> {
+  return Revision.reconstitute(props(locale, number, title));
 }
 
 /**
@@ -385,10 +394,10 @@ describe("LocalizedRevisions", () => {
 
     it.each`
       case                                  | revision
-      ${"of another item"}                  | ${Revision.reconstitute({ ...rev("es", 1), itemId: "item-2" })}
+      ${"of another item"}                  | ${Revision.reconstitute({ ...props("es", 1), itemId: "item-2" })}
       ${"of another locale"}                | ${rev("en", 1)}
       ${"newer than the latest"}            | ${rev("es", 3)}
-      ${"numbered as the latest, other id"} | ${Revision.reconstitute({ ...rev("es", 2), id: "es-other" })}
+      ${"numbered as the latest, other id"} | ${Revision.reconstitute({ ...props("es", 2), id: "es-other" })}
     `("refuses a revision $case", ({ revision }) => {
       const m = esPublishedAtTwo();
       expect(() => m.publish([{ locale: "es", revision }], NOW)).toThrow(RevisionNotOfItem);
@@ -441,6 +450,49 @@ describe("LocalizedRevisions", () => {
     expect(m.archivedAt()).toEqual(SAVED);
     expect(m.publishedAt("es")).toEqual(FIRST);
     expect(m.firstPublishedAt("es")).toEqual(FIRST);
+  });
+});
+
+describe("LocalizedRevisions persistence view", () => {
+  it("lists both revisions of two saves to one locale in one use case, numbered consecutively", () => {
+    const m = machine({ es: "changed", en: "published" });
+    m.append("es", { title: "third" }, "owner", "es-3", NOW);
+    m.append("en", { title: "second" }, "owner", "en-2", NOW);
+    m.append("es", { title: "fourth" }, "machine", "es-4", NOW);
+    expect(m.unsavedRevisions().map((r) => [r.id, r.number])).toEqual([
+      ["es-3", 3],
+      ["es-4", 4],
+      ["en-2", 2],
+    ]);
+  });
+
+  it("has nothing unsaved after a load, and its snapshot mirrors the reconstitute input", () => {
+    const m = machine({ es: "changed", en: "published", de: "draft" }, SAVED);
+    expect(m.unsavedRevisions()).toEqual([]);
+    const reloaded = LocalizedRevisions.reconstitute(ITEM, rules, m.snapshot());
+    expect(reloaded.snapshot()).toEqual(m.snapshot());
+    expect(m.snapshot().locales.es).toEqual(slot("es", "changed"));
+  });
+
+  it("round-trips a machine that was saved and published in memory", () => {
+    const m = LocalizedRevisions.empty<Doc>(ITEM, rules);
+    m.append("es", { title: "uno" }, "owner", "es-1", SAVED);
+    m.append("en", { title: "one" }, "owner", "en-1", SAVED);
+    m.publish(["es", "en"], NOW);
+    m.append("en", { title: "two" }, "owner", "en-2", NOW);
+    const reloaded = LocalizedRevisions.reconstitute(ITEM, rules, m.snapshot());
+    expect(reloaded.snapshot()).toEqual(m.snapshot());
+    expect(reloaded.stateOf("en")).toBe("changed");
+    expect(reloaded.firstPublishedAt("es")).toEqual(NOW);
+  });
+
+  it("does not share snapshot dates with the machine", () => {
+    const m = machine(BOTH_REQUIRED_PUBLISHED, SAVED);
+    const snapshot = m.snapshot();
+    snapshot.archivedAt?.setFullYear(2000);
+    snapshot.locales.es?.publishedAt?.setFullYear(2000);
+    expect(m.archivedAt()).toEqual(SAVED);
+    expect(m.publishedAt("es")).toEqual(FIRST);
   });
 });
 

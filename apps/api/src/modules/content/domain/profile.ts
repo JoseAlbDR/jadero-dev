@@ -50,7 +50,8 @@ export interface StoredProfile {
 
 /**
  * The profile aggregate (ADR-011), a singleton: one row exists, which the persistence enforces. It
- * has no layout fields; everything it says lives in its revisions.
+ * has no layout fields; everything it says lives in its revisions. It cannot be archived: with no
+ * restore, an archived singleton would stay hidden and locked for good.
  */
 export class Profile {
   private constructor(
@@ -79,9 +80,27 @@ export class Profile {
     );
   }
 
-  /** The per-locale state, revisions and archive mark, read only. */
+  /** The per-locale state and revisions, read only. */
   get translations(): LocalizedRevisionsView<ProfileDocument> {
     return this.machine;
+  }
+
+  /**
+   * What a repository stores: the exact mirror of `reconstitute`'s input, at the version it was
+   * loaded at (the repository's optimistic check, D5).
+   * @returns the root fields and the per-locale pointers.
+   */
+  snapshot(): StoredProfile {
+    return { id: this.id, version: this.version, translations: this.machine.snapshot() };
+  }
+
+  /**
+   * The revisions saved since this aggregate was created or loaded, which the repository inserts.
+   * After the save the use case discards the aggregate and the next one loads it again.
+   * @returns per locale (es, en, de), each locale's revisions in number order.
+   */
+  unsavedRevisions(): readonly Revision<ProfileDocument>[] {
+    return this.machine.unsavedRevisions();
   }
 
   /**
@@ -92,7 +111,6 @@ export class Profile {
    * @param revisionId the new revision's identity.
    * @param at the save time.
    * @returns the new revision.
-   * @throws {InvalidTransition} when the profile is archived.
    * @throws {FieldFormatInvalid} when a field holds a malformed value.
    */
   saveRevision(
@@ -113,14 +131,5 @@ export class Profile {
    */
   publish(targets: readonly PublishTarget<ProfileDocument>[], at: Date): PublishResult {
     return this.machine.publish(targets, at);
-  }
-
-  /**
-   * Archives the profile, hiding every locale.
-   * @param at the archive time.
-   * @throws {InvalidTransition} when it is already archived.
-   */
-  archive(at: Date): void {
-    this.machine.archive(at);
   }
 }

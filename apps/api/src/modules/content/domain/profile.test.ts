@@ -52,13 +52,13 @@ describe("Profile", () => {
     expect(() => profile.publish(["es"], AT)).toThrow(RequiredLocalesMissing);
   });
 
-  it("publishes es and en, then archives", () => {
+  it("publishes es and en, and offers no archive (a singleton with no restore)", () => {
     const profile = Profile.create("profile");
     profile.saveRevision("es", doc(), "owner", "r-es", AT);
     profile.saveRevision("en", doc(), "owner", "r-en", AT);
     expect(profile.publish(["es", "en"], AT).published).toHaveLength(2);
-    profile.archive(AT);
-    expect(profile.translations.archivedAt()).toEqual(AT);
+    expect("archive" in profile).toBe(false);
+    expect(profile.translations.archivedAt()).toBeNull();
   });
 
   it("reconstitutes with its stored version", () => {

@@ -42,6 +42,10 @@ describe("CvBullet", () => {
     const bullet = CvBullet.create({ ...LAYOUT, parent: input });
     input.kind = "changed";
     expect(bullet.parent).toEqual(parent);
+    expect(Object.isFrozen(bullet.parent)).toBe(true);
+    expect(() => {
+      (bullet.parent as { kind: string }).kind = "changed";
+    }).toThrow(TypeError);
   });
 
   it.each(["", "Backend-10", "backend_10", "-backend", "backend--10", "a".repeat(81)])(

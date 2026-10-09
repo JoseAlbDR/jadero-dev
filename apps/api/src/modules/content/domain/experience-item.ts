@@ -104,6 +104,29 @@ export class ExperienceItem implements ExperienceItemLayout {
   }
 
   /**
+   * What a repository stores: the exact mirror of `reconstitute`'s input, at the version it was
+   * loaded at (the repository's optimistic check, D5).
+   * @returns the root fields and the per-locale pointers.
+   */
+  snapshot(): StoredExperienceItem {
+    return {
+      id: this.id,
+      sortOrder: this.sortOrder,
+      version: this.version,
+      translations: this.machine.snapshot(),
+    };
+  }
+
+  /**
+   * The revisions saved since this aggregate was created or loaded, which the repository inserts.
+   * After the save the use case discards the aggregate and the next one loads it again.
+   * @returns per locale (es, en, de), each locale's revisions in number order.
+   */
+  unsavedRevisions(): readonly Revision<ExperienceItemDocument>[] {
+    return this.machine.unsavedRevisions();
+  }
+
+  /**
    * Saves a new revision of one locale; the published one stays live until the next publish.
    * @param locale the locale written.
    * @param document one locale's full item, possibly incomplete.

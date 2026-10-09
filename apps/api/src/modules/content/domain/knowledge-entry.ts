@@ -6,6 +6,7 @@ import {
   InvalidTransition,
   LocaleIncomplete,
   RevisionNotLatest,
+  StoredStateInvalid,
 } from "./content.errors.js";
 import type { Period } from "./experience-item.js";
 import {
@@ -74,9 +75,10 @@ export interface KnowledgeEntrySection {
 export type KnowledgeEntryConfidence = "high" | "medium" | "low";
 
 /**
- * One revision of an entry (Q1 B), English only. The public part mirrors `KnowledgeEntryDto`; the
- * last four fields are private provenance for the owner (D-67): stored, never shown, never indexed,
- * and never part of completeness.
+ * One revision of an entry (Q1 B), English only: exactly the fields that are public once the
+ * revision is approved, mirroring `KnowledgeEntryDto`, so it can be WP-14's event payload as is.
+ * The private fields of the format live apart, in `KnowledgeEntryProvenance` (D-67, defense in
+ * depth): a document cannot leak what it does not hold.
  */
 export interface KnowledgeEntryDocument {
   readonly title: string;
@@ -97,15 +99,27 @@ export interface KnowledgeEntryDocument {
   readonly cvBullet: string | null;
   /** False asks for a `noindex` page (D-52). */
   readonly indexable: boolean;
-  /** Private: where the facts come from. */
+}
+
+/**
+ * The private provenance of one entry revision (D-67): written with the revision, frozen with it,
+ * for the owner only; never shown, never indexed, never in an event, never part of completeness or
+ * format checks. Step 5 stores it in its own 1:1 table keyed by revision id (append-only), never as
+ * a column of the revision row, so a query or an event built from the revision row cannot carry it.
+ */
+export interface KnowledgeEntryProvenance {
+  /** Where the facts come from. */
   readonly sources: readonly string[];
-  /** Private: notes on sources that disagree. */
+  /** Notes on sources that disagree. */
   readonly conflicts: string;
-  /** Private: the third-party names allowed in the text (the importer's allowlist). */
+  /** The third-party names allowed in the text (the importer's allowlist). */
   readonly publicNames: readonly string[];
-  /** Private. */
+  /** How well the sources support the entry; `medium` makes the agent hedge. */
   readonly confidence: KnowledgeEntryConfidence;
 }
+
+/** One revision of an entry: its public document and its private provenance. */
+export type KnowledgeEntryRevision = Revision<KnowledgeEntryDocument, KnowledgeEntryProvenance>;
 
 function sectionOrderProblems(sections: readonly KnowledgeEntrySection[]): string[] {
   const positions = sections.map((s) => KNOWLEDGE_ENTRY_SECTION_KEYS.indexOf(s.key));
@@ -119,7 +133,7 @@ function sectionOrderProblems(sections: readonly KnowledgeEntrySection[]): strin
  * well-formed period, sections in the format's order and each once, tags of 1 to 60 characters,
  * related ids and the CV bullet id in their formats. Complete for approval: what `knowledgeEntryDto`
  * requires (a title, a domain, a start, Summary, Problem and What he built, no blank section, at
- * least one question, none blank). The private fields are never checked for completeness.
+ * least one question, none blank). The provenance is not part of the document, so no rule sees it.
  */
 export const knowledgeEntryRules: DocumentRules<KnowledgeEntryDocument> = {
   invalidFields: (doc) => [
@@ -171,6 +185,7 @@ export interface NewKnowledgeEntry {
   /** The human id (`kb-outbox-relay`), chosen by the owner, never reused. */
   readonly id: string;
   readonly document: KnowledgeEntryDocument;
+  readonly provenance: KnowledgeEntryProvenance;
   readonly origin: RevisionOrigin;
   readonly revisionId: string;
   readonly at: Date;
@@ -187,7 +202,7 @@ export interface StoredKnowledgeEntry {
   readonly withdrawnAt: Date | null;
   readonly deletedAt: Date | null;
   /** At least the latest revision, and the approved one when it is older. */
-  readonly history: RevisionHistorySnapshot<KnowledgeEntryDocument>;
+  readonly history: RevisionHistorySnapshot<KnowledgeEntryDocument, KnowledgeEntryProvenance>;
 }
 
 /**
@@ -201,7 +216,7 @@ export class KnowledgeEntry {
   private constructor(
     readonly id: string,
     readonly version: number,
-    private readonly history: RevisionHistory<KnowledgeEntryDocument>,
+    private readonly history: RevisionHistory<KnowledgeEntryDocument, KnowledgeEntryProvenance>,
     private current: ApprovalState,
     private approvalRecord: Approval | null,
     private approvedCvBullet: string | null,
@@ -212,7 +227,8 @@ export class KnowledgeEntry {
   /**
    * Creates an entry with its first revision, in `draft`, at version 0 (never stored). An entry
    * starts with a revision (D4: "[*] --> draft: first revision"), so it always has text to review.
-   * @param input the id, the first document (possibly incomplete), its origin, identity and time.
+   * @param input the id, the first document (possibly incomplete) and its provenance, its origin,
+   * identity and time.
    * @throws {IdInvalid} when the id breaks the `kb-...` format.
    * @throws {FieldFormatInvalid} when a field holds a malformed value.
    */
@@ -228,19 +244,33 @@ export class KnowledgeEntry {
       null,
       null,
     );
-    entry.append(input.document, input.origin, input.revisionId, input.at);
+    entry.append(input.document, input.provenance, input.origin, input.revisionId, input.at);
     return entry;
   }
 
   /**
-   * Rebuilds a stored entry without re-checking its rules.
+   * Rebuilds a stored entry without re-checking its document rules, but refusing a state the machine
+   * can never reach, so a repository bug fails at load instead of surfacing later as a wrong answer.
    * @param stored the root row, its version and the revisions it needs.
+   * @throws {StoredStateInvalid} when no revision was loaded, the state is `approved` with no
+   * approval, or the approval's revision is not among the loaded ones.
    */
   static reconstitute(stored: StoredKnowledgeEntry): KnowledgeEntry {
+    const history = RevisionHistory.reconstitute(stored.id, KNOWLEDGE_ENTRY_LOCALE, stored.history);
+    if (!history.latest()) throw new StoredStateInvalid(stored.id, "no revision was loaded");
+    if (stored.state === "approved" && !stored.approval) {
+      throw new StoredStateInvalid(stored.id, "it is approved with no approval");
+    }
+    if (stored.approval && !history.get(stored.approval.revisionId)) {
+      throw new StoredStateInvalid(
+        stored.id,
+        `its approved revision ${stored.approval.revisionId} was not loaded`,
+      );
+    }
     return new KnowledgeEntry(
       stored.id,
       stored.version,
-      RevisionHistory.reconstitute(stored.id, KNOWLEDGE_ENTRY_LOCALE, stored.history),
+      history,
       stored.state,
       stored.approval ? copyApproval(stored.approval) : null,
       stored.cvBullet,
@@ -281,10 +311,13 @@ export class KnowledgeEntry {
 
   /**
    * The newest revision.
-   * @returns the latest revision; an entry always has one.
+   * @returns the latest revision; an entry always has one (`create` appends the first,
+   * `reconstitute` refuses an empty history).
    */
-  latest(): Revision<KnowledgeEntryDocument> {
-    return this.history.latest() as Revision<KnowledgeEntryDocument>;
+  latest(): KnowledgeEntryRevision {
+    const latest = this.history.latest();
+    if (!latest) throw new StoredStateInvalid(this.id, "it has no revision");
+    return latest;
   }
 
   /**
@@ -292,7 +325,7 @@ export class KnowledgeEntry {
    * @param revisionId the revision's identity.
    * @returns the revision, or null when it is not held.
    */
-  revision(revisionId: string): Revision<KnowledgeEntryDocument> | null {
+  revision(revisionId: string): KnowledgeEntryRevision | null {
     return this.history.get(revisionId);
   }
 
@@ -305,18 +338,39 @@ export class KnowledgeEntry {
   }
 
   /**
-   * What a repository stores for the revisions.
-   * @returns the held revisions, oldest first.
+   * What a repository stores: the exact mirror of `reconstitute`'s input, at the version it was
+   * loaded at (the repository's optimistic check, D5).
+   * @returns the root fields and the held revisions, oldest first; dates and the approval are copies.
    */
-  revisions(): RevisionHistorySnapshot<KnowledgeEntryDocument> {
-    return this.history.snapshot();
+  snapshot(): StoredKnowledgeEntry {
+    return {
+      id: this.id,
+      version: this.version,
+      state: this.current,
+      approval: this.approval,
+      cvBullet: this.approvedCvBullet,
+      withdrawnAt: this.withdrawnAt,
+      deletedAt: this.deletedAt,
+      history: this.history.snapshot(),
+    };
+  }
+
+  /**
+   * The revisions saved since this entry was created or loaded, which the repository inserts with
+   * their provenance rows. After the save the use case discards the entry and the next one loads it
+   * again, so there is no "mark saved".
+   * @returns them in number order.
+   */
+  unsavedRevisions(): readonly KnowledgeEntryRevision[] {
+    return this.history.unsavedRevisions();
   }
 
   /**
    * Saves a new revision and moves the entry to `draft` from any state but deleted: `in_review`
    * (a new revision is a change request), `approved` (the approved revision stays live until the new
    * one is approved) and `withdrawn` (the way back, with nothing live).
-   * @param document the entry's full content, possibly incomplete.
+   * @param document the entry's full public content, possibly incomplete.
+   * @param provenance the revision's private provenance, stored with it and never public.
    * @param origin who wrote it.
    * @param revisionId the new revision's identity.
    * @param at the save time.
@@ -326,12 +380,13 @@ export class KnowledgeEntry {
    */
   saveRevision(
     document: KnowledgeEntryDocument,
+    provenance: KnowledgeEntryProvenance,
     origin: RevisionOrigin,
     revisionId: string,
     at: Date,
-  ): Revision<KnowledgeEntryDocument> {
+  ): KnowledgeEntryRevision {
     this.assertNotDeleted("save a revision of");
-    const revision = this.append(document, origin, revisionId, at);
+    const revision = this.append(document, provenance, origin, revisionId, at);
     this.current = "draft";
     return revision;
   }
@@ -417,15 +472,16 @@ export class KnowledgeEntry {
 
   private append(
     document: KnowledgeEntryDocument,
+    provenance: KnowledgeEntryProvenance,
     origin: RevisionOrigin,
     revisionId: string,
     at: Date,
-  ): Revision<KnowledgeEntryDocument> {
+  ): KnowledgeEntryRevision {
     const invalid = knowledgeEntryRules.invalidFields(document);
     if (invalid.length > 0) {
       throw new FieldFormatInvalid(this.id, KNOWLEDGE_ENTRY_LOCALE, invalid);
     }
-    return this.history.append(document, origin, revisionId, at);
+    return this.history.append(document, provenance, origin, revisionId, at);
   }
 
   private assertState(action: string, from: readonly ApprovalState[]): void {

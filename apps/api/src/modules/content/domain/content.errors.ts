@@ -129,3 +129,18 @@ export class IdInvalid extends Error {
     this.name = "IdInvalid";
   }
 }
+
+/**
+ * A repository handed an aggregate a stored state its state machine can never reach: an approved
+ * entry with no approval, an approval bound to a revision that was not loaded, an entry with no
+ * revision. A bug in the repository or a corrupt row, never a caller's mistake: maps to 500.
+ */
+export class StoredStateInvalid extends Error {
+  constructor(
+    readonly itemId: string,
+    readonly reason: string,
+  ) {
+    super(`Stored item ${itemId} is in an impossible state: ${reason}.`);
+    this.name = "StoredStateInvalid";
+  }
+}

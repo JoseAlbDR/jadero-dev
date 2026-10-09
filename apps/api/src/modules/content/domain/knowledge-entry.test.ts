@@ -7,12 +7,16 @@ import {
   InvalidTransition,
   LocaleIncomplete,
   RevisionNotLatest,
+  StoredStateInvalid,
 } from "./content.errors.js";
 import {
   type ApprovalState,
   KnowledgeEntry,
   type KnowledgeEntryDocument,
+  type KnowledgeEntryProvenance,
+  type KnowledgeEntryRevision,
   knowledgeEntryRules,
+  type StoredKnowledgeEntry,
 } from "./knowledge-entry.js";
 import { Revision } from "./revision.js";
 
@@ -48,6 +52,12 @@ function doc(over: Partial<KnowledgeEntryDocument> = {}): KnowledgeEntryDocument
     related: ["kb-inbox-dedup"],
     cvBullet: "backend-10",
     indexable: true,
+    ...over,
+  };
+}
+
+function prov(over: Partial<KnowledgeEntryProvenance> = {}): KnowledgeEntryProvenance {
+  return {
     sources: ["design notes"],
     conflicts: "",
     publicNames: ["RabbitMQ"],
@@ -56,7 +66,7 @@ function doc(over: Partial<KnowledgeEntryDocument> = {}): KnowledgeEntryDocument
   };
 }
 
-function rev(number: number, document = doc()): Revision<KnowledgeEntryDocument> {
+function rev(number: number, document = doc()): KnowledgeEntryRevision {
   return Revision.reconstitute({
     id: `r${number}`,
     itemId: ID,
@@ -64,6 +74,7 @@ function rev(number: number, document = doc()): Revision<KnowledgeEntryDocument>
     number,
     origin: "owner",
     document,
+    provenance: prov(),
     createdAt: SAVED,
   });
 }
@@ -118,7 +129,7 @@ type Action = "save" | "submit" | "requestChanges" | "approve" | "withdraw" | "d
 function act(entry: KnowledgeEntry, action: Action): void {
   switch (action) {
     case "save":
-      entry.saveRevision(doc({ title: "Edited" }), "owner", "r-new", NOW);
+      entry.saveRevision(doc({ title: "Edited" }), prov(), "owner", "r-new", NOW);
       return;
     case "submit":
       entry.submit();
@@ -205,6 +216,7 @@ describe("KnowledgeEntry approval machine (D4)", () => {
     const entry = KnowledgeEntry.create({
       id: ID,
       document: doc(),
+      provenance: prov(),
       origin: "machine",
       revisionId: "r1",
       at: SAVED,
@@ -213,7 +225,7 @@ describe("KnowledgeEntry approval machine (D4)", () => {
     expect(entry.version).toBe(0);
     expect(entry.latest()).toMatchObject({ id: "r1", number: 1, locale: "en", origin: "machine" });
     expect(entry.approvedRevisionId).toBeNull();
-    expect(entry.revisions().revisions.map((r) => r.id)).toEqual(["r1"]);
+    expect(entry.snapshot().history.revisions.map((r) => r.id)).toEqual(["r1"]);
   });
 
   it.each(["outbox-relay", "kb-", "kb-Outbox", "kb--relay", `kb-${"a".repeat(118)}`])(
@@ -223,6 +235,7 @@ describe("KnowledgeEntry approval machine (D4)", () => {
         KnowledgeEntry.create({
           id,
           document: doc(),
+          provenance: prov(),
           origin: "owner",
           revisionId: "r1",
           at: SAVED,
@@ -236,6 +249,7 @@ describe("KnowledgeEntry approval machine (D4)", () => {
       KnowledgeEntry.create({
         id: ID,
         document: doc({ domain: "Not A Slug" }),
+        provenance: prov(),
         origin: "owner",
         revisionId: "r1",
         at: SAVED,
@@ -245,7 +259,7 @@ describe("KnowledgeEntry approval machine (D4)", () => {
 
   it("an edit after approval keeps the approved revision live until the new one is approved", () => {
     const entry = entryIn("approved");
-    entry.saveRevision(doc({ cvBullet: "backend-11" }), "owner", "r2", NOW);
+    entry.saveRevision(doc({ cvBullet: "backend-11" }), prov(), "owner", "r2", NOW);
     expect(entry.state).toBe("draft");
     expect(entry.approvedRevisionId).toBe("r1");
     expect(entry.cvBullet).toBe("backend-10");
@@ -295,7 +309,7 @@ describe("KnowledgeEntry approval machine (D4)", () => {
     entry.withdraw(NOW);
     expect(() => entry.approve("r1", ALL_TICKED, NOW)).toThrow(InvalidTransition);
 
-    entry.saveRevision(doc({ title: "Rewritten" }), "owner", "r2", NOW);
+    entry.saveRevision(doc({ title: "Rewritten" }), prov(), "owner", "r2", NOW);
     expect(entry.state).toBe("draft");
     expect(() => entry.approve("r1", ALL_TICKED, NOW)).toThrow(RevisionNotLatest);
     expect(entry.approve("r2", ALL_TICKED, NOW).alreadyApproved).toBe(false);
@@ -343,7 +357,7 @@ describe("KnowledgeEntry approval guards", () => {
 
   it("refuses to approve an incomplete revision with LocaleIncomplete", () => {
     const entry = entryIn("draft");
-    entry.saveRevision(doc({ questions: [] }), "owner", "r2", NOW);
+    entry.saveRevision(doc({ questions: [] }), prov(), "owner", "r2", NOW);
     expect(entry.isComplete()).toBe(false);
     expect(() => entry.approve("r2", ALL_TICKED, NOW)).toThrow(LocaleIncomplete);
     expect(entry.state).toBe("draft");
@@ -354,7 +368,7 @@ describe("KnowledgeEntry approval guards", () => {
     expect(entry.version).toBe(3);
     expect(entry.latest().id).toBe("r2");
     expect(entry.approval?.approvedAt).toEqual(APPROVED_AT);
-    expect(entry.revisions().revisions.map((r) => r.id)).toEqual(["r1", "r2"]);
+    expect(entry.snapshot().history.revisions.map((r) => r.id)).toEqual(["r1", "r2"]);
   });
 });
 
@@ -372,7 +386,6 @@ describe("knowledgeEntryRules", () => {
     ${"no optional section"}           | ${{ sections: sections.slice(0, 3) }}                                      | ${true}
     ${"no question"}                   | ${{ questions: [] }}                                                       | ${false}
     ${"a blank question"}              | ${{ questions: ["Why?", " "] }}                                            | ${false}
-    ${"private fields empty"}          | ${{ sources: [], conflicts: "", publicNames: [], confidence: "medium" }}   | ${true}
     ${"no CV bullet, nothing related"} | ${{ cvBullet: null, related: [], stack: [], patterns: [] }}                | ${true}
   `("is complete: $complete with $case", ({ over, complete }) => {
     expect(knowledgeEntryRules.isComplete(doc(over))).toBe(complete);
@@ -391,7 +404,9 @@ describe("knowledgeEntryRules", () => {
   `("refuses to save $over", ({ over, fields }) => {
     expect(knowledgeEntryRules.invalidFields(doc(over))).toEqual(fields);
     const entry = entryIn("draft");
-    expect(() => entry.saveRevision(doc(over), "owner", "r2", NOW)).toThrow(FieldFormatInvalid);
+    expect(() => entry.saveRevision(doc(over), prov(), "owner", "r2", NOW)).toThrow(
+      FieldFormatInvalid,
+    );
     expect(entry.latest().id).toBe("r1");
   });
 
@@ -399,7 +414,98 @@ describe("knowledgeEntryRules", () => {
     const draft = doc({ title: "", domain: "", period: { from: "", to: null }, sections: [] });
     expect(knowledgeEntryRules.invalidFields(draft)).toEqual([]);
     const entry = entryIn("draft");
-    entry.saveRevision({ ...draft, questions: [] }, "owner", "r2", NOW);
+    entry.saveRevision({ ...draft, questions: [] }, prov(), "owner", "r2", NOW);
     expect(entry.isComplete()).toBe(false);
+  });
+});
+
+describe("KnowledgeEntry provenance (D-67)", () => {
+  it("keeps the provenance on the revision, apart from the public document, as a frozen copy", () => {
+    const provenance = { ...prov({ confidence: "medium" }), sources: ["notes"] };
+    const entry = KnowledgeEntry.create({
+      id: ID,
+      document: doc(),
+      provenance,
+      origin: "owner",
+      revisionId: "r1",
+      at: SAVED,
+    });
+    provenance.sources.push("changed by the caller");
+    const revision = entry.latest();
+    expect(revision.provenance).toEqual(prov({ sources: ["notes"], confidence: "medium" }));
+    expect(Object.isFrozen(revision.provenance)).toBe(true);
+    for (const key of ["sources", "conflicts", "publicNames", "confidence"]) {
+      expect(revision.document).not.toHaveProperty(key);
+    }
+  });
+
+  it("approves whatever the provenance says: no rule reads it", () => {
+    const entry = entryIn("draft");
+    entry.saveRevision(
+      doc(),
+      prov({ sources: [], publicNames: [], confidence: "low" }),
+      "owner",
+      "r2",
+      NOW,
+    );
+    expect(entry.approve("r2", ALL_TICKED, NOW).alreadyApproved).toBe(false);
+  });
+});
+
+describe("KnowledgeEntry persistence view", () => {
+  it("lists the revisions saved since creation, and none after a reload", () => {
+    const entry = KnowledgeEntry.create({
+      id: ID,
+      document: doc(),
+      provenance: prov(),
+      origin: "owner",
+      revisionId: "r1",
+      at: SAVED,
+    });
+    expect(entry.unsavedRevisions().map((r) => r.id)).toEqual(["r1"]);
+    expect(KnowledgeEntry.reconstitute(entry.snapshot()).unsavedRevisions()).toEqual([]);
+  });
+
+  it("lists two saves in one use case with consecutive numbers", () => {
+    const entry = entryIn("approved");
+    entry.saveRevision(doc({ title: "Second" }), prov(), "owner", "r2", NOW);
+    entry.saveRevision(doc({ title: "Third" }), prov(), "machine", "r3", NOW);
+    expect(entry.unsavedRevisions().map((r) => [r.id, r.number])).toEqual([
+      ["r2", 2],
+      ["r3", 3],
+    ]);
+  });
+
+  it.each<Fixture>(["draft", "approved", "approved-then-edited", "withdrawn", "deleted"])(
+    "round-trips %s through its snapshot",
+    (fixture) => {
+      const entry = entryIn(fixture);
+      const reloaded = KnowledgeEntry.reconstitute(entry.snapshot());
+      expect(reloaded.snapshot()).toEqual(entry.snapshot());
+      expect(observable(reloaded)).toEqual(observable(entry));
+    },
+  );
+
+  it("round-trips an entry approved in memory", () => {
+    const entry = entryIn("draft");
+    entry.saveRevision(doc({ title: "Second" }), prov(), "owner", "r2", NOW);
+    entry.approve("r2", ALL_TICKED, NOW);
+    const reloaded = KnowledgeEntry.reconstitute(entry.snapshot());
+    expect(reloaded.snapshot()).toEqual(entry.snapshot());
+    expect(reloaded.approvedRevisionId).toBe("r2");
+  });
+
+  const stored = (over: Partial<StoredKnowledgeEntry>): StoredKnowledgeEntry => ({
+    ...entryIn("approved").snapshot(),
+    ...over,
+  });
+
+  it.each`
+    case                                     | input
+    ${"no revision loaded"}                  | ${stored({ history: { revisions: [] } })}
+    ${"approved with no approval"}           | ${stored({ approval: null })}
+    ${"an approval of an unloaded revision"} | ${stored({ history: { revisions: [rev(2)] } })}
+  `("refuses to reconstitute $case", ({ input }) => {
+    expect(() => KnowledgeEntry.reconstitute(input)).toThrow(StoredStateInvalid);
   });
 });

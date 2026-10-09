@@ -253,17 +253,15 @@ export class LocalizedRevisions<TDoc extends object> {
     const invalid = this.rules.invalidFields(document);
     if (invalid.length > 0) throw new FieldFormatInvalid(this.itemId, locale, invalid);
 
-    let slot = this.slots.get(locale);
-    if (!slot) {
-      slot = {
-        history: RevisionHistory.empty(this.itemId, locale),
-        published: null,
-        publishedAt: null,
-        firstPublishedAt: null,
-      };
-      this.slots.set(locale, slot);
-    }
-    return slot.history.append(document, origin, revisionId, at);
+    const slot = this.slots.get(locale) ?? {
+      history: RevisionHistory.empty<TDoc>(this.itemId, locale),
+      published: null,
+      publishedAt: null,
+      firstPublishedAt: null,
+    };
+    const revision = slot.history.append(document, null, origin, revisionId, at);
+    this.slots.set(locale, slot);
+    return revision;
   }
 
   /**
@@ -335,6 +333,39 @@ export class LocalizedRevisions<TDoc extends object> {
   archive(at: Date): void {
     this.assertActive("archive");
     this.archivedOn = copy(at);
+  }
+
+  /**
+   * The revisions appended since the machine was created or loaded, which a repository inserts in
+   * the same transaction as the pointers. After the save the aggregate is discarded and the next use
+   * case loads it again, so there is no "mark saved".
+   * @returns per locale in the order es, en, de, each locale's revisions in number order.
+   */
+  unsavedRevisions(): readonly Revision<TDoc>[] {
+    return LOCALES.flatMap((locale) => this.slots.get(locale)?.history.unsavedRevisions() ?? []);
+  }
+
+  /**
+   * What a repository stores: the exact mirror of `reconstitute`'s input, so
+   * `reconstitute(itemId, rules, machine.snapshot())` rebuilds an equal machine. Revisions appended
+   * in between that are neither latest nor published are not in it: `unsavedRevisions` lists them.
+   * @returns per locale with revisions its latest and published revision and their times, and the
+   * archive mark; dates are copies.
+   */
+  snapshot(): LocalizedRevisionsSnapshot<TDoc> {
+    const locales: Partial<Record<Locale, LocaleSnapshot<TDoc>>> = {};
+    for (const [locale, slot] of this.slots) {
+      const latest = slot.history.latest();
+      if (latest) {
+        locales[locale] = {
+          latest,
+          published: slot.published,
+          publishedAt: copy(slot.publishedAt),
+          firstPublishedAt: copy(slot.firstPublishedAt),
+        };
+      }
+    }
+    return { locales, archivedAt: copy(this.archivedOn) };
   }
 
   /** The given revision, when it is one this aggregate can know: same item, same locale, not newer. */

@@ -59,7 +59,8 @@ export interface StoredCvBullet extends CvBulletLayout {
  * The CV bullet aggregate (D1): its own root because it is addressed from outside by its id
  * (entries name it, the agent's drill-down sends it). Its text is translated and published per
  * locale through the same `LocalizedRevisions` machine as projects: es and en required, de warned,
- * rollback by pointer. The entries that detail it are a reverse lookup, never a field.
+ * rollback by pointer. The entries that detail it are a reverse lookup, never a field. Its parent is
+ * a frozen copy: fixed at creation, unchangeable through the reference it exposes.
  */
 export class CvBullet implements CvBulletLayout {
   readonly id: string;
@@ -73,7 +74,7 @@ export class CvBullet implements CvBulletLayout {
     private readonly machine: LocalizedRevisions<CvBulletDocument>,
   ) {
     this.id = layout.id;
-    this.parent = { ...layout.parent };
+    this.parent = Object.freeze({ ...layout.parent });
     this.sortOrder = layout.sortOrder;
     this.importance = layout.importance;
   }
@@ -103,6 +104,31 @@ export class CvBullet implements CvBulletLayout {
   /** The per-locale state, revisions and archive mark, read only. */
   get translations(): LocalizedRevisionsView<CvBulletDocument> {
     return this.machine;
+  }
+
+  /**
+   * What a repository stores: the exact mirror of `reconstitute`'s input, at the version it was
+   * loaded at (the repository's optimistic check, D5).
+   * @returns the root fields and the per-locale pointers.
+   */
+  snapshot(): StoredCvBullet {
+    return {
+      id: this.id,
+      parent: this.parent,
+      sortOrder: this.sortOrder,
+      importance: this.importance,
+      version: this.version,
+      translations: this.machine.snapshot(),
+    };
+  }
+
+  /**
+   * The revisions saved since this aggregate was created or loaded, which the repository inserts.
+   * After the save the use case discards the aggregate and the next one loads it again.
+   * @returns per locale (es, en, de), each locale's revisions in number order.
+   */
+  unsavedRevisions(): readonly Revision<CvBulletDocument>[] {
+    return this.machine.unsavedRevisions();
   }
 
   /**

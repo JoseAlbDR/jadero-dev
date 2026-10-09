@@ -43,8 +43,8 @@ import { type SkillDocument, skillRules } from "../src/modules/content/domain/sk
  * copy of the publish rules. This file is where the two meet: a document the domain calls complete
  * must parse as the public DTO, and the fields the domain requires at publish must be exactly the
  * ones the DTO refuses when blank: the contract is never weaker than the domain, nor stricter. For
- * knowledge entries "publish" is approval, and the private fields (D-67) are in no DTO and in no
- * completeness rule.
+ * knowledge entries "publish" is approval, and the private fields (D-67) live in the revision's
+ * provenance, outside the document: in no DTO and in no completeness rule.
  */
 interface Case<TDoc extends object> {
   readonly type: string;
@@ -202,10 +202,6 @@ const minimalEntry: KnowledgeEntryDocument = {
   related: [],
   cvBullet: null,
   indexable: true,
-  sources: [],
-  conflicts: "",
-  publicNames: [],
-  confidence: "medium",
 };
 
 const entryToDto = (doc: KnowledgeEntryDocument) => ({ ...doc, id: "kb-sample-entry" });
@@ -225,9 +221,6 @@ suite<KnowledgeEntryDocument>({
     "sections.whatHeBuilt": (d, v) => withSection(d, "whatHeBuilt", v),
     "sections.lessons": (d, v) => withSection(d, "lessons", v),
     "questions[0]": (d, v) => ({ ...d, questions: [v] }),
-    sources: (d, v) => ({ ...d, sources: [v] }),
-    conflicts: (d, v) => ({ ...d, conflicts: v }),
-    publicNames: (d, v) => ({ ...d, publicNames: [v] }),
   },
 });
 
@@ -241,13 +234,72 @@ describe("KnowledgeEntry documents against the public contract, beyond blank fie
     expect(knowledgeEntryRules.isComplete(doc)).toBe(false);
     expect(knowledgeEntryDto.safeParse(entryToDto(doc)).success).toBe(false);
   });
+});
 
-  it("the private fields never reach the DTO", () => {
-    const doc = { ...minimalEntry, sources: ["notes"], conflicts: "x", publicNames: ["Acme"] };
-    const parsed = knowledgeEntryDto.parse(entryToDto(doc));
-    for (const key of ["sources", "conflicts", "publicNames", "confidence"]) {
-      expect(parsed).not.toHaveProperty(key);
+/**
+ * Every key of the entry document, listed once. `satisfies` makes the compiler refuse a missing or
+ * an extra key, so this list is the document type's shape, checked at run time below.
+ */
+const ENTRY_DOCUMENT_KEYS = Object.keys({
+  title: true,
+  type: true,
+  domain: true,
+  period: true,
+  role: true,
+  sections: true,
+  questions: true,
+  stack: true,
+  patterns: true,
+  related: true,
+  cvBullet: true,
+  indexable: true,
+} satisfies Record<keyof KnowledgeEntryDocument, true>);
+
+/** The private fields of the format (D-67), which belong to the provenance, never the document. */
+const PRIVATE_ENTRY_KEYS = ["sources", "conflicts", "publicNames", "confidence"];
+
+/** Public document keys the DTO does not carry (none today); each must be named here on purpose. */
+const PUBLIC_KEYS_OUTSIDE_THE_DTO: readonly string[] = [];
+
+/** Every field filled, every optional section present, so a parse that drops anything shows it. */
+const fullEntry: KnowledgeEntryDocument = {
+  title: "Sample entry",
+  type: "integration",
+  domain: "messaging",
+  period: { from: "2025-03", to: "2025-06" },
+  role: "sole author",
+  sections: [
+    { key: "summary", body: "Summary." },
+    { key: "problem", body: "Problem." },
+    { key: "whatHeBuilt", body: "What he built." },
+    { key: "howItWorks", body: "How it works." },
+    { key: "tradeoffs", body: "Tradeoffs." },
+    { key: "testingRollout", body: "Testing and rollout." },
+    { key: "outcome", body: "Outcome." },
+    { key: "lessons", body: "Lessons." },
+  ],
+  questions: ["What was built?", "Why this way?"],
+  stack: ["NestJS"],
+  patterns: ["outbox"],
+  related: ["kb-other-entry"],
+  cvBullet: "backend-10",
+  indexable: false,
+};
+
+describe("the KnowledgeEntry document holds only public fields (D-67, defense in depth)", () => {
+  it("every document key is a DTO key or a named public key outside it, and none is private", () => {
+    const dtoKeys = Object.keys(knowledgeEntryDto.shape);
+    for (const key of ENTRY_DOCUMENT_KEYS) {
+      expect(PRIVATE_ENTRY_KEYS).not.toContain(key);
+      expect([...dtoKeys, ...PUBLIC_KEYS_OUTSIDE_THE_DTO]).toContain(key);
     }
+  });
+
+  it("a fully filled document parsed as the DTO loses nothing", () => {
+    expect(Object.keys(fullEntry).sort()).toEqual([...ENTRY_DOCUMENT_KEYS].sort());
+    expect(knowledgeEntryRules.isComplete(fullEntry)).toBe(true);
+    expect(knowledgeEntryRules.invalidFields(fullEntry)).toEqual([]);
+    expect(knowledgeEntryDto.parse(entryToDto(fullEntry))).toEqual(entryToDto(fullEntry));
   });
 });
 
