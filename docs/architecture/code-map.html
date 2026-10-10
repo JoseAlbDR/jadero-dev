@@ -259,7 +259,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
   <header class="top">
     <div class="eyebrow">jadero.dev v2 · monorepo · NestJS 12 on Node 24</div>
     <h1>Code map</h1>
-    <p class="lede">How the repo fits together today: which package depends on which, what the <code>api</code> container injects at runtime, the two module shapes new code copies, how <code>api</code> boots, what a request passes through and how one trace id follows it, how the build, <code>pnpm dev</code> and the checks run, what a page request passes through in <code>web</code>, how an event crosses the broker from <code>api</code> to <code>agent</code>, and how each service reaches its own database: the connection, one transaction per use case, the unit of work and the migrations. Click or tap any box for what it is, how it works, why it was built this way, and where the code lives. Arrows start faded: pick one or more boxes in a graph's Focus row (or click them) to see only their arrows, and switch arrow kinds off under Layers.</p>
+    <p class="lede">How the repo fits together today: which package depends on which, what the <code>api</code> container injects at runtime, the two module shapes new code copies, how <code>api</code> boots, what a request passes through and how one trace id follows it, how the build, <code>pnpm dev</code> and the checks run, what a page request passes through in <code>web</code>, how an event crosses the broker from <code>api</code> to <code>agent</code>, and how each service reaches its own database: the connection, one transaction per use case, the unit of work, the migrations and the two database roles of <code>api</code>, and how the content module is layered behind the public read API. Click or tap any box for what it is, how it works, why it was built this way, and where the code lives. Arrows start faded: pick one or more boxes in a graph's Focus row (or click them) to see only their arrows, and switch arrow kinds off under Layers.</p>
   </header>
   <nav class="toc" id="toc" aria-label="Sections"></nav>
   <main id="sections"></main>
@@ -285,7 +285,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 <script type="application/json" id="map-data">
 {
   "meta": {
-    "lastUpdated": "after WP-10 · data layer, 2026-10-06",
+    "lastUpdated": "after WP-12 · content domain and public API, 2026-10-10",
     "kinds": {
       "app": "deployable app", "pkg": "library package", "module": "Nest module", "provider": "provider",
       "token": "DI token", "ext": "external library", "global": "app-level wiring", "env": "environment",
@@ -300,7 +300,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "figures": [
         {
           "type": "graph", "title": "Workspace packages and their workspace:* dependencies", "viewBox": [1000, 720],
-          "caption": "api depends on platform-nest at runtime and on config for its tsconfig and Vitest base; platform-nest and the module template depend on config the same way. Since WP-10 the template also depends on platform-nest (the database tokens and `withTransaction`) and on messaging (`uuidv7`). The template is a workspace package so pnpm verify checks it, but nothing deploys it. Red dotted arrows are imports that dependency-cruiser forbids.",
+          "caption": "api depends on platform-nest at runtime and on config for its tsconfig and Vitest base; platform-nest and the module template depend on config the same way. Since WP-10 the template also depends on platform-nest (the database tokens and `withTransaction`) and on messaging (`uuidv7`). Since WP-12 api, agent, messaging and the template take `@jadero/testing` as a dev dependency for their integration tests (the Postgres global setup and one database per test file). The template is a workspace package so pnpm verify checks it, but nothing deploys it. Red dotted arrows are imports that dependency-cruiser forbids.",
           "lanes": [
             { "x": 8, "y": 30, "w": 984, "h": 150, "label": "apps/ · deployables" },
             { "x": 8, "y": 262, "w": 984, "h": 250, "label": "packages/ · libraries" },
@@ -311,7 +311,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             "ws-mcp": [500, 90, 140, 62], "ws-web": [660, 90, 140, 62], "ws-admin": [820, 90, 140, 62],
             "ws-platform": [20, 310, 150, 62], "ws-config": [190, 420, 140, 62],
             "ws-contracts": [350, 310, 140, 62], "ws-messaging": [510, 310, 140, 62], "ws-ai": [670, 310, 140, 62], "ws-agent-pkg": [830, 310, 140, 62],
-            "ws-ui": [350, 420, 140, 62], "ws-cv": [510, 420, 140, 62],
+            "ws-ui": [350, 420, 140, 62], "ws-cv": [510, 420, 140, 62], "ws-testing": [670, 420, 140, 62],
             "ext-nest-db": [720, 536, 250, 48],
             "ws-template": [20, 638, 220, 58]
           },
@@ -334,7 +334,11 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             { "from": "ws-agent-app", "to": "ws-messaging", "label": "workspace:*", "kind": "dep", "hideLabel": true },
             { "from": "ws-agent-app", "to": "ws-contracts", "label": "workspace:*", "kind": "dep", "hideLabel": true },
             { "from": "ws-messaging", "to": "ws-contracts", "label": "workspace:*", "kind": "dep", "hideLabel": true },
-            { "from": "ws-agent-app", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "hideLabel": true }
+            { "from": "ws-agent-app", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "hideLabel": true },
+            { "from": "ws-api", "to": "ws-testing", "label": "workspace:* (dev)", "kind": "dev", "via": [[150, 226], [820, 226], [820, 451]], "hideLabel": true },
+            { "from": "ws-agent-app", "to": "ws-testing", "label": "workspace:* (dev)", "kind": "dev", "via": [[290, 226], [820, 226], [820, 451]], "hideLabel": true },
+            { "from": "ws-messaging", "to": "ws-testing", "label": "workspace:* (dev)", "kind": "dev", "hideLabel": true },
+            { "from": "ws-template", "to": "ws-testing", "label": "workspace:* (dev)", "kind": "dev", "via": [[690, 667]], "hideLabel": true }
           ]
         },
         {
@@ -346,23 +350,25 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     {
       "id": "di", "eyebrow": "2 · Runtime", "title": "Inside api: modules and injection",
-      "intro": "What Nest builds from AppModule.forRoot(config): the modules it imports, the providers they offer, who injects what, and the app-level wiring configureApp adds outside any module. Left column: telemetry and logging. Middle: health from platform-nest. Right: config and the database connection from platform-nest (pool and Drizzle).",
+      "intro": "What Nest builds from AppModule.forRoot(config): the modules it imports, the providers they offer, who injects what, and the app-level wiring configureApp adds outside any module. Left column: telemetry and logging. Middle: health from platform-nest. Right: config and the database connection from platform-nest (pool and Drizzle). Since WP-12 a second pool sits next to the first: the public content reads log in as a read-only role, and the second figure opens that module.",
       "figures": [
         {
-          "type": "graph", "title": "Nest module and DI graph of api", "viewBox": [1000, 780],
-          "caption": "LoggingModule provides the nestjs-pino Logger (through LoggerModule); configureApp consumes it with app.get(Logger) and hands it to app.useLogger. ApiConfig and ReadinessCheck are abstract classes used as DI tokens; PG_POOL, DRIZZLE and READINESS_CHECKS are symbol tokens. DatabaseModule (platform-nest, global) gets the URL and pool size from the config as plain options, so no provider injects ApiConfig for it; api-worker and agent import the same module. HealthModule comes from platform-nest; api lists PostgresReadinessCheck in it. TelemetryModule, also from platform-nest, flushes the spans of the last requests when the app closes. Dashed boxes are planned.",
+          "type": "graph", "title": "Nest module and DI graph of api", "viewBox": [1000, 1000],
+          "caption": "LoggingModule provides the nestjs-pino Logger (through LoggerModule); configureApp consumes it with app.get(Logger) and hands it to app.useLogger. ApiConfig and ReadinessCheck are abstract classes used as DI tokens; PG_POOL, DRIZZLE and READINESS_CHECKS are symbol tokens. DatabaseModule (platform-nest, global) gets the URL and pool size from the config as plain options, so no provider injects ApiConfig for it; api-worker and agent import the same module. HealthModule comes from platform-nest; api lists PostgresReadinessCheck and ContentReaderReadinessCheck in it, and passes it the same PublicContentModule object in `imports` (not drawn), so the second check finds CONTENT_READER_POOL. That pool is a plain symbol token from api, not from DatabaseModule, and only PublicContentModule provides it. The write side of content (`ContentModule`) is not imported here yet: only `db:seed` boots it until WP-13 adds the admin controllers. TelemetryModule, also from platform-nest, flushes the spans of the last requests when the app closes. Dashed boxes are planned.",
           "lanes": [
-            { "x": 8, "y": 10, "w": 984, "h": 606, "label": "DI container · built by NestFactory.create" },
-            { "x": 8, "y": 640, "w": 984, "h": 130, "label": "configureApp(app) · app-level, outside any module" }
+            { "x": 8, "y": 10, "w": 984, "h": 714, "label": "DI container · built by NestFactory.create" },
+            { "x": 8, "y": 744, "w": 984, "h": 246, "label": "configureApp(app, env) · app-level, outside any module" }
           ],
           "place": {
             "di-telemetry": [20, 40, 250, 56], "di-appmodule": [300, 40, 320, 56], "apiconfig": [680, 40, 300, 56],
             "di-logging": [20, 150, 250, 56], "di-health": [300, 150, 320, 56], "di-postgresmodule": [680, 150, 300, 56],
             "di-loggermodule": [20, 260, 250, 56], "di-terminus": [300, 260, 150, 56], "di-shutdownstate": [480, 260, 140, 56], "di-pgpool": [680, 260, 130, 56], "di-drizzle": [850, 260, 130, 56],
             "di-logger": [20, 370, 120, 56], "di-pinologger": [150, 370, 120, 56], "di-healthcontroller": [300, 370, 320, 56],
-            "di-feature": [150, 480, 145, 56], "di-healthbodyfilter": [300, 480, 150, 56], "di-readinesschecks": [460, 480, 160, 56], "di-prc": [660, 480, 190, 56], "di-poolcloser": [860, 480, 120, 56],
-            "di-readinesscheck": [460, 556, 160, 46],
-            "g-uselogger": [20, 688, 210, 60], "g-pipe": [250, 688, 230, 60], "g-filter": [540, 688, 200, 60], "g-shutdown": [770, 688, 210, 60]
+            "di-feature": [150, 480, 130, 56], "di-healthbodyfilter": [300, 480, 150, 56], "di-readinesschecks": [460, 480, 160, 56], "di-prc": [660, 480, 190, 56], "di-poolcloser": [860, 480, 120, 56],
+            "di-readinesscheck": [460, 556, 160, 46], "di-crc": [660, 556, 240, 46],
+            "di-publiccontent": [300, 640, 320, 56], "di-readerpool": [680, 640, 170, 56],
+            "g-helmet": [20, 784, 210, 60], "g-bodyparser": [250, 784, 230, 60], "g-uselogger": [500, 784, 230, 60], "g-shutdown": [750, 784, 230, 60],
+            "g-pipe": [20, 900, 250, 60], "g-filter": [290, 900, 230, 60], "g-versioning": [540, 900, 230, 60]
           },
           "edges": [
             { "from": "di-appmodule", "to": "apiconfig", "label": "provides", "kind": "provides" },
@@ -389,10 +395,48 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             { "from": "di-prc", "to": "di-pgpool", "label": "injects", "kind": "injects" },
             { "from": "di-poolcloser", "to": "di-pgpool", "label": "injects", "kind": "injects" },
             { "from": "di-feature", "to": "di-pinologger", "label": "injects", "kind": "injects" },
-            { "from": "di-logger", "to": "g-uselogger", "label": "app.get(Logger)", "kind": "consumes", "labelAt": [112, 628] },
+            { "from": "di-logger", "to": "g-uselogger", "label": "app.get(Logger)", "kind": "consumes", "via": [[80, 600], [270, 600], [270, 740], [615, 740]], "labelAt": [200, 600] },
             { "from": "g-pipe", "to": "g-filter", "label": "throws", "kind": "throws" },
-            { "from": "g-shutdown", "to": "di-poolcloser", "label": "onApplicationShutdown", "kind": "lifecycle", "labelAt": [894, 628] },
-            { "from": "g-shutdown", "to": "di-shutdownstate", "label": "beforeApplicationShutdown", "kind": "lifecycle", "via": [[760, 652], [650, 652], [650, 288]], "labelAt": [740, 652] }
+            { "from": "g-bodyparser", "to": "g-filter", "label": "413", "kind": "throws" },
+            { "from": "g-shutdown", "to": "di-poolcloser", "label": "onApplicationShutdown", "kind": "lifecycle", "via": [[920, 740], [920, 600]], "labelAt": [920, 616] },
+            { "from": "g-shutdown", "to": "di-shutdownstate", "label": "beforeApplicationShutdown", "kind": "lifecycle", "via": [[760, 740], [650, 740], [650, 288]], "labelAt": [740, 740] },
+            { "from": "di-appmodule", "to": "di-publiccontent", "label": "imports forRoot(reader)", "kind": "imports", "via": [[288, 100], [288, 668]], "labelAt": [288, 610] },
+            { "from": "di-publiccontent", "to": "di-readerpool", "label": "provides", "kind": "provides" },
+            { "from": "di-readinesschecks", "to": "di-crc", "label": "lists", "kind": "provides", "hideLabel": true },
+            { "from": "di-crc", "to": "di-readinesscheck", "label": "extends", "kind": "extends", "hideLabel": true },
+            { "from": "di-crc", "to": "di-readerpool", "label": "injects", "kind": "injects", "labelAt": [790, 622] }
+          ]
+        },
+        {
+          "type": "graph", "title": "The public read side: PublicContentModule.forRoot(reader)", "viewBox": [1000, 420],
+          "caption": "AppModule builds the module once from ApiConfig (`databaseReadUrl`, `databasePoolMax`) and hands the same object to HealthModule, so the readiness check and the reads share one pool. The module declares the two `/v1/content` controllers and binds ContentQueries to the Drizzle adapter on CONTENT_READER_POOL, a `pg` pool that logs in as `content_reader`. It exports only the pool. Nothing here can write: the role is read-only, and the module holds no use case and no unit of work.",
+          "lanes": [
+            { "x": 8, "y": 10, "w": 984, "h": 96, "label": "wiring" },
+            { "x": 8, "y": 118, "w": 984, "h": 294, "label": "providers and controllers of PublicContentModule · plus the health check that shares its pool" }
+          ],
+          "place": {
+            "apiconfig": [20, 40, 220, 56], "di-publiccontent": [270, 40, 430, 56],
+            "di-lcc": [20, 150, 250, 56], "di-wlc": [290, 150, 210, 56], "di-readerpool": [560, 150, 190, 56], "di-readercloser": [784, 150, 198, 56],
+            "di-cacheint": [20, 250, 250, 56], "di-contentqueries": [290, 250, 210, 56], "di-crc": [560, 250, 225, 56], "di-health": [800, 250, 180, 56],
+            "di-drizzlequeries": [290, 346, 210, 56]
+          },
+          "edges": [
+            { "from": "apiconfig", "to": "di-publiccontent", "label": "url, poolMax", "kind": "flow", "hideLabel": true },
+            { "from": "di-publiccontent", "to": "di-lcc", "label": "controller", "kind": "provides", "hideLabel": true },
+            { "from": "di-publiccontent", "to": "di-wlc", "label": "controller", "kind": "provides", "hideLabel": true },
+            { "from": "di-publiccontent", "to": "di-readerpool", "label": "provides, exports", "kind": "provides", "labelAt": [610, 112] },
+            { "from": "di-publiccontent", "to": "di-readercloser", "label": "provides", "kind": "provides", "hideLabel": true },
+            { "from": "di-publiccontent", "to": "di-contentqueries", "label": "useFactory", "kind": "provides", "via": [[525, 100], [525, 278]], "labelAt": [525, 228] },
+            { "from": "di-lcc", "to": "di-contentqueries", "label": "injects", "kind": "injects", "hideLabel": true },
+            { "from": "di-wlc", "to": "di-contentqueries", "label": "injects", "kind": "injects" },
+            { "from": "di-lcc", "to": "di-cacheint", "label": "@UseInterceptors", "kind": "imports" },
+            { "from": "di-wlc", "to": "di-cacheint", "label": "@UseInterceptors", "kind": "imports", "hideLabel": true },
+            { "from": "di-drizzlequeries", "to": "di-contentqueries", "label": "extends", "kind": "extends" },
+            { "from": "di-drizzlequeries", "to": "di-readerpool", "label": "drizzleOn(pool)", "kind": "injects", "via": [[545, 374], [545, 178]], "labelAt": [545, 330] },
+            { "from": "di-readercloser", "to": "di-readerpool", "label": "injects", "kind": "injects" },
+            { "from": "di-crc", "to": "di-readerpool", "label": "injects", "kind": "injects" },
+            { "from": "di-health", "to": "di-crc", "label": "checks", "kind": "provides", "hideLabel": true },
+            { "from": "di-health", "to": "di-publiccontent", "label": "imports", "kind": "imports", "via": [[767, 240], [767, 68]], "labelAt": [767, 120] }
           ]
         }
       ]
@@ -488,43 +532,48 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     {
       "id": "request", "eyebrow": "5 · Request", "title": "What a request passes through",
-      "intro": "One lane from the socket to the log line. The amber step only runs when something throws. Pick an example to see which steps it touches. With telemetry on, the whole lane runs inside one HTTP span, and its trace id shows up in three places.",
+      "intro": "One lane from the socket to the log line. The amber step only runs when something throws. Pick an example to see which steps it touches; the first ones are WP-12's public content reads, which add the versioned route, the cache interceptor and the read-only pool. With telemetry on, the whole lane runs inside one HTTP span, and its trace id shows up in three places.",
       "figures": [
         {
           "type": "steps", "title": "Request pipeline",
-          "steps": ["r-express", "r-pinohttp", "r-router", "r-pipe", "r-handler", "r-filter", "r-log"],
+          "steps": ["r-express", "r-helmet", "r-bodyparser", "r-pinohttp", "r-router", "r-pipe", "r-handler", "r-interceptor", "r-filter", "r-log"],
           "examples": [
+            {"id": "ex-content-200", "label": "Public read 200", "path": ["r-express", "r-helmet", "r-bodyparser", "r-pinohttp", "r-router", "r-pipe", "r-handler", "r-interceptor", "r-log"], "request": "GET /v1/content/en/profile\naccept: application/json", "response": "HTTP/1.1 200 OK\ncontent-type: application/json; charset=utf-8\ncache-control: public, max-age=60, stale-while-revalidate=300, stale-if-error=86400\ncontent-language: en\netag: W/\"<length>-<hash of the body>\"\ncontent-security-policy: default-src 'none';frame-ancestors 'none'\ncross-origin-resource-policy: same-origin\nreferrer-policy: no-referrer\nx-content-type-options: nosniff\n\n{\n  \"locale\": \"en\",\n  \"name\": \"Alex Example\",\n  \"headline\": \"Backend engineer\",\n  \"summary\": \"Builds **event-driven** services with NestJS and PostgreSQL.\",\n  \"links\": [\n    { \"kind\": \"email\", \"url\": \"mailto:hello@example.com\" },\n    { \"kind\": \"github\", \"url\": \"https://github.com/example\" }\n  ]\n}", "note": "The URI version picks LocalizedContentController (`version: \"1\"`); the pipe parses `:locale` with `localeParams`; the handler asks ContentQueries, whose Drizzle adapter runs plain SELECTs on the `content_reader` pool; the serializer interceptor parses the result with `profileDto` (unknown keys dropped); PublicCacheInterceptor adds Cache-Control and Content-Language; Express adds the weak ETag. The body is shaped like `packages/contracts/fixtures/content/profile.json`. Source: apps/api/test/content-public.int.test.ts."},
+            {"id": "ex-content-304", "label": "Revalidate 304", "path": ["r-express", "r-helmet", "r-bodyparser", "r-pinohttp", "r-router", "r-pipe", "r-handler", "r-interceptor", "r-log"], "request": "GET /v1/content/en/projects/sample-case-study\nif-none-match: W/\"<the etag of the last 200>\"", "response": "HTTP/1.1 304 Not Modified\ncache-control: public, max-age=60, stale-while-revalidate=300, stale-if-error=86400\netag: W/\"<the same etag>\"\n\n(no body)", "note": "The query still runs and Express hashes the new body; the hash matches, so Express answers 304 with the headers and no body (D6's honest limit: it saves bytes, not the query). Source: apps/api/test/content-public.int.test.ts, \"answers a matching If-None-Match with 304\"."},
+            {"id": "ex-content-fallback", "label": "German fallback", "path": ["r-express", "r-helmet", "r-bodyparser", "r-pinohttp", "r-router", "r-pipe", "r-handler", "r-interceptor", "r-log"], "request": "GET /v1/content/de/projects/sample-project", "response": "HTTP/1.1 200 OK\ncache-control: public, max-age=60, stale-while-revalidate=300, stale-if-error=86400\ncontent-language: en\n\n{ \"locale\": \"en\", \"slug\": \"sample-project\", ... }", "note": "The project has no published German version, so the query answers with its English one and the interceptor names the body's language, not the requested one. Only `de` falls back; `es` and `en` are required at publish (D-20). In a list each item falls back on its own (`content-language: de, en`)."},
+            {"id": "ex-content-404", "label": "Missing item 404", "path": ["r-express", "r-helmet", "r-bodyparser", "r-pinohttp", "r-router", "r-pipe", "r-handler", "r-filter", "r-log"], "request": "GET /v1/content/de/projects/sample-case-study", "response": "HTTP/1.1 404 Not Found\ncontent-type: application/problem+json\ncache-control: no-store\n\n{\n  \"type\": \"about:blank\",\n  \"title\": \"Not Found\",\n  \"status\": 404,\n  \"detail\": \"No published project 'sample-case-study' in de.\",\n  \"instance\": \"/v1/content/de/projects/sample-case-study\",\n  \"requestId\": \"<generated UUID>\"\n}", "note": "The case study has a German version, so its English slug is not a German page. The handler throws NotFoundException, the interceptor's `map` never runs, and ProblemDetailsFilter sets `no-store`: a cached 404 would hide an item published a minute later. An unknown locale (`/v1/content/fr/projects`) is a 400 from the pipe before any query."},
+            {"id": "ex-413", "label": "Body over the limit 413", "path": ["r-express", "r-helmet", "r-bodyparser", "r-filter"], "request": "POST /__fixtures/echo\ncontent-type: application/json\n\n{\"email\":\"xxxx... (2000 characters)\",\"locale\":\"es\"}", "response": "HTTP/1.1 413 Payload Too Large\ncontent-type: application/problem+json; charset=utf-8\ncache-control: no-store\ncontent-security-policy: default-src 'none';frame-ancestors 'none'\ncross-origin-resource-policy: same-origin\nreferrer-policy: no-referrer\nx-content-type-options: nosniff\n\n{\n  \"type\": \"about:blank\",\n  \"title\": \"Payload Too Large\",\n  \"status\": 413,\n  \"detail\": \"request entity too large\",\n  \"instance\": \"/__fixtures/echo\"\n}", "note": "The test app sets `HTTP_JSON_BODY_LIMIT=1kb`. configureApp registers Helmet and the parser on Express directly, before Nest adds the module middleware at init, so the parser fails before pino-http runs: the 413 carries the security headers but no `x-request-id` and no `requestId`. Source: packages/platform-nest/test/http-hardening.e2e.test.ts, plus a probe of the same app for the missing request id."},
             {
               "id": "ex-400", "label": "Validation 400",
-              "path": ["r-express", "r-pinohttp", "r-router", "r-pipe", "r-filter", "r-log"],
+              "path": ["r-express", "r-helmet", "r-bodyparser", "r-pinohttp", "r-router", "r-pipe", "r-filter", "r-log"],
               "request": "POST /__fixtures/echo\ncontent-type: application/json\nx-request-id: trace-two-0001\n\n{\"email\":\"not-an-email\",\"locale\":\"fr\"}",
               "response": "HTTP/1.1 400 Bad Request\ncontent-type: application/problem+json\nx-request-id: trace-two-0001\n\n{\n  \"type\": \"https://jadero.dev/problems/validation-failed\",\n  \"title\": \"Request validation failed\",\n  \"status\": 400,\n  \"detail\": \"2 fields are invalid.\",\n  \"instance\": \"/__fixtures/echo\",\n  \"errors\": [\n    { \"pointer\": \"#/email\", \"detail\": \"Invalid email address\" },\n    { \"pointer\": \"#/locale\", \"detail\": \"Invalid option: expected one of \\\"es\\\"|\\\"en\\\"|\\\"de\\\"\" }\n  ],\n  \"requestId\": \"trace-two-0001\"\n}",
               "note": "The pipe finds the schema on @Body(), Zod returns two issues, the exceptionFactory wraps them in RequestValidationException, and the handler never runs. The request line is logged at warn (level 40). Source: packages/platform-nest/test/problem-details.e2e.test.ts against the fixture controller."
             },
             {
               "id": "ex-404", "label": "Unknown route 404",
-              "path": ["r-express", "r-pinohttp", "r-router", "r-filter", "r-log"],
+              "path": ["r-express", "r-helmet", "r-bodyparser", "r-pinohttp", "r-router", "r-filter", "r-log"],
               "request": "GET /nope",
               "response": "HTTP/1.1 404 Not Found\ncontent-type: application/problem+json\n\n{\n  \"type\": \"about:blank\",\n  \"title\": \"Not Found\",\n  \"status\": 404,\n  \"detail\": \"Cannot GET /nope\",\n  \"instance\": \"/nope\",\n  \"requestId\": \"<generated UUID>\"\n}",
               "note": "No route matches, so Nest throws NotFoundException. It is a 4xx HttpException, so the filter keeps the status and message with type about:blank. The test asserts type, title and instance; detail is Nest's own message. Source: the same e2e test."
             },
             {
               "id": "ex-201", "label": "Valid body 201",
-              "path": ["r-express", "r-pinohttp", "r-router", "r-pipe", "r-handler", "r-log"],
+              "path": ["r-express", "r-helmet", "r-bodyparser", "r-pinohttp", "r-router", "r-pipe", "r-handler", "r-log"],
               "request": "POST /__fixtures/echo\ncontent-type: application/json\n\n{\"email\":\"ada@example.com\",\"locale\":\"es\"}",
               "response": "HTTP/1.1 201 Created\ncontent-type: application/json\n\n{\"email\":\"ada@example.com\",\"locale\":\"es\"}",
               "note": "For contrast: validation passes, the handler gets a typed body, and the filter is never involved. The request line is logged at info."
             },
             {
               "id": "ex-503", "label": "Readiness 503",
-              "path": ["r-express", "r-pinohttp", "r-router", "r-handler", "r-log"],
+              "path": ["r-express", "r-helmet", "r-bodyparser", "r-pinohttp", "r-router", "r-handler", "r-log"],
               "request": "GET /health/ready",
               "response": "HTTP/1.1 503 Service Unavailable\ncontent-type: application/json\n\n{\n  \"status\": \"error\",\n  \"info\": { \"shutdown\": { \"status\": \"up\" } },\n  \"error\": { \"database\": { \"status\": \"down\", \"message\": \"unavailable\" } },\n  \"details\": { ... both checks ... }\n}",
               "note": "Postgres is down (the unit test points DATABASE_URL at port 1). HealthController runs the checks, Terminus throws a 503, and the controller-scoped HealthBodyFilter writes the Terminus body instead of problem+json, so the global filter step is skipped. The cause (ECONNREFUSED and the address) goes only to a warn line, \"readiness check failed\". Sources: apps/api/test/health.test.ts and packages/platform-nest/test/health.test.ts."
             },
             {
               "id": "ex-trace", "label": "404 with trace id",
-              "path": ["r-express", "r-pinohttp", "r-router", "r-filter", "r-log"],
+              "path": ["r-express", "r-helmet", "r-bodyparser", "r-pinohttp", "r-router", "r-filter", "r-log"],
               "request": "GET /nope\nx-request-id: trace-three-0001",
               "response": "HTTP/1.1 404 Not Found\ncontent-type: application/problem+json\nx-request-id: trace-three-0001\n\n{\n  \"type\": \"about:blank\",\n  \"title\": \"Not Found\",\n  \"status\": 404,\n  \"detail\": \"Cannot GET /nope\",\n  \"instance\": \"/nope\",\n  \"requestId\": \"trace-three-0001\",\n  \"traceId\": \"4bf92f3577b34da6a3ce929d0e0e4736\"\n}\n\nlog line:\n{\"level\":40,\"service\":\"api\",\"req_id\":\"trace-three-0001\",\n \"trace_id\":\"4bf92f3577b34da6a3ce929d0e0e4736\",\"span_id\":\"00f067aa0ba902b7\",\n \"res\":{\"statusCode\":404},\"msg\":\"request completed\"}\n\nconsole span:\n{ traceId: '4bf92f3577b34da6a3ce929d0e0e4736', name: 'GET', kind: 1, ... }",
               "note": "The same 404 as before, started with `pnpm start` and `OTEL_TRACES_EXPORTER=console` (the dev `.env`), so the instrumentation entry is loaded and prints spans. ProblemDetailsFilter adds `traceId` from `currentTraceId()`, the pino instrumentation adds `trace_id` and `span_id` to the line, and the console exporter prints the `GET` span (plus the Express middleware spans) with the same id. The ids here are examples in the right format; the shape is what step 7 showed on `api` and what `packages/platform-nest/test/telemetry.test.ts` asserts with a real `node --import`."
@@ -913,7 +962,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     {
       "id": "data", "eyebrow": "9 · Data", "title": "The data layer: one database per service, one transaction per use case",
-      "intro": "WP-10: every service gets its pool and Drizzle from platform-nest's DatabaseModule, every write goes through one transaction on one connection, and every schema change is a generated, reviewed SQL migration that a one-off step applies to that service's own database before it starts. The outbox and inbox rows are written inside the same transaction as the change, so an event commits with it or not at all.",
+      "intro": "WP-10: every service gets its pool and Drizzle from platform-nest's DatabaseModule, every write goes through one transaction on one connection, and every schema change is a generated, reviewed SQL migration that a one-off step applies to that service's own database before it starts. The outbox and inbox rows are written inside the same transaction as the change, so an event commits with it or not at all. WP-12 gives api a second database role: writes keep the owner role through the unit of work, public reads log in as `content_reader`, which can only SELECT the tables a migration granted it.",
       "figures": [
         {
           "type": "graph", "title": "Who injects PG_POOL and DRIZZLE, and where each transaction starts", "viewBox": [1000, 570],
@@ -946,6 +995,37 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             { "from": "db-hbrepo", "to": "g-heartbeat", "label": "upsert", "kind": "flow" },
             { "from": "m-w-drizzle-uow", "to": "m-w-drizzle-repo", "label": "new DrizzleWidgetRepository(db)", "kind": "flow" },
             { "from": "m-w-drizzle-repo", "to": "m-w-schema", "label": "insert, select", "kind": "flow" }
+          ]
+        },
+        {
+          "type": "graph", "title": "api's two database roles: the owner writes, content_reader reads", "viewBox": [1000, 500],
+          "caption": "Both pools reach the same database, content_dev, with different credentials. Left: every write is a use case that runs inside `uow.run`, one transaction on PG_POOL, as the owner role `content`, with `expectedVersion` checked in the UPDATE. Today only `db:seed` calls them; the admin controllers arrive with WP-13. Right: the public reads use CONTENT_READER_POOL, logged in as `content_reader`: read-only by default (an INSERT fails with 25006) and granted SELECT table by table by migration 0002 (anything else fails with 42501). Provisioning creates the role (infra/compose/init/01-databases.sql in development); the migration only grants.",
+          "lanes": [
+            { "x": 8, "y": 10, "w": 488, "h": 330, "label": "writes · owner role content · DATABASE_URL" },
+            { "x": 504, "y": 10, "w": 488, "h": 330, "label": "public reads · role content_reader · DATABASE_READ_URL" },
+            { "x": 8, "y": 360, "w": 984, "h": 130, "label": "content_dev · schema content" }
+          ],
+          "place": {
+            "ct-seed": [24, 40, 220, 56], "ct-admin": [264, 40, 220, 56],
+            "ct-usecases": [24, 140, 460, 56],
+            "ct-drizzle-uow": [24, 240, 220, 56], "di-pgpool": [264, 240, 220, 56],
+            "di-lcc": [520, 40, 220, 56], "di-wlc": [756, 40, 220, 56],
+            "di-drizzlequeries": [520, 140, 456, 56],
+            "di-readerpool": [520, 240, 456, 56],
+            "ct-tables": [24, 400, 460, 64], "ct-provenance": [520, 400, 220, 64], "g-outbox": [756, 400, 220, 64]
+          },
+          "edges": [
+            { "from": "ct-seed", "to": "ct-usecases", "label": "SeedContent.execute", "kind": "flow" },
+            { "from": "ct-admin", "to": "ct-usecases", "label": "WP-13", "kind": "planned" },
+            { "from": "ct-usecases", "to": "ct-drizzle-uow", "label": "uow.run", "kind": "injects" },
+            { "from": "ct-drizzle-uow", "to": "di-pgpool", "label": "withTransaction", "kind": "injects", "hideLabel": true },
+            { "from": "di-pgpool", "to": "ct-tables", "label": "BEGIN · UPDATE ... WHERE version = $n · COMMIT", "kind": "flow", "labelAt": [200, 322] },
+            { "from": "di-lcc", "to": "di-drizzlequeries", "label": "ContentQueries", "kind": "injects" },
+            { "from": "di-wlc", "to": "di-drizzlequeries", "label": "ContentQueries", "kind": "injects", "hideLabel": true },
+            { "from": "di-drizzlequeries", "to": "di-readerpool", "label": "drizzleOn(pool)", "kind": "injects" },
+            { "from": "di-readerpool", "to": "ct-tables", "label": "SELECT, granted per table", "kind": "flow", "labelAt": [610, 318] },
+            { "from": "di-readerpool", "to": "ct-provenance", "label": "42501", "kind": "forbidden" },
+            { "from": "di-readerpool", "to": "g-outbox", "label": "42501", "kind": "forbidden" }
           ]
         },
         {
@@ -1006,27 +1086,70 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
           "cards": ["db-d-q1", "db-d-q2", "db-d-d6", "db-d-d2", "db-d-d3", "db-d-d4"]
         }
       ]
+    },
+    {
+      "id": "content", "eyebrow": "10 · Content", "title": "The content module and the public read API",
+      "intro": "WP-12: api's first feature module, hexagonal (ADR-003). The domain holds one aggregate per content item, each with its translations and an append-only history of revisions; publishing (or, for a knowledge entry, approving) moves a pointer to one revision. The write side is use cases on a unit of work; the read side is a separate query port on its own read-only pool (CQRS). Two Nest modules wire it: ContentModule (writes, booted today only by `db:seed`) and PublicContentModule (the `/v1/content` reads, in AppModule).",
+      "figures": [
+        {
+          "type": "graph", "title": "apps/api/src/modules/content, layer by layer", "viewBox": [1000, 510],
+          "caption": "Arrows point the way the code depends: presentation and infrastructure depend on application, application on domain, never the other way (dependency-cruiser checks it). The write path goes down the left half: use cases load an aggregate through a repository the unit of work hands them, call a domain method, and save with `expectedVersion`. The read path is the right half: the controllers ask ContentQueries, whose Drizzle adapter maps rows straight to the public DTOs of `packages/contracts` and never builds an aggregate. In-memory adapters and contract suites back every port, like the template.",
+          "lanes": [
+            { "x": 8, "y": 10, "w": 984, "h": 90, "label": "presentation" },
+            { "x": 8, "y": 110, "w": 984, "h": 190, "label": "application · use cases and ports" },
+            { "x": 8, "y": 310, "w": 984, "h": 95, "label": "infrastructure · adapters" },
+            { "x": 8, "y": 415, "w": 984, "h": 85, "label": "domain · plain TypeScript" }
+          ],
+          "place": {
+            "ct-admin": [24, 40, 460, 50], "di-lcc": [504, 40, 230, 50], "di-wlc": [754, 40, 230, 50],
+            "ct-usecases": [24, 140, 460, 56], "di-contentqueries": [504, 140, 480, 56],
+            "ct-uow-port": [24, 236, 220, 50], "ct-repo-ports": [264, 236, 220, 50],
+            "ct-drizzle-uow": [24, 340, 220, 56], "ct-drizzle-repos": [264, 340, 220, 56], "di-drizzlequeries": [504, 340, 230, 56], "ct-schema": [754, 340, 230, 56],
+            "ct-aggregates": [24, 440, 460, 50], "ct-revisions": [504, 440, 480, 50]
+          },
+          "edges": [
+            { "from": "ct-admin", "to": "ct-usecases", "label": "WP-13", "kind": "planned" },
+            { "from": "di-lcc", "to": "di-contentqueries", "label": "injects", "kind": "injects" },
+            { "from": "di-wlc", "to": "di-contentqueries", "label": "injects", "kind": "injects" },
+            { "from": "ct-usecases", "to": "ct-uow-port", "label": "injects", "kind": "injects", "hideLabel": true },
+            { "from": "ct-uow-port", "to": "ct-repo-ports", "label": "scope", "kind": "provides" },
+            { "from": "ct-usecases", "to": "ct-aggregates", "label": "domain methods", "kind": "imports", "via": [[254, 300], [254, 420]], "labelAt": [254, 306] },
+            { "from": "ct-drizzle-uow", "to": "ct-uow-port", "label": "extends", "kind": "extends", "hideLabel": true },
+            { "from": "ct-drizzle-repos", "to": "ct-repo-ports", "label": "extends", "kind": "extends", "hideLabel": true },
+            { "from": "ct-drizzle-uow", "to": "ct-drizzle-repos", "label": "builds", "kind": "flow", "hideLabel": true },
+            { "from": "ct-drizzle-repos", "to": "ct-aggregates", "label": "rebuilds", "kind": "imports", "hideLabel": true },
+            { "from": "di-drizzlequeries", "to": "di-contentqueries", "label": "extends", "kind": "extends" },
+            { "from": "di-drizzlequeries", "to": "ct-schema", "label": "SELECT", "kind": "flow" },
+            { "from": "ct-aggregates", "to": "ct-revisions", "label": "owns", "kind": "imports" }
+          ]
+        },
+        {
+          "type": "cards", "title": "Decisions the content module rests on",
+          "caption": "From docs/learning/wp-12.md (recorded 2026-10-08, amended 2026-10-09 for URI versioning); click a card for the reasoning.",
+          "cards": ["ct-d-d1", "ct-d-d2", "ct-d-q1", "ct-d-d4", "ct-d-d5", "ct-d-d6", "ct-d-q2", "ct-d-reader", "ct-d-version"]
+        }
+      ]
     }
   ],
   "nodes": {
     "ws-api": {
       "label": "api", "sub": "@jadero/api", "kind": "app", "status": "real", "wp": "WP-3",
-      "what": "The content, auth, media and CV service. Today it is the boot skeleton (validated config, logging, problem+json errors with request and trace ids, health endpoints, OpenTelemetry traces, the database connection from platform-nest) plus, since WP-5, the outbox in content_dev, `POST /dev/ping` in development, and its second process type `api-worker` (`dist/worker.js`: outbox relay and heartbeat; section 8). Since WP-10 its schema lives in Drizzle files and its migrations in `drizzle/` (section 9). No feature modules yet.",
-      "how": "`start` and `dev` run `node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js`, so tracing starts before any import of `main.js`. `main.ts` then validates the environment, builds `AppModule.forRoot(config)`, applies `configureApp` from platform-nest and listens on `PORT`. `db:generate` runs drizzle-kit over `drizzle.config.ts`; `db:migrate` runs `dist/migrate.js`, the one-off step that applies `drizzle/` to content_dev. Runtime dependencies on `@jadero/platform-nest`, `@jadero/messaging` and `@jadero/contracts`; dev dependency on `@jadero/config` for its tsconfig and Vitest base. Its own runtime dependencies are Nest, Express, `pg`, `drizzle-orm`, rxjs, reflect-metadata and zod; drizzle-kit and Testcontainers are dev dependencies.",
-      "why": "ADR-001 splits the backend into services, and ADR-029 says each one owns its database and talks to the others only through events. api comes first because the site's content lives there. Feature modules join from WP-12 (content).",
-      "files": ["apps/api/package.json", "apps/api/AGENTS.md", "apps/api/src/main.ts", "apps/api/src/app.module.ts", "apps/api/src/config/api-config.ts", "apps/api/drizzle.config.ts", "apps/api/src/migrate.ts"]
+      "what": "The content, auth, media and CV service. It has the boot skeleton (validated config, logging, problem+json errors with request and trace ids, security headers, health endpoints, OpenTelemetry traces, the database connection from platform-nest), the outbox in content_dev, `POST /dev/ping` in development and its second process type `api-worker` (`dist/worker.js`: outbox relay and heartbeat; section 8). Since WP-10 its schema lives in Drizzle files and its migrations in `drizzle/` (section 9). Since WP-12 it has its first feature module, `content` (section 10): the content aggregates, the write use cases and the public read API under `/v1/content`, served from a second, read-only database role.",
+      "how": "`start` and `dev` run `node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js`, so tracing starts before any import of `main.js`. `main.ts` then validates the environment, builds `AppModule.forRoot(config)` with `APP_OPTIONS`, applies `configureApp(app, env)` from platform-nest and listens on `PORT`. `db:generate` runs drizzle-kit over `drizzle.config.ts`; `db:migrate` runs `dist/migrate.js`, the one-off step that applies `drizzle/` to content_dev (0000 messaging, 0001 content schema, 0002 the `content_reader` grants, 0003 the posts feed index); `db:seed` runs `dist/seed.js`, which loads placeholder content through the content use cases (idempotent, by hand, never by a deploy). Runtime dependencies on `@jadero/platform-nest`, `@jadero/messaging` and `@jadero/contracts`; dev dependencies on `@jadero/config` (tsconfig, Vitest base) and `@jadero/testing` (integration test helpers). Its own runtime dependencies are Nest, Express, `pg`, `drizzle-orm`, rxjs, reflect-metadata and zod; drizzle-kit, supertest and Testcontainers are dev dependencies.",
+      "why": "ADR-001 splits the backend into services, and ADR-029 says each one owns its database and talks to the others only through events. api comes first because the site's content lives there. WP-12 (Q2 A) ships no write endpoint: WP-13 adds the admin controllers together with their guard.",
+      "files": ["apps/api/package.json", "apps/api/AGENTS.md", "apps/api/src/main.ts", "apps/api/src/app.module.ts", "apps/api/src/config/api-config.ts", "apps/api/src/modules/content/", "apps/api/src/seed.ts", "apps/api/drizzle.config.ts", "apps/api/src/migrate.ts"]
     },
     "ws-platform": {
       "label": "platform-nest", "sub": "@jadero/platform-nest", "kind": "pkg", "status": "real", "wp": "WP-3",
-      "what": "The bootstrap every NestJS service shares: fail-fast config, structured logging, RFC 9457 errors, the health module, the OpenTelemetry entry, one `configureApp` and, since WP-10, the database connection (`DatabaseModule`, `withTransaction`, `runMigrations`). Infrastructure only, no domain code.",
-      "how": "Compiled with tsc to `dist/` and exposed through two `exports` entries: `.` for everything Nest uses, and `./instrumentation` for the file `node --import` loads before the app. Nest packages, rxjs and zod are peer dependencies, so the app supplies the single copy of `@nestjs/core`. `@nestjs/terminus`, nestjs-pino, pino, pino-http, pino-pretty, the OpenTelemetry SDK, OTLP exporter and five instrumentations (http, express, pg, pino, amqplib), and since WP-10 `pg` and `drizzle-orm`, are its own dependencies, which is why api never lists them. `src/database/` holds `DatabaseModule.forRoot` (the `PG_POOL` and `DRIZZLE` tokens, the pool closer), `PostgresReadinessCheck`, `withTransaction` and `runMigrations`; section 9 shows them.",
+      "what": "The bootstrap every NestJS service shares: fail-fast config, structured logging that redacts database errors, RFC 9457 errors, the health module, the OpenTelemetry entry, one `configureApp` (security headers, one JSON body parser with a limit, URI versioning) with its `APP_OPTIONS`, and, since WP-10, the database connection (`DatabaseModule`, `createPool`, `withTransaction`, `runMigrations`). Infrastructure only, no domain code.",
+      "how": "Compiled with tsc to `dist/` and exposed through two `exports` entries: `.` for everything Nest uses, and `./instrumentation` for the file `node --import` loads before the app. Nest packages, rxjs and zod are peer dependencies, so the app supplies the single copy of `@nestjs/core`. `@nestjs/terminus`, nestjs-pino, pino, pino-http, pino-pretty, the OpenTelemetry SDK, OTLP exporter and five instrumentations (http, express, pg, pino, amqplib), `pg` and `drizzle-orm`, and since WP-12 `helmet`, are its own dependencies, which is why api never lists them. `src/database/` holds `DatabaseModule.forRoot` (the `PG_POOL` and `DRIZZLE` tokens, the pool closer), `createPool` (exported in WP-12, so a service can build a second pool), `postgresReadinessCheck(token, name)` and `PostgresReadinessCheck`, `withTransaction` and `runMigrations`; section 9 shows them.",
       "why": "AGENTS.md rule 5: shared packages hold infrastructure, never domain code. One boot path means api, agent and contact log, validate and fail the same way. WP-3 decision C (default kept) puts the health module here too, with checks registered per service. WP-10 Q1 A moved the two copies of `postgres.module.ts` (api and agent) here before contact made a third.",
-      "files": ["packages/platform-nest/package.json", "packages/platform-nest/src/index.ts", "packages/platform-nest/src/telemetry/", "packages/platform-nest/src/database/"]
+      "files": ["packages/platform-nest/package.json", "packages/platform-nest/src/index.ts", "packages/platform-nest/src/bootstrap/configure-app.ts", "packages/platform-nest/src/logging/error-serializer.ts", "packages/platform-nest/src/telemetry/", "packages/platform-nest/src/database/"]
     },
     "ws-template": {
       "label": "nest-module", "sub": "@jadero/template-nest-module", "kind": "template", "status": "real", "wp": "WP-3 step 8",
       "what": "Copyable module shapes for the Nest services: a layered `notes` module and a hexagonal `widgets` module. A workspace package that nothing imports and nothing deploys.",
-      "how": "Real TypeScript with its own `typecheck`, `test` and `test:int` scripts, so `pnpm verify` type-checks it, runs its tests and checks it against the dependency-cruiser rules, and `pnpm test:int` runs the Drizzle adapters on real Postgres. It has no `build`. Nest, rxjs and zod are normal dependencies here because no app consumes it; since WP-10 it also depends on `@jadero/platform-nest` and `@jadero/messaging`. Section 3 shows both shapes.",
+      "how": "Real TypeScript with its own `typecheck`, `test` and `test:int` scripts, so `pnpm verify` type-checks it, runs its tests and checks it against the dependency-cruiser rules, and `pnpm test:int` runs the Drizzle adapters on real Postgres. It has no `build`. Nest, rxjs and zod are normal dependencies here because no app consumes it; since WP-10 it also depends on `@jadero/platform-nest` and `@jadero/messaging`, and since WP-12 its integration tests use `@jadero/testing` (dev). Section 3 shows both shapes.",
       "why": "WP-3 decision G3: a checked folder instead of documentation or a generator. The cheapest shape to copy should be the right one, and a template the tools check cannot drift from what the rules accept. Widening the rules to `templates/` is what found the gap in `domain-imports-only-domain`.",
       "files": ["templates/nest-module/package.json", "templates/nest-module/README.md", "templates/nest-module/src/modules/", "pnpm-workspace.yaml"]
     },
@@ -1074,10 +1197,10 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     "ws-contracts": {
       "label": "contracts", "sub": "@jadero/contracts", "kind": "pkg", "status": "real", "wp": "WP-5",
-      "what": "Message contracts as Zod: the CloudEvents 1.0 envelope, defineEvent and the first event, system.ping.v1, with one example fixture per event and the AsyncAPI 3.1 catalog generated from the schemas.",
-      "how": "`defineEvent(\"system.ping.v1\", schema)` derives the routing key, the type `dev.jadero.system.ping.v1` and the envelope schema. A fixture test parses every event's example; a compatibility test compares each version's schema with its frozen copy in `compat/`, so within a version only optional fields can be added. Compiled to dist/; zod is a peer dependency.",
-      "why": "ADR-029 and AGENTS.md rule 5: one shared contract per event, versioned and changed expand/contract, so producer and consumer can deploy in any order.",
-      "files": ["packages/contracts/src/envelope.ts", "packages/contracts/src/define-event.ts", "packages/contracts/src/events/", "packages/contracts/fixtures/", "packages/contracts/compat/", "packages/contracts/asyncapi.json"]
+      "what": "Contracts as Zod: the CloudEvents 1.0 envelope, defineEvent and the first event, system.ping.v1, with one example fixture per event and the AsyncAPI 3.1 catalog generated from the schemas. Since WP-12 also the HTTP contracts of the public content API: `Locale`, the route parameters and queries (locale, localized slug, entry id, project kind, the opaque posts cursor) and the response DTOs (profile, experience with CV bullets, projects, posts page, skills, work log), each with a fixture.",
+      "how": "`defineEvent(\"system.ping.v1\", schema)` derives the routing key, the type `dev.jadero.system.ping.v1` and the envelope schema. A fixture test parses every event's example; a compatibility test compares each version's schema with its frozen copy in `compat/`, so within a version only optional fields can be added. The content DTOs live in `src/content/`; api's controllers validate parameters with them (`@Param({ schema })`) and parse every response with them before it leaves (`@SerializeOptions({ schema })`), and `content.test.ts` parses each fixture. Compiled to dist/; zod is a peer dependency.",
+      "why": "ADR-029 and AGENTS.md rule 5: one shared contract per event, versioned and changed expand/contract, so producer and consumer can deploy in any order. The HTTP DTOs live here for the same reason: `web` (WP-16) reads the same schemas the API answers with, and the response parse is the second guard that keeps private fields (an entry's provenance, D-67) out of a public body.",
+      "files": ["packages/contracts/src/envelope.ts", "packages/contracts/src/define-event.ts", "packages/contracts/src/events/", "packages/contracts/src/content/", "packages/contracts/fixtures/", "packages/contracts/compat/", "packages/contracts/asyncapi.json"]
     },
     "ws-messaging": {
       "label": "messaging", "sub": "@jadero/messaging", "kind": "pkg", "status": "real", "wp": "WP-5",
@@ -1187,13 +1310,13 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "di-appmodule": {
       "label": "AppModule.forRoot(config)", "sub": "root dynamic module · global", "kind": "module", "status": "real", "wp": "WP-3 step 3",
       "what": "The root module of api, built around an already validated configuration.",
-      "how": "A static `forRoot(config)` returns a `DynamicModule` with `global: true`. It imports `LoggingModule.forRoot({ serviceName, level, pretty })` from the config (pretty only when `nodeEnv` is development), `DatabaseModule.forRoot({ url: config.databaseUrl, poolMax: config.databasePoolMax })`, `HealthModule.forRoot({ checks: [PostgresReadinessCheck] })`, `TelemetryModule` and, in development only, `DevPingModule`. It provides `ApiConfig` with `useValue: config` and exports it, so any module can inject it without importing AppModule.",
+      "how": "A static `forRoot(config)` returns a `DynamicModule` with `global: true`. It imports `LoggingModule.forRoot({ serviceName, level, pretty })` from the config (pretty only when `nodeEnv` is development), `DatabaseModule.forRoot({ url: config.databaseUrl, poolMax: config.databasePoolMax })`, `HealthModule.forRoot({ checks: [PostgresReadinessCheck, ContentReaderReadinessCheck], imports: [publicContent] })`, `TelemetryModule`, `publicContent` and, in development only, `DevPingModule`. `publicContent` is one `PublicContentModule.forRoot({ url: config.databaseReadUrl, poolMax: config.databasePoolMax })` object used in both places, so Nest builds one module instance and one reader pool. It provides `ApiConfig` with `useValue: config` and exports it, so any module can inject it without importing AppModule.",
       "why": "Because the config is parsed before the module is built, a bad environment never reaches a module (WP-3 decision B2). `forRoot` takes the config as an argument instead of reading `process.env`, which keeps the environment read in one place (ADR-043).",
       "files": ["apps/api/src/app.module.ts", "apps/api/test/app.module.test.ts", "apps/api/test/setup/boot.ts"]
     },
     "apiconfig": {
       "label": "ApiConfig", "sub": "abstract class · DI token · useValue", "kind": "token", "status": "real", "wp": "WP-3 step 3",
-      "what": "The typed configuration providers inject: `nodeEnv`, `port`, `logLevel`, `serviceName`, `databaseUrl`.",
+      "what": "The typed configuration providers inject: `nodeEnv`, `port`, `logLevel`, `serviceName`, `databaseUrl`, `databasePoolMax` and, since WP-12, `databaseReadUrl` (the read-only `content_reader` connection, never logged). api-worker has its own `ApiWorkerConfig` without the read URL: the worker serves no public reads, so it never holds that credential.",
       "how": "An abstract class is both the TypeScript type and the runtime DI token. AppModule provides it with `{ provide: ApiConfig, useValue: config }`. A provider writes `constructor(readonly config: ApiConfig)` and Nest resolves it from `design:paramtypes`. It must be imported as a value, never with `import type`, or the metadata becomes `Object` and DI fails.",
       "why": "WP-3 decision B2: matches the \"ports are abstract classes and DI tokens\" convention of ADR-003 and keeps string keys like `config.get(\"PORT\")` out of code. The DI test proves the token resolves under Vitest.",
       "files": ["apps/api/src/config/api-config.ts", "apps/api/test/app.module.test.ts"]
@@ -1201,16 +1324,16 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "di-logging": {
       "label": "LoggingModule.forRoot(opts)", "sub": "platform-nest", "kind": "module", "status": "real", "wp": "WP-3 step 4",
       "what": "Structured JSON logging with a request id on every line, wrapped from nestjs-pino.",
-      "how": "`forRoot(options)` imports `LoggerModule.forRoot(loggerParams(options))` and re-exports `LoggerModule`. `loggerParams` sets the level, `base: { service }`, `genReqId: requestId`, `customLogLevel: requestLogLevel` (health probes at debug when they pass and warn when they fail), minimal req and res serializers, redaction of auth headers, and pino-pretty only in development. Tests pass an in-memory `destination`.",
+      "how": "`forRoot(options)` imports `LoggerModule.forRoot(loggerParams(options))` and re-exports `LoggerModule`. `loggerParams` sets the level, `base: { service }`, `genReqId: requestId`, `customLogLevel: requestLogLevel` (health probes at debug when they pass and warn when they fail), minimal req and res serializers, an `err` serializer and a `logMethod` hook that swap a database error for a redacted copy (WP-12: code, constraint, table and SQL text, never the bound parameters), redaction of auth headers, and pino-pretty only in development. api, api-worker and agent all get it. Tests pass an in-memory `destination`.",
       "why": "WP-3 spike row 2 passed, so nestjs-pino is used directly. A request id reaches lines from singleton providers through AsyncLocalStorage, with no request-scoped providers. Headers, bodies and the client IP are not logged (AGENTS.md section 7; the hashed IP comes with WP-11). ADR-010 wants `service` on every line.",
-      "files": ["packages/platform-nest/src/logging/logging.module.ts", "packages/platform-nest/src/logging/logger-params.ts", "packages/platform-nest/test/logging.test.ts"]
+      "files": ["packages/platform-nest/src/logging/logging.module.ts", "packages/platform-nest/src/logging/logger-params.ts", "packages/platform-nest/src/logging/error-serializer.ts", "packages/platform-nest/test/logging.test.ts"]
     },
     "di-health": {
       "label": "HealthModule.forRoot({ imports, checks })", "sub": "platform-nest · Terminus", "kind": "module", "status": "real", "wp": "WP-3 step 6",
       "what": "`/health/live` and `/health/ready`, the same in every service, with each service bringing its own readiness checks.",
-      "how": "`forRoot(options)` imports `TerminusModule.forRoot({ logger: false })` plus the modules in `options.imports`, declares `HealthController`, provides `ShutdownState` (with the optional `drainMs`, default 0, as `SHUTDOWN_DRAIN_MS`) and every class in `options.checks`, and builds `READINESS_CHECKS` with a factory that collects the check instances into an array. api calls it as `HealthModule.forRoot({ checks: [PostgresReadinessCheck] })`: the check finds `PG_POOL` because `DatabaseModule` is global, so no `imports` are needed (api-worker passes `imports: [RelayModule]` for its broker check).",
+      "how": "`forRoot(options)` imports `TerminusModule.forRoot({ logger: false })` plus the modules in `options.imports`, declares `HealthController` (`VERSION_NEUTRAL`, so `/health/*` keeps its path under URI versioning), provides `ShutdownState` (with the optional `drainMs`, default 0, as `SHUTDOWN_DRAIN_MS`) and every class in `options.checks`, and builds `READINESS_CHECKS` with a factory that collects the check instances into an array. api calls it as `HealthModule.forRoot({ checks: [PostgresReadinessCheck, ContentReaderReadinessCheck], imports: [publicContent] })`: the first check finds `PG_POOL` because `DatabaseModule` is global; the second needs `CONTENT_READER_POOL`, which only PublicContentModule exports, hence `imports` (api-worker passes `imports: [RelayModule]` for its broker check the same way).",
       "why": "WP-3 decision C: endpoints and status codes must be identical for Docker Compose and Uptime Kuma, while the checks are service specific. Terminus does the response shape (ADR-010).",
-      "files": ["packages/platform-nest/src/health/health.module.ts", "packages/platform-nest/test/health.test.ts", "apps/api/src/app.module.ts"]
+      "files": ["packages/platform-nest/src/health/health.module.ts", "packages/platform-nest/src/health/health.controller.ts", "packages/platform-nest/test/health.test.ts", "apps/api/src/app.module.ts"]
     },
     "di-terminus": {
       "label": "TerminusModule", "sub": "@nestjs/terminus", "kind": "ext", "status": "real", "wp": "WP-3 step 6",
@@ -1269,9 +1392,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/platform-nest/src/database/database.module.ts", "packages/platform-nest/src/database/database.tokens.ts", "apps/api/src/config/api-config.ts"]
     },
     "di-prc": {
-      "label": "PostgresReadinessCheck", "sub": "platform-nest · SELECT 1", "kind": "provider", "status": "real", "wp": "WP-10 step 2",
+      "label": "PostgresReadinessCheck", "sub": "platform-nest · SELECT 1 · as database", "kind": "provider", "status": "real", "wp": "WP-10 step 2",
       "what": "The readiness check for the service's own database.",
-      "how": "Extends `ReadinessCheck`, injects `PG_POOL` and runs `SELECT 1` with a per-query `query_timeout` equal to the controller's `CHECK_TIMEOUT_MS`, so a hung check frees its connection when the controller gives up. With Postgres down, `/health/ready` answers 503 with `database: { status: down, message: unavailable }`.",
+      "how": "Built by `postgresReadinessCheck(PG_POOL, \"database\")` (WP-12): the factory returns an `@Injectable()` class that injects the pool under the given token and runs `SELECT 1` with a per-query `query_timeout` equal to the controller's `CHECK_TIMEOUT_MS`, so a hung check frees its connection when the controller gives up. With Postgres down, `/health/ready` answers 503 with `database: { status: down, message: unavailable }`. api builds a second check from the same factory for its reader pool (`content-reader`).",
       "why": "Readiness covers the database (ADR-010). It moved from api and agent to platform-nest with the pool (WP-10 Q1 A): every service checks its own database the same way.",
       "files": ["packages/platform-nest/src/database/postgres.readiness-check.ts", "apps/api/test/health.test.ts", "apps/api/test/health.int.test.ts"]
     },
@@ -1311,11 +1434,11 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/platform-nest/src/telemetry/telemetry.module.ts", "packages/platform-nest/src/telemetry/telemetry-state.ts", "apps/api/src/app.module.ts", "packages/platform-nest/test/telemetry.test.ts"]
     },
     "di-feature": {
-      "label": "feature providers", "sub": "planned · WP-12 on", "kind": "provider", "status": "planned", "wp": "WP-12 on",
-      "what": "The services, repositories and use cases that feature modules will add.",
-      "how": "They inject `ApiConfig` and `PinoLogger` by constructor type, `PG_POOL` (to open transactions with `withTransaction` or a unit of work) and `DRIZZLE` (for display reads) with `@Inject`, from the global DatabaseModule. The only one today is `PingService` in the development-only `DevPingModule` (section 9). The test already injects `ApiConfig` this way with `NeedsConfig` inside a separate `FeatureModule`. The arrows to ApiConfig and the tokens are left out of the drawing to keep it readable.",
-      "why": "Shows the tokens any feature can rely on today.",
-      "files": ["apps/api/test/app.module.test.ts", "apps/api/src/modules/ping/"]
+      "label": "admin write controllers", "sub": "planned · WP-13", "kind": "provider", "status": "planned", "wp": "WP-13",
+      "what": "The admin controllers that will call the content use cases behind the login guard.",
+      "how": "WP-13 imports `ContentModule` into AppModule and adds controllers that inject its use cases (`CreateContentItem`, `SaveContentRevision`, `PublishContentItem`, the knowledge entry transitions) and `PinoLogger`. Until then `ContentModule` is booted only by `db:seed` (SeedModule), and api's HTTP container holds no write path. Features inject `ApiConfig` and `PinoLogger` by constructor type and `PG_POOL` or `DRIZZLE` with `@Inject`; the test already injects `ApiConfig` this way with `NeedsConfig` inside a separate `FeatureModule`. Only the arrow to PinoLogger is drawn, to keep the drawing readable.",
+      "why": "WP-12 Q2 A: nothing writable is ever deployed unguarded, so the write endpoints and their guard arrive together, with their 401 and 403 tests.",
+      "files": ["apps/api/src/modules/content/content.module.ts", "apps/api/src/seed/seed.module.ts", "apps/api/test/app.module.test.ts"]
     },
     "g-uselogger": {
       "label": "app.useLogger(...)", "sub": "consumes nestjs-pino Logger", "kind": "global", "status": "real", "wp": "WP-3 step 4",
@@ -1334,8 +1457,8 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "g-filter": {
       "label": "ProblemDetailsFilter", "sub": "global @Catch() filter", "kind": "global", "status": "real", "wp": "WP-3 step 5",
       "what": "The one exception filter: every error leaves as `application/problem+json` (RFC 9457).",
-      "how": "`RequestValidationException` becomes 400 `validation-failed` with an `errors` array; any other HttpException under 500 keeps its status and message as `about:blank`; an Express middleware error with a 4xx `status` and `expose: true` (body-parser's 413 payload too large, 415 unsupported media type) keeps its status the same way instead of becoming a 500; anything else is a generic 500 whose stack goes only to the error log. `instance` is the path only, without the query string, and Nest's 404 message is cut the same way, because a query may carry an email or a token. Every body carries `requestId` from pino-http and, when telemetry is on, `traceId` from `currentTraceId()`.",
-      "why": "ADR-006: one error shape for every route and service. Exception shielding keeps internals out of responses. Health routes keep their own body (WP-3 decision E1).",
+      "how": "`RequestValidationException` becomes 400 `validation-failed` with an `errors` array; any other HttpException under 500 keeps its status and message as `about:blank`; an Express middleware error with a 4xx `status` and `expose: true` (body-parser's 413 payload too large, 415 unsupported media type) keeps its status the same way instead of becoming a 500; anything else is a generic 500 whose stack goes only to the error log. `instance` is the path only, without the query string, and Nest's 404 message is cut the same way, because a query may carry an email or a token. Every body carries `requestId` from pino-http (when pino-http ran: a 413 from the parser has none) and, when telemetry is on, `traceId` from `currentTraceId()`. Since WP-12 every error response gets `Cache-Control: no-store`, which also replaces a public cache header set before the throw.",
+      "why": "ADR-006: one error shape for every route and service. Exception shielding keeps internals out of responses. Health routes keep their own body (WP-3 decision E1), and their filter sets `no-store` too. WP-12 D6: a cached 404 would hide an item published a moment later.",
       "files": ["packages/platform-nest/src/errors/problem-details.filter.ts", "packages/platform-nest/src/errors/problem-details.ts", "packages/platform-nest/test/problem-details.e2e.test.ts"]
     },
     "g-shutdown": {
@@ -1402,17 +1525,17 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["apps/api/src/config/api-config.ts"]
     },
     "b-create": {
-      "label": "NestFactory.create(AppModule.forRoot(config), { bufferLogs: true })", "sub": "builds the DI container", "kind": "step", "status": "real", "wp": "WP-3 step 3",
+      "label": "NestFactory.create(AppModule.forRoot(config), APP_OPTIONS)", "sub": "builds the DI container", "kind": "step", "status": "real", "wp": "WP-3 step 3",
       "what": "Builds the module graph and the Express app.",
-      "how": "Nest resolves the imports and providers shown in section 2. The `pg` pool is created but connects lazily, so a database that is down does not stop the boot. `bufferLogs: true` holds Nest's boot lines until a logger is set.",
-      "why": "Express 5 is the adapter (WP-3 decision A1). Buffering lets the very first lines come out as pino JSON.",
-      "files": ["apps/api/src/main.ts"]
+      "how": "Nest resolves the imports and providers shown in section 2. Both `pg` pools (owner and reader) are created but connect lazily, so a database that is down does not stop the boot; readiness reports it. `APP_OPTIONS` from platform-nest is `{ bufferLogs: true, bodyParser: false }`: boot lines wait until a logger is set, and Nest adds none of its default body parsers (JSON and URL-encoded), so configureApp registers the only one.",
+      "why": "Express 5 is the adapter (WP-3 decision A1). Buffering lets the very first lines come out as pino JSON. Turning the default parsers off means a form-encoded body is never parsed (ADR-047, the smallest surface), and the JSON limit comes from config instead of Nest's built-in default.",
+      "files": ["apps/api/src/main.ts", "packages/platform-nest/src/bootstrap/configure-app.ts"]
     },
     "b-configure": {
-      "label": "configureApp(app)", "sub": "logger, pipe, filter, hooks", "kind": "step", "status": "real", "wp": "WP-3 steps 3 to 5",
+      "label": "configureApp(app, env)", "sub": "headers, parser, logger, pipe, filter, versions, hooks", "kind": "step", "status": "real", "wp": "WP-3 steps 3 to 5",
       "what": "The one place that wires an app the same way for `main.ts` and for end-to-end tests.",
-      "how": "Calls `useLogger(app.get(Logger))`, `useGlobalPipes(...)`, `useGlobalFilters(new ProblemDetailsFilter())` and `enableShutdownHooks()`, then returns the same app.",
-      "why": "Tests must apply exactly the wiring production does, or a green test proves nothing (WP-3 first principles, Testcontainers harness).",
+      "how": "In order: `app.disable(\"x-powered-by\")`, `app.use(helmet(...))` with the JSON API policy, `app.useBodyParser(\"json\", { limit: env.HTTP_JSON_BODY_LIMIT })`, `useLogger(app.get(Logger))`, `useGlobalPipes(...)`, `useGlobalFilters(new ProblemDetailsFilter())`, `enableVersioning({ type: VersioningType.URI })` and `enableShutdownHooks()`, then returns the same app. Helmet and the parser go straight onto Express here, so they run before the middleware Nest's modules add at init (pino-http). Every service (api, api-worker, agent, agent consumer) passes its parsed env.",
+      "why": "Tests must apply exactly the wiring production does, or a green test proves nothing (WP-3 first principles, Testcontainers harness). ADR-047 puts the HTTP hardening that every service needs here, and the edge (nginx) keeps HSTS and the rate limits.",
       "files": ["packages/platform-nest/src/bootstrap/configure-app.ts"]
     },
     "b-listen": {
@@ -1424,16 +1547,16 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     "platformenv": {
       "label": "platformEnv", "sub": "in platform-nest", "kind": "env", "status": "real", "wp": "WP-3 step 3",
-      "what": "The variables every Nest service reads: `NODE_ENV`, `PORT`, `LOG_LEVEL`, `SERVICE_NAME`.",
-      "how": "A `z.object`. `PORT` is a string piped into a coerced integer from 1 to 65535, so a missing value reads \"received undefined\". Booleans, when they arrive, use `z.stringbool()` because `z.coerce.boolean()` turns \"false\" into true.",
+      "what": "The variables every Nest service reads: `NODE_ENV`, `PORT`, `LOG_LEVEL`, `SERVICE_NAME` and, since WP-12, `HTTP_JSON_BODY_LIMIT` (default `100kb`).",
+      "how": "A `z.object`. `PORT` is a string piped into a coerced integer from 1 to 65535, so a missing value reads \"received undefined\". `HTTP_JSON_BODY_LIMIT` must look like `100kb` or `1mb` (body-parser's units); configureApp passes it to the one JSON parser. Booleans, when they arrive, use `z.stringbool()` because `z.coerce.boolean()` turns \"false\" into true.",
       "why": "Each module contributes a slice and the service merges them (ADR-043, which kept this rule from ADR-007).",
       "files": ["packages/platform-nest/src/config/platform-env.ts"]
     },
     "apienv": {
       "label": "apiEnv", "sub": "in api", "kind": "env", "status": "real", "wp": "WP-3 step 3",
-      "what": "api's environment schema: the platform variables, `SERVICE_NAME` defaulting to `api`, and `DATABASE_URL` for its own database.",
-      "how": "`platformEnv.extend({ SERVICE_NAME: z.string().min(1).default(\"api\"), DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }) })`. A missing or non-Postgres URL stops the boot.",
-      "why": "Service-specific variables stay in the service; the shared ones stay identical everywhere.",
+      "what": "api's environment schema: the platform variables, `SERVICE_NAME` defaulting to `api`, `DATABASE_URL` for its own database as the owner role, `DATABASE_POOL_MAX` and, since WP-12, `DATABASE_READ_URL`, the same database as the read-only `content_reader` role.",
+      "how": "A shared `apiSharedEnv` (`platformEnv.extend({ SERVICE_NAME, DATABASE_URL, DATABASE_POOL_MAX })`, both URLs `z.url({ protocol: /^postgres(ql)?$/ })`) is extended twice: `apiEnv` adds `DATABASE_READ_URL`, `apiWorkerEnv` adds the broker and the heartbeat. A missing or non-Postgres URL stops the boot. The seed reads only `DATABASE_URL` and the pool size (`apiEnv.pick`).",
+      "why": "Service-specific variables stay in the service; the shared ones stay identical everywhere. Least privilege by process: only the process that serves public reads gets the reader credential.",
       "files": ["apps/api/src/config/api-config.ts"]
     },
     "b-env": {
@@ -1444,25 +1567,25 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/platform-nest/src/config/load-config.ts"]
     },
     "r-express": {
-      "label": "Express 5", "sub": "HTTP server, JSON body parser", "kind": "step", "status": "real", "wp": "WP-3 step 3",
-      "what": "Accepts the connection and parses the JSON body.",
-      "how": "`@nestjs/platform-express` installs Express as Nest's HTTP adapter.",
+      "label": "Express 5", "sub": "HTTP server · middleware in order", "kind": "step", "status": "real", "wp": "WP-3 step 3",
+      "what": "Accepts the connection and runs the Express middleware in the order it was registered.",
+      "how": "`@nestjs/platform-express` installs Express as Nest's HTTP adapter. The app is created with `APP_OPTIONS` (`bodyParser: false`), and `X-Powered-By` is off, so nothing names the stack.",
       "why": "WP-3 decision A1: Nest's default, the one the auth and MCP libraries assume first, and the owner knows it best.",
       "files": ["apps/api/package.json"]
     },
     "r-pinohttp": {
       "label": "pino-http middleware", "sub": "request id · AsyncLocalStorage", "kind": "step", "status": "real", "wp": "WP-3 step 4",
       "what": "Gives the request an id and a child logger, and stores both for the rest of the request.",
-      "how": "`requestId` reuses `x-request-id` when it matches `^[A-Za-z0-9-]{8,128}$`, else generates a UUID, and echoes it in the response header. nestjs-pino keeps the child logger in AsyncLocalStorage.",
+      "how": "`requestId` reuses `x-request-id` when it matches `^[A-Za-z0-9-]{8,128}$`, else generates a UUID, and echoes it in the response header. nestjs-pino keeps the child logger in AsyncLocalStorage. It is module middleware, added at `app.init()`, so it runs after Helmet and the body parser: a request the parser rejects (413, malformed JSON) never gets a request id.",
       "why": "A client cannot inject newlines or huge strings into logs, and every line of the request shares one id (step 4 log).",
       "files": ["packages/platform-nest/src/logging/logger-params.ts"]
     },
     "r-router": {
-      "label": "router", "sub": "Nest route match", "kind": "step", "status": "real", "wp": "WP-3",
+      "label": "router", "sub": "URI version · route match", "kind": "step", "status": "real", "wp": "WP-3",
       "what": "Finds the controller method for method and path.",
-      "how": "No match means Nest throws `NotFoundException`, which still goes through the global filter. There are no guards or interceptors yet; they would run between here and the pipe.",
-      "why": "Even a 404 must leave as problem+json.",
-      "files": ["apps/api/src/app.module.ts"]
+      "how": "URI versioning (WP-12, amendment of 2026-10-09): a controller with `version: \"1\"` answers under `/v1/...`; `HealthController` and `/dev/ping` are `VERSION_NEUTRAL` and keep their paths, so `/v1/health/ready` is a 404. No match means Nest throws `NotFoundException`, which still goes through the global filter. Controller-scoped interceptors (PublicCacheInterceptor, the schema serializer) wrap the pipe and the handler from here on; there are no guards yet.",
+      "why": "Even a 404 must leave as problem+json. A version in the path keeps one URL per representation, which caches and CDNs key on; a breaking change adds `version: \"2\"` next to v1 (expand/contract), as events do.",
+      "files": ["packages/platform-nest/src/bootstrap/configure-app.ts", "apps/api/src/modules/content/presentation/localized-content.controller.ts", "apps/api/src/app.module.ts"]
     },
     "r-pipe": {
       "label": "global pipe", "sub": "Standard Schema validation", "kind": "step", "status": "real", "wp": "WP-3 step 5",
@@ -1472,25 +1595,25 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/platform-nest/src/bootstrap/configure-app.ts", "packages/platform-nest/src/errors/request-validation.exception.ts"]
     },
     "r-handler": {
-      "label": "handler", "sub": "controller method", "kind": "step", "status": "real", "wp": "WP-12 on",
+      "label": "handler", "sub": "controller method", "kind": "step", "status": "real", "wp": "WP-12",
       "what": "The controller method with a typed, validated input.",
-      "how": "api's only controller so far is `HealthController` from platform-nest. The validation end-to-end tests use `EchoController`, a fixture under platform-nest's tests.",
-      "why": "Real endpoints with bodies arrive with WP-11 and WP-12.",
-      "files": ["packages/platform-nest/src/health/health.controller.ts", "packages/platform-nest/test/fixtures/echo.controller.ts"]
+      "how": "Since WP-12 api's real handlers are the public reads: `LocalizedContentController` (`/v1/content/:locale/profile`, `experience`, `projects`, `projects/:slug`, `posts`, `posts/:slug`, `skills`) and `WorkLogController` (`/v1/content/work`, `/v1/content/work/:entryId`). Each calls one `ContentQueries` method and returns a DTO, or throws `NotFoundException` when nothing is published under that slug. `HealthController` comes from platform-nest; the validation end-to-end tests use the fixture `EchoController`.",
+      "why": "Thin controllers: parse the input, call one port, return the DTO. The query port keeps SQL out of the presentation layer (ADR-003).",
+      "files": ["apps/api/src/modules/content/presentation/localized-content.controller.ts", "apps/api/src/modules/content/presentation/work-log.controller.ts", "packages/platform-nest/src/health/health.controller.ts", "packages/platform-nest/test/fixtures/echo.controller.ts"]
     },
     "r-filter": {
       "label": "ProblemDetailsFilter", "sub": "on error · application/problem+json", "kind": "step", "status": "real", "wp": "WP-3 step 5", "branch": true,
       "what": "Turns whatever was thrown into an RFC 9457 body.",
-      "how": "Validation: 400 with `errors`. Other 4xx, including body-parser's 413 and 415: status and message kept. `instance` is the path without the query string. Anything else: generic 500, stack only in the error log with the request id. On `/health/*` the controller-scoped `HealthBodyFilter` catches the 503 first and keeps the Terminus body.",
+      "how": "Validation: 400 with `errors`. Other 4xx, including body-parser's 413 and 415: status and message kept. `instance` is the path without the query string. Anything else: generic 500, stack only in the error log with the request id. Every error gets `Cache-Control: no-store`. On `/health/*` the controller-scoped `HealthBodyFilter` catches the 503 first and keeps the Terminus body (also `no-store`).",
       "why": "One error format for clients and the admin; internals never leak (ADR-006).",
       "files": ["packages/platform-nest/src/errors/problem-details.filter.ts"]
     },
     "r-log": {
       "label": "request log line", "sub": "\"request completed\"", "kind": "step", "status": "real", "wp": "WP-3 step 4",
       "what": "One JSON line per request when the response finishes.",
-      "how": "Carries `service`, `req_id`, `req: { method, url }` (the URL as a path, without the query string), `res: { statusCode }` and the response time, plus `trace_id` and `span_id` when telemetry is on (added by the pino instrumentation). Level from `requestLogLevel`: `/health/*` debug when it passes and warn when it fails, other 5xx error, other 4xx warn, else info.",
-      "why": "Lines are easy to grep by request id, and no headers, body or client IP are written (AGENTS.md section 7).",
-      "files": ["packages/platform-nest/src/logging/logger-params.ts"]
+      "how": "Carries `service`, `req_id`, `req: { method, url }` (the URL as a path, without the query string), `res: { statusCode }` and the response time, plus `trace_id` and `span_id` when telemetry is on (added by the pino instrumentation). Level from `requestLogLevel`: `/health/*` debug when it passes and warn when it fails, other 5xx error, other 4xx warn, else info. Since WP-12 an error logged anywhere (`logger.error(err)` or `{ err }`) passes the error serializer first: a Drizzle query error keeps its SQLSTATE code, constraint, table, column, schema and SQL text with `$n` placeholders, and loses its bound parameters and Postgres's `detail`, which carry row values.",
+      "why": "Lines are easy to grep by request id, and no headers, body, client IP or query parameters are written (AGENTS.md section 7). A failed content write would otherwise put the document text into the error log through Drizzle's message.",
+      "files": ["packages/platform-nest/src/logging/logger-params.ts", "packages/platform-nest/src/logging/error-serializer.ts", "packages/platform-nest/test/error-serializer.test.ts"]
     },
     "k-src": {
       "label": "platform-nest/src/*.ts", "sub": "TypeScript source", "kind": "step", "status": "real", "wp": "WP-3 step 3",
@@ -1565,9 +1688,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "c-testint": {
       "label": "pnpm test:int", "sub": "Testcontainers · needs Docker", "kind": "check", "status": "real", "wp": "WP-3 step 6",
       "what": "Integration tests against real containers, kept out of `pnpm verify`.",
-      "how": "`turbo run test:int` runs each package's `vitest.int.config.ts`, built from `integrationConfig()`: only `test/**/*.int.test.ts`, longer timeouts, and a global setup. The Postgres global setup of api, agent, messaging and the module template is the shared one in `@jadero/testing` (WP-12 step 1): it first calls `useDockerContextHost()`, then starts one `pgvector/pgvector:0.8.7-pg18` container per run and provides its URL; each test file creates and drops its own database with `createTestDatabase()`. A unit test keeps that tag equal to `compose.dev.yml`. Since WP-10 they prove the data layer: migrations from zero as an ordinary role, the repository and unit of work contracts on Drizzle, rollback and the atomic outbox.",
-      "why": "WP-3 decision H: one container per run, one database per file, so files run in parallel without sharing rows. `pnpm verify` stays fast and Docker-free; CI runs these from WP-6. Testcontainers looks only at `DOCKER_HOST`, `~/.testcontainers.properties` and `/var/run/docker.sock`, not at the Docker CLI context that OrbStack, Colima and Docker Desktop use on macOS. `useDockerContextHost()` asks `docker context inspect` and sets `DOCKER_HOST` when none is set, so `pnpm test:int` works wherever `pnpm dev:up` works.",
-      "files": ["apps/api/vitest.int.config.ts", "packages/testing/src/postgres.global-setup.ts", "packages/testing/src/docker-host.ts", "packages/testing/src/test-database.ts", "apps/api/test/outbox.int.test.ts", "apps/api/test/migrations.int.test.ts", "templates/nest-module/test/widgets.int.test.ts", "packages/config/vitest/base.js"]
+      "how": "`turbo run test:int` runs each package's `vitest.int.config.ts`, built from `integrationConfig()`: only `test/**/*.int.test.ts`, longer timeouts, and a global setup. The Postgres global setup of api, agent, messaging and the module template is the shared one in `@jadero/testing` (WP-12 step 1): it first calls `useDockerContextHost()`, then starts one `pgvector/pgvector:0.8.7-pg18` container per run and provides its URL; each test file creates and drops its own database with `createTestDatabase({ superuserExtensions, roles })`, owned by an ordinary role. The extensions and login roles it creates are parsed from `infra/compose/init/01-databases.sql` (`provisionedExtensions`, `provisionedRoles`), so the tests provision exactly what development does: api's tests get the `content_reader` role with its read-only default. A unit test keeps the image tag equal to `compose.dev.yml`. They prove the data layer: migrations from zero as an ordinary role, the repository and unit of work contracts on Drizzle, rollback and the atomic outbox, and since WP-12 the content repositories, the seed, the public reads over HTTP and what `content_reader` may not do.",
+      "why": "WP-3 decision H: one container per run, one database per file, so files run in parallel without sharing rows. `pnpm verify` stays fast and Docker-free; CI runs these from WP-6. Testcontainers looks only at `DOCKER_HOST`, `~/.testcontainers.properties` and `/var/run/docker.sock`, not at the Docker CLI context that OrbStack, Colima and Docker Desktop use on macOS. `useDockerContextHost()` asks `docker context inspect` and sets `DOCKER_HOST` when none is set, so `pnpm test:int` works wherever `pnpm dev:up` works. WP-12 moved the four copies of these helpers into one package before a fifth appeared.",
+      "files": ["apps/api/vitest.int.config.ts", "packages/testing/src/postgres.global-setup.ts", "packages/testing/src/test-database.ts", "packages/testing/src/provisioned-roles.ts", "packages/testing/src/docker-host.ts", "apps/api/test/content-public.int.test.ts", "apps/api/test/outbox.int.test.ts", "packages/config/vitest/base.js"]
     },
     "c-e2e": {
       "label": "pnpm test:e2e", "sub": "Playwright · axe · standalone build", "kind": "check", "status": "real", "wp": "WP-4",
@@ -2019,9 +2142,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     "c-migrations": {
       "label": "pnpm check:migrations", "sub": "append-only migrations · in pnpm verify", "kind": "check", "status": "real", "wp": "WP-10 step 3",
-      "what": "Fails when a branch edits or deletes a migration that `main` already has.",
-      "how": "Compares the merge base with `origin/main` (else `main`) against the working tree for files under `apps/<service>/drizzle/`: a new file passes unless main has one of that name with other content; `meta/_journal.json` may only grow, main's entries first and unchanged; any other change fails. Without either base (a shallow clone) it prints a notice and passes.",
-      "why": "Drizzle's migrator applies only journal entries newer than the last applied one and never compares the stored hash, so an edited migration is skipped in every database that already ran it and applied in every new one: schema drift by environment. The fix is always a new migration (WP-10, step 3 check question).",
+      "what": "Fails when a branch edits or deletes a migration that `main` already has, or holds a journal entry the migrator would skip.",
+      "how": "Compares the merge base with `origin/main` (else `main`) against the working tree for files under `apps/<service>/drizzle/`: a new file passes unless main has one of that name with other content; `meta/_journal.json` may only grow, main's entries first and unchanged; any other change fails. Since WP-12 it also checks every journal's order: `idx` 0..n with no gap, each tag starting with its padded `idx`, `when` strictly increasing, and every entry the branch adds has a `when` above main's last. Without a base (a shallow clone) the checks against main print a notice and pass; the order check still runs.",
+      "why": "Drizzle's migrator applies only journal entries newer than the last applied one and never compares the stored hash, so an edited migration is skipped in every database that already ran it and applied in every new one: schema drift by environment. The same comparison uses `when`: an entry generated before main gained a newer one would be skipped silently (WP-12 step 1c). The fix is always a new migration.",
       "files": ["scripts/check-migrations.mjs", "scripts/check-migrations.test.mjs", "package.json"]
     },
     "db-withtx": {
@@ -2198,6 +2321,265 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "how": "Outbox and inbox rows are written on the transaction's executor, never on the pool. `outbox.int.test.ts` proves a rollback leaves no row, and shows that a write on a second connection survives it.",
       "why": "A write on another pool connection autocommits, so a rolled-back change would still publish its event (a phantom event).",
       "files": ["packages/platform-nest/src/database/transaction.ts", "apps/api/test/outbox.int.test.ts", ".claude/rules/services.md"]
+    },
+    "ws-testing": {
+      "label": "testing", "sub": "@jadero/testing", "kind": "pkg", "status": "real", "wp": "WP-12 step 1",
+      "what": "Integration test helpers shared by the services and packages: the Postgres global setup for Vitest, one test database per file owned by an ordinary role, the Docker host detection for Testcontainers, the test image tag and the drizzle-kit schema drift check.",
+      "how": "Three `exports` entries: `.` (`createTestDatabase({ superuserExtensions, roles })`, `provisionedExtensions`, `provisionedRoles`, `useDockerContextHost`, `POSTGRES_IMAGE`), `./postgres-global-setup` (what a `vitest.int.config.ts` names as its global setup) and `./drizzle` (`pendingSchemaChanges`, which runs drizzle-kit against a service's schema files). `provisionedExtensions` and `provisionedRoles` parse `infra/compose/init/01-databases.sql`, so a test database gets the same extensions and login roles as development, `content_reader` with its read-only default included. A dev dependency of api, agent, messaging and the module template; drizzle-kit and platform-nest are optional peers, so a package that needs neither loads neither. Compiled to dist/.",
+      "why": "WP-10 left four copies of the same setup files (api, agent, messaging, template); WP-12 needed roles and extensions in them, which would have meant four more edits. Infrastructure only, no domain code (AGENTS.md rule 5), and never imported by production code.",
+      "files": ["packages/testing/package.json", "packages/testing/src/index.ts", "packages/testing/src/test-database.ts", "packages/testing/src/provisioned-roles.ts", "packages/testing/src/provisioned-extensions.ts", "packages/testing/src/postgres.global-setup.ts", "packages/testing/src/pending-schema-changes.ts"]
+    },
+    "di-publiccontent": {
+      "label": "PublicContentModule.forRoot(reader)", "sub": "content · read side · its own pool", "kind": "module", "status": "real", "wp": "WP-12 step 7",
+      "what": "The public read side of the content module: the `/v1/content` controllers, the query service and the read-only pool it runs on.",
+      "how": "`forRoot({ url, poolMax })` returns a dynamic module that declares `LocalizedContentController` and `WorkLogController`, provides `CONTENT_READER_POOL` (`createPool(reader)` from platform-nest, lazy like the owner pool), `ContentReaderPoolCloser` and `ContentQueries` (`useFactory: (pool) => new DrizzleContentQueries(drizzleOn(pool))`), and exports only the pool. AppModule builds it once and passes the same object to `imports` and to `HealthModule.forRoot({ imports })`.",
+      "why": "CQRS: the reads never load an aggregate, so they need no unit of work, no use case and no write credential. Keeping them in their own module lets `db:seed` boot the write side (`ContentModule`) without a reader URL, and least privilege rests on a credential, not on code review: an injected statement on this pool can neither write nor read a table the migration did not grant.",
+      "files": ["apps/api/src/modules/content/public-content.module.ts", "apps/api/src/app.module.ts", "apps/api/src/modules/content/index.ts"]
+    },
+    "di-readerpool": {
+      "label": "CONTENT_READER_POOL", "sub": "pg Pool · as content_reader", "kind": "token", "status": "real", "wp": "WP-12 step 7",
+      "what": "The second `pg` pool to api's database, logged in as the read-only role `content_reader`, used only by the content query service.",
+      "how": "A symbol token in `content-reader-pool.ts`, provided by PublicContentModule with `createPool({ url: DATABASE_READ_URL, poolMax: DATABASE_POOL_MAX })`: the same settings as the owner pool (1 s connect timeout, 5 s query timeout, an `error` listener that logs only the code). The role is created by provisioning with `LOGIN` and `default_transaction_read_only = on`; migration 0002 grants it `USAGE` on schema `content` and `SELECT` on exactly the tables the queries read. An INSERT fails with 25006 (read-only transaction), and with 42501 even after `SET default_transaction_read_only = off`; any table not granted (`knowledge_entry_provenance`, `messaging.outbox`, `content.profile`) fails with 42501.",
+      "why": "Least privilege for the only code reachable by anonymous visitors. No `ALTER DEFAULT PRIVILEGES`, so a table added later stays unreadable until a migration grants it (deny by default).",
+      "files": ["apps/api/src/modules/content/infrastructure/content-reader-pool.ts", "apps/api/drizzle/0002_content_reader.sql", "infra/compose/init/01-databases.sql", "apps/api/test/content-public.int.test.ts"]
+    },
+    "di-readercloser": {
+      "label": "ContentReaderPoolCloser", "sub": "closes the reader pool", "kind": "provider", "status": "real", "wp": "WP-12 step 7",
+      "what": "Closes the reader pool when the app shuts down.",
+      "how": "Implements `onApplicationShutdown` and calls `pool.end()` on `CONTENT_READER_POOL`, like platform-nest's PoolCloser for the owner pool. That hook runs after the HTTP server has closed (`enableShutdownHooks`).",
+      "why": "Reads in flight during a graceful shutdown finish before their pool closes.",
+      "files": ["apps/api/src/modules/content/infrastructure/content-reader-pool.ts"]
+    },
+    "di-crc": {
+      "label": "ContentReaderReadinessCheck", "sub": "content-reader · SELECT 1", "kind": "provider", "status": "real", "wp": "WP-12 step 7b",
+      "what": "The readiness check of the reader pool, reported as `content-reader` on `/health/ready`.",
+      "how": "`class ContentReaderReadinessCheck extends postgresReadinessCheck(CONTENT_READER_POOL, \"content-reader\") {}`: the platform-nest factory gives an injectable class that runs `SELECT 1` through that pool with the controller's timeout. Listed in `HealthModule.forRoot({ checks })` next to `PostgresReadinessCheck`.",
+      "why": "A wrong `DATABASE_READ_URL` password or a missing CONNECT grant fails readiness, so the instance gets no traffic, instead of passing it and answering 500 on every public read.",
+      "files": ["apps/api/src/modules/content/infrastructure/content-reader-pool.ts", "packages/platform-nest/src/database/postgres.readiness-check.ts", "apps/api/test/health.int.test.ts"]
+    },
+    "di-lcc": {
+      "label": "LocalizedContentController", "sub": "/v1/content/:locale/...", "kind": "provider", "status": "real", "wp": "WP-12 step 7",
+      "what": "The public reads of the localized content: profile, experience, projects (with `?kind=`), one project, the posts feed (with `?cursor=`), one post, skills.",
+      "how": "`@Controller({ path: \"content/:locale\", version: \"1\" })` with `@UseInterceptors(PublicCacheInterceptor, StandardSchemaSerializerInterceptor)`. Each method validates its parameters with a schema from `packages/contracts` (`localeParams`, `localizedSlugParams`, `postListQuery`, `projectListQuery`), so an unknown locale, slug, kind or cursor is a 400 before any query; calls one `ContentQueries` method; and declares its response schema with `@SerializeOptions({ schema })`, which parses the result before it leaves (unknown keys dropped). A missing item is a `NotFoundException`.",
+      "why": "The locale is in the path, never negotiated: one URL per representation, so no `Vary` and a clean cache key (ADR-022). Parsing the response with the public contract is the second guard against private fields leaking (D-67).",
+      "files": ["apps/api/src/modules/content/presentation/localized-content.controller.ts", "packages/contracts/src/content/params.ts", "apps/api/test/content-public.test.ts"]
+    },
+    "di-wlc": {
+      "label": "WorkLogController", "sub": "/v1/content/work", "kind": "provider", "status": "real", "wp": "WP-12 step 7",
+      "what": "The public work log: approved knowledge entries, English only, as a list and one by one.",
+      "how": "`@Controller({ path: \"content/work\", version: \"1\" })`, the same two interceptors as the localized reads. `GET /v1/content/work` lists every approved, not deleted entry; `GET /v1/content/work/:entryId` validates the id (`kb-...`) and returns the approved revision, or 404 when the entry is not approved, withdrawn or deleted. `Content-Language` is always `en`.",
+      "why": "ADR-031 and D-52: only the approved revision is public, and never the entry's provenance (sources, conflicts, confidence), which lives in a table the reader role cannot read.",
+      "files": ["apps/api/src/modules/content/presentation/work-log.controller.ts", "packages/contracts/src/content/knowledge-entries.ts"]
+    },
+    "di-cacheint": {
+      "label": "PublicCacheInterceptor", "sub": "Cache-Control · Content-Language", "kind": "provider", "status": "real", "wp": "WP-12 step 7",
+      "what": "Adds the public cache headers to every successful public read.",
+      "how": "Runs `next.handle().pipe(map(...))`: after the handler returned and the schema serializer parsed the body, it sets `Cache-Control: public, max-age=60, stale-while-revalidate=300, stale-if-error=86400` and `Content-Language` from the body (the item's `locale`, or every locale in a list's items with the requested one first, such as `de, en`). Errors never pass through `map`, so a 4xx or 5xx never carries these headers. The `ETag` is Express's weak hash of the body, and Express answers a matching `If-None-Match` with 304 and these same headers.",
+      "why": "WP-12 D6: a publish reaches every cache within about a minute, a revalidation in the background hides the latency, and a down api still serves the last copy for a day. 304 comes for free from Express; the query still runs, which is the honest limit of a body hash.",
+      "files": ["apps/api/src/modules/content/presentation/public-cache.interceptor.ts", "apps/api/test/content-public.int.test.ts"]
+    },
+    "di-contentqueries": {
+      "label": "ContentQueries", "sub": "abstract class · the read port", "kind": "token", "status": "real", "wp": "WP-12 step 7",
+      "what": "The read side of the content module (CQRS): what a visitor may see, straight from the published pointers, as the public DTOs.",
+      "how": "An abstract class (port and DI token) with one method per route: `profile`, `experience`, `projects`, `project`, `posts` (keyset pagination, 20 per page, newest first publication first), `post`, `skills`, `workLog`, `workEntry`. German falls back per item to English when an item has no published German version; `es` and `en` never fall back (D-20). A fake in `apps/api/test/content-queries.fake.ts` backs the HTTP unit tests.",
+      "why": "It never loads an aggregate or goes through a repository: reads need no invariants, and building aggregates to throw them away costs queries. It never returns a draft, an archived item, an unapproved entry or provenance (D-67).",
+      "files": ["apps/api/src/modules/content/application/content-queries.ts", "apps/api/test/content-queries.fake.ts"]
+    },
+    "di-drizzlequeries": {
+      "label": "DrizzleContentQueries", "sub": "plain SELECTs on the reader pool", "kind": "provider", "status": "real", "wp": "WP-12 step 7",
+      "what": "The Drizzle adapter of ContentQueries.",
+      "how": "Built by PublicContentModule's factory on `drizzleOn(readerPool)`. Plain read-only SQL from the `*_translations` rows whose `published_revision_id` is set, joined to the revision they point at; every row and `jsonb` document is parsed on the way in with the type's Zod schema (tolerant reader), and every DTO is built field by field. The posts cursor is opaque (`encodePostCursor`) and its index is migration 0003.",
+      "why": "Mapping field by field means a document field added later stays private until a contract and this mapper name it. The integration suite runs it as `content_reader`, so a query that needs a table the role was not granted fails in the test, not in production.",
+      "files": ["apps/api/src/modules/content/infrastructure/drizzle-content-queries.ts", "apps/api/drizzle/0003_posts_feed_index.sql", "apps/api/test/content-public.int.test.ts"]
+    },
+    "g-helmet": {
+      "label": "Helmet · no X-Powered-By", "sub": "JSON API security headers", "kind": "global", "status": "real", "wp": "WP-12 (ADR-047)",
+      "what": "The security headers of a JSON API, on every response of every service.",
+      "how": "`app.disable(\"x-powered-by\")` and `app.use(helmet({...}))` with `Content-Security-Policy: default-src 'none';frame-ancestors 'none'`, `Cross-Origin-Resource-Policy: same-origin`, `Referrer-Policy: no-referrer` and `X-Content-Type-Options: nosniff`; Helmet's HTML-oriented defaults and HSTS are off. CORS stays closed: no service calls `enableCors`, so a preflight gets no `Access-Control-*` header.",
+      "why": "ADR-047: no HTML is served, so nothing may load or frame it, and no header names the stack. nginx owns HSTS for the whole domain, so a service never sends it twice.",
+      "files": ["packages/platform-nest/src/bootstrap/configure-app.ts", "packages/platform-nest/test/http-hardening.e2e.test.ts"]
+    },
+    "g-bodyparser": {
+      "label": "JSON body parser", "sub": "limit: HTTP_JSON_BODY_LIMIT · the only parser", "kind": "global", "status": "real", "wp": "WP-12 (ADR-047)",
+      "what": "One body parser, JSON, with a configured size limit.",
+      "how": "`app.useBodyParser(\"json\", { limit: env.HTTP_JSON_BODY_LIMIT })` (default `100kb`); the app is created with `bodyParser: false`, so Nest adds no URL-encoded parser. A larger body is body-parser's 413, which ProblemDetailsFilter keeps as a 413 problem with `no-store`; a form-encoded body is never parsed, so its schema fails with 400.",
+      "why": "Smallest surface (ADR-047): no route takes forms, and the limit is config, not Nest's built-in default. It runs before pino-http, so a rejected body has no request id (section 5).",
+      "files": ["packages/platform-nest/src/bootstrap/configure-app.ts", "packages/platform-nest/src/config/platform-env.ts", "packages/platform-nest/test/http-hardening.e2e.test.ts"]
+    },
+    "g-versioning": {
+      "label": "enableVersioning(URI)", "sub": "/v1 · health stays neutral", "kind": "global", "status": "real", "wp": "WP-12 (amendment 2026-10-09)",
+      "what": "URI versioning: a controller that declares `version: \"1\"` answers under `/v1/...`.",
+      "how": "`app.enableVersioning({ type: VersioningType.URI })`. The content controllers declare `version: \"1\"`; `HealthController` and the ping controller declare `VERSION_NEUTRAL`, so probes keep `/health/live` and `/health/ready`. A breaking change adds `version: \"2\"` on the endpoints that change; v1 then carries `Deprecation` and `Sunset` while its traffic is measured, and goes when nobody calls it.",
+      "why": "The owner's amendment to WP-12: a version in the path is visible in logs and caches and lets v1 and v2 live side by side (expand/contract, the same idea as event versions).",
+      "files": ["packages/platform-nest/src/bootstrap/configure-app.ts", "packages/platform-nest/src/health/health.controller.ts", "apps/api/src/modules/ping/ping.controller.ts"]
+    },
+    "r-helmet": {
+      "label": "Helmet", "sub": "security headers", "kind": "step", "status": "real", "wp": "WP-12 (ADR-047)",
+      "what": "Sets the JSON API security headers on the response before anything else runs.",
+      "how": "Express middleware registered by configureApp, so every response carries them, a 413 or a 404 included. See the Helmet box in section 2.",
+      "why": "ADR-047: one hardening for every service, tested once in platform-nest.",
+      "files": ["packages/platform-nest/src/bootstrap/configure-app.ts"]
+    },
+    "r-bodyparser": {
+      "label": "JSON body parser", "sub": "limit · 413 before pino-http", "kind": "step", "status": "real", "wp": "WP-12 (ADR-047)",
+      "what": "Parses a JSON body up to `HTTP_JSON_BODY_LIMIT`; anything else is left unparsed.",
+      "how": "A GET passes straight through. A JSON body over the limit fails here with 413, and malformed JSON with 400: the error goes to Nest's error handler and ProblemDetailsFilter, skipping pino-http, the router and the handler. That is why such a response has no request id.",
+      "why": "Bodies are refused before any code of ours sees them.",
+      "files": ["packages/platform-nest/src/bootstrap/configure-app.ts"]
+    },
+    "r-interceptor": {
+      "label": "PublicCacheInterceptor", "sub": "on success · cache headers", "kind": "step", "status": "real", "wp": "WP-12 step 7",
+      "what": "On a successful public read, the schema serializer parses the body and the cache interceptor adds `Cache-Control` and `Content-Language`; then Express adds the ETag and may turn the answer into 304.",
+      "how": "Both are controller-scoped interceptors of the content controllers, listed outer first: `PublicCacheInterceptor`, then `StandardSchemaSerializerInterceptor`. On the way out the serializer parses the result with the route's response schema first, then the cache interceptor sets the headers. A thrown error skips both and goes to the filter, which sets `no-store`. Other routes (health, ping) have no interceptor.",
+      "why": "WP-12 D6 and D-67: the cache headers only on success, and the public contract checked on every body.",
+      "files": ["apps/api/src/modules/content/presentation/public-cache.interceptor.ts", "apps/api/src/modules/content/presentation/localized-content.controller.ts"]
+    },
+    "ct-seed": {
+      "label": "pnpm db:seed", "sub": "SeedModule · no HTTP", "kind": "step", "status": "real", "wp": "WP-12 step 6",
+      "what": "The one-off command that loads placeholder content into api's database through the content use cases.",
+      "how": "`node dist/seed.js` reads `DATABASE_URL` and the pool size, boots `SeedModule` (DatabaseModule plus ContentModule) as an application context without HTTP, runs `SeedContent.execute(contentSeed)` and closes. Idempotent: an item already stored is skipped, never changed. It prints counts per type, never content, and a query failure only by its SQLSTATE code.",
+      "why": "WP-12 Q2 A: no write endpoint is deployed before WP-13's guard, yet WP-16 needs data locally and on staging. Seeding through the use cases means the seed obeys the same rules as the admin will.",
+      "files": ["apps/api/src/seed.ts", "apps/api/src/seed/seed.module.ts", "apps/api/src/seed/content-seed-data.ts", "apps/api/test/content-seed.int.test.ts"]
+    },
+    "ct-admin": {
+      "label": "admin write controllers", "sub": "planned · WP-13", "kind": "provider", "status": "planned", "wp": "WP-13",
+      "what": "The authenticated endpoints that will save, publish, approve and withdraw content.",
+      "how": "WP-13 imports ContentModule into AppModule and adds controllers behind the login guard; each calls one use case with the `expectedVersion` the admin loaded, and a stale version will answer 409.",
+      "why": "WP-12 Q2 A: the write path and its guard arrive together.",
+      "files": ["apps/api/src/modules/content/content.module.ts"]
+    },
+    "ct-usecases": {
+      "label": "content use cases", "sub": "ContentModule · one transaction each · expectedVersion", "kind": "provider", "status": "real", "wp": "WP-12 step 5",
+      "what": "The write side of content: `CreateContentItem`, `SaveContentRevision`, `PublishContentItem`, `ArchiveContentItem`, the knowledge entry transitions (`Create`, `SaveRevision`, `Submit`, `RequestChanges`, `Approve`, `Withdraw`, `Delete`) and `SeedContent`.",
+      "how": "Each `execute(command)` parses the command with Zod, then runs `uow.run(scope => ...)`: load the aggregate from a scope repository, call one domain method, save with `expectedVersion`. A save that finds another version throws `ConcurrentModification`; a publish that moves no pointer saves nothing. They also take `Clock` and `IdGenerator` ports (system clock, UUIDv7). `ContentModule` provides them and binds the ports; today only `db:seed` imports it.",
+      "why": "WP-10 D6: the use case owns the transaction. WP-12 D5: optimistic concurrency with a version per aggregate, no locks. One use case per generic type keeps the seven localized types from needing seven copies.",
+      "files": ["apps/api/src/modules/content/application/use-cases/", "apps/api/src/modules/content/content.module.ts", "apps/api/test/content-use-cases.test.ts", "apps/api/test/content-knowledge-entry-use-cases.test.ts"]
+    },
+    "ct-uow-port": {
+      "label": "ContentUnitOfWork", "sub": "abstract class · run(work)", "kind": "token", "status": "real", "wp": "WP-12 step 4",
+      "what": "The port of the content module's transactions.",
+      "how": "`run(work)` runs `work(scope)` in one transaction; the scope holds one repository per aggregate type (`profiles`, `experienceItems`, `cvBullets`, `projects`, `posts`, `skills`, `knowledgeEntries`), all bound to that transaction. One contract suite runs against the in-memory and the Drizzle unit of work.",
+      "why": "The same unit of work as the template (WP-10 Q2 B): the application never sees a connection, and a test runs on the in-memory version with the same guarantees.",
+      "files": ["apps/api/src/modules/content/application/content.unit-of-work.ts", "apps/api/src/modules/content/application/content.unit-of-work.contract.ts"]
+    },
+    "ct-repo-ports": {
+      "label": "repository ports", "sub": "one per aggregate type", "kind": "token", "status": "real", "wp": "WP-12 step 4",
+      "what": "Load and save one aggregate by id: `ProfileRepository`, `ExperienceItemRepository`, `CvBulletRepository`, `ProjectRepository`, `PostRepository`, `SkillRepository`, `KnowledgeEntryRepository`.",
+      "how": "Abstract classes. `save(aggregate, expectedVersion)` writes the new revisions and pointers and bumps the version only where it is still `expectedVersion`. Each has a contract suite (shared for the localized types) that the in-memory and Drizzle adapters both pass.",
+      "why": "Ports are abstract classes (ADR-003); contract suites keep the fakes honest.",
+      "files": ["apps/api/src/modules/content/application/project.repository.ts", "apps/api/src/modules/content/application/localized.repository.contract.ts"]
+    },
+    "ct-drizzle-uow": {
+      "label": "DrizzleContentUnitOfWork", "sub": "withTransaction on PG_POOL", "kind": "provider", "status": "real", "wp": "WP-12 step 4",
+      "what": "The real unit of work: one Postgres transaction, every repository on its connection.",
+      "how": "Injects `PG_POOL` and calls platform-nest's `withTransaction`, which checks out one connection and sends `BEGIN`; it builds every scope repository on that connection's Drizzle, so a version check and the writes it guards share the transaction. `withTransaction` sends `COMMIT` or `ROLLBACK`. The in-memory unit of work (`InMemoryContentUnitOfWork`) passes the same contract suite.",
+      "why": "The owner role writes; isolation stays `READ COMMITTED` because the version column, not the isolation level, catches a concurrent edit (WP-12 D5).",
+      "files": ["apps/api/src/modules/content/infrastructure/drizzle-content.unit-of-work.ts", "apps/api/src/modules/content/infrastructure/in-memory-content.unit-of-work.ts", "apps/api/test/content-repositories.int.test.ts"]
+    },
+    "ct-drizzle-repos": {
+      "label": "Drizzle repositories", "sub": "rows to aggregates and back", "kind": "provider", "status": "real", "wp": "WP-12 step 4",
+      "what": "One Drizzle repository per aggregate type, built by the unit of work on the transaction's Drizzle.",
+      "how": "They read the base row, the per-locale rows and the latest revision of each locale (not the whole history), rebuild the aggregate, and on save insert the new revisions, update the pointers and run `UPDATE ... SET version = $n + 1 WHERE id = $1 AND version = $n`; zero rows is a conflict. Revision documents are parsed with Zod on the way in and out (`*-rows.ts`).",
+      "why": "ADR-005: Drizzle behind repositories. Loading only the latest revisions keeps an aggregate small however long its history grows.",
+      "files": ["apps/api/src/modules/content/infrastructure/drizzle-project.repository.ts", "apps/api/src/modules/content/infrastructure/revision-rows.ts", "apps/api/test/content-repositories.int.test.ts"]
+    },
+    "ct-schema": {
+      "label": "content schema", "sub": "content.schema.ts · migrations 0001 to 0003", "kind": "file", "status": "real", "wp": "WP-12 step 3",
+      "what": "The Drizzle tables of schema `content`.",
+      "how": "Per aggregate type a base table (`content.projects`: id, slug, layout fields, `version`, `archived_at`), a `*_translations` table keyed by `(item_id, locale)` with the latest and published revision pointers, the published slug and time, and a `*_revisions` table built by one factory (`revisionTable`): id, item id, locale, number, `document jsonb`, `origin owner|machine`, created at. Composite foreign keys prove a pointer names a revision of the same item and locale. Knowledge entries are English only: `knowledge_entries`, `knowledge_entry_revisions` and the private `knowledge_entry_provenance`.",
+      "why": "WP-12 D3 and Q1 B: a per-locale table for state, one document per revision for content, the database still proving every pointer.",
+      "files": ["apps/api/src/modules/content/infrastructure/content.schema.ts", "apps/api/src/modules/content/infrastructure/knowledge-entry.schema.ts", "apps/api/drizzle/0001_content.sql"]
+    },
+    "ct-tables": {
+      "label": "content tables", "sub": "items · translations · revisions (jsonb)", "kind": "file", "status": "real", "wp": "WP-12 step 3",
+      "what": "The tables of schema `content` in content_dev, owned by the role `content`.",
+      "how": "Written only by the owner role inside a use case's transaction; read by the reader role only where migration 0002 granted SELECT: the `*_translations` and `*_revisions` tables, the base tables of experience items, CV bullets, projects, posts and skills, and the knowledge entries with their revisions. See the content schema box in section 10.",
+      "why": "One schema per bounded context inside the service's own database (ADR-029).",
+      "files": ["apps/api/drizzle/0001_content.sql", "apps/api/drizzle/0002_content_reader.sql"]
+    },
+    "ct-provenance": {
+      "label": "knowledge_entry_provenance", "sub": "private · never granted", "kind": "file", "status": "real", "wp": "WP-12 step 3",
+      "what": "Where a knowledge entry's private provenance lives: sources, conflicts, public names, confidence.",
+      "how": "A table of its own, so the grant can leave it out: `content_reader` gets 42501 on any SELECT. The public DTO has no field for it either, and the integration test checks that no public body contains its field names.",
+      "why": "D-67: provenance stays private. Two guards, one in the database and one in the contract, so a bug in one is not a leak.",
+      "files": ["apps/api/src/modules/content/infrastructure/knowledge-entry.schema.ts", "apps/api/test/content-public.int.test.ts"]
+    },
+    "ct-aggregates": {
+      "label": "content aggregates", "sub": "Profile · ExperienceItem · CvBullet · Project · Post · Skill · KnowledgeEntry", "kind": "domain", "status": "real", "wp": "WP-12 step 2",
+      "what": "One aggregate per content item, each with its translations and its revisions, in plain TypeScript.",
+      "how": "Each transition is a method that checks its guards and throws a domain error otherwise. Localized items: `saveRevision(locale, document)`, `publish(locales)` (each named locale complete; `es` and `en` published afterwards; `de` missing is a warning), `archive()`. Knowledge entries: draft, in review, approved, withdrawn, with `approve(revisionId, checklist)` bound to the latest revision and the five checklist boxes. Aggregates point at each other by id only (a CV bullet names its parent; an entry names at most one bullet).",
+      "why": "WP-12 D1 and D4: the publish rule spans an item's locales, so the item is the consistency boundary; a state bound to a revision says which text is live, which a boolean cannot.",
+      "files": ["apps/api/src/modules/content/domain/project.ts", "apps/api/src/modules/content/domain/knowledge-entry.ts", "apps/api/src/modules/content/domain/content.errors.ts"]
+    },
+    "ct-revisions": {
+      "label": "revisions and pointers", "sub": "append-only · origin owner | machine", "kind": "domain", "status": "real", "wp": "WP-12 step 2",
+      "what": "The history every aggregate owns: per locale, an append-only list of revisions and two pointers, latest and published (or approved).",
+      "how": "`LocalizedRevisions` and `RevisionHistory` hold the revisions; a save appends one with the next number and moves the latest pointer; a publish moves the published pointer, also back to an older revision (rollback). The per-locale state is derived: missing, draft, published, changed. Every revision records `origin: owner | machine`, so a machine translation (WP-32) needs no migration: publishing it is the owner's review.",
+      "why": "WP-12 D2 and Q3: never update a revision, so what was public at any time can be told, and \"draft\" is a state, not a second table.",
+      "files": ["apps/api/src/modules/content/domain/localized-revisions.ts", "apps/api/src/modules/content/domain/revision-history.ts", "apps/api/src/modules/content/domain/revision.ts"]
+    },
+    "ct-d-d1": {
+      "label": "D1 · one aggregate per item", "sub": "with its translations and revisions", "kind": "rule", "status": "real", "wp": "WP-12",
+      "what": "Profile, ExperienceItem, CvBullet, Project, Post, Skill and KnowledgeEntry are each one aggregate that owns its translations and its revisions.",
+      "how": "Aggregates reference each other by id only; the entries under a CV bullet are a reverse lookup, never a field. An aggregate loads its per-locale state and the latest revision of each locale.",
+      "why": "The publish rule (es and en together) spans an item's locales, so the item is the consistency boundary. One big tree would lock everything on every edit; one aggregate per translation could not enforce the rule.",
+      "files": ["docs/learning/wp-12.md"]
+    },
+    "ct-d-d2": {
+      "label": "D2 · revisions with a published pointer", "sub": "not draft and published tables", "kind": "rule", "status": "real", "wp": "WP-12",
+      "what": "Every save appends a revision; a pointer per item and locale says which one is published.",
+      "how": "Draft, published and changed are derived from the pointers. Rollback is publishing an older revision.",
+      "why": "Nothing is ever overwritten, so an edit never touches what visitors see until a publish, and history comes for free.",
+      "files": ["docs/learning/wp-12.md"]
+    },
+    "ct-d-q1": {
+      "label": "Q1 B · one jsonb document per revision", "sub": "one table per type, one factory", "kind": "rule", "status": "real", "wp": "WP-12",
+      "what": "A revision is one locale's full item, stored as a `jsonb` document validated by the type's Zod schema, in a revision table per type built by one factory.",
+      "how": "Layout fields (slug, kind, order, featured) stay on the base row. The document is read with a tolerant reader and is the payload WP-14 will publish.",
+      "why": "Revisions are immutable snapshots read whole; each type keeps its own table, so foreign keys still prove a pointer (one shared table could not).",
+      "files": ["docs/learning/wp-12.md"]
+    },
+    "ct-d-d4": {
+      "label": "D4 · state machines bound to a revision", "sub": "publish per locale, approval per entry", "kind": "rule", "status": "real", "wp": "WP-12",
+      "what": "Publishing and approving name the revision that goes live, not a boolean on the item.",
+      "how": "Guards in transition methods: publish needs complete locales and keeps es and en together; approve needs the latest revision and the five checklist boxes (ADR-031).",
+      "why": "With a flag, the first edit after approval would either go public unchecked or take the page down.",
+      "files": ["docs/learning/wp-12.md"]
+    },
+    "ct-d-d5": {
+      "label": "D5 · a version per aggregate", "sub": "expectedVersion, no locks", "kind": "rule", "status": "real", "wp": "WP-12",
+      "what": "Every write takes the version the caller loaded; the UPDATE runs `WHERE version = expected` and zero rows is a conflict.",
+      "how": "Isolation stays READ COMMITTED. A conflict throws `ConcurrentModification`; WP-13 will map it to a 409 problem.",
+      "why": "Optimistic concurrency fits a single editor with rare conflicts; locks would hold connections across an admin's think time.",
+      "files": ["docs/learning/wp-12.md"]
+    },
+    "ct-d-d6": {
+      "label": "D6 · Cache-Control, ETag and 304", "sub": "max-age 60, stale while revalidating", "kind": "rule", "status": "real", "wp": "WP-12",
+      "what": "Every public read is cacheable for 60 seconds, served stale for 5 minutes while it revalidates and for a day while api is down; errors are `no-store`.",
+      "how": "PublicCacheInterceptor sets the headers; Express computes the weak ETag and answers 304. The query still runs on a 304.",
+      "why": "A publish shows within about a minute without a purge system; a long cache would need one, no cache would put every visit on Postgres.",
+      "files": ["docs/learning/wp-12.md"]
+    },
+    "ct-d-q2": {
+      "label": "Q2 A · no write endpoints yet", "sub": "db:seed instead", "kind": "rule", "status": "real", "wp": "WP-12",
+      "what": "WP-12 ships the use cases and a seed command, no admin controller.",
+      "how": "Use cases are proven by unit and integration tests; `db:seed` loads placeholder content through them. WP-13 adds the controllers with their guard.",
+      "why": "Nothing writable is ever deployed unguarded (secure by default).",
+      "files": ["docs/learning/wp-12.md"]
+    },
+    "ct-d-reader": {
+      "label": "least privilege for reads", "sub": "content_reader, granted per table", "kind": "rule", "status": "real", "wp": "WP-12",
+      "what": "Public reads connect as a read-only role that can SELECT only the tables a migration granted.",
+      "how": "Provisioning creates the role with a read-only default; migration 0002 grants per table and never the provenance; a readiness check covers the pool.",
+      "why": "The anonymous path is the one most exposed to a bug or an injection; the credential limits what any bug there can do.",
+      "files": ["docs/learning/wp-12.md"]
+    },
+    "ct-d-version": {
+      "label": "URI versioning from /v1", "sub": "amendment of 2026-10-09", "kind": "rule", "status": "real", "wp": "WP-12",
+      "what": "Public routes start at `/v1`; health and ping are version neutral.",
+      "how": "A breaking change adds `version: \"2\"` next to v1, which then carries Deprecation and Sunset until its traffic stops.",
+      "why": "Expand/contract for HTTP, like event versions; the version is visible in logs and cache keys.",
+      "files": ["docs/learning/wp-12.md"]
     }
   }
 }
