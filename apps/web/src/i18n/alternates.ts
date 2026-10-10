@@ -1,3 +1,4 @@
+import type { Alternates } from "@jadero/contracts";
 import type { Metadata } from "next";
 import type { Locale } from "next-intl";
 import { getPathname } from "./navigation";
@@ -19,6 +20,40 @@ export function localeAlternates(href: Href, locale: Locale): Metadata["alternat
     languages: {
       ...Object.fromEntries(routing.locales.map((l) => [l, path(l)])),
       "x-default": path(routing.defaultLocale),
+    },
+  };
+}
+
+/** A page of one content item, addressed by the item's own localized slug. */
+type ContentPathname = "/projects/[slug]";
+
+/**
+ * Canonical and hreflang alternates for the page of one content item whose slug differs per locale
+ * (ADR-022). Only the locales the item is published in get an hreflang link, each with its own
+ * slug; `x-default` is the English page. When the API answered in another language than the page
+ * (the German fallback to English), the page is a copy of that language's page, so its canonical
+ * points there, the same rule as the English-only work-log pages (D-50).
+ * @param pathname the page as a `routing.pathnames` key with a `[slug]` param.
+ * @param item the returned item: its `slug`, its `locale` (the page's, or English on the German
+ *   fallback) and its published slugs per locale.
+ * @returns the `alternates` field of the page's metadata.
+ */
+export function contentAlternates(
+  pathname: ContentPathname,
+  item: Readonly<{ slug: string; locale: Locale; alternates: Alternates }>,
+): Metadata["alternates"] {
+  const path = (l: Locale, slug: string) =>
+    getPathname({ href: { pathname, params: { slug } }, locale: l });
+  const published = routing.locales.flatMap((l) => {
+    const slug = item.alternates[l];
+    return slug ? [[l, path(l, slug)] as const] : [];
+  });
+  const english = item.alternates[routing.defaultLocale];
+  return {
+    canonical: path(item.locale, item.slug),
+    languages: {
+      ...Object.fromEntries(published),
+      ...(english ? { "x-default": path(routing.defaultLocale, english) } : {}),
     },
   };
 }

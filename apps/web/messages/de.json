@@ -27,6 +27,29 @@
     "highlights": "Schwerpunkte",
     "ask": "Danach fragen"
   },
+  "ProjectsPage": {
+    "metaTitle": "Projekte",
+    "metaDescription": "Fallstudien, Projekte und frühe Arbeiten, mit den Technologien dahinter.",
+    "eyebrow": "Projekte",
+    "title": "Was ich gebaut habe",
+    "lead": "Zuerst die Fallstudien, dann kleinere Projekte und ein Archiv früher Arbeiten.",
+    "empty": "Noch keine Projekte veröffentlicht.",
+    "sections": {
+      "case_study": "Fallstudien",
+      "project": "Projekte",
+      "early": "Frühe Arbeiten"
+    },
+    "kind": {
+      "case_study": "Fallstudie",
+      "project": "Projekt",
+      "early": "Frühe Arbeit"
+    },
+    "stack": "Technologien",
+    "links": "Links",
+    "repo": "Quellcode",
+    "demo": "Live-Demo",
+    "back": "Alle Projekte"
+  },
   "NotFound": {
     "title": "Seite nicht gefunden",
     "description": "Die gesuchte Seite existiert nicht."
@@ -42,7 +65,8 @@
   "Nav": {
     "label": "Hauptnavigation",
     "home": "Startseite",
-    "experience": "Erfahrung"
+    "experience": "Erfahrung",
+    "projects": "Projekte"
   },
   "Footer": {
     "copyright": "© {year} jadero.dev",

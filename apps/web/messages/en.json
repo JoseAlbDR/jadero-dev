@@ -27,6 +27,29 @@
     "highlights": "Highlights",
     "ask": "Ask about this"
   },
+  "ProjectsPage": {
+    "metaTitle": "Projects",
+    "metaDescription": "Case studies, projects and early work, with the stack behind each one.",
+    "eyebrow": "Projects",
+    "title": "What I have built",
+    "lead": "Case studies first, then smaller projects and an archive of early work.",
+    "empty": "No projects are published yet.",
+    "sections": {
+      "case_study": "Case studies",
+      "project": "Projects",
+      "early": "Early archive"
+    },
+    "kind": {
+      "case_study": "Case study",
+      "project": "Project",
+      "early": "Early work"
+    },
+    "stack": "Stack",
+    "links": "Links",
+    "repo": "Source code",
+    "demo": "Live demo",
+    "back": "All projects"
+  },
   "NotFound": {
     "title": "Page not found",
     "description": "The page you are looking for does not exist."
@@ -42,7 +65,8 @@
   "Nav": {
     "label": "Main",
     "home": "Home",
-    "experience": "Experience"
+    "experience": "Experience",
+    "projects": "Projects"
   },
   "Footer": {
     "copyright": "© {year} jadero.dev",

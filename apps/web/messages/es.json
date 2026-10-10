@@ -27,6 +27,29 @@
     "highlights": "Puntos destacados",
     "ask": "Pregunta por esto"
   },
+  "ProjectsPage": {
+    "metaTitle": "Proyectos",
+    "metaDescription": "Casos de estudio, proyectos y primeros trabajos, con las tecnologías de cada uno.",
+    "eyebrow": "Proyectos",
+    "title": "Lo que he construido",
+    "lead": "Primero los casos de estudio, después proyectos más pequeños y un archivo de primeros trabajos.",
+    "empty": "Todavía no hay proyectos publicados.",
+    "sections": {
+      "case_study": "Casos de estudio",
+      "project": "Proyectos",
+      "early": "Primeros trabajos"
+    },
+    "kind": {
+      "case_study": "Caso de estudio",
+      "project": "Proyecto",
+      "early": "Primer trabajo"
+    },
+    "stack": "Tecnologías",
+    "links": "Enlaces",
+    "repo": "Código fuente",
+    "demo": "Demo en vivo",
+    "back": "Todos los proyectos"
+  },
   "NotFound": {
     "title": "Página no encontrada",
     "description": "La página que buscas no existe."
@@ -42,7 +65,8 @@
   "Nav": {
     "label": "Principal",
     "home": "Inicio",
-    "experience": "Experiencia"
+    "experience": "Experiencia",
+    "projects": "Proyectos"
   },
   "Footer": {
     "copyright": "© {year} jadero.dev",
