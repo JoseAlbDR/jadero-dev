@@ -75,3 +75,31 @@ describe("proxy: locale redirects follow the open-redirect rule (ADR-047)", () =
     expect(new URL(location).pathname).toMatch(/^\/en(\/|$)/);
   });
 });
+
+describe("proxy: redirects are pinned to SITE_URL, not the Host header (ADR-047)", () => {
+  /** A request whose Host header names another site, as a client or a cache-poisoning probe sends. */
+  function spoofed(path: string, host: string): NextRequest {
+    const headers = new Headers({ "accept-language": "de", host });
+    return new NextRequest(`https://${host}${path}`, { headers });
+  }
+
+  it("never redirects to a spoofed Host", () => {
+    const response = proxy(spoofed("/", "evil.example"));
+    expect(response.status).toBe(307);
+    const location = response.headers.get("location") ?? "";
+    expect(location).not.toContain("evil.example");
+    expect(new URL(location).origin).toBe(SITE);
+  });
+
+  it("still sends a request on the site's own host to its locale", () => {
+    const response = proxy(spoofed("/", "jadero.dev"));
+    expect(response.headers.get("location")).toBe(`${SITE}/de`);
+  });
+
+  it("uses the request's own origin in development, where the dev server has no fixed host", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const headers = new Headers({ "accept-language": "es" });
+    const response = proxy(new NextRequest("http://localhost:3000/", { headers }));
+    expect(response.headers.get("location")).toBe("http://localhost:3000/es");
+  });
+});

@@ -3,13 +3,14 @@ import { z } from "zod";
 import { SITE_URL } from "@/config/site";
 
 /**
- * True when a link leaves the site: an absolute http(s) URL on another origin. Relative links,
- * same-site URLs and `mailto:` are not external.
+ * True when a link leaves the site: resolved against the site origin, the way the browser resolves
+ * it, it is an http(s) URL on another origin. That catches `//host` and `/\host`, which look
+ * relative but leave the site. Relative paths, same-site URLs and `mailto:` are not external.
  * @param href the sanitized `href` of a Markdown link.
  */
 export function isExternalHref(href: string): boolean {
   try {
-    const url = new URL(href);
+    const url = new URL(href, SITE_URL);
     return (
       (url.protocol === "https:" || url.protocol === "http:") && url.origin !== SITE_URL.origin
     );

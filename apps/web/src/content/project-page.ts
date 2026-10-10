@@ -10,8 +10,9 @@ import { getProject, getProjects } from "./api";
  * current slug, lands on `/de/projekte/caso-de-ejemplo` with the Spanish one. When the slug is not
  * the locale's but is another locale's slug of a project published here, the page redirects to the
  * locale's own slug (307: a slug can change when a translation is published). Otherwise the API
- * decides: its 404 is the page's 404. The lookup reads the cached project list (60 s, the same tag
- * as the list page), so it costs no extra request most of the time.
+ * decides: its 404 is the page's 404. The lookup reads the unfiltered project list, cached for 60 s
+ * under the projects tag. The list page fetches per `kind`, so it fills other cache entries: the
+ * lookup's entry is shared by the project pages of a locale, not with the list page.
  * @param locale the page locale.
  * @param slug the slug from the page URL.
  * @returns the project; redirects or calls `notFound()` instead of returning when it must.

@@ -14,6 +14,16 @@ export const SITE_URL = new URL(
     }),
 );
 
+/**
+ * True when the app runs under `next dev` (`NODE_ENV=development`). The proxy uses it to relax the
+ * CSP for hot reload and to resolve redirects on the request's own origin, since the dev server is
+ * reached on whatever host and port it was started with.
+ * @returns `true` only in development; a production build, the standalone server and tests are not.
+ */
+export function isDevelopment(): boolean {
+  return process.env.NODE_ENV === "development";
+}
+
 const contentApiUrlSchema = z.url({ protocol: /^https?$/ });
 
 /**

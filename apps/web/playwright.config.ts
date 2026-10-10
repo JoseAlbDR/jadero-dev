@@ -2,9 +2,7 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
 
-// The server reads SITE_URL at request time for canonical and hreflang links; the tests must expect
-// the same value, so load `.env` here and hand it to the server. Variables already set in the shell
-// win (loadEnvFile never overrides).
+// Load `.env` for CSP_MODE; variables already set in the shell win (loadEnvFile never overrides).
 const envFile = fileURLToPath(new URL(".env", import.meta.url));
 if (existsSync(envFile)) {
   process.loadEnvFile(envFile);
@@ -12,6 +10,13 @@ if (existsSync(envFile)) {
 
 const PORT = Number(process.env.E2E_PORT ?? 3210);
 const API_PORT = Number(process.env.E2E_API_PORT ?? 3211);
+
+// SITE_URL is always the test server's own origin, whatever `.env` or the shell says: the proxy
+// resolves every redirect on SITE_URL (ADR-047), so any other value would send the browser off the
+// test server. Set here, before the workers load this file, so the specs expect the same value in
+// canonical and hreflang links.
+const SITE_URL = `http://localhost:${PORT}`;
+process.env.SITE_URL = SITE_URL;
 
 /**
  * Smoke tests per locale against the standalone build (ADR-009, ADR-026): `pnpm test:e2e` builds
@@ -53,7 +58,7 @@ export default defineConfig({
         PORT: String(PORT),
         HOSTNAME: "localhost",
         CONTENT_API_URL: `http://127.0.0.1:${API_PORT}`,
-        ...(process.env.SITE_URL ? { SITE_URL: process.env.SITE_URL } : {}),
+        SITE_URL,
         ...(process.env.CSP_MODE ? { CSP_MODE: process.env.CSP_MODE } : {}),
       },
       url: `http://localhost:${PORT}/en`,

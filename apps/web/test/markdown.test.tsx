@@ -64,6 +64,11 @@ describe("Markdown (ADR-011 safe pipeline)", () => {
     expect(html).toMatch(/<a href="\/en\/experience" class="[^"]*">in<\/a>/);
   });
 
+  it("marks a protocol-relative link to another host noopener noreferrer", () => {
+    const html = render("[out](//evil.example/a)");
+    expect(html).toContain('<a href="//evil.example/a" rel="noopener noreferrer"');
+  });
+
   it("never writes a style attribute, even for an aligned table", () => {
     const html = render("| a | b |\n|:--|--:|\n| 1 | 2 |");
     expect(html).not.toContain("style=");
@@ -125,6 +130,11 @@ describe("isExternalHref", () => {
     ["http://example.com/x", true],
     ["https://jadero.dev/en", false],
     ["/en/projects", false],
+    ["projects", false],
+    // Both look relative, but the browser reads them as "another host".
+    ["//evil.example/a", true],
+    ["/\\evil.example/a", true],
+    ["//jadero.dev/en", false],
     ["mailto:hi@example.com", false],
     ["#section", false],
   ])("%s is external: %s", (href, expected) => {

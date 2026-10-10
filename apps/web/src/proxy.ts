@@ -1,6 +1,6 @@
 import { NextRequest, type NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
-import { cspMode } from "./config/site";
+import { cspMode, isDevelopment, SITE_URL } from "./config/site";
 import { routing } from "./i18n/routing";
 import {
   buildContentSecurityPolicy,
@@ -20,14 +20,16 @@ const handleLocale = createMiddleware(routing);
  *    policy also goes on the response for the browser.
  * 2. next-intl sends `/` and any path without a locale to the visitor's locale, picked from the
  *    cookie, then Accept-Language, then English (ADR-022, D-19).
- * 3. Its redirect target derives from the request path, so it passes the open-redirect rule
- *    (ADR-047): a same-site target keeps its path, anything else goes to the default locale's home.
+ * 3. Its redirect target derives from the request URL, Host header included, so it passes the
+ *    open-redirect rule (ADR-047) against the configured `SITE_URL` origin, never the Host a client
+ *    sent: a same-site target keeps its path, anything else goes to the default locale's home, and
+ *    the result is resolved on `SITE_URL`. In development the request's own origin stands in.
  * @param request the incoming request.
  * @returns next-intl's response (pass-through, rewrite or redirect) with the CSP header.
  */
 export default function proxy(request: NextRequest): NextResponse {
   const nonce = createNonce();
-  const policy = buildContentSecurityPolicy(nonce, { dev: process.env.NODE_ENV === "development" });
+  const policy = buildContentSecurityPolicy(nonce, { dev: isDevelopment() });
   const header = cspHeaderName(cspMode());
 
   // next-intl forwards the request headers it receives to the render, so they are set here.
@@ -38,7 +40,9 @@ export default function proxy(request: NextRequest): NextResponse {
 
   const location = response.headers.get("location");
   if (location !== null) {
-    const origin = request.nextUrl.origin;
+    // `nextUrl.origin` comes from the Host header, which a client controls: outside development the
+    // site's origin is the configured one, so a spoofed Host never ends up in a Location.
+    const origin = isDevelopment() ? request.nextUrl.origin : SITE_URL.origin;
     const safe = safeRedirectTarget(location, origin) ?? `/${routing.defaultLocale}`;
     // Next requires an absolute Location from the proxy; the checked path is resolved on our origin.
     response.headers.set("location", new URL(safe, origin).href);
