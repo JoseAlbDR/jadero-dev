@@ -2,6 +2,6 @@
 
 Process changes in jadero-dev that still have to be ported to `project-kit`, or kit changes still to bring back here (`docs/process/project-kit.md`, "How it stays in sync"). One line per PR: the PR, the files, what to port. Clear a line in the PR that ports it.
 
-Nothing waiting (`chore/instructions-size-check` #104 and `chore/persist-session-flow` #105 are ported in project-kit#14).
+Nothing waiting (`chore/repetition-warmup-prepush` #112 and its review fixes (#113) are ported in project-kit#16 and #17; #104 and #105 in project-kit#14).
 
 Standing rule, not a port: when the ADR template, `/adr` or `scripts/adr/` change here, re-check the kit's `.claude/skills/domain-modeling/ADR-FORMAT.md` (`docs/process/project-kit.md`).

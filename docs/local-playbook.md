@@ -158,4 +158,5 @@ A session that can publish artifacts republishes them; one that cannot edits the
 | `/wp NN`, `/learn-step NN`, `/step NN M`, `/map`, `/wrap-wp NN`, `/explain X`, `/adr Title` | the seven skills |
 | `@agent-reviewer` | ten-point review before the owner looks at a PR |
 | `LEFTHOOK=0 git commit ...` | skip hooks once; CI runs the same checks |
+| `LEFTHOOK=0 git push` | skip the pre-push `pnpm verify` once, only for a deliberate work-in-progress or docs-only push; CI still runs it. Hooks are shared by every worktree, so a new worktree runs `pnpm install` before its first push instead of skipping; an agent runs the push with a 10-minute timeout, since a cold-cache verify can pass 2 minutes |
 | `node scripts/github/seed.mjs` | re-seed issues and the Project after adding a WP |

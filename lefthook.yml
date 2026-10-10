@@ -1,6 +1,6 @@
 # Git hooks, versioned with the repo (ADR-024). `pnpm install` runs the root `prepare` script,
 # which runs `lefthook install` and writes the hook files into .git/hooks.
-# Skip once with LEFTHOOK=0 git commit ...; CI runs the same checks, so a skip only delays the failure.
+# Skip once with LEFTHOOK=0 git commit ... or LEFTHOOK=0 git push; CI runs the same checks, so a skip only delays the failure.
 
 pre-commit:
   jobs:
@@ -15,3 +15,12 @@ commit-msg:
     - name: commitlint
       # {1} is the first argument git passes to the hook: the path of the message file.
       run: pnpm exec commitlint --edit {1}
+
+pre-push:
+  jobs:
+    - name: verify
+      # The same "am I done" gate as before a commit, so a red verify never reaches the remote
+      # (a `pnpm verify | tail && git push` chain once pushed a failure: the pipe kept tail's exit
+      # code). Turborepo's cache makes it seconds when nothing changed since the last run.
+      # Fetch main first: check:migrations compares the branch's journals with origin/main.
+      run: git fetch --quiet origin main && pnpm verify
