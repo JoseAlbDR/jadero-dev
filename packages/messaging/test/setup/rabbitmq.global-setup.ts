@@ -1,6 +1,6 @@
+import { useDockerContextHost } from "@jadero/testing";
 import { GenericContainer, type StartedTestContainer, Wait } from "testcontainers";
 import type { TestProject } from "vitest/node";
-import { useDockerContextHost } from "./docker-host.js";
 import { RABBITMQ_IMAGE } from "./images.js";
 import { TEST_DEFINITIONS, TEST_VHOST } from "./test-topology.js";
 

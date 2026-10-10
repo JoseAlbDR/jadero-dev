@@ -1,0 +1,1 @@
+CREATE INDEX "post_translations_feed_idx" ON "content"."post_translations" USING btree ("locale","first_published_at","post_id");

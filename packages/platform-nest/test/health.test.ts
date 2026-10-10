@@ -1,12 +1,13 @@
 import { type INestApplication, Injectable } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
+import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { configureApp } from "../src/bootstrap/configure-app.js";
 import { CHECK_TIMEOUT_MS } from "../src/health/health.controller.js";
 import { HealthModule } from "../src/health/health.module.js";
 import { ReadinessCheck } from "../src/health/readiness-check.js";
 import { ShutdownState } from "../src/health/shutdown-state.js";
 import { LoggingModule } from "../src/logging/logging.module.js";
+import { createApp } from "./create-app.js";
 import { memoryStream } from "./memory-stream.js";
 
 /** A dependency whose answer each test controls. */
@@ -26,7 +27,6 @@ class FakeDatabaseCheck extends ReadinessCheck {
 describe("HealthModule", () => {
   const stream = memoryStream();
   let app: INestApplication;
-  let base: string;
   let database: FakeDatabaseCheck;
 
   beforeAll(async () => {
@@ -41,9 +41,8 @@ describe("HealthModule", () => {
         HealthModule.forRoot({ checks: [FakeDatabaseCheck] }),
       ],
     }).compile();
-    app = configureApp(moduleRef.createNestApplication({ bufferLogs: true }));
-    await app.listen(0, "127.0.0.1");
-    base = await app.getUrl();
+    app = createApp(moduleRef);
+    await app.init();
     database = app.get(FakeDatabaseCheck);
   });
 
@@ -56,8 +55,8 @@ describe("HealthModule", () => {
   });
 
   async function get(path: string) {
-    const res = await fetch(`${base}${path}`);
-    return { res, body: (await res.json()) as Record<string, unknown> };
+    const res = await request(app.getHttpServer()).get(path);
+    return { res, body: res.body as Record<string, unknown> };
   }
 
   it("answers live with 200 without running any check", async () => {
@@ -80,7 +79,7 @@ describe("HealthModule", () => {
     database.behavior = "down";
     const failed = await get("/health/ready");
     expect(failed.res.status).toBe(503);
-    expect(failed.res.headers.get("content-type")).toMatch(/^application\/json/);
+    expect(failed.res.headers["content-type"]).toMatch(/^application\/json/);
     expect(failed.body).toMatchObject({
       status: "error",
       error: { database: { status: "down", message: "unavailable" } },

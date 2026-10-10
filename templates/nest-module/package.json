@@ -21,14 +21,13 @@
   },
   "devDependencies": {
     "@jadero/config": "workspace:*",
+    "@jadero/testing": "workspace:*",
     "@nestjs/platform-express": "catalog:",
     "@nestjs/testing": "catalog:",
-    "@testcontainers/postgresql": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "drizzle-kit": "catalog:",
     "pg": "catalog:",
-    "testcontainers": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

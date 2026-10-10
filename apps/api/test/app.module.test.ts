@@ -20,6 +20,7 @@ describe("api config", () => {
         apiEnv.parse({
           PORT: "3001",
           DATABASE_URL: "postgres://content:content@127.0.0.1:5432/content_dev",
+          DATABASE_READ_URL: "postgres://content_reader:x@127.0.0.1:5432/content_dev",
         }),
       ),
     ).toEqual({
@@ -29,7 +30,17 @@ describe("api config", () => {
       serviceName: "api",
       databaseUrl: "postgres://content:content@127.0.0.1:5432/content_dev",
       databasePoolMax: 4,
+      databaseReadUrl: "postgres://content_reader:x@127.0.0.1:5432/content_dev",
     });
+  });
+
+  it("refuses to start without the read-only database URL of the public reads", () => {
+    expect(
+      apiEnv.safeParse({
+        PORT: "3001",
+        DATABASE_URL: "postgres://content:content@127.0.0.1:5432/content_dev",
+      }).success,
+    ).toBe(false);
   });
 
   it("injects ApiConfig into a provider of another module (DI by abstract class under Vitest)", async () => {
@@ -39,6 +50,7 @@ describe("api config", () => {
         NODE_ENV: "test",
         LOG_LEVEL: "fatal",
         DATABASE_URL: "postgres://content:content@127.0.0.1:5432/content_dev",
+        DATABASE_READ_URL: "postgres://content_reader:x@127.0.0.1:5432/content_dev",
       }),
     );
     const moduleRef = await Test.createTestingModule({

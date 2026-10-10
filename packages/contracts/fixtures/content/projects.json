@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "slug": "jobs-hub",
+      "locale": "en",
+      "kind": "project",
+      "title": "Jobs hub",
+      "summary": "A job board with full-text search and filters.",
+      "stackTags": ["NestJS", "PostgreSQL"],
+      "featured": true,
+      "alternates": { "es": "portal-de-empleo", "en": "jobs-hub" }
+    }
+  ]
+}

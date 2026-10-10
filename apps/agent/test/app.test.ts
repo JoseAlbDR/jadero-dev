@@ -1,7 +1,9 @@
 import { JADERO_QUEUES, MessageBus, RabbitMqMessageBus } from "@jadero/messaging";
-import { configureApp, PG_POOL } from "@jadero/platform-nest";
+import { APP_OPTIONS, configureApp, PG_POOL } from "@jadero/platform-nest";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
 import type { Pool } from "pg";
+import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module.js";
 import {
@@ -47,14 +49,17 @@ describe("agent config", () => {
 
 describe("agent HTTP process with its database down", () => {
   it("boots, is live, and is not ready", async () => {
+    const env = agentEnv.parse(base);
     const moduleRef = await Test.createTestingModule({
-      imports: [AppModule.forRoot(toAgentConfig(agentEnv.parse(base)))],
+      imports: [AppModule.forRoot(toAgentConfig(env))],
     }).compile();
-    const app = configureApp(moduleRef.createNestApplication({ bufferLogs: true }));
-    await app.listen(0, "127.0.0.1");
-    const url = await app.getUrl();
-    expect((await fetch(`${url}/health/live`)).status).toBe(200);
-    expect((await fetch(`${url}/health/ready`)).status).toBe(503);
+    const app = configureApp(
+      moduleRef.createNestApplication<NestExpressApplication>(APP_OPTIONS),
+      env,
+    );
+    await app.init();
+    expect((await request(app.getHttpServer()).get("/health/live")).status).toBe(200);
+    expect((await request(app.getHttpServer()).get("/health/ready")).status).toBe(503);
     const pool = app.get<Pool>(PG_POOL);
     expect(pool.options.max).toBe(6);
     await app.close();

@@ -1,12 +1,12 @@
-import { Controller, HttpCode, Post } from "@nestjs/common";
+import { Controller, HttpCode, Post, VERSION_NEUTRAL } from "@nestjs/common";
 import { PingService } from "./ping.service.js";
 
 /**
  * `POST /dev/ping`, registered only when `NODE_ENV=development` (WP-5 decision W1 c): one request
  * starts a trace that runs through the outbox, the relay, RabbitMQ and the `agent` consumer. Never
- * public: anyone could fill the queues.
+ * public: anyone could fill the queues. Version neutral: an operational route, not part of the API.
  */
-@Controller("dev")
+@Controller({ path: "dev", version: VERSION_NEUTRAL })
 export class PingController {
   constructor(private readonly ping: PingService) {}
 

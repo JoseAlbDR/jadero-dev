@@ -1,0 +1,16 @@
+{
+  "items": [
+    {
+      "id": "kb-outbox-relay",
+      "title": "Outbox relay",
+      "type": "feature",
+      "domain": "platform",
+      "period": { "from": "2025-03", "to": "2025-05" },
+      "role": "sole author",
+      "stack": ["NestJS", "PostgreSQL", "RabbitMQ"],
+      "patterns": ["transactional outbox", "idempotent consumer"],
+      "indexable": true,
+      "summary": "He built a relay that publishes events written in the same transaction as the change."
+    }
+  ]
+}

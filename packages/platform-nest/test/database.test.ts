@@ -11,8 +11,11 @@ import {
   QUERY_TIMEOUT_MS,
 } from "../src/database/database.module.js";
 import { type Database, DRIZZLE, PG_POOL } from "../src/database/database.tokens.js";
-import { PostgresReadinessCheck } from "../src/database/postgres.readiness-check.js";
-import { CHECK_TIMEOUT_MS } from "../src/health/health.controller.js";
+import {
+  PostgresReadinessCheck,
+  postgresReadinessCheck,
+} from "../src/database/postgres.readiness-check.js";
+import { CHECK_TIMEOUT_MS, READINESS_CHECKS } from "../src/health/health.controller.js";
 import { HealthModule } from "../src/health/health.module.js";
 
 // Nothing listens on port 1: the module must still boot, because the pool connects lazily.
@@ -98,6 +101,47 @@ describe("DatabaseModule", () => {
   it("fails the readiness check when nothing answers", async () => {
     const moduleRef = await boot();
     await expect(moduleRef.get(PostgresReadinessCheck).check()).rejects.toThrow();
+    await moduleRef.close();
+  });
+
+  it("builds a check for a second pool under its own token and name", async () => {
+    const READER_POOL = Symbol("READER_POOL");
+    class ReaderCheck extends postgresReadinessCheck(READER_POOL, "reader") {}
+    const reader = {
+      query: vi.fn().mockRejectedValue(new Error("password authentication failed")),
+    };
+    // The module that provides the pool is imported where the checks live, as api does.
+    @Module({ providers: [{ provide: READER_POOL, useValue: reader }], exports: [READER_POOL] })
+    class ReaderModule {}
+    const withReader = await Test.createTestingModule({
+      imports: [
+        DatabaseModule.forRoot({ url: URL, poolMax: 1 }),
+        HealthModule.forRoot({
+          checks: [PostgresReadinessCheck, ReaderCheck],
+          imports: [ReaderModule],
+        }),
+      ],
+    }).compile();
+    const checks = withReader.get<{ name: string }[]>(READINESS_CHECKS);
+    expect(checks.map((check) => check.name)).toEqual(["database", "reader"]);
+    await expect(withReader.get(ReaderCheck).check()).rejects.toThrow("password");
+    expect(reader.query).toHaveBeenCalledWith({
+      text: "SELECT 1",
+      query_timeout: CHECK_TIMEOUT_MS,
+    });
+    await withReader.close();
+  });
+
+  it("runs a pool's own probe when one is given, with the same budget", async () => {
+    const READER_POOL = Symbol("READER_POOL");
+    const probe = "SELECT 1 FROM content.profile_translations LIMIT 0";
+    class ReaderCheck extends postgresReadinessCheck(READER_POOL, "reader", { probe }) {}
+    const reader = { query: vi.fn().mockResolvedValue({ rows: [] }) };
+    const moduleRef = await Test.createTestingModule({
+      providers: [{ provide: READER_POOL, useValue: reader }, ReaderCheck],
+    }).compile();
+    await moduleRef.get(ReaderCheck).check();
+    expect(reader.query).toHaveBeenCalledWith({ text: probe, query_timeout: CHECK_TIMEOUT_MS });
     await moduleRef.close();
   });
 

@@ -12,7 +12,12 @@ describe("RelayLifecycle (api-worker's background work)", () => {
     vi.useRealTimers();
   });
 
-  function setup() {
+  /**
+   * Builds the lifecycle over recording fakes.
+   * @param heartbeatIntervalMs ping interval; the daily cleanup test passes a long one, so advancing
+   *   a day of fake time runs a few callbacks instead of 86,400 (slow enough to time out under load)
+   */
+  function setup(heartbeatIntervalMs = 1000) {
     const calls: string[] = [];
     const relay = {
       start: () => calls.push("relay.start"),
@@ -31,16 +36,23 @@ describe("RelayLifecycle (api-worker's background work)", () => {
         return "id";
       },
     } as unknown as PingService;
-    const config = { heartbeatIntervalMs: 1000 } as ApiWorkerConfig;
+    const config = { heartbeatIntervalMs } as ApiWorkerConfig;
     return { lifecycle: new RelayLifecycle(relay, bus, ping, config), calls };
   }
 
-  it("starts the relay, pings at once and on every interval, and cleans the outbox daily", async () => {
+  it("starts the relay and pings at once and on every interval", async () => {
     const { lifecycle, calls } = setup();
     lifecycle.onApplicationBootstrap();
     expect(calls).toEqual(["relay.start", "ping.heartbeat", "relay.cleanup"]);
     await vi.advanceTimersByTimeAsync(2000);
     expect(calls.filter((c) => c === "ping.heartbeat")).toHaveLength(3);
+    await lifecycle.beforeApplicationShutdown();
+  });
+
+  it("cleans the outbox at boot and once a day", async () => {
+    const { lifecycle, calls } = setup(CLEANUP_INTERVAL_MS / 4);
+    lifecycle.onApplicationBootstrap();
+    expect(calls.filter((c) => c === "relay.cleanup")).toHaveLength(1);
     await vi.advanceTimersByTimeAsync(CLEANUP_INTERVAL_MS);
     expect(calls.filter((c) => c === "relay.cleanup")).toHaveLength(2);
     await lifecycle.beforeApplicationShutdown();
