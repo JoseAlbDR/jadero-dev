@@ -4652,7 +4652,8 @@
       "size": "L",
       "dependsOn": [
         "WP-14",
-        "WP-19"
+        "WP-19",
+        "WP-57"
       ],
       "deliverable": "agent-ingest: read model, two-layer chunking with contextual headers, approval validation, withdrawal tombstones, daily reconciliation, embeddings, vector + full-text schema, index versions, re-index, blue-green switch; HNSW vs exact scan measured.",
       "learns": "Embeddings, chunking trade-offs, approximate nearest neighbor indexes, read models.",
@@ -4809,7 +4810,8 @@
       "size": "S",
       "dependsOn": [
         "WP-17",
-        "WP-19"
+        "WP-19",
+        "WP-57"
       ],
       "deliverable": "LLM-drafted translations through the chat port with a glossary; owner reviews.",
       "learns": "Structured output, translation prompting.",
@@ -5119,6 +5121,18 @@
       "deliverable": "A custom serde for PostgresSaver that encrypts checkpoint payloads with AES-256-GCM, a key id stored per row so the key can rotate, the key sourced from runtime secrets (D-7), a rotation runbook. Optional (D-17 second pass): the 24-hour purge, backup exclusion and LangSmith masking already cover the privacy goal.",
       "learns": "Envelope encryption at rest, key rotation, where encryption does and does not help.",
       "milestone": "R7"
+    },
+    {
+      "id": "WP-57",
+      "title": "Translated work-log entries",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-12"
+      ],
+      "deliverable": "A new ADR that supersedes the English-only rule of ADR-031 (D-50): es and en required, de optional; approval per entry revision and locale; what the agent indexes. Knowledge entries gain per-locale revisions and approval (migration), knowledge.entry.approved.v1 carries the locale before any consumer exists, /v1/content/:locale/work with an English fallback, seed and fixtures in es and en; WP-16's English fallback note and canonical go. Lands before WP-20 so the event changes without a v2.",
+      "learns": "Changing a contract before it has consumers, per-locale approval as a state machine, schema migration of a live aggregate, fallback and canonical rules for partial translations.",
+      "milestone": "R2"
     }
   ],
   "manualActions": [
@@ -5424,6 +5438,7 @@
         "name": "Agent core",
         "exitCriterion": "The agent answers with citations in three languages, guarded, traced and evaluated, on real approved entries",
         "workPackages": [
+          "WP-57",
           "WP-19",
           "WP-20",
           "WP-21",
