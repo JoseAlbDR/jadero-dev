@@ -1,7 +1,7 @@
 ---
 id: ADR-047
 title: "HTTP hardening at the edge and in the apps"
-status: proposed
+status: accepted
 date: 2026-10-09
 deciders: [owner]
 decisions: [D-77]
@@ -12,7 +12,7 @@ source: null
 
 # ADR-047: HTTP hardening at the edge and in the apps
 
-**Status:** proposed
+**Status:** accepted
 
 ## Context
 
