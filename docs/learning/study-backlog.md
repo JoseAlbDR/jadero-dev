@@ -18,7 +18,8 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 ## R1 (open)
 
 ### Theme: transaction boundaries and atomicity
-- Why the outbox cannot be a central service: the outbox row must commit in the same Postgres transaction as the business change; a network call is the dual write again. WP-10, weak (Q1 discussion). `docs/learning/wp-10.md`, Decision.
+- Why the outbox cannot be a central service: the outbox row must commit in the same Postgres transaction as the business change; a network call is the dual write again. WP-10, weak (Q1 discussion), weak again 2026-10-10 (warm-up, WP-12 step 8: named the coupling, missed the dual write). `docs/learning/wp-10.md`, Decision.
+- Inheriting a dual write (a commit plus a synchronous call to a central service): why a try/catch compensation fails (a crash skips the catch, a timeout is ambiguous, no isolation, the compensation can fail), and the fixes in order: a local outbox whose relay calls the central service with an idempotency key (strangler fig), CDC from the WAL, a saga only when the second step is business work, 2PC almost never; holding the transaction open across the call is the anti-pattern. WP-12, interesting (owner asked after the step 8 warm-up). `docs/learning/wp-12.md`, Step log.
 - Unit of work versus TypeORM's `EntityManager`; reads that feed a write inside the transaction, lost update, optimistic concurrency. WP-10, interesting (Q2 discussion). Decision.
 - The inbox row and the consumer's effect commit or roll back together; a separate inbox commit turns a retry into a dropped duplicate (idempotency without atomicity loses messages). WP-10, weak (step 5 check question), solid 2026-10-07 (explain-back Q1). Step log.
 - When a port pays for itself: layered versus hexagonal, speculative generality, fakes that drift without a contract suite. WP-10, interesting (step 5 layered decision). Decision.
