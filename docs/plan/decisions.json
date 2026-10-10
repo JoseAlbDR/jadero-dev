@@ -4604,7 +4604,7 @@
         "WP-12",
         "WP-15"
       ],
-      "deliverable": "Home built around the positioning and the proof-pillar strip with its evidence map (D-73, D-74), home, experience timeline with CV bullets and Ask about this, work-log pages for approved entries, case studies, projects, early archive, stack and skills, blog; safe Markdown; SEO; nginx stale cache; accessibility and performance budgets met. Second pass (D-52): work-log pages carry a per-entry indexable flag (default true) mapped to a noindex meta tag when false. Security (2026-10-09 audit): the nonce-based CSP of ADR-047; the open-redirect rule of ADR-047 for locale redirects and cutover 301s; fonts self-hosted, no requests to third-party font CDNs.",
+      "deliverable": "Home built around the positioning and the proof-pillar strip with its evidence map (D-73, D-74), home, experience timeline with CV bullets and Ask about this, work-log pages for approved entries, case studies, projects, early archive, stack and skills, blog; safe Markdown; SEO; nginx stale cache; accessibility and performance budgets met. Second pass (D-52): work-log pages carry a per-entry indexable flag (default true) mapped to a noindex meta tag when false. Security (2026-10-09 audit): the nonce-based CSP of ADR-047; the open-redirect rule of ADR-047 for locale redirects and cutover 301s; fonts self-hosted, no requests to third-party font CDNs. Until WP-57, work-log entries show the English text under every locale with lang=\"en\", a translated note and a canonical to /en.",
       "learns": "",
       "milestone": "R1"
     },
