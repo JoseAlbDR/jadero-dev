@@ -28,6 +28,7 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 - One aggregate per transaction: the unit of work is the use case's consistency boundary; independent aggregates get their own run, the aggregate and its outbox row share one, batches commit per item and report failures. WP-12, interesting (owner asked after the step 5b check question). `docs/learning/wp-12.md`, Step log.
 - How a unique index serializes concurrent inserts (the second waits on the first's uncommitted row) and what `ON CONFLICT` absorbs with and without a target; the owner thought two singleton creates with different ids both succeed. WP-12, weak (step 5c check question). `docs/learning/wp-12.md`, Step log.
 - The version as a concurrency token: it guards what the caller saw, not who else wrote, so a caller that reuses a stale `expectedVersion` after its own write is refused like another tab; reload and retry, `If-Match` and `412` over HTTP. WP-12, weak on the why (step 6 check question), weak again 2026-10-10 (explain-back E3: remembered a matching value, thought it was a timestamp). `docs/learning/wp-12.md`, Step log.
+- High contention on a scarce resource (the last tickets): optimistic retries storm, a database lock cannot outlive a transaction, so a reservation is data: an atomic conditional `UPDATE` with a hold that expires (lease, hold with TTL). WP-12, weak (explain-back transfer T2). `docs/learning/wp-12.md`, Recap.
 - Database roles as a security boundary: grants table by table, a separate login role versus `SET ROLE` (undoable from inside the session), session settings such as `default_transaction_read_only` as bug guards rather than barriers, views or row-level security to hide rows. WP-12, weak on the scope of the grant (step 7a check question). `docs/learning/wp-12.md`, Step log.
 - Extracting a module into its own service: no cross-module foreign keys, no transaction across databases, events and read models instead, eventual consistency and sagas. WP-10, weak (explain-back Q3). Recap.
 
@@ -42,6 +43,7 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 
 ### Theme: process health and startup
 - Liveness versus readiness probes (the owner had them swapped). WP-10, weak (step 2 check question), weak again 2026-10-10 (WP-12 explain-back E4: swapped them again for a wrong database password). Step log.
+- Readiness must not depend on a shared external dependency: it fails on every replica at once and turns a partial outage into a total one (cascading failure); circuit breaker and graceful degradation instead. WP-12, weak (explain-back transfer T3). `docs/learning/wp-12.md`, Recap.
 - Fail fast at boot versus lazy connection plus readiness, and when each wins. WP-10, recommended. Step log.
 - A lazy pool boots without its database, so readiness must check every dependency a request needs, or a broken one passes the deploy and fails every request (the owner thought the deploy would fail before the reader check existed). WP-12, weak (step 7b check question). `docs/learning/wp-12.md`, Step log.
 
