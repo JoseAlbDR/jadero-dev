@@ -574,7 +574,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
               "path": ["r-express", "r-pinohttp", "r-helmet", "r-bodyparser", "r-als", "r-router", "r-handler", "r-log"],
               "request": "GET /health/ready",
               "response": "HTTP/1.1 503 Service Unavailable\ncontent-type: application/json\n\n{\n  \"status\": \"error\",\n  \"info\": { \"shutdown\": { \"status\": \"up\" } },\n  \"error\": { \"database\": { \"status\": \"down\", \"message\": \"unavailable\" } },\n  \"details\": { ... both checks ... }\n}",
-              "note": "Postgres is down (the unit test points DATABASE_URL at port 1). HealthController runs the checks, Terminus throws a 503, and the controller-scoped HealthBodyFilter writes the Terminus body instead of problem+json, so the global filter step is skipped. The cause (ECONNREFUSED and the address) goes only to a warn line, \"readiness check failed\". Sources: apps/api/test/health.test.ts and packages/platform-nest/test/health.test.ts."
+              "note": "Postgres is down (the unit test points DATABASE_URL at port 1). HealthController runs the checks, Terminus throws a 503, and the controller-scoped HealthBodyFilter writes the Terminus body instead of problem+json, so the global filter step is skipped. The cause (ECONNREFUSED and the address) goes only to a warn line, \"readiness check failed\". The same 503 names `content-reader` instead when the reader logs in but cannot read its probe table: migration 0002 not applied yet, or the grant revoked. Sources: apps/api/test/health.test.ts, apps/api/test/health.int.test.ts and packages/platform-nest/test/health.test.ts."
             },
             {
               "id": "ex-trace", "label": "404 with trace id",
@@ -1147,7 +1147,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "ws-platform": {
       "label": "platform-nest", "sub": "@jadero/platform-nest", "kind": "pkg", "status": "real", "wp": "WP-3",
       "what": "The bootstrap every NestJS service shares: fail-fast config, structured logging that redacts database errors, RFC 9457 errors, the health module, the OpenTelemetry entry, one `configureApp` (security headers, one JSON body parser with a limit, URI versioning) with its `APP_OPTIONS`, and, since WP-10, the database connection (`DatabaseModule`, `createPool`, `withTransaction`, `runMigrations`). Infrastructure only, no domain code.",
-      "how": "Compiled with tsc to `dist/` and exposed through two `exports` entries: `.` for everything Nest uses, and `./instrumentation` for the file `node --import` loads before the app. Nest packages, rxjs and zod are peer dependencies, so the app supplies the single copy of `@nestjs/core`. `@nestjs/terminus`, nestjs-pino, pino, pino-http, pino-pretty, the OpenTelemetry SDK, OTLP exporter and five instrumentations (http, express, pg, pino, amqplib), `pg` and `drizzle-orm`, and since WP-12 `helmet`, are its own dependencies, which is why api never lists them. `src/database/` holds `DatabaseModule.forRoot` (the `PG_POOL` and `DRIZZLE` tokens, the pool closer), `createPool` (exported in WP-12, so a service can build a second pool), `postgresReadinessCheck(token, name)` and `PostgresReadinessCheck`, `withTransaction` and `runMigrations`; section 9 shows them.",
+      "how": "Compiled with tsc to `dist/` and exposed through two `exports` entries: `.` for everything Nest uses, and `./instrumentation` for the file `node --import` loads before the app. Nest packages, rxjs and zod are peer dependencies, so the app supplies the single copy of `@nestjs/core`. `@nestjs/terminus`, nestjs-pino, pino, pino-http, pino-pretty, the OpenTelemetry SDK, OTLP exporter and five instrumentations (http, express, pg, pino, amqplib), `pg` and `drizzle-orm`, and since WP-12 `helmet`, are its own dependencies, which is why api never lists them. `src/database/` holds `DatabaseModule.forRoot` (the `PG_POOL` and `DRIZZLE` tokens, the pool closer), `createPool` (exported in WP-12, so a service can build a second pool), `postgresReadinessCheck(token, name, { probe? })` (default probe `SELECT 1`, options type `PoolReadinessOptions`) and `PostgresReadinessCheck`, `withTransaction` and `runMigrations`; section 9 shows them.",
       "why": "AGENTS.md rule 5: shared packages hold infrastructure, never domain code. One boot path means api, agent and contact log, validate and fail the same way. WP-3 decision C (default kept) puts the health module here too, with checks registered per service. WP-10 Q1 A moved the two copies of `postgres.module.ts` (api and agent) here before contact made a third.",
       "files": ["packages/platform-nest/package.json", "packages/platform-nest/src/index.ts", "packages/platform-nest/src/bootstrap/configure-app.ts", "packages/platform-nest/src/logging/error-serializer.ts", "packages/platform-nest/src/telemetry/", "packages/platform-nest/src/database/"]
     },
@@ -1397,11 +1397,11 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/platform-nest/src/database/database.module.ts", "packages/platform-nest/src/database/database.tokens.ts", "apps/api/src/config/api-config.ts"]
     },
     "di-prc": {
-      "label": "PostgresReadinessCheck", "sub": "platform-nest · SELECT 1 · as database", "kind": "provider", "status": "real", "wp": "WP-10 step 2",
+      "label": "PostgresReadinessCheck", "sub": "platform-nest · as database", "kind": "provider", "status": "real", "wp": "WP-10 step 2",
       "what": "The readiness check for the service's own database.",
-      "how": "Built by `postgresReadinessCheck(PG_POOL, \"database\")` (WP-12): the factory returns an `@Injectable()` class that injects the pool under the given token and runs `SELECT 1` with a per-query `query_timeout` equal to the controller's `CHECK_TIMEOUT_MS`, so a hung check frees its connection when the controller gives up. With Postgres down, `/health/ready` answers 503 with `database: { status: down, message: unavailable }`. api builds a second check from the same factory for its reader pool (`content-reader`).",
+      "how": "Built by `postgresReadinessCheck(PG_POOL, \"database\")` (WP-12): the factory returns an `@Injectable()` class that injects the pool under the given token and runs one probe statement with a per-query `query_timeout` equal to the controller's `CHECK_TIMEOUT_MS`, so a hung check frees its connection when the controller gives up. The probe is `SELECT 1` by default, which proves only that the pool can log in; a third argument, `{ probe }` (`PoolReadinessOptions`, exported), swaps in a fixed statement from code. With Postgres down, `/health/ready` answers 503 with `database: { status: down, message: unavailable }`. api builds a second check from the same factory for its reader pool (`content-reader`), with a probe on a granted table.",
       "why": "Readiness covers the database (ADR-010). It moved from api and agent to platform-nest with the pool (WP-10 Q1 A): every service checks its own database the same way.",
-      "files": ["packages/platform-nest/src/database/postgres.readiness-check.ts", "apps/api/test/health.test.ts", "apps/api/test/health.int.test.ts"]
+      "files": ["packages/platform-nest/src/database/postgres.readiness-check.ts", "packages/platform-nest/test/database.test.ts", "apps/api/test/health.test.ts", "apps/api/test/health.int.test.ts"]
     },
     "di-poolcloser": {
       "label": "PoolCloser", "sub": "closes the pool", "kind": "provider", "status": "real", "wp": "WP-10 step 2",
@@ -2377,10 +2377,10 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["apps/api/src/modules/content/infrastructure/content-reader-pool.ts"]
     },
     "di-crc": {
-      "label": "ContentReaderReadinessCheck", "sub": "content-reader · SELECT 1", "kind": "provider", "status": "real", "wp": "WP-12 step 7b",
+      "label": "ContentReaderReadinessCheck", "sub": "content-reader · table probe", "kind": "provider", "status": "real", "wp": "WP-12 step 7b",
       "what": "The readiness check of the reader pool, reported as `content-reader` on `/health/ready`.",
-      "how": "`class ContentReaderReadinessCheck extends postgresReadinessCheck(CONTENT_READER_POOL, \"content-reader\") {}`: the platform-nest factory gives an injectable class that runs `SELECT 1` through that pool with the controller's timeout. Listed in `HealthModule.forRoot({ checks })` next to `PostgresReadinessCheck`.",
-      "why": "A wrong `DATABASE_READ_URL` password or a missing CONNECT grant fails readiness, so the instance gets no traffic, instead of passing it and answering 500 on every public read.",
+      "how": "`class ContentReaderReadinessCheck extends postgresReadinessCheck(CONTENT_READER_POOL, \"content-reader\", { probe }) {}`: the platform-nest factory gives an injectable class that runs `SELECT 1 FROM content.profile_translations LIMIT 0` through that pool with the controller's timeout. `LIMIT 0` reads no row, but Postgres still checks that the table exists and that the role holds `SELECT` on it. Listed in `HealthModule.forRoot({ checks })` next to `PostgresReadinessCheck`.",
+      "why": "A wrong `DATABASE_READ_URL` password, migration 0002 not applied yet or a missing grant fails readiness, so the instance gets no traffic, instead of passing it and answering 500 on every public read. A plain `SELECT 1` only proved the login: the reader could pass readiness with no table to read. The profile table is the probe because every page reads it.",
       "files": ["apps/api/src/modules/content/infrastructure/content-reader-pool.ts", "packages/platform-nest/src/database/postgres.readiness-check.ts", "apps/api/test/health.int.test.ts"]
     },
     "di-lcc": {
@@ -2610,7 +2610,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "ct-d-reader": {
       "label": "least privilege for reads", "sub": "content_reader, granted per table", "kind": "rule", "status": "real", "wp": "WP-12",
       "what": "Public reads connect as a read-only role that can SELECT only the tables a migration granted.",
-      "how": "Provisioning creates the role with a read-only default; migration 0002 grants per table and never the provenance; a readiness check covers the pool.",
+      "how": "Provisioning creates the role with a read-only default; migration 0002 grants per table and never the provenance; a readiness check probes a granted table through the pool, so a missing grant fails readiness, not the first visitor.",
       "why": "The anonymous path is the one most exposed to a bug or an injection; the credential limits what any bug there can do.",
       "files": ["docs/learning/wp-12.md"]
     },
