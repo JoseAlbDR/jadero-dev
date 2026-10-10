@@ -4554,7 +4554,7 @@
       "dependsOn": [
         "WP-10"
       ],
-      "deliverable": "Aggregates, translations, revisions, publish state machine, CV bullets and knowledge entries with per-locale approval, public endpoints with cache headers, contracts package.",
+      "deliverable": "Aggregates, translations, revisions, publish state machine, CV bullets and knowledge entries with approval per entry, English only until WP-57, public endpoints with cache headers, contracts package.",
       "learns": "Domain modeling, aggregate boundaries, state machines, HTTP caching.",
       "milestone": "R1"
     },
@@ -4579,7 +4579,7 @@
         "WP-5",
         "WP-12"
       ],
-      "deliverable": "Outbox writes on publish and approval, relay in api-worker, content.published, knowledge.entry.approved and withdrawn, daily knowledge.snapshot, revalidation consumer, scheduled jobs.",
+      "deliverable": "Outbox writes on publish and approval, relay in api-worker, content.published, knowledge.entry.approved and withdrawn, daily knowledge.snapshot, revalidation consumer, scheduled jobs; the knowledge events carry locale (es, en or de; always en until WP-57), so WP-57 needs no new event version.",
       "learns": "Dual-write problem, event-carried state transfer, idempotent consumers.",
       "milestone": "R1"
     },
@@ -5128,10 +5128,13 @@
       "tag": "learning",
       "size": "M",
       "dependsOn": [
-        "WP-12"
+        "WP-12",
+        "WP-14",
+        "WP-17",
+        "WP-35"
       ],
-      "deliverable": "A new ADR that supersedes the English-only rule of ADR-031 (D-50): es and en required, de optional; approval per entry revision and locale; what the agent indexes. Knowledge entries gain per-locale revisions and approval (migration), knowledge.entry.approved.v1 carries the locale before any consumer exists, /v1/content/:locale/work with an English fallback, seed and fixtures in es and en; WP-16's English fallback note and canonical go. Lands before WP-20 so the event changes without a v2.",
-      "learns": "Changing a contract before it has consumers, per-locale approval as a state machine, schema migration of a live aggregate, fallback and canonical rules for partial translations.",
+      "deliverable": "A new ADR that supersedes the English-only rule of ADR-031 (D-50): es and en required, de optional; approval per entry revision and locale; what the agent indexes. Knowledge entries gain per-locale revisions and approval (migration), the importer format (WP-35) and the admin approval checklist (WP-17) work per locale; the knowledge events already carry locale from WP-14, so no new event version, /v1/content/:locale/work with an English fallback, seed and fixtures in es and en; WP-16's English fallback note and canonical go. Lands before WP-20 so the agent ingests per-locale entries from its first run.",
+      "learns": "Designing a contract field before its first freeze, per-locale approval as a state machine, schema migration of a live aggregate, fallback and canonical rules for partial translations.",
       "milestone": "R2"
     }
   ],
