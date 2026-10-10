@@ -2,6 +2,9 @@
   "$schema": "https://turborepo.com/schema.json",
   "ui": "stream",
   "agentGuidance": false,
+  "futureFlags": {
+    "affectedUsingTaskInputs": true
+  },
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -17,6 +20,7 @@
     },
     "test:int": {
       "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/infra/compose/**"],
       "cache": false
     },
     "db:generate": {
@@ -42,7 +46,22 @@
       ]
     },
     "//#test:scripts": {
-      "inputs": ["scripts/**/*.mjs"]
+      "inputs": [
+        "scripts/**/*.mjs",
+        "turbo.json",
+        "apps/*/turbo.json",
+        "apps/*/package.json",
+        "apps/*/src/**",
+        "apps/*/test/**",
+        "packages/*/turbo.json",
+        "packages/*/package.json",
+        "packages/*/src/**",
+        "packages/*/test/**",
+        "templates/*/turbo.json",
+        "templates/*/package.json",
+        "templates/*/src/**",
+        "templates/*/test/**"
+      ]
     },
     "//#depcruise": {
       "inputs": [

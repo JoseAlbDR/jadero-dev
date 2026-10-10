@@ -1,0 +1,13 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/infra/compose/**",
+        "$TURBO_ROOT$/infra/rabbitmq/definitions.json"
+      ]
+    }
+  }
+}

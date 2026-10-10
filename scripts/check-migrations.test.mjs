@@ -1,12 +1,19 @@
 // Runs with the Node test runner (`node --test`), like the ADR scripts: no dependencies.
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 import {
   entriesOlderThanBase,
   journalOnlyGrew,
   journalOrderProblems,
   migrationViolations,
+  missingBaseOutcome,
   parseNameStatus,
+  runsInCi,
 } from "./check-migrations.mjs";
 
 const entry = (idx, when, tag) => ({ idx, version: "7", when, tag, breakpoints: true });
@@ -164,5 +171,61 @@ describe("entriesOlderThanBase", () => {
 
   it("passes when main has no journal for the service yet", () => {
     assert.deepEqual(entriesOlderThanBase(path, null, journal(entry(0, 1, "0000_a"))), []);
+  });
+});
+
+describe("runsInCi", () => {
+  it("reads CI as GitHub Actions sets it, and ignores empty or false values", () => {
+    assert.equal(runsInCi({ CI: "true" }), true);
+    assert.equal(runsInCi({ CI: "1" }), true);
+    assert.equal(runsInCi({}), false);
+    assert.equal(runsInCi({ CI: "" }), false);
+    assert.equal(runsInCi({ CI: "0" }), false);
+    assert.equal(runsInCi({ CI: "FALSE" }), false);
+  });
+});
+
+describe("missingBaseOutcome", () => {
+  it("passes with a notice on a developer machine", () => {
+    const outcome = missingBaseOutcome("no main", {});
+    assert.equal(outcome.exitCode, 0);
+    assert.match(outcome.message, /base checks skipped, no main/);
+  });
+
+  it("fails closed in CI and names the fix", () => {
+    const outcome = missingBaseOutcome("no main", { CI: "true" });
+    assert.equal(outcome.exitCode, 1);
+    assert.match(outcome.message, /fetch-depth: 0/);
+  });
+});
+
+describe("check-migrations.mjs in a clone without main", () => {
+  const script = fileURLToPath(new URL("./check-migrations.mjs", import.meta.url));
+  /** Runs the script in a fresh repository with only a `feature` branch, so no base exists. */
+  const runWithoutBase = (ci) => {
+    const folder = mkdtempSync(join(tmpdir(), "check-migrations-"));
+    // Drop CI (the suite itself may run in CI) and GIT_* (set when it runs inside a git hook).
+    const env = Object.fromEntries(
+      Object.entries(process.env).filter(([name]) => name !== "CI" && !name.startsWith("GIT_")),
+    );
+    if (ci) env.CI = "true";
+    try {
+      spawnSync("git", ["init", "--quiet", "--initial-branch", "feature"], { cwd: folder, env });
+      return spawnSync(process.execPath, [script], { cwd: folder, env, encoding: "utf8" });
+    } finally {
+      rmSync(folder, { recursive: true, force: true });
+    }
+  };
+
+  it("passes locally, as a fresh shallow clone may", () => {
+    const run = runWithoutBase(false);
+    assert.equal(run.status, 0, run.stderr);
+    assert.match(run.stdout, /base checks skipped/);
+  });
+
+  it("fails in CI instead of passing silently", () => {
+    const run = runWithoutBase(true);
+    assert.equal(run.status, 1, run.stdout);
+    assert.match(run.stderr, /CI must compare with main/);
   });
 });
