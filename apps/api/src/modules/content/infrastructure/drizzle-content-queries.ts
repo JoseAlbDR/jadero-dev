@@ -348,7 +348,9 @@ export class DrizzleContentQueries extends ContentQueries {
   private postSelect(locale: Locale): SQL {
     // Drizzle's node-postgres driver returns timestamps from `execute` as Postgres text, so the
     // key is formatted here as ISO 8601 in UTC with milliseconds, the precision the domain clock
-    // stores (epoch ms), which keeps the cursor exact.
+    // stores (epoch ms), which keeps the cursor exact. The rule this rests on: every write of
+    // `first_published_at` comes from the domain clock, never SQL `now()` (microseconds), or a
+    // row whose stored value is finer than its cursor would repeat on the next page.
     return sql`SELECT t.post_id AS id, t.locale, t.published_slug AS slug,
         to_char(t.first_published_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
           AS first_published_at,

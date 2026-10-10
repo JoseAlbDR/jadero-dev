@@ -209,6 +209,19 @@ describe("DrizzleContentQueries on Postgres, as content_reader", () => {
     expect(dates).toEqual([...dates].sort().reverse());
   });
 
+  it("stores first_published_at at millisecond precision, the precision of the feed cursor", async () => {
+    // The keyset cursor carries milliseconds; a microsecond value (an SQL now()) would make
+    // `(first_published_at, post_id) < cursor` keep the row on the next page too.
+    const { rows } = await owner.query<{ stored: number; finer: number }>(
+      `SELECT count(first_published_at)::int AS stored,
+         count(*) FILTER (WHERE date_trunc('milliseconds', first_published_at)
+           <> first_published_at)::int AS finer
+       FROM content.post_translations`,
+    );
+    expect(rows[0]?.stored).toBeGreaterThan(EXTRA_POSTS);
+    expect(rows[0]?.finer).toBe(0);
+  });
+
   it("shows a German experience item's bullets in German only, each with its approved entries", async () => {
     const { items } = await queries.experience("de");
     expect(items.map((item) => item.locale)).toEqual(["de", "en"]);

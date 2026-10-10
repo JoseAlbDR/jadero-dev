@@ -144,7 +144,12 @@ export function translationTable<
       publishedRevisionId: uuid(),
       /** When the published pointer last moved (a publish or a rollback). */
       publishedAt: timestamp({ withTimezone: true }),
-      /** When the locale was first published; orders the posts feed (step 3 follow-ups). */
+      /**
+       * When the locale was first published; orders the posts feed (step 3 follow-ups). Written
+       * only from the domain clock (a JS `Date`, millisecond precision), never by SQL `now()`:
+       * the feed cursor carries milliseconds, so a microsecond value would repeat its row on the
+       * next page.
+       */
       firstPublishedAt: timestamp({ withTimezone: true }),
       ...extra,
     },
