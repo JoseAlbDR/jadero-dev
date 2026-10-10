@@ -15,3 +15,11 @@ commit-msg:
     - name: commitlint
       # {1} is the first argument git passes to the hook: the path of the message file.
       run: pnpm exec commitlint --edit {1}
+
+pre-push:
+  jobs:
+    - name: verify
+      # The same "am I done" gate as before a commit, so a red verify never reaches the remote
+      # (a `pnpm verify | tail && git push` chain once pushed a failure: the pipe kept tail's exit
+      # code). Turborepo's cache makes it seconds when nothing changed since the last run.
+      run: pnpm verify
