@@ -4554,7 +4554,7 @@
       "dependsOn": [
         "WP-10"
       ],
-      "deliverable": "Aggregates, translations, revisions, publish state machine, CV bullets and knowledge entries with per-locale approval, public endpoints with cache headers, contracts package.",
+      "deliverable": "Aggregates, translations, revisions, publish state machine, CV bullets and knowledge entries with approval per entry, English only until WP-57, public endpoints with cache headers, contracts package.",
       "learns": "Domain modeling, aggregate boundaries, state machines, HTTP caching.",
       "milestone": "R1"
     },
@@ -4579,7 +4579,7 @@
         "WP-5",
         "WP-12"
       ],
-      "deliverable": "Outbox writes on publish and approval, relay in api-worker, content.published, knowledge.entry.approved and withdrawn, daily knowledge.snapshot, revalidation consumer, scheduled jobs.",
+      "deliverable": "Outbox writes on publish and approval, relay in api-worker, content.published, knowledge.entry.approved and withdrawn, daily knowledge.snapshot, revalidation consumer, scheduled jobs; the knowledge events carry locale (es, en or de; always en until WP-57), so WP-57 needs no new event version.",
       "learns": "Dual-write problem, event-carried state transfer, idempotent consumers.",
       "milestone": "R1"
     },
@@ -4604,7 +4604,7 @@
         "WP-12",
         "WP-15"
       ],
-      "deliverable": "Home built around the positioning and the proof-pillar strip with its evidence map (D-73, D-74), home, experience timeline with CV bullets and Ask about this, work-log pages for approved entries, case studies, projects, early archive, stack and skills, blog; safe Markdown; SEO; nginx stale cache; accessibility and performance budgets met. Second pass (D-52): work-log pages carry a per-entry indexable flag (default true) mapped to a noindex meta tag when false. Security (2026-10-09 audit): the nonce-based CSP of ADR-047; the open-redirect rule of ADR-047 for locale redirects and cutover 301s; fonts self-hosted, no requests to third-party font CDNs.",
+      "deliverable": "Home built around the positioning and the proof-pillar strip with its evidence map (D-73, D-74), home, experience timeline with CV bullets and Ask about this, work-log pages for approved entries, case studies, projects, early archive, stack and skills, blog; safe Markdown; SEO; nginx stale cache; accessibility and performance budgets met. Second pass (D-52): work-log pages carry a per-entry indexable flag (default true) mapped to a noindex meta tag when false. Security (2026-10-09 audit): the nonce-based CSP of ADR-047; the open-redirect rule of ADR-047 for locale redirects and cutover 301s; fonts self-hosted, no requests to third-party font CDNs. Until WP-57, work-log entries show the English text under every locale with lang=\"en\", a translated note and a canonical to /en.",
       "learns": "",
       "milestone": "R1"
     },
@@ -4652,7 +4652,8 @@
       "size": "L",
       "dependsOn": [
         "WP-14",
-        "WP-19"
+        "WP-19",
+        "WP-57"
       ],
       "deliverable": "agent-ingest: read model, two-layer chunking with contextual headers, approval validation, withdrawal tombstones, daily reconciliation, embeddings, vector + full-text schema, index versions, re-index, blue-green switch; HNSW vs exact scan measured.",
       "learns": "Embeddings, chunking trade-offs, approximate nearest neighbor indexes, read models.",
@@ -4809,7 +4810,8 @@
       "size": "S",
       "dependsOn": [
         "WP-17",
-        "WP-19"
+        "WP-19",
+        "WP-57"
       ],
       "deliverable": "LLM-drafted translations through the chat port with a glossary; owner reviews.",
       "learns": "Structured output, translation prompting.",
@@ -5119,6 +5121,21 @@
       "deliverable": "A custom serde for PostgresSaver that encrypts checkpoint payloads with AES-256-GCM, a key id stored per row so the key can rotate, the key sourced from runtime secrets (D-7), a rotation runbook. Optional (D-17 second pass): the 24-hour purge, backup exclusion and LangSmith masking already cover the privacy goal.",
       "learns": "Envelope encryption at rest, key rotation, where encryption does and does not help.",
       "milestone": "R7"
+    },
+    {
+      "id": "WP-57",
+      "title": "Translated work-log entries",
+      "tag": "learning",
+      "size": "M",
+      "dependsOn": [
+        "WP-12",
+        "WP-14",
+        "WP-17",
+        "WP-35"
+      ],
+      "deliverable": "A new ADR that supersedes the English-only rule of ADR-031 (D-50): es and en required, de optional; approval per entry revision and locale; what the agent indexes. Knowledge entries gain per-locale revisions and approval (migration), the importer format (WP-35) and the admin approval checklist (WP-17) work per locale; the knowledge events already carry locale from WP-14, so no new event version, /v1/content/:locale/work with an English fallback, seed and fixtures in es and en; WP-16's English fallback note and canonical go. Lands before WP-20 so the agent ingests per-locale entries from its first run.",
+      "learns": "Designing a contract field before its first freeze, per-locale approval as a state machine, schema migration of a live aggregate, fallback and canonical rules for partial translations.",
+      "milestone": "R2"
     }
   ],
   "manualActions": [
@@ -5424,6 +5441,7 @@
         "name": "Agent core",
         "exitCriterion": "The agent answers with citations in three languages, guarded, traced and evaluated, on real approved entries",
         "workPackages": [
+          "WP-57",
           "WP-19",
           "WP-20",
           "WP-21",
