@@ -57,3 +57,19 @@ export function contentAlternates(
     },
   };
 }
+
+/**
+ * Canonical and hreflang alternates for a page whose content exists in English only: the work-log
+ * entry pages (D-50). The `/es` and `/de` pages show the same English entry, so they are copies of
+ * the English page: every locale's canonical points at it, and the only hreflang links are `en` and
+ * `x-default`, both the English page. Translated entries would get their own links (issue #116).
+ * @param href the page as a `routing.pathnames` key (with params, if any).
+ * @returns the `alternates` field of the page's metadata, the same in every locale.
+ */
+export function englishOnlyAlternates(href: Href): Metadata["alternates"] {
+  const english = getPathname({ href, locale: routing.defaultLocale });
+  return {
+    canonical: english,
+    languages: { [routing.defaultLocale]: english, "x-default": english },
+  };
+}

@@ -70,6 +70,46 @@
     "lead": "Sprachen, Werkzeuge und Plattformen, nach Bereich gruppiert.",
     "empty": "Noch keine Kenntnisse veröffentlicht."
   },
+  "WorkPage": {
+    "metaTitle": "Arbeitsprotokoll",
+    "metaDescription": "Ein Eintrag pro Arbeit: das Problem, was ich gebaut habe, die Abwägungen und das Ergebnis.",
+    "eyebrow": "Arbeitsprotokoll",
+    "title": "Die Arbeit hinter dem Lebenslauf",
+    "lead": "Ein Eintrag pro Arbeit: das Problem, was ich gebaut habe, die Abwägungen und wie es ausging.",
+    "empty": "Noch keine Einträge veröffentlicht.",
+    "listNote": "Die Einträge gibt es nur auf Englisch.",
+    "entryNote": "Diesen Eintrag gibt es nur auf Englisch.",
+    "period": "<from>{fromLabel}</from> – <to>{toLabel}</to>",
+    "present": "heute",
+    "type": {
+      "feature": "Feature",
+      "improvement": "Verbesserung",
+      "tech-debt": "Technische Schulden",
+      "integration": "Integration",
+      "performance": "Performance",
+      "tooling": "Tooling",
+      "workshop": "Workshop"
+    },
+    "role": {
+      "soleAuthor": "Alleinautor",
+      "lead": "Leitung",
+      "contributor": "Mitwirkung"
+    },
+    "stack": "Stack",
+    "patterns": "Muster",
+    "sections": {
+      "summary": "Zusammenfassung",
+      "problem": "Problem",
+      "whatHeBuilt": "Was ich gebaut habe",
+      "howItWorks": "Wie es funktioniert",
+      "tradeoffs": "Abwägungen und Alternativen",
+      "testingRollout": "Tests und Rollout",
+      "outcome": "Ergebnis",
+      "lessons": "Erkenntnisse"
+    },
+    "questions": "Fragen, die dieser Eintrag beantwortet",
+    "back": "Alle Einträge"
+  },
   "NotFound": {
     "title": "Seite nicht gefunden",
     "description": "Die gesuchte Seite existiert nicht."
@@ -92,7 +132,8 @@
   },
   "Footer": {
     "copyright": "© {year} jadero.dev",
-    "note": "Gebaut, ein Release nach dem anderen."
+    "note": "Gebaut, ein Release nach dem anderen.",
+    "work": "Arbeitsprotokoll"
   },
   "ThemeToggle": {
     "label": "Farbschema",

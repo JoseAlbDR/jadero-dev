@@ -70,6 +70,46 @@
     "lead": "Languages, tools and platforms, grouped by area.",
     "empty": "No skills are published yet."
   },
+  "WorkPage": {
+    "metaTitle": "Work log",
+    "metaDescription": "One entry per piece of work: the problem, what I built, the trade-offs and the outcome.",
+    "eyebrow": "Work log",
+    "title": "The work behind the CV",
+    "lead": "One entry per piece of work: the problem, what I built, the trade-offs and how it turned out.",
+    "empty": "No entries are published yet.",
+    "listNote": "The entries are only available in English.",
+    "entryNote": "This entry is only available in English.",
+    "period": "<from>{fromLabel}</from> – <to>{toLabel}</to>",
+    "present": "now",
+    "type": {
+      "feature": "Feature",
+      "improvement": "Improvement",
+      "tech-debt": "Tech debt",
+      "integration": "Integration",
+      "performance": "Performance",
+      "tooling": "Tooling",
+      "workshop": "Workshop"
+    },
+    "role": {
+      "soleAuthor": "Sole author",
+      "lead": "Lead",
+      "contributor": "Contributor"
+    },
+    "stack": "Stack",
+    "patterns": "Patterns",
+    "sections": {
+      "summary": "Summary",
+      "problem": "Problem",
+      "whatHeBuilt": "What I built",
+      "howItWorks": "How it works",
+      "tradeoffs": "Trade-offs and alternatives",
+      "testingRollout": "Testing and rollout",
+      "outcome": "Outcome",
+      "lessons": "Lessons"
+    },
+    "questions": "Questions this answers",
+    "back": "All entries"
+  },
   "NotFound": {
     "title": "Page not found",
     "description": "The page you are looking for does not exist."
@@ -92,7 +132,8 @@
   },
   "Footer": {
     "copyright": "© {year} jadero.dev",
-    "note": "Built one release at a time."
+    "note": "Built one release at a time.",
+    "work": "Work log"
   },
   "ThemeToggle": {
     "label": "Color theme",

@@ -70,6 +70,46 @@
     "lead": "Lenguajes, herramientas y plataformas, agrupados por área.",
     "empty": "Todavía no hay tecnologías publicadas."
   },
+  "WorkPage": {
+    "metaTitle": "Registro de trabajo",
+    "metaDescription": "Una entrada por cada trabajo: el problema, lo que construí, las alternativas y el resultado.",
+    "eyebrow": "Registro de trabajo",
+    "title": "El trabajo detrás del CV",
+    "lead": "Una entrada por cada trabajo: el problema, lo que construí, las alternativas y cómo salió.",
+    "empty": "Aún no hay entradas publicadas.",
+    "listNote": "Las entradas solo están disponibles en inglés.",
+    "entryNote": "Esta entrada solo está disponible en inglés.",
+    "period": "<from>{fromLabel}</from> – <to>{toLabel}</to>",
+    "present": "actualidad",
+    "type": {
+      "feature": "Funcionalidad",
+      "improvement": "Mejora",
+      "tech-debt": "Deuda técnica",
+      "integration": "Integración",
+      "performance": "Rendimiento",
+      "tooling": "Herramientas",
+      "workshop": "Taller"
+    },
+    "role": {
+      "soleAuthor": "Autor único",
+      "lead": "Responsable",
+      "contributor": "Colaborador"
+    },
+    "stack": "Stack",
+    "patterns": "Patrones",
+    "sections": {
+      "summary": "Resumen",
+      "problem": "Problema",
+      "whatHeBuilt": "Lo que construí",
+      "howItWorks": "Cómo funciona",
+      "tradeoffs": "Compromisos y alternativas",
+      "testingRollout": "Pruebas y despliegue",
+      "outcome": "Resultado",
+      "lessons": "Lecciones"
+    },
+    "questions": "Preguntas que responde",
+    "back": "Todas las entradas"
+  },
   "NotFound": {
     "title": "Página no encontrada",
     "description": "La página que buscas no existe."
@@ -92,7 +132,8 @@
   },
   "Footer": {
     "copyright": "© {year} jadero.dev",
-    "note": "Construida versión a versión."
+    "note": "Construida versión a versión.",
+    "work": "Registro de trabajo"
   },
   "ThemeToggle": {
     "label": "Tema de color",

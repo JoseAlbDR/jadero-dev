@@ -20,6 +20,10 @@ export const routing = defineRouting({
     "/stack": "/stack",
     "/blog": "/blog",
     "/blog/[slug]": "/blog/[slug]",
+    // The work log (ADR-031, D-52): entries are English only (D-50) and addressed by their stable
+    // id (`kb-...`) in every locale, the target of a citation (`/en/work/<id>#tradeoffs`).
+    "/work": { en: "/work", es: "/trabajo", de: "/arbeit" },
+    "/work/[entryId]": { en: "/work/[entryId]", es: "/trabajo/[entryId]", de: "/arbeit/[entryId]" },
     // WP-15 throwaway mockups; removed once the owner picks a direction.
     "/mockups": "/mockups",
     "/mockups/terminal": "/mockups/terminal",

@@ -4,8 +4,9 @@
  * `GET /v1/content/:locale/experience` from `experience.json`, `GET /v1/content/:locale/projects`
  * (with `?kind=`) and `GET /v1/content/:locale/projects/:slug` from `projects.json`,
  * `GET /v1/content/:locale/posts` (with `?cursor=`) and `GET /v1/content/:locale/posts/:slug` from
- * `posts.json`, `GET /v1/content/:locale/skills` from `skills.json`, and a 404 problem for anything
- * else. The fixtures hold each locale's answer as the API gives it, the German fallback to English
+ * `posts.json`, `GET /v1/content/:locale/skills` from `skills.json`, `GET /v1/content/work` and
+ * `GET /v1/content/work/:entryId` from `work.json` (English only, no locale), and a 404 problem
+ * for anything else. The fixtures hold each locale's answer as the API gives it, the German fallback to English
  * included; posts are listed newest first. Every fixture is parsed with its `@jadero/contracts`
  * schema at start: a fixture that drifts from the contract stops the suite before a test runs.
  * Node runs this file directly (type stripping), so it holds only erasable TypeScript. It logs
@@ -15,6 +16,8 @@ import { createServer } from "node:http";
 import {
   encodePostCursor,
   experienceListDto,
+  knowledgeEntryDto,
+  knowledgeEntryListDto,
   type Locale,
   locale,
   postCursor,
@@ -30,11 +33,13 @@ import experience from "./experience.json" with { type: "json" };
 import posts from "./posts.json" with { type: "json" };
 import projects from "./projects.json" with { type: "json" };
 import skills from "./skills.json" with { type: "json" };
+import work from "./work.json" with { type: "json" };
 
 const experienceFixtures = z.record(locale, experienceListDto).parse(experience);
 const projectFixtures = z.record(locale, z.array(projectDto)).parse(projects);
 const postFixtures = z.record(locale, z.array(postDto)).parse(posts);
 const skillFixtures = z.record(locale, skillListDto).parse(skills);
+const workFixtures = z.array(knowledgeEntryDto).parse(work);
 
 /**
  * Posts per page. The real API sends 20; the stub sends 2, so three fixture posts already need a
@@ -53,6 +58,7 @@ const PROJECT_PATH = /^\/v1\/content\/(es|en|de)\/projects\/([a-z0-9-]+)$/;
 const POSTS_PATH = /^\/v1\/content\/(es|en|de)\/posts$/;
 const POST_PATH = /^\/v1\/content\/(es|en|de)\/posts\/([a-z0-9-]+)$/;
 const SKILLS_PATH = /^\/v1\/content\/(es|en|de)\/skills$/;
+const WORK_ENTRY_PATH = /^\/v1\/content\/work\/(kb-[a-z0-9-]+)$/;
 
 /** A stable post id for the cursor: the post's position in its locale's fixture list. */
 const postId = (index: number) => `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
@@ -122,6 +128,18 @@ function answer(url: URL): unknown {
 
   const skillsMatch = SKILLS_PATH.exec(path);
   if (skillsMatch) return skillFixtures[locale.parse(skillsMatch[1])];
+
+  if (path === "/v1/content/work") {
+    // The list carries each entry's metadata and its Summary, as the API's list does.
+    const items = workFixtures.map((entry) => ({
+      ...entry,
+      summary: entry.sections.find((s) => s.key === "summary")?.body,
+    }));
+    return knowledgeEntryListDto.parse({ items });
+  }
+
+  const workEntryMatch = WORK_ENTRY_PATH.exec(path);
+  if (workEntryMatch) return workFixtures.find((entry) => entry.id === workEntryMatch[1]);
   return undefined;
 }
 
