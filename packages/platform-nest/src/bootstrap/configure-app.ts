@@ -6,9 +6,11 @@ import {
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import helmet from "helmet";
 import { Logger } from "nestjs-pino";
+import type { HttpLogger } from "pino-http";
 import type { PlatformEnv } from "../config/platform-env.js";
 import { ProblemDetailsFilter } from "../errors/problem-details.filter.js";
 import { RequestValidationException } from "../errors/request-validation.exception.js";
+import { REQUEST_LOGGER } from "../logging/logging.module.js";
 
 /**
  * The options every service creates its app with (`NestFactory.create(module, APP_OPTIONS)`, and
@@ -48,6 +50,9 @@ const jsonApiHelmet = helmet({
 
 /**
  * The one place that wires an app the same way for `main.ts` and for end-to-end tests:
+ * - the request logger (pino-http) first, so every request gets its id (`x-request-id`, and
+ *   `requestId` in a problem body) and its one log line, also when Helmet or the body parser
+ *   rejects it (WP-12 step 8c, observability first);
  * - the JSON API security headers through Helmet, and no `X-Powered-By` (ADR-047). CORS stays
  *   closed: no service calls `enableCors`, so no response carries an `Access-Control-*` header;
  * - one body parser, JSON, with the configured limit (`HTTP_JSON_BODY_LIMIT`); a larger body is a
@@ -72,6 +77,8 @@ export function configureApp<T extends NestExpressApplication>(
   env: Pick<PlatformEnv, "HTTP_JSON_BODY_LIMIT">,
 ): T {
   app.disable("x-powered-by");
+  // Before anything that can end a request: Express runs middleware in registration order.
+  app.use(app.get<HttpLogger>(REQUEST_LOGGER));
   app.use(jsonApiHelmet);
   app.useBodyParser("json", { limit: env.HTTP_JSON_BODY_LIMIT });
   app.useLogger(app.get(Logger));

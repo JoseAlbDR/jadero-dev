@@ -103,6 +103,19 @@ describe("LoggingModule", () => {
     expect(requestLine(id)?.level).toBe(20);
   });
 
+  it("logs outside a request through the same pino instance, with the platform's serializers", async () => {
+    const logger = await app.resolve(PinoLogger);
+    logger.info(
+      { req: { method: "GET", url: "/outside?token=query-secret", headers: { cookie: "c" } } },
+      "outside a request",
+    );
+    const line = stream.lines.find((entry) => entry.msg === "outside a request");
+    expect(line).toMatchObject({ service: "probe", req: { method: "GET", url: "/outside" } });
+    expect(line).not.toHaveProperty("req_id");
+    expect(JSON.stringify(line)).not.toContain("query-secret");
+    expect(line?.req).not.toHaveProperty("headers");
+  });
+
   it("routes Nest's own boot lines through pino", () => {
     expect(stream.lines.some((line) => line.context === "NestApplication")).toBe(true);
   });

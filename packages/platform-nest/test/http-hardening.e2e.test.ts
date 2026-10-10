@@ -124,6 +124,32 @@ describe("HTTP hardening of every service (ADR-047)", () => {
     expect(res.headers["content-type"]).toMatch(/^application\/problem\+json/);
   });
 
+  // Owner decision A (2026-10-10, observability first): a request Helmet or the JSON parser
+  // rejects still gets a request id and its one pino-http line, like any other request.
+  it.each([
+    ["a body over the limit", JSON.stringify({ email: `body-marker-${"x".repeat(2000)}` }), 413],
+    ["malformed JSON", '{"email": body-marker-not-json', 400],
+  ])("gives %s a request id and exactly one request line", async (_case, body, status) => {
+    const res = await request(app.getHttpServer())
+      .post("/__fixtures/echo?email=query-marker%40example.com")
+      .set("Content-Type", "application/json")
+      .send(body);
+    expect(res.status).toBe(status);
+    const id = res.headers["x-request-id"] ?? "";
+    expect(id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(res.body).toMatchObject({ status, requestId: id });
+    const requestLines = stream.lines.filter((line) => line.req_id === id && "res" in line);
+    expect(requestLines).toHaveLength(1);
+    expect(requestLines[0]).toMatchObject({
+      level: 40,
+      req: { method: "POST", url: "/__fixtures/echo" },
+      res: { statusCode: status },
+    });
+    const all = JSON.stringify(stream.lines);
+    expect(all).not.toContain("body-marker");
+    expect(all).not.toContain("query-marker");
+  });
+
   it("logs a failed query with its code and SQL, never its values", async () => {
     const res = await request(app.getHttpServer())
       .get("/__fixtures/query-error")
