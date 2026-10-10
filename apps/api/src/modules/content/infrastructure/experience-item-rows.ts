@@ -1,35 +1,12 @@
-import { z } from "zod";
+import { experienceItemDocumentSchema } from "../application/content-documents.js";
+import { ExperienceItem } from "../domain/experience-item.js";
 import {
-  ExperienceItem,
-  type ExperienceItemDocument,
-  type LocationType,
-} from "../domain/experience-item.js";
-import {
-  keysOf,
   type LocalizedItemRows,
   localizedRows,
   localizedSnapshot,
   type RevisionRow,
   type TranslationRow,
 } from "./revision-rows.js";
-
-const locationTypes = {
-  remote: true,
-  hybrid: true,
-  onsite: true,
-} as const satisfies Record<LocationType, true>;
-
-/**
- * The stored shape of an experience item revision's document (Q1 B), read with it and written
- * through it. Structure only: the format and completeness rules are the domain's.
- */
-export const experienceItemDocumentSchema: z.ZodType<ExperienceItemDocument> = z.object({
-  organization: z.string(),
-  role: z.string(),
-  period: z.object({ from: z.string(), to: z.string().nullable() }),
-  locationType: z.enum(keysOf(locationTypes)),
-  stackTags: z.array(z.string()),
-});
 
 /** A `content.experience_items` row: identity and layout. */
 export interface ExperienceItemBaseRow {

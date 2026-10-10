@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { Post, type PostDocument } from "../domain/post.js";
+import { postDocumentSchema } from "../application/content-documents.js";
+import { Post } from "../domain/post.js";
 import {
   type LocalizedItemRows,
   localizedRows,
@@ -9,18 +9,6 @@ import {
   type RevisionRow,
   type SlugTranslationRow,
 } from "./revision-rows.js";
-
-/**
- * The stored shape of a post revision's document (Q1 B). Structure only: the format and
- * completeness rules are the domain's.
- */
-export const postDocumentSchema: z.ZodType<PostDocument> = z.object({
-  slug: z.string(),
-  title: z.string(),
-  excerpt: z.string(),
-  body: z.string(),
-  tags: z.array(z.string()),
-});
 
 /** A `content.posts` row: identity, the canonical slug and the archive mark. */
 export interface PostBaseRow {

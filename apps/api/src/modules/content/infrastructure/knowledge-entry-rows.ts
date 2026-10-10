@@ -1,41 +1,18 @@
 import { z } from "zod";
-import { APPROVAL_CHECKS, type ApprovalChecklist } from "../domain/approval-checklist.js";
+import {
+  approvalChecklistSchema,
+  keysOf,
+  knowledgeEntryDocumentSchema,
+  knowledgeEntryProvenanceSchema,
+} from "../application/content-documents.js";
 import { StoredStateInvalid } from "../domain/content.errors.js";
 import {
   type ApprovalState,
   KNOWLEDGE_ENTRY_LOCALE,
-  KNOWLEDGE_ENTRY_SECTION_KEYS,
   KnowledgeEntry,
-  type KnowledgeEntryConfidence,
-  type KnowledgeEntryDocument,
-  type KnowledgeEntryProvenance,
   type KnowledgeEntryRevision,
-  type KnowledgeEntryRole,
-  type KnowledgeEntryType,
 } from "../domain/knowledge-entry.js";
-import { keysOf, readStored, revisionFromRow } from "./revision-rows.js";
-
-const entryTypes = {
-  feature: true,
-  improvement: true,
-  "tech-debt": true,
-  integration: true,
-  performance: true,
-  tooling: true,
-  workshop: true,
-} as const satisfies Record<KnowledgeEntryType, true>;
-
-const entryRoles = {
-  "sole author": true,
-  lead: true,
-  contributor: true,
-} as const satisfies Record<KnowledgeEntryRole, true>;
-
-const confidences = {
-  high: true,
-  medium: true,
-  low: true,
-} as const satisfies Record<KnowledgeEntryConfidence, true>;
+import { readStored, revisionFromRow } from "./revision-rows.js";
 
 const approvalStates = {
   draft: true,
@@ -43,40 +20,6 @@ const approvalStates = {
   approved: true,
   withdrawn: true,
 } as const satisfies Record<ApprovalState, true>;
-
-/**
- * The stored shape of an entry revision's document (Q1 B): only the public fields; the provenance
- * has its own table. Structure only: format and completeness are the domain's rules.
- */
-export const knowledgeEntryDocumentSchema: z.ZodType<KnowledgeEntryDocument> = z.object({
-  title: z.string(),
-  type: z.enum(keysOf(entryTypes)),
-  domain: z.string(),
-  period: z.object({ from: z.string(), to: z.string().nullable() }),
-  role: z.enum(keysOf(entryRoles)),
-  sections: z.array(z.object({ key: z.enum(KNOWLEDGE_ENTRY_SECTION_KEYS), body: z.string() })),
-  questions: z.array(z.string()),
-  stack: z.array(z.string()),
-  patterns: z.array(z.string()),
-  related: z.array(z.string()),
-  cvBullet: z.string().nullable(),
-  indexable: z.boolean(),
-});
-
-const provenanceSchema: z.ZodType<KnowledgeEntryProvenance> = z.object({
-  sources: z.array(z.string()),
-  conflicts: z.string(),
-  publicNames: z.array(z.string()),
-  confidence: z.enum(keysOf(confidences)),
-});
-
-const checklistSchema: z.ZodType<ApprovalChecklist> = z.object({
-  noClientNames: z.boolean(),
-  noInternalNames: z.boolean(),
-  noNonPublicNumbers: z.boolean(),
-  noEmployerCode: z.boolean(),
-  ownVoice: z.boolean(),
-} satisfies Record<(typeof APPROVAL_CHECKS)[number], z.ZodBoolean>);
 
 const stateSchema = z.enum(keysOf(approvalStates));
 
@@ -149,7 +92,9 @@ export function knowledgeEntryToRows(entry: KnowledgeEntry, version: number): Kn
       state: stored.state,
       approvedRevisionId: stored.approval?.revisionId ?? null,
       approvedAt: stored.approval?.approvedAt ?? null,
-      approvalChecklist: stored.approval ? checklistSchema.parse(stored.approval.checklist) : null,
+      approvalChecklist: stored.approval
+        ? approvalChecklistSchema.parse(stored.approval.checklist)
+        : null,
       cvBullet: stored.cvBullet,
       withdrawnAt: stored.withdrawnAt,
       deletedAt: stored.deletedAt,
@@ -210,7 +155,12 @@ export function knowledgeEntryFromRows(
     return revisionFromRow(
       { ...revision, itemId: revision.entryId, locale: KNOWLEDGE_ENTRY_LOCALE },
       knowledgeEntryDocumentSchema,
-      readStored(provenanceSchema, fields, base.id, `revision ${revision.id} provenance`),
+      readStored(
+        knowledgeEntryProvenanceSchema,
+        fields,
+        base.id,
+        `revision ${revision.id} provenance`,
+      ),
     );
   });
   return KnowledgeEntry.reconstitute({
@@ -231,6 +181,11 @@ function approvalFromRow(base: KnowledgeEntryBaseRow) {
   return {
     revisionId: base.approvedRevisionId,
     approvedAt: base.approvedAt,
-    checklist: readStored(checklistSchema, base.approvalChecklist, base.id, "approval checklist"),
+    checklist: readStored(
+      approvalChecklistSchema,
+      base.approvalChecklist,
+      base.id,
+      "approval checklist",
+    ),
   };
 }

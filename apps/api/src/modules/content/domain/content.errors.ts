@@ -163,3 +163,17 @@ export class ConcurrentModification extends Error {
     this.name = "ConcurrentModification";
   }
 }
+
+/**
+ * A command named an item that is not stored: no item of that type has the id (for the profile,
+ * the stored singleton has another id, or none exists yet). Maps to 404.
+ */
+export class ItemNotFound extends Error {
+  constructor(
+    readonly itemType: string,
+    readonly itemId: string,
+  ) {
+    super(`No ${itemType} ${itemId} is stored.`);
+    this.name = "ItemNotFound";
+  }
+}

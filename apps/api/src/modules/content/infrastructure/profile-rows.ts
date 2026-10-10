@@ -1,32 +1,13 @@
-import { z } from "zod";
+import { profileDocumentSchema } from "../application/content-documents.js";
 import { StoredStateInvalid } from "../domain/content.errors.js";
-import { Profile, type ProfileDocument, type ProfileLinkKind } from "../domain/profile.js";
+import { Profile } from "../domain/profile.js";
 import {
-  keysOf,
   type LocalizedItemRows,
   localizedRows,
   localizedSnapshot,
   type RevisionRow,
   type TranslationRow,
 } from "./revision-rows.js";
-
-const linkKinds = {
-  email: true,
-  github: true,
-  linkedin: true,
-  website: true,
-} as const satisfies Record<ProfileLinkKind, true>;
-
-/**
- * The stored shape of a profile revision's document (Q1 B). Structure only: the URL formats and
- * completeness are the domain's rules.
- */
-export const profileDocumentSchema: z.ZodType<ProfileDocument> = z.object({
-  name: z.string(),
-  headline: z.string(),
-  summary: z.string(),
-  links: z.array(z.object({ kind: z.enum(keysOf(linkKinds)), url: z.string() })),
-});
 
 /** A `content.profile` row: the id and the version, nothing else (no layout, no archive). */
 export interface ProfileBaseRow {

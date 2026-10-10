@@ -50,16 +50,6 @@ const localeSchema = z.enum(LOCALES);
 const originSchema = z.enum(REVISION_ORIGINS);
 
 /**
- * The keys of a union as the tuple `z.enum` takes; a `satisfies Record<Union, true>` on the
- * argument makes each list complete, so a value added to the domain's union fails to compile here.
- * @param record one `true` per member of the union.
- * @returns the members.
- */
-export function keysOf<T extends string>(record: Record<T, true>): [T, ...T[]] {
-  return Object.keys(record) as [T, ...T[]];
-}
-
-/**
  * Parses a stored value with its schema (the tolerant reader of Q1 B: unknown keys are dropped,
  * defaults fill fields added later). A value that does not parse is a corrupt row or a breaking
  * change to a stored shape, never a caller's mistake.

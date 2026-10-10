@@ -15,7 +15,8 @@
     "dev:worker": "PORT=3011 SERVICE_NAME=api-worker OTEL_SERVICE_NAME=api-worker node --watch-path=dist --watch-path=../../packages/platform-nest/dist --watch-path=../../packages/messaging/dist --watch-preserve-output --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/worker.js",
     "start:worker": "node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/worker.js",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node --env-file-if-exists=.env dist/migrate.js"
+    "db:migrate": "node --env-file-if-exists=.env dist/migrate.js",
+    "db:seed": "node --env-file-if-exists=.env dist/seed.js"
   },
   "dependencies": {
     "@jadero/contracts": "workspace:*",

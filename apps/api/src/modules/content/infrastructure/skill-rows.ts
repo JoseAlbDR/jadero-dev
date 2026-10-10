@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { Skill, type SkillDocument } from "../domain/skill.js";
+import { skillDocumentSchema } from "../application/content-documents.js";
+import { Skill } from "../domain/skill.js";
 import {
   type LocalizedItemRows,
   localizedRows,
@@ -7,16 +7,6 @@ import {
   type RevisionRow,
   type TranslationRow,
 } from "./revision-rows.js";
-
-/**
- * The stored shape of a skill revision's document (Q1 B). Structure only: the format and
- * completeness rules are the domain's.
- */
-export const skillDocumentSchema: z.ZodType<SkillDocument> = z.object({
-  name: z.string(),
-  category: z.string(),
-  projectSlugs: z.array(z.string()),
-});
 
 /** A `content.skills` row: identity and layout. */
 export interface SkillBaseRow {

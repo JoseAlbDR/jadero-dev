@@ -1,7 +1,6 @@
-import { z } from "zod";
-import { Project, type ProjectDocument, type ProjectKind } from "../domain/project.js";
+import { projectDocumentSchema, projectKindSchema } from "../application/content-documents.js";
+import { Project } from "../domain/project.js";
 import {
-  keysOf,
   type LocalizedItemRows,
   localizedRows,
   localizedSnapshot,
@@ -11,28 +10,6 @@ import {
   readStored,
   type SlugTranslationRow,
 } from "./revision-rows.js";
-
-/**
- * The stored shape of a project revision's document (Q1 B), read with it and written through it.
- * Structure only: the format and completeness rules are the domain's, checked at save and publish.
- */
-export const projectDocumentSchema: z.ZodType<ProjectDocument> = z.object({
-  slug: z.string(),
-  title: z.string(),
-  summary: z.string(),
-  body: z.string(),
-  stackTags: z.array(z.string()),
-  repoUrl: z.string().nullable(),
-  demoUrl: z.string().nullable(),
-});
-
-const projectKinds = {
-  case_study: true,
-  project: true,
-  early: true,
-} as const satisfies Record<ProjectKind, true>;
-
-const projectKindSchema = z.enum(keysOf(projectKinds));
 
 /** A `content.projects` row. */
 export interface ProjectBaseRow {

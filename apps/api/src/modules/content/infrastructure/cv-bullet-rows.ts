@@ -1,11 +1,9 @@
-import { z } from "zod";
-import { StoredStateInvalid } from "../domain/content.errors.js";
 import {
-  CvBullet,
-  type CvBulletDocument,
-  type CvBulletImportance,
-  type CvBulletParent,
-} from "../domain/cv-bullet.js";
+  cvBulletDocumentSchema,
+  cvBulletImportanceSchema,
+} from "../application/content-documents.js";
+import { StoredStateInvalid } from "../domain/content.errors.js";
+import { CvBullet, type CvBulletParent } from "../domain/cv-bullet.js";
 import {
   type LocalizedItemRows,
   localizedRows,
@@ -14,15 +12,6 @@ import {
   readStored,
   type TranslationRow,
 } from "./revision-rows.js";
-
-/** The stored shape of a CV bullet revision's document (Q1 B): the line itself. */
-export const cvBulletDocumentSchema: z.ZodType<CvBulletDocument> = z.object({ text: z.string() });
-
-const importanceSchema: z.ZodType<CvBulletImportance> = z.union([
-  z.literal(1),
-  z.literal(2),
-  z.literal(3),
-]);
 
 /** The parent columns of a `content.cv_bullets` row: exactly one is set (its CHECK). */
 export interface CvBulletParentColumns {
@@ -114,7 +103,7 @@ export function cvBulletFromRows(
     id: base.id,
     parent: parentFromRow(base),
     sortOrder: base.sortOrder,
-    importance: readStored(importanceSchema, base.importance, base.id, "importance"),
+    importance: readStored(cvBulletImportanceSchema, base.importance, base.id, "importance"),
     version: base.version,
     translations: localizedSnapshot(
       base.id,
