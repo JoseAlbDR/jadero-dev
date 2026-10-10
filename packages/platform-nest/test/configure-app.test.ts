@@ -8,6 +8,7 @@ import {
 } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
+import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { APP_OPTIONS, configureApp } from "../src/bootstrap/configure-app.js";
 import { LoggingModule } from "../src/logging/logging.module.js";
@@ -81,14 +82,14 @@ describe("configureApp", () => {
       ],
     }).compile();
     const app = createApp(moduleRef);
-    await app.listen(0, "127.0.0.1");
-    const base = await app.getUrl();
+    await app.init();
+    const http = () => request(app.getHttpServer());
     try {
-      expect((await fetch(`${base}/v1/things`)).status).toBe(200);
-      expect((await fetch(`${base}/things`)).status).toBe(404);
-      expect((await fetch(`${base}/ops`)).status).toBe(200);
+      expect((await http().get("/v1/things")).status).toBe(200);
+      expect((await http().get("/things")).status).toBe(404);
+      expect((await http().get("/ops")).status).toBe(200);
       // Neutral means "no version segment", not "any version".
-      expect((await fetch(`${base}/v1/ops`)).status).toBe(404);
+      expect((await http().get("/v1/ops")).status).toBe(404);
     } finally {
       await app.close();
     }

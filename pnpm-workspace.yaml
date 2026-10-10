@@ -36,6 +36,7 @@ catalog:
   "@types/pg": 8.23.1
   "@types/react": 19.3.0
   "@types/react-dom": 19.3.0
+  "@types/supertest": 7.2.1
   class-variance-authority: 0.7.1
   clsx: 2.1.1
   amqp-connection-manager: 5.0.0
@@ -60,6 +61,7 @@ catalog:
   react: 19.3.0
   reflect-metadata: 0.2.2
   rxjs: 7.8.2
+  supertest: 7.3.1
   tailwind-merge: 3.7.0
   tailwindcss: 4.3.3
   testcontainers: 12.2.0

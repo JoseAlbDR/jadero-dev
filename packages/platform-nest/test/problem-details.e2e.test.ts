@@ -1,5 +1,6 @@
 import { type INestApplication, Module } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
+import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { toJsonPointer } from "../src/errors/request-validation.exception.js";
 import { LoggingModule } from "../src/logging/logging.module.js";
@@ -13,7 +14,6 @@ class FixtureModule {}
 describe("problem details (RFC 9457)", () => {
   const stream = memoryStream();
   let app: INestApplication;
-  let base: string;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -28,27 +28,23 @@ describe("problem details (RFC 9457)", () => {
       ],
     }).compile();
     app = createApp(moduleRef);
-    await app.listen(0, "127.0.0.1");
-    base = await app.getUrl();
+    await app.init();
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  async function call(path: string, init?: RequestInit) {
-    const res = await fetch(`${base}${path}`, init);
-    return { res, body: (await res.json()) as Record<string, unknown> };
-  }
+  /** Starts a request against the app; supertest binds a free port for it. */
+  const http = () => request(app.getHttpServer());
 
   it("answers a validation failure with 400 and one pointer per invalid field", async () => {
-    const { res, body } = await call("/__fixtures/echo", {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-request-id": "trace-two-0001" },
-      body: JSON.stringify({ email: "not-an-email", locale: "fr" }),
-    });
-    expect(res.status).toBe(400);
-    expect(res.headers.get("content-type")).toMatch(/^application\/problem\+json/);
+    const { status, headers, body } = await http()
+      .post("/__fixtures/echo")
+      .set("X-Request-Id", "trace-two-0001")
+      .send({ email: "not-an-email", locale: "fr" });
+    expect(status).toBe(400);
+    expect(headers["content-type"]).toMatch(/^application\/problem\+json/);
     expect(body).toEqual({
       type: "https://jadero.dev/problems/validation-failed",
       title: "Request validation failed",
@@ -64,18 +60,16 @@ describe("problem details (RFC 9457)", () => {
   });
 
   it("passes a valid body through to the handler", async () => {
-    const { res, body } = await call("/__fixtures/echo", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email: "ada@example.com", locale: "es" }),
-    });
-    expect(res.status).toBe(201);
+    const { status, body } = await http()
+      .post("/__fixtures/echo")
+      .send({ email: "ada@example.com", locale: "es" });
+    expect(status).toBe(201);
     expect(body).toEqual({ email: "ada@example.com", locale: "es" });
   });
 
   it("keeps the status and message of a 4xx HTTP exception", async () => {
-    const { res, body } = await call("/__fixtures/forbidden");
-    expect(res.status).toBe(403);
+    const { status, body } = await http().get("/__fixtures/forbidden");
+    expect(status).toBe(403);
     expect(body).toMatchObject({
       type: "about:blank",
       title: "Forbidden",
@@ -85,12 +79,10 @@ describe("problem details (RFC 9457)", () => {
   });
 
   it("answers an oversized body with 413, not a 500, and never echoes the query string", async () => {
-    const { res, body } = await call("/__fixtures/echo?email=ada@example.com", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email: "x".repeat(200_000), locale: "es" }),
-    });
-    expect(res.status).toBe(413);
+    const { status, body } = await http()
+      .post("/__fixtures/echo?email=ada@example.com")
+      .send({ email: "x".repeat(200_000), locale: "es" });
+    expect(status).toBe(413);
     expect(body).toMatchObject({
       type: "about:blank",
       title: "Payload Too Large",
@@ -102,8 +94,8 @@ describe("problem details (RFC 9457)", () => {
   });
 
   it("turns an unknown route into a 404 problem", async () => {
-    const { res, body } = await call("/nope?token=secret-value");
-    expect(res.status).toBe(404);
+    const { status, body } = await http().get("/nope?token=secret-value");
+    expect(status).toBe(404);
     expect(body).toMatchObject({
       type: "about:blank",
       title: "Not Found",
@@ -114,10 +106,10 @@ describe("problem details (RFC 9457)", () => {
   });
 
   it("shields an unexpected error: generic 500 to the client, the stack in the error log", async () => {
-    const { res, body } = await call("/__fixtures/boom", {
-      headers: { "x-request-id": "boom-request-01" },
-    });
-    expect(res.status).toBe(500);
+    const { status, body } = await http()
+      .get("/__fixtures/boom")
+      .set("X-Request-Id", "boom-request-01");
+    expect(status).toBe(500);
     expect(body).toEqual({
       type: "about:blank",
       title: "Internal Server Error",

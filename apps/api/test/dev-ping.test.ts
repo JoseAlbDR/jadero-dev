@@ -1,4 +1,5 @@
 import type { INestApplication } from "@nestjs/common";
+import request from "supertest";
 import { afterEach, describe, expect, it } from "vitest";
 import { bootApi } from "./setup/boot.js";
 
@@ -11,17 +12,15 @@ describe("POST /dev/ping", () => {
   });
 
   it("does not exist outside development: anyone could fill the queues", async () => {
-    const booted = await bootApi({ NODE_ENV: "production", DATABASE_URL });
-    app = booted.app;
-    const response = await fetch(`${booted.base}/dev/ping`, { method: "POST" });
+    app = await bootApi({ NODE_ENV: "production", DATABASE_URL });
+    const response = await request(app.getHttpServer()).post("/dev/ping");
     expect(response.status).toBe(404);
   });
 
   it("exists in development (here the database is down, so it fails as a problem, not a 404)", async () => {
-    const booted = await bootApi({ NODE_ENV: "development", DATABASE_URL });
-    app = booted.app;
-    const response = await fetch(`${booted.base}/dev/ping`, { method: "POST" });
+    app = await bootApi({ NODE_ENV: "development", DATABASE_URL });
+    const response = await request(app.getHttpServer()).post("/dev/ping");
     expect(response.status).toBe(500);
-    expect(response.headers.get("content-type")).toContain("application/problem+json");
+    expect(response.headers["content-type"]).toContain("application/problem+json");
   });
 });

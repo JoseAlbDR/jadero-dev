@@ -10,6 +10,7 @@ import { drizzleOn, runMigrations } from "@jadero/platform-nest";
 import type { INestApplication, INestApplicationContext } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import pg from "pg";
+import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ArchiveContentItem } from "../src/modules/content/application/use-cases/archive-content-item.use-case.js";
 import { DeleteKnowledgeEntry } from "../src/modules/content/application/use-cases/delete-knowledge-entry.use-case.js";
@@ -21,7 +22,6 @@ import { contentSeed } from "../src/seed/content-seed-data.js";
 import { SeedModule } from "../src/seed/seed.module.js";
 import { bootApi } from "./setup/boot.js";
 import { CONTENT_READER, createContentTestDatabase } from "./setup/content-database.js";
-import { rawGet } from "./setup/raw-get.js";
 
 // WP-12 step 7a on Postgres: the query service (CQRS read side) and the /v1 routes, reading as the
 // read-only role `content_reader` while the seed writes as the owner. Placeholder content only
@@ -101,7 +101,6 @@ let owner: pg.Pool;
 let readerUrl: string;
 let drop: () => Promise<void>;
 let app: INestApplication;
-let base: string;
 
 /** The version an item is at now, read as the owner. */
 async function versionOf(table: string, id: string): Promise<number> {
@@ -146,7 +145,7 @@ beforeAll(async () => {
     await writer.close();
   }
 
-  ({ app, base } = await bootApi({ DATABASE_URL: database.url, DATABASE_READ_URL: readerUrl }));
+  app = await bootApi({ DATABASE_URL: database.url, DATABASE_READ_URL: readerUrl });
 });
 
 afterAll(async () => {
@@ -155,10 +154,13 @@ afterAll(async () => {
   await drop?.();
 });
 
-/** GETs a path of the running app and parses the JSON body. */
-async function getJson<T>(path: string): Promise<{ res: Response; body: T }> {
-  const res = await fetch(`${base}${path}`);
-  return { res, body: (await res.json()) as T };
+/** Starts a request against the app; supertest binds a free port for it. */
+const http = () => request(app.getHttpServer());
+
+/** GETs a path of the app and types the parsed JSON body. */
+async function getJson<T>(path: string): Promise<{ res: request.Response; body: T }> {
+  const res = await http().get(path);
+  return { res, body: res.body as T };
 }
 
 describe("DrizzleContentQueries on Postgres, as content_reader", () => {
@@ -246,37 +248,37 @@ describe("GET /v1/content over HTTP, against Postgres", () => {
       ["/v1/content/work/kb-sample-message-queue", "en"],
     ];
     for (const [path, language] of routes) {
-      const res = await fetch(`${base}${path}`);
+      const res = await http().get(path);
       expect(res.status, path).toBe(200);
-      expect(res.headers.get("cache-control"), path).toBe(PUBLIC_CACHE_CONTROL);
-      expect(res.headers.get("content-language"), path).toBe(language);
+      expect(res.headers["cache-control"], path).toBe(PUBLIC_CACHE_CONTROL);
+      expect(res.headers["content-language"], path).toBe(language);
     }
   });
 
   it("answers a matching If-None-Match with 304 and no body", async () => {
-    const url = `${base}/v1/content/en/projects/sample-case-study`;
-    const first = await rawGet(url);
+    const path = "/v1/content/en/projects/sample-case-study";
+    const first = await http().get(path);
     expect(first.status).toBe(200);
-    const again = await rawGet(url, { "if-none-match": String(first.headers.etag) });
+    const again = await http().get(path).set("If-None-Match", String(first.headers.etag));
     expect(again.status).toBe(304);
-    expect(again.body).toBe("");
+    expect(again.text).toBe("");
     expect(again.headers["cache-control"]).toBe(PUBLIC_CACHE_CONTROL);
   });
 
   it("serves a German detail from the English slug only when German is not published", async () => {
     const fallback = await getJson<ProjectDto>("/v1/content/de/projects/sample-project");
-    expect(fallback.res.headers.get("content-language")).toBe("en");
+    expect(fallback.res.headers["content-language"]).toBe("en");
     expect(fallback.body).toMatchObject({ locale: "en", slug: "sample-project" });
     // The case study has a German version, so its English slug is not a German page.
-    const res = await fetch(`${base}/v1/content/de/projects/sample-case-study`);
+    const res = await http().get("/v1/content/de/projects/sample-case-study");
     expect(res.status).toBe(404);
-    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers["cache-control"]).toBe("no-store");
   });
 
   it("hides an archived project from the list and its page", async () => {
     const { body } = await getJson<ProjectListDto>("/v1/content/en/projects");
     expect(body.items.map((item) => item.slug)).not.toContain("archived-project");
-    expect((await fetch(`${base}/v1/content/en/projects/archived-project`)).status).toBe(404);
+    expect((await http().get("/v1/content/en/projects/archived-project")).status).toBe(404);
   });
 
   it("pages the posts with the opaque cursor", async () => {
@@ -290,20 +292,20 @@ describe("GET /v1/content over HTTP, against Postgres", () => {
   });
 
   it("never sends an entry's private provenance, nor a hidden entry", async () => {
-    const res = await fetch(`${base}/v1/content/work/kb-sample-message-queue`);
-    const text = await res.text();
+    const res = await http().get("/v1/content/work/kb-sample-message-queue");
+    const text = res.text;
     for (const name of ["sources", "conflicts", "publicNames", "public_names", "confidence"]) {
       expect(text).not.toContain(name);
     }
     expect((JSON.parse(text) as KnowledgeEntryDto).cvBullet).toBe("sample-backend-1");
-    expect((await fetch(`${base}/v1/content/work/kb-sample-withdrawn`)).status).toBe(404);
-    expect((await fetch(`${base}/v1/content/work/kb-sample-deleted`)).status).toBe(404);
+    expect((await http().get("/v1/content/work/kb-sample-withdrawn")).status).toBe(404);
+    expect((await http().get("/v1/content/work/kb-sample-deleted")).status).toBe(404);
   });
 
   it("is a 400 for an unknown locale, and keeps /health unversioned", async () => {
-    expect((await fetch(`${base}/v1/content/fr/projects`)).status).toBe(400);
-    expect((await fetch(`${base}/health/ready`)).status).toBe(200);
-    expect((await fetch(`${base}/v1/health/ready`)).status).toBe(404);
+    expect((await http().get("/v1/content/fr/projects")).status).toBe(400);
+    expect((await http().get("/health/ready")).status).toBe(200);
+    expect((await http().get("/v1/health/ready")).status).toBe(404);
   });
 });
 
