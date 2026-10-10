@@ -1,23 +1,48 @@
 {
   "Metadata": {
     "title": "jadero.dev",
-    "description": "Persönliche Website und Portfolio eines Softwareentwicklers."
+    "description": "Persönliche Website und Portfolio eines Softwareentwicklers.",
+    "titleTemplate": "%s · jadero.dev"
   },
   "HomePage": {
     "eyebrow": "Version 2",
     "title": "jadero.dev",
     "lead": "Die neue Version dieser Website ist im Aufbau."
   },
+  "ExperiencePage": {
+    "metaTitle": "Erfahrung",
+    "metaDescription": "Stationen, Zeiträume und was ich jeweils gemacht habe, mit der Arbeit hinter jedem Punkt.",
+    "eyebrow": "Erfahrung",
+    "title": "Wo ich gearbeitet habe",
+    "lead": "Jede Station mit den Punkten aus meinem Lebenslauf, die wichtigsten zuerst. Frag nach jedem davon.",
+    "empty": "Noch keine Erfahrung veröffentlicht.",
+    "period": "<from>{fromLabel}</from> – <to>{toLabel}</to>",
+    "present": "heute",
+    "location": {
+      "remote": "Remote",
+      "hybrid": "Hybrid",
+      "onsite": "Vor Ort"
+    },
+    "stack": "Technologien",
+    "highlights": "Schwerpunkte",
+    "ask": "Danach fragen"
+  },
   "NotFound": {
     "title": "Seite nicht gefunden",
     "description": "Die gesuchte Seite existiert nicht."
+  },
+  "ErrorPage": {
+    "title": "Diese Seite konnte nicht geladen werden",
+    "description": "Bei uns ist etwas schiefgelaufen. Bitte versuche es gleich noch einmal.",
+    "retry": "Erneut versuchen"
   },
   "Header": {
     "home": "Startseite"
   },
   "Nav": {
     "label": "Hauptnavigation",
-    "home": "Startseite"
+    "home": "Startseite",
+    "experience": "Erfahrung"
   },
   "Footer": {
     "copyright": "© {year} jadero.dev",

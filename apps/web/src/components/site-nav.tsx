@@ -8,7 +8,10 @@ import { Link, usePathname } from "@/i18n/navigation";
  * The main navigation, in display order. Only pages that exist are listed: each WP-16 page adds
  * its entry together with its localized pathname in `routing.pathnames`.
  */
-const NAV_ITEMS = [{ href: "/", key: "home" }] as const;
+const NAV_ITEMS = [
+  { href: "/", key: "home" },
+  { href: "/experience", key: "experience" },
+] as const;
 
 /**
  * Main navigation of the header; the current page is marked with `aria-current` and the signal

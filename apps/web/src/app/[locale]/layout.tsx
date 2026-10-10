@@ -30,8 +30,10 @@ export function generateStaticParams() {
 }
 
 /**
- * Base URL, title and description shared by every page of a locale. Canonical and hreflang links
- * are per page (`localeAlternates`), never here, or every page would inherit the home's.
+ * Base URL, title and description shared by every page of a locale. A page's own title goes into
+ * the localized template (`Experience · jadero.dev`); a page without one gets the site title.
+ * Canonical and hreflang links are per page (`localeAlternates`), never here, or every page would
+ * inherit the home's.
  * @param props.params the route params with the locale segment.
  */
 export async function generateMetadata({
@@ -41,7 +43,7 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: "Metadata" });
   return {
     metadataBase: SITE_URL,
-    title: t("title"),
+    title: { default: t("title"), template: t("titleTemplate") },
     description: t("description"),
   };
 }

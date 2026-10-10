@@ -1,0 +1,78 @@
+{
+  "en": {
+    "items": [
+      {
+        "locale": "en",
+        "organization": "Example Co",
+        "role": "Backend engineer",
+        "period": { "from": "2024-09", "to": null },
+        "locationType": "remote",
+        "stackTags": ["NestJS", "PostgreSQL", "RabbitMQ"],
+        "bullets": [
+          {
+            "id": "backend-10",
+            "text": "Built an outbox relay so events leave the database exactly when the change commits.",
+            "entryIds": ["kb-outbox-relay"]
+          },
+          {
+            "id": "backend-11",
+            "text": "Moved slow reports to a background worker.",
+            "entryIds": []
+          }
+        ]
+      },
+      {
+        "locale": "en",
+        "organization": "Example Studio",
+        "role": "Developer",
+        "period": { "from": "2022-03", "to": "2024-08" },
+        "locationType": "hybrid",
+        "stackTags": [],
+        "bullets": []
+      }
+    ]
+  },
+  "es": {
+    "items": [
+      {
+        "locale": "es",
+        "organization": "Empresa de ejemplo",
+        "role": "Ingeniero de backend",
+        "period": { "from": "2024-09", "to": null },
+        "locationType": "remote",
+        "stackTags": ["NestJS", "PostgreSQL", "RabbitMQ"],
+        "bullets": [
+          {
+            "id": "backend-10",
+            "text": "Construí un relé de outbox para que los eventos salgan de la base de datos justo cuando se confirma el cambio.",
+            "entryIds": ["kb-outbox-relay"]
+          },
+          {
+            "id": "backend-11",
+            "text": "Llevé los informes lentos a un worker en segundo plano.",
+            "entryIds": []
+          }
+        ]
+      }
+    ]
+  },
+  "de": {
+    "items": [
+      {
+        "locale": "en",
+        "organization": "Example Co",
+        "role": "Backend engineer",
+        "period": { "from": "2024-09", "to": null },
+        "locationType": "onsite",
+        "stackTags": ["NestJS"],
+        "bullets": [
+          {
+            "id": "backend-10",
+            "text": "Built an outbox relay so events leave the database exactly when the change commits.",
+            "entryIds": ["kb-outbox-relay"]
+          }
+        ]
+      }
+    ]
+  }
+}

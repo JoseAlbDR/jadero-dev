@@ -12,6 +12,7 @@ export const routing = defineRouting({
   localePrefix: "always",
   pathnames: {
     "/": "/",
+    "/experience": { en: "/experience", es: "/experiencia", de: "/erfahrung" },
     // WP-15 throwaway mockups; removed once the owner picks a direction.
     "/mockups": "/mockups",
     "/mockups/terminal": "/mockups/terminal",
