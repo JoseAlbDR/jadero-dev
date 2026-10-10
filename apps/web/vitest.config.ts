@@ -8,6 +8,11 @@ export default mergeConfig(
   baseConfig(),
   defineConfig({
     resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
-    test: { include: ["src/**/*.test.{ts,tsx}", "test/**/*.test.{ts,tsx}"] },
+    test: {
+      include: ["src/**/*.test.{ts,tsx}", "test/**/*.test.{ts,tsx}"],
+      // next-intl's ESM build imports `next/server` without an extension, which Node's resolver
+      // refuses; inlined, Vite resolves it the way Next does (needed by the proxy test).
+      server: { deps: { inline: ["next-intl"] } },
+    },
   }),
 );

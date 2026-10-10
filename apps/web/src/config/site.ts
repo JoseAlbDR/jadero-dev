@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 /**
- * The public origin used for canonical and hreflang links. Pages are prerendered, so this is read
- * at build time and baked into the HTML: set `SITE_URL` before `next build`, not at `start`.
- * A malformed value fails the build instead of producing broken links.
+ * The public origin used for canonical and hreflang links. Pages render per request (CSP nonce,
+ * ADR-047), so the server reads `SITE_URL` when it loads: set it where the server starts. The build
+ * reads it too, so a malformed value fails `next build` instead of producing broken links.
  */
 export const SITE_URL = new URL(
   z
@@ -32,4 +32,25 @@ export function contentApiUrl(): string {
     );
   }
   return parsed.data.replace(/\/+$/, "");
+}
+
+const cspModeSchema = z.enum(["report-only", "enforce"]).default("report-only");
+
+/** How the browser applies the Content-Security-Policy (ADR-047): report it only, or enforce it. */
+export type CspMode = z.infer<typeof cspModeSchema>;
+
+/**
+ * Mode of the nonce-based CSP (`CSP_MODE`), read per request by the proxy. ADR-047 rolls the policy
+ * out report-only first (`Content-Security-Policy-Report-Only`: the browser logs a violation but
+ * still runs the script) and enforces it once the reports are clean; switching is this one value.
+ * @returns `report-only` when `CSP_MODE` is unset or empty, else the parsed value.
+ * @throws {Error} when `CSP_MODE` holds anything else, so a typo fails loudly instead of silently
+ *   picking a mode.
+ */
+export function cspMode(): CspMode {
+  const parsed = cspModeSchema.safeParse(process.env.CSP_MODE || undefined);
+  if (!parsed.success) {
+    throw new Error('CSP_MODE must be "report-only" or "enforce"');
+  }
+  return parsed.data;
 }

@@ -5,7 +5,7 @@ import en from "../messages/en.json" with { type: "json" };
 import es from "../messages/es.json" with { type: "json" };
 
 const LOCALES = { en, es, de } as const;
-// The build bakes SITE_URL into the prerendered HTML; the default matches src/config/site.ts.
+// The server puts SITE_URL in canonical and hreflang links; the default matches src/config/site.ts.
 const SITE = (process.env.SITE_URL ?? "https://jadero.dev").replace(/\/$/, "");
 
 /**
@@ -15,9 +15,13 @@ const SITE = (process.env.SITE_URL ?? "https://jadero.dev").replace(/\/$/, "");
  * @param page the page under test, already loaded.
  */
 async function expectAccessible(page: Page): Promise<void> {
-  await page.addStyleTag({
-    content: "[data-aurora], .mockup-dot-grid, .mockup-aurora { display: none !important; }",
-  });
+  // A constructed stylesheet, not a <style> tag: the enforced CSP (ADR-047) blocks an inline style
+  // without the nonce, test helpers included.
+  await page.evaluate((css) => {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(css);
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+  }, "[data-aurora], .mockup-dot-grid, .mockup-aurora { display: none !important; }");
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();

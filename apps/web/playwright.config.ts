@@ -2,8 +2,9 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
 
-// `next build` reads `.env` and bakes SITE_URL into the pages; the tests must expect the same value,
-// so load the same file here. Variables already set in the shell win (loadEnvFile never overrides).
+// The server reads SITE_URL at request time for canonical and hreflang links; the tests must expect
+// the same value, so load `.env` here and hand it to the server. Variables already set in the shell
+// win (loadEnvFile never overrides).
 const envFile = fileURLToPath(new URL(".env", import.meta.url));
 if (existsSync(envFile)) {
   process.loadEnvFile(envFile);
@@ -29,7 +30,13 @@ export default defineConfig({
   projects: [{ name: "chrome", use: { ...devices["Desktop Chrome"], channel: "chrome" } }],
   webServer: {
     command: "node .next/standalone/apps/web/server.js",
-    env: { PORT: String(PORT), HOSTNAME: "127.0.0.1" },
+    // CSP_MODE=enforce runs the suite under the enforced CSP (ADR-047); unset, it is report-only.
+    env: {
+      PORT: String(PORT),
+      HOSTNAME: "127.0.0.1",
+      ...(process.env.SITE_URL ? { SITE_URL: process.env.SITE_URL } : {}),
+      ...(process.env.CSP_MODE ? { CSP_MODE: process.env.CSP_MODE } : {}),
+    },
     url: `http://127.0.0.1:${PORT}/en`,
     reuseExistingServer: false,
     timeout: 30_000,

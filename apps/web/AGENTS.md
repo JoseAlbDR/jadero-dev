@@ -7,22 +7,23 @@ The public multilingual site (ADR-001, ADR-022, ADR-045, which supersedes ADR-02
 ## Run it
 
 ```sh
-cp apps/web/.env.example apps/web/.env   # once; SITE_URL, read at build time for canonical and hreflang links
+cp apps/web/.env.example apps/web/.env   # once; SITE_URL for canonical and hreflang links, CSP_MODE
 pnpm --filter @jadero/web dev            # next dev on port 3000
 pnpm --filter @jadero/web build          # standalone output, assets copied next to server.js
 pnpm --filter @jadero/web start          # node .next/standalone/apps/web/server.js, as the image will
 pnpm test:e2e                            # from the root: build, then Playwright and axe in Chrome
 ```
 
-`playwright.config.ts` loads `apps/web/.env` when it exists, so the tests expect the same `SITE_URL` the build baked into the pages (canonical and hreflang links). A `SITE_URL` exported in the shell wins over the file.
+`playwright.config.ts` loads `apps/web/.env` when it exists and hands `SITE_URL` and `CSP_MODE` to the server, so the tests expect the same `SITE_URL` the server puts in canonical and hreflang links. A value exported in the shell wins over the file. `CSP_MODE=enforce pnpm test:e2e` runs the suite under the enforced CSP.
 
 ## Layout
 
-- `src/proxy.ts`: the next-intl middleware (Next 16 calls it proxy). A path without a locale gets a 307 to the cookie locale, else Accept-Language, else `en`.
+- `src/proxy.ts` (Next 16's name for middleware): per request, a fresh nonce and the CSP built with it, then the next-intl middleware. A path without a locale gets a 307 to the cookie locale, else Accept-Language, else `en`; that `Location` passes the open-redirect rule first.
+- `src/security/`: `csp.ts` (nonce, the strict CSP of ADR-047, header name per mode) and `redirect.ts` (`safeRedirectTarget`: a redirect built from request input goes only to a same-site path or a `REDIRECT_ALLOWLIST` origin; every redirect, the cutover 301s included, goes through it).
 - `src/i18n/`: `routing.ts` (locales, default, cookie, localized pathnames), `navigation.ts` (use its `Link` and `usePathname`, never `next/link`), `request.ts` (messages per request), `locale.ts` (`requireLocale`), `alternates.ts` (`localeAlternates`), `global.d.ts` (typed keys from `messages/en.json`).
-- `src/app/[locale]/`: the locale layout (`<html lang>`, metadata with hreflang, providers, header), the home, the localized 404 and a catch-all that triggers it. `src/app/layout.tsx` only passes children through.
+- `src/app/[locale]/`: the locale layout (`connection()`, the nonce for the theme script, `<html lang>`, metadata, providers, header), the home, the localized 404 and a catch-all that triggers it. `src/app/layout.tsx` only passes children through.
 - `src/components/`: app components (header and its nav, footer, theme provider and toggle, locale switcher). Reusable, text-free components go to `packages/ui` (`Button`, the glass `Card` with its `tile` and `wide` variants, the `Aurora` background).
-- `src/content/api.ts`: the client of the public content API (`/v1/content`), for Server Components only. One function per endpoint; each response is parsed with its `@jadero/contracts` schema and cached by `fetch` for 60 s under content tags (`content:projects`, `content:projects:<slug>`, ...) that `revalidateTag` can drop. A 404 problem body calls `notFound()`; any other failure throws a `ContentApiError` that names the resource only, never the URL or a body. A page that uses it calls `connection()` first (nonce-based CSP, `docs/learning/wp-16.md`), never `force-dynamic`.
+- `src/content/api.ts`: the client of the public content API (`/v1/content`), for Server Components only. One function per endpoint; each response is parsed with its `@jadero/contracts` schema and cached by `fetch` for 60 s under content tags (`content:projects`, `content:projects:<slug>`, ...) that `revalidateTag` can drop. A 404 problem body calls `notFound()`; any other failure throws a `ContentApiError` that names the resource only, never the URL or a body. The `fetch` cache still applies to pages rendered per request.
 - The layout loads Geist and Geist Mono from the `geist` package (`next/font/local`, self-hosted, no font CDN) and sets their variables on `<html>`; the tokens in `packages/ui/src/theme.css` point `font-sans` and `font-mono` at them.
 - `src/app/[locale]/mockups/`: the WP-15 hero mockups (`/mockups/terminal`, `/editorial`, `/bento`, `/hybrid`, `/bento-agent`), throwaway and `noindex`. Each overrides the tokens in `mockups.css` through its `data-direction`; the owner picked `/bento-agent` (ADR-045). WP-16 deletes the folder, its six `routing.pathnames` entries, the `Mockups` messages, its e2e block, this line and the code-map mentions, after promoting the agent terminal card and the tokens.
 - `messages/{en,es,de}.json`: every UI string. `test/messages.test.ts` fails when a locale's keys differ from English or a string is empty.
@@ -31,9 +32,11 @@ pnpm test:e2e                            # from the root: build, then Playwright
 ## Rules that bite here
 
 - No hard-coded UI strings: add the key to all three message files (the test and the typed keys catch a miss).
-- A new page adds its localized pathname to `routing.pathnames` (`/es/proyectos`, `/de/projekte`), calls `setRequestLocale` and stays static.
+- A new page adds its localized pathname to `routing.pathnames` (`/es/proyectos`, `/de/projekte`) and calls `setRequestLocale`.
+- Every page is rendered per request because of the CSP nonce (ADR-047, `docs/learning/wp-16.md`): the locale layout calls `connection()` once, for every route under it. Data is cached with `fetch` `revalidate` and tags (`src/content/api.ts`). Never `export const dynamic = "force-dynamic"`: it drops that cache.
+- The CSP is report-only until `CSP_MODE=enforce`. An inline `<script>` or `<style>` needs the nonce (Next adds it to its own tags; `headers().get("x-nonce")` gives it to anything else), and a `style` attribute in server HTML is blocked outright (no nonce covers it): use classes.
 - Colors and radii come from the tokens in `packages/ui/src/theme.css` (`bg-background`, `text-muted-foreground`); no raw color values in components.
-- App code (`src/`) reads the environment only in `src/config/site.ts`. `SITE_URL` is baked in at build time (pages are prerendered): set it before `next build`; Turborepo hashes it and `.env*`. `CONTENT_API_URL` is server only and read at request time (`contentApiUrl()`); it has no default, so a missing value fails the content fetch with a clear error.
+- App code (`src/`) reads the environment only in `src/config/site.ts`. `SITE_URL` is read when the server starts (pages render per request): set it where the server runs; the build checks it too. `CSP_MODE` (`report-only` by default, or `enforce`) is read per request by the proxy. `CONTENT_API_URL` is server only and read at request time (`contentApiUrl()`); it has no default, so a missing value fails the content fetch with a clear error.
 - Colors, glass and the aurora come from tokens and utilities (`text-signal`, `bg-term`, `glass`, `aurora`, `rounded-card`); accessibility checks hide `[data-aurora]` so contrast is measured on the solid surface (ADR-045).
 - Every page sets its own canonical and hreflang links with `localeAlternates` in its `generateMetadata`; the layout sets none.
 - The map of this app is section 7 of `docs/architecture/code-map.html`; update it when the request path changes.
