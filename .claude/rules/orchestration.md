@@ -19,7 +19,7 @@ The main session keeps only what needs its context: teaching, decisions, challen
 | The last step of a WP is committed | `/wrap-wp N` |
 | The owner asks why or how something works | `/explain <topic>` in the main session |
 | A design choice is made or changed | `/adr <title>` |
-| A `chore/` PR changes a generic process file (`docs/process/project-kit.md`, "How it stays in sync") | port it to `project-kit`, or add a line to `docs/process/kit-backlog.md` |
+| A `chore/` PR changes a generic process file (`docs/process/project-kit.md`, "How it stays in sync") | open the port PR in `project-kit` at the same time (clone it to the scratchpad when it is not attached); the backlog only for a port that cannot be done at once |
 | The last step of a learning WP | the journal draft in `/wrap-wp` (an agent writes `docs/journal/wp-N.md`, the owner corrects) |
 | A step is closed (check question answered and logged, branch pushed) | print the ready-to-copy `/compact` line of `/step` step 7, so the main session does not carry finished steps |
 | A release milestone is closed | the owner runs `/teach` once on that release's themes in `docs/learning/study-backlog.md` (`docs/sessions.md`, "Study a release") |
