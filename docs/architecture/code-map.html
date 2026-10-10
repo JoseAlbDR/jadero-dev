@@ -259,7 +259,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
   <header class="top">
     <div class="eyebrow">jadero.dev v2 · monorepo · NestJS 12 on Node 24</div>
     <h1>Code map</h1>
-    <p class="lede">How the repo fits together today: which package depends on which, what the <code>api</code> container injects at runtime, the two module shapes new code copies, how <code>api</code> boots, what a request passes through and how one trace id follows it, how the build, <code>pnpm dev</code> and the checks run, what a page request passes through in <code>web</code>, how an event crosses the broker from <code>api</code> to <code>agent</code>, and how each service reaches its own database: the connection, one transaction per use case, the unit of work, the migrations and the two database roles of <code>api</code>, and how the content module is layered behind the public read API. Click or tap any box for what it is, how it works, why it was built this way, and where the code lives. Arrows start faded: pick one or more boxes in a graph's Focus row (or click them) to see only their arrows, and switch arrow kinds off under Layers.</p>
+    <p class="lede">How the repo fits together today: which package depends on which, what the <code>api</code> container injects at runtime, the two module shapes new code copies, how <code>api</code> boots, what a request passes through and how one trace id follows it, how the build, <code>pnpm dev</code> and the checks run, what a page request passes through in <code>web</code> and how its server reads content from <code>api</code>, how an event crosses the broker from <code>api</code> to <code>agent</code>, and how each service reaches its own database: the connection, one transaction per use case, the unit of work, the migrations and the two database roles of <code>api</code>, and how the content module is layered behind the public read API. Click or tap any box for what it is, how it works, why it was built this way, and where the code lives. Arrows start faded: pick one or more boxes in a graph's Focus row (or click them) to see only their arrows, and switch arrow kinds off under Layers.</p>
   </header>
   <nav class="toc" id="toc" aria-label="Sections"></nav>
   <main id="sections"></main>
@@ -285,7 +285,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 <script type="application/json" id="map-data">
 {
   "meta": {
-    "lastUpdated": "after WP-12 · content domain and public API, 2026-10-10",
+    "lastUpdated": "during WP-16 · site pages on the content API, 2026-10-11",
     "kinds": {
       "app": "deployable app", "pkg": "library package", "module": "Nest module", "provider": "provider",
       "token": "DI token", "ext": "external library", "global": "app-level wiring", "env": "environment",
@@ -300,7 +300,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "figures": [
         {
           "type": "graph", "title": "Workspace packages and their workspace:* dependencies", "viewBox": [1000, 720],
-          "caption": "api depends on platform-nest at runtime and on config for its tsconfig and Vitest base; platform-nest and the module template depend on config the same way. Since WP-10 the template also depends on platform-nest (the database tokens and `withTransaction`) and on messaging (`uuidv7`). Since WP-12 api, agent, messaging and the template take `@jadero/testing` as a dev dependency for their integration tests (the Postgres global setup and one database per test file). The template is a workspace package so pnpm verify checks it, but nothing deploys it. Red dotted arrows are imports that dependency-cruiser forbids.",
+          "caption": "api depends on platform-nest at runtime and on config for its tsconfig and Vitest base; platform-nest and the module template depend on config the same way. Since WP-10 the template also depends on platform-nest (the database tokens and `withTransaction`) and on messaging (`uuidv7`). Since WP-12 api, agent, messaging and the template take `@jadero/testing` as a dev dependency for their integration tests (the Postgres global setup and one database per test file). Since WP-16 web depends on contracts at runtime: it parses every content API answer with the same Zod schemas api answers with. The template is a workspace package so pnpm verify checks it, but nothing deploys it. Red dotted arrows are imports that dependency-cruiser forbids.",
           "lanes": [
             { "x": 8, "y": 30, "w": 984, "h": 150, "label": "apps/ · deployables" },
             { "x": 8, "y": 262, "w": 984, "h": 250, "label": "packages/ · libraries" },
@@ -327,6 +327,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             { "from": "ws-agent-pkg", "to": "ext-nest-db", "label": "never", "kind": "forbidden", "ref": "rule-ai-agent-no-nest" },
             { "from": "ws-web", "to": "ws-ui", "label": "workspace:*", "kind": "dep", "via": [[660, 240], [660, 398], [470, 398]], "labelAt": [660, 288] },
             { "from": "ws-web", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "via": [[660, 240], [660, 500], [260, 500]], "hideLabel": true },
+            { "from": "ws-web", "to": "ws-contracts", "label": "workspace:*", "kind": "dep", "via": [[720, 250], [450, 250]], "hideLabel": true },
             { "from": "ws-ui", "to": "ws-config", "label": "workspace:* (dev)", "kind": "dev", "hideLabel": true },
             { "from": "ws-api", "to": "ws-messaging", "label": "workspace:*", "kind": "dep", "hideLabel": true },
             { "from": "ws-api", "to": "ws-contracts", "label": "workspace:*", "kind": "dep", "hideLabel": true },
@@ -622,16 +623,56 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     {
       "id": "web", "eyebrow": "7 · Web", "title": "What a page request passes through in web",
-      "intro": "apps/web is a Next.js 16 App Router app with next-intl. Every URL carries its locale (/en, /es, /de); the proxy sends anything else to one. Pages are prerendered once per locale at build time and served by the standalone server.js. No call to api yet: content arrives in WP-16.",
+      "intro": "apps/web is a Next.js 16 App Router app with next-intl. Every URL carries its locale (/en, /es, /de); the proxy sends anything else to one. Since WP-16 every page renders per request, because each response carries a fresh CSP nonce, and the content pages read api's public content API while they render on the server (section 10). The browser never calls api. Pick an example to see which steps it touches; the amber step only runs when a content call fails.",
       "figures": [
         {
           "type": "steps", "title": "Page request in web",
-          "steps": ["w-proxy", "w-layout", "w-messages", "w-providers", "w-page"],
+          "steps": ["w-proxy", "w-layout", "w-messages", "w-providers", "w-page", "w-content", "w-markdown", "w-error"],
           "examples": [
-            { "id": "ex-web-redirect", "label": "No locale in the path", "path": ["w-proxy"], "request": "GET /\naccept-language: de-DE,de;q=0.9", "response": "HTTP/1.1 307 Temporary Redirect\nlocation: /de\nlink: <https://jadero.dev/en>; rel=\"alternate\"; hreflang=\"en\", ..." },
-            { "id": "ex-web-page", "label": "A locale home", "path": ["w-proxy", "w-layout", "w-messages", "w-providers", "w-page"], "request": "GET /es\naccept-language: en", "response": "HTTP/1.1 200 OK\nset-cookie: NEXT_LOCALE=es; Path=/; SameSite=lax\n\n<html lang=\"es\">\n<link rel=\"canonical\" href=\"https://jadero.dev/es\"/>\n<link rel=\"alternate\" hrefLang=\"de\" href=\"https://jadero.dev/de\"/>\n...\n<h1>jadero.dev</h1>" },
+            { "id": "ex-web-redirect", "label": "No locale in the path", "path": ["w-proxy"], "request": "GET /\nhost: jadero.dev\naccept-language: de-DE,de;q=0.9", "response": "HTTP/1.1 307 Temporary Redirect\nlocation: https://jadero.dev/de\ncontent-security-policy-report-only: default-src 'self'; script-src 'nonce-Q2hhbmdlc0V2ZXJ5VGltZQ==' 'strict-dynamic'; style-src 'self' 'nonce-...'; ...\nlink: <https://jadero.dev/en>; rel=\"alternate\"; hreflang=\"en\", ...", "note": "next-intl builds the target from the request URL, Host header included. The proxy passes it through `safeRedirectTarget` and resolves it on the `SITE_URL` origin, so a request with `host: evil.example` still gets `location: https://jadero.dev/de`. Source: apps/web/test/proxy.test.ts." },
+            { "id": "ex-web-page", "label": "A locale home", "path": ["w-proxy", "w-layout", "w-messages", "w-providers", "w-page"], "request": "GET /es\naccept-language: en", "response": "HTTP/1.1 200 OK\nset-cookie: NEXT_LOCALE=es; Path=/; SameSite=lax\ncontent-security-policy-report-only: default-src 'self'; script-src 'nonce-...' 'strict-dynamic'; ...\n\n<html lang=\"es\" class=\"...geist sans and mono variables...\">\n<link rel=\"canonical\" href=\"https://jadero.dev/es\"/>\n<link rel=\"alternate\" hrefLang=\"de\" href=\"https://jadero.dev/de\"/>\n...\n<script nonce=\"...\">/* next-themes */<\/script>\n<h1>jadero.dev</h1>", "note": "The home is still a placeholder card and calls no API. It renders per request anyway: `connection()` in the locale layout makes every route under it wait for the request, so the nonce in the header matches the one on the scripts." },
+            { "id": "ex-web-experience", "label": "Experience page", "path": ["w-proxy", "w-layout", "w-messages", "w-providers", "w-page", "w-content"], "request": "GET /es/experiencia\n\n(server side, while the page renders)\nGET http://localhost:3001/v1/content/es/experience\naccept: application/json", "response": "HTTP/1.1 200 OK\ncontent-security-policy-report-only: ...\n\n<html lang=\"es\">\n<title>Experiencia · jadero.dev</title>\n<link rel=\"alternate\" hrefLang=\"de\" href=\"https://jadero.dev/de/erfahrung\"/>\n...\n<ol> one item per role, its CV bullets under it </ol>", "note": "next-intl rewrites the localized pathname `/es/experiencia` to the route `/es/experience`. The page calls `getExperience(\"es\")`: Next's fetch cache keeps the answer 60 s under the tag `content:experience`, so a second visit within the minute makes no call. The body is parsed with `experienceListDto` from `@jadero/contracts` before the page sees it." },
+            { "id": "ex-web-project", "label": "Case study with Markdown", "path": ["w-proxy", "w-layout", "w-messages", "w-providers", "w-page", "w-content", "w-markdown"], "request": "GET /en/projects/message-relay\n\n(server side)\nGET .../v1/content/en/projects\n    tags: content:projects\nGET .../v1/content/en/projects/message-relay\n    tags: content:projects, content:projects:message-relay", "response": "HTTP/1.1 200 OK\n\n<p>Case study</p>\n<h1>Message relay</h1>\n...\n<h2>Problem</h2>\n<div role=\"note\"><p>The change and its event are saved <strong>together</strong>, in one transaction.</p></div>\n<table>...</table>\n<a href=\"https://example.com/...\" rel=\"noopener noreferrer\">pattern</a>", "note": "`loadProjectPage` first reads the unfiltered list to check that the slug is this locale's, then the item. The body is Markdown: `:::callout` becomes the fixed Callout component, a GitHub table stays a table, the external link gets `rel`. Raw HTML, a `<script>`, a `javascript:` link or a `style` attribute never survives the pipeline. Source: apps/web/test/markdown.test.tsx and e2e/projects.spec.ts." },
+            { "id": "ex-web-slug", "label": "Another locale's slug", "path": ["w-proxy", "w-layout", "w-messages", "w-providers", "w-page", "w-content"], "request": "GET /de/projekte/relay-de-mensajes", "response": "HTTP/1.1 307 Temporary Redirect\nlocation: /de/projekte/nachrichten-relay", "note": "The locale switcher keeps the current slug, so it lands here with the Spanish one. The German list has no item with that slug, but one item lists it in its `alternates`, so the page redirects to the German slug. The target goes through `safeRedirectTarget` too, even though it was built from API data. 307, not 308: a slug can change when a translation is published." },
+            { "id": "ex-web-project-404", "label": "Unknown slug 404", "path": ["w-proxy", "w-layout", "w-messages", "w-providers", "w-page", "w-content"], "request": "GET /en/projects/nope\n\n(server side)\nGET .../v1/content/en/projects/nope\n-> 404 application/problem+json", "response": "HTTP/1.1 404 Not Found\n\n<html lang=\"en\">\n<h1>Page not found</h1>", "note": "Only a 404 that carries the API's problem body becomes `notFound()`. A 404 from a wrong `CONTENT_API_URL` or a proxy in front has no problem body and surfaces as an error instead of a quiet missing page. A slug the contract refuses (the `slug` schema) is a 404 before any call." },
+            { "id": "ex-web-api-down", "label": "API unreachable", "path": ["w-proxy", "w-layout", "w-messages", "w-providers", "w-page", "w-content", "w-error"], "request": "GET /en/experience\n\n(server side)\nGET http://localhost:3001/v1/content/en/experience\n-> ECONNREFUSED", "response": "<html lang=\"en\">\n<header>...</header>\n<h1>This page could not load</h1>\n<p>Something went wrong on our side. Please try again in a moment.</p>\n<button>Try again</button>\n<footer>...</footer>", "note": "The client throws `ContentApiError(\"experience\", null, \"Content API unreachable for experience\")`: it names the resource only, never the URL, the host or a body. The locale's `error.tsx` catches it inside the layout, so the header and footer stay, and it prints no detail. Try again re-renders the page, which fetches again. Source: apps/web/test/content-api.test.ts." },
             { "id": "ex-web-404", "label": "Unknown path in a locale", "path": ["w-proxy", "w-layout", "w-messages", "w-providers", "w-page"], "request": "GET /de/nope", "response": "HTTP/1.1 404 Not Found\n\n<html lang=\"de\">\n<h1>Seite nicht gefunden</h1>" }
           ]
+        },
+        {
+          "type": "graph",
+          "title": "Where a content page gets its data",
+          "viewBox": [1000, 400],
+          "caption": "Solid arrows are what runs today. The page asks the content client, the client asks Next's fetch cache, and only a miss or a stale entry goes to api over HTTP (server to server, never from the browser). Every answer is parsed with its contract schema before the page sees it. The dashed arrow is WP-14: a consumer that drops a tag with `revalidateTag` when content is published, so a change shows before the 60 s run out.",
+          "lanes": [
+            { "x": 8, "y": 10, "w": 984, "h": 250, "label": "apps/web · server, while the page renders" },
+            { "x": 8, "y": 280, "w": 560, "h": 110, "label": "packages/" },
+            { "x": 588, "y": 280, "w": 404, "h": 110, "label": "apps/api · public read API" }
+          ],
+          "place": {
+            "w-page": [24, 50, 190, 60],
+            "w-content": [300, 50, 220, 60],
+            "w-g-cache": [620, 50, 200, 60],
+            "w-g-revalidate": [620, 170, 200, 60],
+            "w-markdown": [24, 170, 190, 60],
+            "w-error": [300, 170, 220, 60],
+            "ws-contracts": [300, 316, 220, 60],
+            "di-lcc": [620, 316, 240, 60]
+          },
+          "edges": [
+            { "from": "w-page", "to": "w-content", "label": "getProject()", "kind": "flow" },
+            { "from": "w-content", "to": "w-g-cache", "label": "fetch · tags · 60 s", "kind": "flow" },
+            { "from": "w-g-cache", "to": "di-lcc", "label": "miss: GET /v1/content", "kind": "flow", "via": [[900, 80], [900, 346]], "labelAt": [900, 270] },
+            { "from": "w-content", "to": "ws-contracts", "label": "safeParse", "kind": "imports", "via": [[545, 100], [545, 346]], "labelAt": [545, 140] },
+            { "from": "w-content", "to": "w-error", "label": "ContentApiError", "kind": "throws" },
+            { "from": "w-page", "to": "w-markdown", "label": "project.body", "kind": "flow" },
+            { "from": "w-g-revalidate", "to": "w-g-cache", "label": "revalidateTag", "kind": "planned" }
+          ]
+        },
+        {
+          "type": "cards", "title": "What every page is built from",
+          "caption": "The shell, the security pieces in the proxy, the ADR-045 design pieces from packages/ui, and the stub API the e2e suite runs against. Click a card for the details.",
+          "cards": ["w-shell", "w-csp", "w-redirect", "w-fonts", "ui-card", "ui-aurora", "w-stub"]
         }
       ]
     },
@@ -1094,7 +1135,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     {
       "id": "content", "eyebrow": "10 · Content", "title": "The content module and the public read API",
-      "intro": "WP-12: api's first feature module, hexagonal (ADR-003). The domain holds one aggregate per content item, each with its translations and an append-only history of revisions; publishing (or, for a knowledge entry, approving) moves a pointer to one revision. The write side is use cases on a unit of work; the read side is a separate query port on its own read-only pool (CQRS). Two Nest modules wire it: ContentModule (writes, booted today only by `db:seed`) and PublicContentModule (the `/v1/content` reads, in AppModule).",
+      "intro": "WP-12: api's first feature module, hexagonal (ADR-003). The domain holds one aggregate per content item, each with its translations and an append-only history of revisions; publishing (or, for a knowledge entry, approving) moves a pointer to one revision. The write side is use cases on a unit of work; the read side is a separate query port on its own read-only pool (CQRS). Two Nest modules wire it: ContentModule (writes, booted today only by `db:seed`) and PublicContentModule (the `/v1/content` reads, in AppModule). Since WP-16 the first caller of those reads is web's server, while it renders a page (section 7).",
       "figures": [
         {
           "type": "graph", "title": "apps/api/src/modules/content, layer by layer", "viewBox": [1000, 510],
@@ -1187,11 +1228,11 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["apps/mcp (not created yet)"]
     },
     "ws-web": {
-      "label": "web", "sub": "@jadero/web", "kind": "app", "status": "real", "wp": "WP-4",
-      "what": "The public multilingual site (en, es, de) on Next.js 16. Today it is the skeleton: locale routing, theme tokens, a light, dark and system theme toggle, a locale switcher, a placeholder home and the WP-15 design mockups under `/mockups`.",
-      "how": "`next build` with `output: \"standalone\"`, then `scripts/copy-standalone-assets.mjs` copies `.next/static` and `public/` next to `server.js`; `pnpm start` runs that server the way the image will. Runtime dependency on `@jadero/ui` (just-in-time: Next compiles its source through `transpilePackages`); dev dependency on `@jadero/config` for the tsconfig base and Vitest. `pnpm test` checks that every locale has the same non-empty message keys; `pnpm test:e2e` runs Playwright and axe against the standalone build. `SITE_URL` is a build-time variable that Turborepo hashes, together with `.env*`.",
-      "why": "ADR-022 (next-intl, `localePrefix: always`, English default from D-19, cookie, hreflang), ADR-023 (Tailwind v4 tokens, shadcn/ui in packages/ui, next-themes) and ADR-026 (standalone output for the image). Result-only frontend: no learning gate.",
-      "files": ["apps/web/package.json", "apps/web/next.config.ts", "apps/web/src/proxy.ts", "apps/web/src/i18n/", "apps/web/src/app/[locale]/", "apps/web/src/components/", "apps/web/messages/", "apps/web/e2e/smoke.spec.ts"]
+      "label": "web", "sub": "@jadero/web", "kind": "app", "status": "real", "wp": "WP-4, WP-16",
+      "what": "The public multilingual site (en, es, de) on Next.js 16. Since WP-16: the site shell (header, nav, locale switcher, footer) over the ADR-045 glass design, the experience and projects pages read from api's public content API, a safe Markdown pipeline for content bodies, a nonce CSP and an open-redirect guard in the proxy. The home is still a placeholder and the WP-15 mockups under `/mockups` are still there.",
+      "how": "`next build` with `output: \"standalone\"`, then `scripts/copy-standalone-assets.mjs` copies `.next/static` and `public/` next to `server.js`; `pnpm start` runs that server the way the image will. Every page renders per request (a fresh CSP nonce each time); content comes from `CONTENT_API_URL` through Next's fetch cache (section 7). Runtime dependencies on `@jadero/ui` (just-in-time: Next compiles its source through `transpilePackages`) and `@jadero/contracts` (the Zod schemas of the content API, used to parse every answer); dev dependency on `@jadero/config` for the tsconfig base and Vitest. Environment: `SITE_URL`, `CONTENT_API_URL` (server only, read per request, no default) and `CSP_MODE`. `pnpm test` runs the message key check and the unit tests of the client, the CSP, the redirect guard, the proxy and the Markdown pipeline; `pnpm test:e2e` runs Playwright and axe against the standalone build and a stub content API.",
+      "why": "ADR-022 (next-intl, `localePrefix: always`, English default from D-19, cookie, hreflang), ADR-023 and ADR-045 (Tailwind v4 tokens, shadcn/ui in packages/ui, next-themes, Bento glass), ADR-011 (Markdown, never MDX), ADR-047 (CSP, open redirects) and ADR-026 (standalone output for the image). AGENTS.md rule 2: web is the edge, so its server may call api over HTTP. Result-only frontend: no learning gate.",
+      "files": ["apps/web/package.json", "apps/web/next.config.ts", "apps/web/src/proxy.ts", "apps/web/src/security/", "apps/web/src/content/", "apps/web/src/markdown/", "apps/web/src/config/site.ts", "apps/web/src/i18n/", "apps/web/src/app/[locale]/", "apps/web/src/components/", "apps/web/messages/", "apps/web/e2e/"]
     },
     "ws-admin": {
       "label": "admin", "sub": "planned · R1", "kind": "app", "status": "planned", "wp": "R1",
@@ -1229,11 +1270,11 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/agent (not created yet)"]
     },
     "ws-ui": {
-      "label": "ui", "sub": "@jadero/ui", "kind": "pkg", "status": "real", "wp": "WP-4",
-      "what": "Design tokens and the shadcn/ui components the repo owns, shared by web and later admin. Today: `theme.css`, the `Button` and `cn`.",
+      "label": "ui", "sub": "@jadero/ui", "kind": "pkg", "status": "real", "wp": "WP-4, WP-16",
+      "what": "Design tokens and the shadcn/ui components the repo owns, shared by web and later admin. Today: `theme.css` with the ADR-045 tokens (surface, glass, signal, aurora, terminal, the card radius) in light and dark, the `Button`, the glass `Card` (tile and wide), the decorative `Aurora` and `cn`.",
       "how": "Just-in-time package: `exports` point at TypeScript and CSS source (`./theme.css`, `./components/*`, `./cn`), no build step; each app compiles it. An app imports Tailwind, then `@jadero/ui/theme.css`, and adds an `@source` for `packages/ui/src` so Tailwind sees the component classes. `components.json` lets `shadcn add` write new components here.",
-      "why": "ADR-023: CSS-first Tailwind v4 tokens in OKLCH with light and dark values, shadcn/ui owned in packages/ui. The values are a neutral base until the WP-15 mockups pick the typefaces and the accent.",
-      "files": ["packages/ui/package.json", "packages/ui/src/theme.css", "packages/ui/src/components/button.tsx", "packages/ui/src/lib/cn.ts", "packages/ui/components.json"]
+      "why": "ADR-023: CSS-first Tailwind v4 tokens in OKLCH with light and dark values, shadcn/ui owned in packages/ui. ADR-045 picked the direction (Bento glass, Geist, a violet signal color); WP-16 put its values here.",
+      "files": ["packages/ui/package.json", "packages/ui/src/theme.css", "packages/ui/src/components/button.tsx", "packages/ui/src/components/card.tsx", "packages/ui/src/components/aurora.tsx", "packages/ui/src/lib/cn.ts", "packages/ui/components.json"]
     },
     "ws-cv": {
       "label": "cv", "sub": "planned", "kind": "pkg", "status": "planned", "wp": "planned, WP not set",
@@ -1719,46 +1760,130 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["apps/api/vitest.int.config.ts", "packages/testing/src/postgres.global-setup.ts", "packages/testing/src/test-database.ts", "packages/testing/src/provisioned-roles.ts", "packages/testing/src/docker-host.ts", "apps/api/test/content-public.int.test.ts", "apps/api/test/outbox.int.test.ts", "packages/config/vitest/base.js"]
     },
     "c-e2e": {
-      "label": "pnpm test:e2e", "sub": "Playwright · axe · standalone build", "kind": "check", "status": "real", "wp": "WP-4",
+      "label": "pnpm test:e2e", "sub": "Playwright · axe · standalone build", "kind": "check", "status": "real", "wp": "WP-4, WP-16",
       "what": "Smoke tests per locale for web, kept out of `pnpm verify`.",
-      "how": "`turbo run test:e2e` builds web first (`dependsOn: [\"build\"]`), then Playwright starts the standalone `server.js` and checks: the redirect from `/` by Accept-Language and by cookie, each locale's `lang`, heading and hreflang links, the localized 404, the theme class surviving a reload, and no axe WCAG 2.2 AA violations in light and dark mode, on the home and on each design mockup. It drives the installed Chrome (`channel: \"chrome\"`).",
-      "why": "ADR-009 (Playwright smoke per locale for the web, no coverage percentage) and ADR-023 (axe in CI). CI runs it from WP-6.",
-      "files": ["apps/web/playwright.config.ts", "apps/web/e2e/smoke.spec.ts", "apps/web/turbo.json"]
+      "how": "`turbo run test:e2e` builds web first (`dependsOn: [\"build\"]`), then Playwright starts the stub content API and the standalone `server.js` (pointed at the stub, `SITE_URL` set to its own origin) and checks: the redirect from `/` by Accept-Language and by cookie, each locale's `lang`, heading and hreflang links, the site shell, the localized 404, Geist loaded from the site, the theme class surviving a reload, the CSP with a nonce that changes per request and no violation on a real page, the experience and projects pages (order, `lang` on fallback texts, the Markdown body, the slug redirect, the locale switcher on a project page, the 404 for an unknown slug), and no axe WCAG 2.2 AA violations in light and dark mode. `CSP_MODE=enforce` runs it under the enforced policy. It drives the installed Chrome (`channel: \"chrome\"`).",
+      "why": "ADR-009 (Playwright smoke per locale for the web, no coverage percentage), ADR-023 (axe in CI) and ADR-047 (the CSP checked in a real browser). CI runs it from WP-6.",
+      "files": ["apps/web/playwright.config.ts", "apps/web/e2e/", "apps/web/e2e/stub/content-api.ts", "apps/web/turbo.json"]
     },
     "w-proxy": {
-      "label": "proxy.ts", "sub": "next-intl middleware", "kind": "step", "status": "real", "wp": "WP-4",
-      "what": "Makes sure every path carries a supported locale.",
-      "how": "`createMiddleware(routing)` from next-intl. A path without a locale gets a 307 to the locale from the `NEXT_LOCALE` cookie, else from Accept-Language, else `en`. On a locale path it sets a session cookie when the locale differs from the detected one (no persistent cookie, owner's choice), and adds hreflang `Link` headers. The matcher skips `/api`, `/_next` and files with an extension.",
-      "why": "ADR-022 and D-19. Next 16 renamed `middleware.ts` to `proxy.ts`.",
-      "files": ["apps/web/src/proxy.ts", "apps/web/src/i18n/routing.ts"]
+      "label": "proxy.ts", "sub": "nonce CSP · next-intl · redirect guard", "kind": "step", "status": "real", "wp": "WP-4, WP-16",
+      "what": "Runs on every page request: gives it a fresh CSP nonce, makes sure the path carries a supported locale, and checks every redirect it sends.",
+      "how": "1. `createNonce()` (16 random bytes, base64) and `buildContentSecurityPolicy(nonce)`; both go on a copy of the request headers (`x-nonce` and the policy), because next-intl forwards the request headers to the render, and the policy goes on the response too. The header is `Content-Security-Policy-Report-Only` unless `CSP_MODE=enforce`. 2. `createMiddleware(routing)` from next-intl: a path without a locale gets a 307 to the locale from the `NEXT_LOCALE` cookie, else Accept-Language, else `en`; a localized pathname (`/es/proyectos`) is rewritten to its route; a session cookie when the locale differs from the detected one; hreflang `Link` headers. 3. When the response has a `Location`, `safeRedirectTarget(location, origin)` checks it against the `SITE_URL` origin (the request's own origin only under `next dev`), falls back to `/en` when refused, and resolves it on that origin. The matcher skips `/api`, `/_next` and files with an extension.",
+      "why": "ADR-022 and D-19 for the locale. ADR-047 for the nonce CSP (rolled out report-only first) and the open-redirect rule: next-intl builds its target from the request URL, Host header included, which a client controls. Next 16 renamed `middleware.ts` to `proxy.ts`.",
+      "files": ["apps/web/src/proxy.ts", "apps/web/src/security/csp.ts", "apps/web/src/security/redirect.ts", "apps/web/src/i18n/routing.ts", "apps/web/test/proxy.test.ts"]
     },
     "w-layout": {
-      "label": "[locale]/layout.tsx", "sub": "locale, metadata, <html>", "kind": "step", "status": "real", "wp": "WP-4",
-      "what": "Validates the locale and renders the document shell.",
-      "how": "`requireLocale` narrows the segment or calls `notFound()`; `setRequestLocale` keeps the page static; `generateStaticParams` lists en, es, de; `generateMetadata` sets the base URL (`SITE_URL`, parsed in `src/config/site.ts` and baked in at build time), title and description. Canonical and hreflang links are per page: each page calls `localeAlternates` (with `x-default` to en), so the 404 gets none.",
-      "why": "ADR-022: static rendering per locale, hreflang alternates. The root `app/layout.tsx` only passes children through, because only this layout knows the `lang`.",
+      "label": "[locale]/layout.tsx", "sub": "connection() · locale · metadata · shell", "kind": "step", "status": "real", "wp": "WP-4, WP-16",
+      "what": "Waits for the request, validates the locale and renders the document: the aurora, the header, the page and the footer.",
+      "how": "`await connection()` once here makes every route under the locale render per request, so the nonce in the CSP header can reach the page (a page built at build time could not carry it); it is not `force-dynamic`, which would also drop the content fetch cache. `requireLocale` narrows the segment or calls `notFound()`; `generateStaticParams` lists en, es, de as the valid values; `generateMetadata` sets the base URL (`SITE_URL`, now read when the server starts), the localized title template (`Experience · jadero.dev`) and description. It reads `x-nonce` for the theme script and puts the Geist font variables on `<html>`. Canonical and hreflang links are per page (`localeAlternates`, or `contentAlternates` with each locale's slug on a project page), so the 404 gets none.",
+      "why": "ADR-022 (hreflang alternates) and ADR-047 (a nonce per response). The root `app/layout.tsx` only passes children through, because only this layout knows the `lang`.",
       "files": ["apps/web/src/app/[locale]/layout.tsx", "apps/web/src/i18n/locale.ts", "apps/web/src/i18n/alternates.ts", "apps/web/src/config/site.ts", "apps/web/src/app/layout.tsx"]
     },
     "w-messages": {
       "label": "i18n/request.ts", "sub": "messages per locale", "kind": "step", "status": "real", "wp": "WP-4",
       "what": "Loads the UI strings of the request's locale.",
       "how": "`getRequestConfig` reads the locale and imports `messages/<locale>.json`. `global.d.ts` types the keys from `en.json`, so a missing key is a type error; a Vitest check fails when a locale's keys differ or a string is empty.",
-      "why": "ADR-022: UI strings in messages files with a CI check; content translations come from the API later.",
+      "why": "ADR-022: UI strings in messages files with a CI check. Content texts come from the API (`w-content`), never from these files.",
       "files": ["apps/web/src/i18n/request.ts", "apps/web/src/i18n/global.d.ts", "apps/web/messages/", "apps/web/test/messages.test.ts"]
     },
     "w-providers": {
       "label": "providers", "sub": "NextIntlClientProvider · ThemeProvider", "kind": "step", "status": "real", "wp": "WP-4",
       "what": "Gives client components the messages and the theme.",
-      "how": "next-themes injects an inline script that puts the `dark` class on `<html>` from localStorage or the system preference before the first paint (`suppressHydrationWarning` on `<html>` for that one difference). `SiteHeader` renders the locale switcher and the three-way theme toggle.",
-      "why": "ADR-023: light, dark and system with no flash on load.",
-      "files": ["apps/web/src/components/theme-provider.tsx", "apps/web/src/components/theme-toggle.tsx", "apps/web/src/components/locale-switcher.tsx", "apps/web/src/components/site-header.tsx"]
+      "how": "next-themes injects an inline script that puts the `dark` class on `<html>` from localStorage or the system preference before the first paint (`suppressHydrationWarning` on `<html>` for that one difference). Since WP-16 the script carries the request's nonce, so the CSP lets it run.",
+      "why": "ADR-023: light, dark and system with no flash on load; ADR-047: no inline script without the nonce.",
+      "files": ["apps/web/src/components/theme-provider.tsx", "apps/web/src/components/theme-toggle.tsx"]
     },
     "w-page": {
-      "label": "[locale]/page.tsx", "sub": "prerendered per locale", "kind": "step", "status": "real", "wp": "WP-4",
-      "what": "The placeholder home, the WP-15 design mockups, or the localized 404 for an unknown path.",
-      "how": "Built once per locale at `next build` and served as static HTML. `[locale]/[...rest]/page.tsx` calls `notFound()`, which renders `[locale]/not-found.tsx` in the visitor's language. `[locale]/mockups/` holds five throwaway hero mockups (terminal, editorial, bento, hybrid and bento-agent, the direction picked in ADR-045) with `noindex`: each page marks its root with `data-direction`, and `mockups.css` overrides the `packages/ui` tokens with `:root:has([data-direction=...])`, so the header takes the direction too.",
-      "why": "WP-16 builds the real home and pages; each new page adds its localized pathname in `routing.ts`. The mockups let the owner confirm the ADR-023 direction from screenshots (D-23) and are deleted once one is picked.",
-      "files": ["apps/web/src/app/[locale]/page.tsx", "apps/web/src/app/[locale]/not-found.tsx", "apps/web/src/app/[locale]/[...rest]/page.tsx", "apps/web/src/app/[locale]/mockups/"]
+      "label": "the page", "sub": "home · experience · projects", "kind": "step", "status": "real", "wp": "WP-4, WP-16",
+      "what": "The route's page: the placeholder home, the experience timeline, the projects list, one project, the WP-15 mockups, or the localized 404.",
+      "how": "`/[locale]/experience` (es `experiencia`, de `erfahrung`) renders `ExperienceTimeline` from `getExperience`. `/[locale]/projects` (es `proyectos`, de `projekte`) fetches one list per kind (case studies, projects, early work) in parallel. `/[locale]/projects/[slug]` goes through `loadProjectPage`: when the slug is another locale's slug of a published project, it redirects to this locale's slug (307, checked by `safeRedirectTarget`); else it asks for the item. On the German fallback the content texts get `lang=\"en\"` while the labels stay German. `[locale]/[...rest]/page.tsx` calls `notFound()`, rendered by `[locale]/not-found.tsx`. The mockups under `[locale]/mockups/` are still there, removed in a later WP-16 step.",
+      "why": "WP-16 builds the site pages on the WP-12 read API. Each new page adds its localized pathname in `routing.ts` and its entry in the site nav.",
+      "files": ["apps/web/src/app/[locale]/page.tsx", "apps/web/src/app/[locale]/experience/page.tsx", "apps/web/src/app/[locale]/projects/page.tsx", "apps/web/src/app/[locale]/projects/[slug]/page.tsx", "apps/web/src/content/project-page.ts", "apps/web/src/components/experience-timeline.tsx", "apps/web/src/components/project-sections.tsx", "apps/web/src/app/[locale]/not-found.tsx", "apps/web/src/app/[locale]/mockups/"]
+    },
+    "w-content": {
+      "label": "content/api.ts", "sub": "fetch · cache tags · Zod parse", "kind": "step", "status": "real", "wp": "WP-16",
+      "what": "The typed client of api's public content API, for Server Components only: one function per read (profile, experience, projects, one project, posts, one post, skills, work log, one work entry).",
+      "how": "`getContent` calls `fetch(CONTENT_API_URL + path, { next: { revalidate: 60, tags } })`. A list carries its type tag (`content:projects`), an item also its own (`content:projects:message-relay`). The answer is parsed with its schema from `@jadero/contracts`. A 404 with the API's `application/problem+json` body becomes `notFound()`; anything else (unreachable, another status, a payload the contract refuses) throws `ContentApiError`, whose message names the resource only. Slugs and entry ids from the URL are checked against their contract schema before any call. `CONTENT_API_URL` is read per request in `src/config/site.ts`, server only, with no default and an error that never repeats the value.",
+      "why": "AGENTS.md rule 2: synchronous HTTP only at the edge, and web is the edge. 60 s matches the API's `max-age=60`; the tags are there so WP-14's revalidation can drop an entry early. The same Zod contracts on both sides, so a drift fails loudly in web instead of rendering a broken page.",
+      "files": ["apps/web/src/content/api.ts", "apps/web/src/config/site.ts", "apps/web/.env.example", "apps/web/test/content-api.test.ts"]
+    },
+    "w-g-cache": {
+      "label": "Next fetch cache", "sub": "60 s · content tags", "kind": "ext", "status": "real", "wp": "WP-16",
+      "what": "Next's data cache: keeps each content answer per URL for 60 s, under its tags.",
+      "how": "A fresh entry answers without a call. After 60 s the next request still gets the stale entry and Next refetches in the background. `revalidateTag(tag)` drops every entry that carries the tag. The pages render per request, but this cache stays on, which is why the layout uses `connection()` and not `force-dynamic`.",
+      "why": "The page render is dynamic for the nonce; the data does not need to be. Caching here keeps api's load at one call per URL per minute.",
+      "files": ["apps/web/src/content/api.ts"]
+    },
+    "w-g-revalidate": {
+      "label": "revalidateTag", "sub": "planned · WP-14", "kind": "step", "status": "planned", "wp": "WP-14",
+      "what": "Drops the cached content of a page as soon as that content is published.",
+      "how": "Planned: a consumer of the content events calls `revalidateTag` with the tags of `contentTags` (the type tag, plus the item tag). Item tags hold the slug without the locale, so a slug shared by two locales is dropped together, which over-invalidates at worst.",
+      "why": "Without it a published change shows within 60 s; with it, at once.",
+      "files": ["apps/web/src/content/api.ts (contentTags)"]
+    },
+    "w-markdown": {
+      "label": "markdown/", "sub": "remark · rehype-sanitize", "kind": "step", "status": "real", "wp": "WP-16",
+      "what": "Renders a content body (Markdown from the API) as React elements on the server, through an allowlist.",
+      "how": "unified: `remark-parse`, `remark-gfm` (tables, lists), `remark-directive`, `remarkSiteRules`, `remark-rehype` (drops raw HTML), `rehype-sanitize` with the site's own written-out schema, then `hast-util-to-jsx-runtime` maps each allowed tag to a fixed component with design-token classes. `remarkSiteRules` turns `:::callout` and `::figure[alt]{src=...}` into fixed tags (a figure only with a `src` on the site), removes any other directive and footnotes, turns `# h1` into `h2` and gives prose like `10:30` back as text. Links keep `href` only for http, https and mailto; an external one gets `rel=\"noopener noreferrer\"`. No `style`, `class` or event attribute survives; table alignment is dropped because a `style` attribute would break the CSP.",
+      "why": "ADR-011: Markdown, never MDX, so a body stored in the database never runs as code; no `dangerouslySetInnerHTML` anywhere on this path. ADR-047: the CSP blocks inline styles, so the pipeline emits none.",
+      "files": ["apps/web/src/markdown/markdown.tsx", "apps/web/src/markdown/schema.ts", "apps/web/src/markdown/remark-site-rules.ts", "apps/web/src/markdown/components.tsx", "apps/web/test/markdown.test.tsx"]
+    },
+    "w-error": {
+      "label": "[locale]/error.tsx", "sub": "on a content error · no detail", "kind": "step", "status": "real", "wp": "WP-16", "branch": true,
+      "what": "The error boundary of every page in a locale: a page whose content call failed lands here.",
+      "how": "A client component inside the layout, so the header and footer stay. It shows a localized title, a line and a Try again button that re-renders the page (and fetches again). It never prints the error: in production Next replaces a server error's message with a digest, and this component does not show even that.",
+      "why": "A visitor gets a page in their language, and no URL, status or payload reaches them (AGENTS.md section 7).",
+      "files": ["apps/web/src/app/[locale]/error.tsx", "apps/web/messages/en.json"]
+    },
+    "w-shell": {
+      "label": "Site shell", "sub": "header · nav · locale switcher · footer", "kind": "file", "status": "real", "wp": "WP-16",
+      "what": "The header with the main navigation, the locale switcher and the theme toggle, and the footer.",
+      "how": "`SiteNav` lists only pages that exist (home, experience, projects) and marks the current one with `aria-current`. `LocaleSwitcher` links to the current page in each locale; on a page with a dynamic segment it fills the route template with the current params, so it keeps the slug, and the project page redirects it to the target locale's own slug. `SiteFooter` holds the copyright line and a note.",
+      "why": "ADR-022 (localized pathnames) and ADR-045 (the shell over the aurora). Nav and footer links to later pages arrive with those pages.",
+      "files": ["apps/web/src/components/site-header.tsx", "apps/web/src/components/site-nav.tsx", "apps/web/src/components/locale-switcher.tsx", "apps/web/src/components/site-footer.tsx"]
+    },
+    "w-csp": {
+      "label": "Nonce CSP", "sub": "report-only · CSP_MODE=enforce", "kind": "file", "status": "real", "wp": "WP-16",
+      "what": "The strict Content-Security-Policy of the site, with a fresh nonce per request.",
+      "how": "`script-src 'nonce-...' 'strict-dynamic'`, `style-src 'self' 'nonce-...'`, and `'self'` for everything else (fonts are self-hosted, the API is called from the server); `object-src 'none'`, `base-uri 'none'`, `frame-ancestors 'none'`. Next reads the nonce back from the request's CSP header and puts it on its own scripts. Under `next dev` it adds `'unsafe-eval'` and inline styles for the dev tools. `CSP_MODE` (read per request) switches the header from report-only to enforced; the e2e suite runs under both.",
+      "why": "ADR-047: a nonce policy stops an injected script, and the report-only phase shows violations before anything is blocked.",
+      "files": ["apps/web/src/security/csp.ts", "apps/web/src/config/site.ts", "apps/web/test/csp.test.ts", "apps/web/e2e/csp.spec.ts"]
+    },
+    "w-redirect": {
+      "label": "safeRedirectTarget", "sub": "open-redirect guard", "kind": "file", "status": "real", "wp": "WP-16",
+      "what": "Checks every redirect target that derives from request input or API data.",
+      "how": "Parses the target with the WHATWG URL parser, the way a browser will. A same-origin target comes back as a relative path; another origin only when it is on `REDIRECT_ALLOWLIST` (empty today). It refuses other schemes, `//host` and `/\\host`, a path without a leading `/`, and the same tricks hidden behind up to three layers of percent-encoding, tabs or newlines. The proxy passes the `SITE_URL` origin outside dev, so a spoofed Host header never ends up in a `Location`.",
+      "why": "ADR-047: no open redirect, one guard for every redirect, tested once.",
+      "files": ["apps/web/src/security/redirect.ts", "apps/web/test/redirect.test.ts"]
+    },
+    "w-fonts": {
+      "label": "Geist, self-hosted", "sub": "geist package · next/font", "kind": "ext", "status": "real", "wp": "WP-16",
+      "what": "Geist and Geist Mono, served from the site itself.",
+      "how": "`GeistSans` and `GeistMono` from the `geist` package expose CSS variables that the layout puts on `<html>`; Next serves the font files from `/_next/static`. An e2e test checks that no font request leaves the site.",
+      "why": "ADR-045 picks the typefaces; self-hosting keeps the CSP at `font-src 'self'` and avoids a font CDN request.",
+      "files": ["apps/web/src/app/[locale]/layout.tsx", "apps/web/e2e/smoke.spec.ts"]
+    },
+    "ui-card": {
+      "label": "Card", "sub": "@jadero/ui · glass · tile, wide", "kind": "file", "status": "real", "wp": "WP-16",
+      "what": "The glass card of the bento grid: a translucent surface over the aurora, a hairline border, the large radius.",
+      "how": "`cva` variants: `tile` (the default, a hover lift only when motion is allowed) and `wide` (long text such as a case study, children kept to 70ch). `asChild` renders the child element (a `section`, an `article`) with the card's classes through Radix `Slot`.",
+      "why": "ADR-045: Bento glass. Owned in packages/ui (ADR-023) so the admin can reuse it.",
+      "files": ["packages/ui/src/components/card.tsx", "packages/ui/src/theme.css"]
+    },
+    "ui-aurora": {
+      "label": "Aurora", "sub": "@jadero/ui · decorative", "kind": "file", "status": "real", "wp": "WP-16",
+      "what": "The soft static aurora behind every page.",
+      "how": "An `aria-hidden` div with `pointer-events-none` and the `.aurora` gradients of `theme.css`; static, so reduced motion needs nothing. `data-aurora` lets the axe checks hide it, so contrast is measured on the solid surface.",
+      "why": "ADR-045's visual direction, with the tokens (`--surface`, `--glass`, `--signal`, `--aurora-1..3`) in light and dark in `theme.css`.",
+      "files": ["packages/ui/src/components/aurora.tsx", "packages/ui/src/theme.css"]
+    },
+    "w-stub": {
+      "label": "Stub content API", "sub": "e2e only · no Docker", "kind": "file", "status": "real", "wp": "WP-16",
+      "what": "A small Node HTTP server that answers the content reads the pages make, for `pnpm test:e2e`.",
+      "how": "Playwright starts it before the standalone server and always hands that server `CONTENT_API_URL` pointing at it. It answers experience, projects (with `?kind=`) and one project from JSON fixtures, the German fallback included, and a 404 problem for anything else. Every fixture is parsed with its `@jadero/contracts` schema at start, so a fixture that drifts from the contract stops the suite before a test runs.",
+      "why": "The e2e suite stays free of Docker, Postgres and api, and still asserts on data shaped exactly like the API's.",
+      "files": ["apps/web/e2e/stub/content-api.ts", "apps/web/e2e/stub/experience.json", "apps/web/e2e/stub/projects.json", "apps/web/playwright.config.ts"]
     },
     "c-precommit": {
       "label": "lefthook pre-commit", "sub": "biome check --write on staged files", "kind": "check", "status": "real", "wp": "WP-1",
