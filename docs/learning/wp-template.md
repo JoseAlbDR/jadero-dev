@@ -66,7 +66,7 @@ Issue #<n>, branch `wp/N-slug`, release RN, size S/M/L. Deliverable in one parag
 
 ## Recap
 
-<!-- Interview form: why, alternatives, when to change, failure; the main trace drawn from memory. -->
+<!-- Interview form: why, alternatives, when to change, failure; the main trace drawn from memory. Each question in two halves, here (this project) and transfer (the same pattern in another domain: an online shop, payments, bookings, a typical company service), each self-contained (refresher, facts, hints, never the answer); record both answers and the gaps. -->
 
 ## Named here
 
