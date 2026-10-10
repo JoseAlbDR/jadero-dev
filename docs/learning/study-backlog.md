@@ -45,6 +45,11 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 - Fail fast at boot versus lazy connection plus readiness, and when each wins. WP-10, recommended. Step log.
 - A lazy pool boots without its database, so readiness must check every dependency a request needs, or a broken one passes the deploy and fails every request (the owner thought the deploy would fail before the reader check existed). WP-12, weak (step 7b check question). `docs/learning/wp-12.md`, Step log.
 
+- How a deploy treats a new version that is live but not ready depends on the orchestrator: Compose recreates (a few seconds down, the smoke test catches it, the script re-pins the old version, ADR-026), Kubernetes rolls (the old version keeps traffic until the new one is ready), blue-green switches upstreams (WP-33); who restarts a hung but live process (the kubelet on liveness; nothing in Compose without an autoheal or an alert). WP-12, weak (the step 7b answer assumed a rolling update; corrected after step 8). `docs/learning/wp-12.md`, Step log.
+
+### Theme: HTTP caching and conditional requests
+- `max-age` then `stale-while-revalidate`: inside the window the first request gets the stale copy at once and triggers a background revalidation, which stores the new copy (the next request sees it); the api compares the ETag, a body hash, so the database query always runs and a 304 only saves the body; publish delay is bounded (about 6 minutes worst case), not a minute. WP-12, weak (step 8 check question). `docs/learning/wp-12.md`, Step log.
+
 ### Theme: state machines and approval
 - Approval bound to a revision: the state describes the latest revision, the pointer what is live, and a withdraw acts on the entry (pointer cleared), not on the newest draft; undoing an edit is a new revision, never a withdraw (the owner thought withdraw discarded the draft and the visitor would see it). WP-12, weak (step 4 check question). Step log.
 
