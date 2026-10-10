@@ -15,6 +15,11 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 - After the run, the studied lines are marked `studied <date>`; what the run showed is still weak stays open.
 - At the end of the project, one last run on whatever is left, plus a review pass of the themes marked weak more than once.
 
+## R0 (open)
+
+### Theme: incremental builds and CI gates
+- An undeclared task input: a test that reads a file its task does not declare is not selected by an affected run when only that file changes, and its input hash does not change, so the cached run on `main` replays green too; only an uncached run (`--force`, the weekly backstop) executes it. "The test would fail" holds only if the test runs. WP-6, weak (step 2 check question: answered that CI catches it). `docs/learning/wp-6.md`, Step log.
+
 ## R1 (open)
 
 ### Theme: transaction boundaries and atomicity
@@ -33,7 +38,7 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 - Extracting a module into its own service: no cross-module foreign keys, no transaction across databases, events and read models instead, eventual consistency and sagas. WP-10, weak (explain-back Q3). Recap.
 
 ### Theme: migrations as append-only history
-- An edited applied migration is skipped silently; schema drift between environments. WP-10, weak (step 3 check question). Step log.
+- An edited applied migration is skipped silently; schema drift between environments. WP-10, weak (step 3 check question), weak again 2026-10-11 (warm-up, WP-6 step 2: the skip was right, the drift between migrated and fresh databases came after the hint). Step log.
 - `drizzle-kit generate` diffs schema files against the last snapshot and never reads the database; the runtime migrator keeps `drizzle.__drizzle_migrations`. WP-10, weak (step 4 check question). Step log.
 
 - Untrusted Postgres extensions: who creates them (provisioning as superuser) versus who asserts them (the service's migration as owner); environment parity between the test harness and provisioning; least privilege for migration roles. WP-12, weak (step 1 check question). `docs/learning/wp-12.md`, Step log.
