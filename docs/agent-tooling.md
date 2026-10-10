@@ -81,7 +81,7 @@ Fixed:
 
 - `/wp` works without a logged-in `gh` (GitHub MCP tools, or ask), names the source of the definition of done, marks n/a items, and has a rule for stacking a branch on an unmerged dependency (branch from its PR, rebase after the merge).
 - `/learn-step` may query the npm registry, Docker Hub and nodejs.org through Bash (documentation sites can be unreachable), marks unverified behavior as **verify**, asks for two traces on a service WP (success and failure), and the template gained a Facts checked table and a Proposed steps section. Spike results go under Options; a changed answer is an amendment under Decision.
-- The learning gate also covers the repo tooling files, `packages/platform-nest` and `templates/`.
+- The learning gate also covers the repo tooling files, `packages/platform-nest`, `packages/testing` and `templates/`.
 - Explainer names take the WP number as is (`wp-1.md`).
 - The seed marks staging and changelog items n/a for R0 work packages.
 - Commit identity: a cloud session commits as the tool, and a squash merge would then add a co-author trailer to `main`. The branch authors were reset to the owner before the PR; `git config user.name` and `user.email` in the checkout are set to the owner. Local sessions never see this.
