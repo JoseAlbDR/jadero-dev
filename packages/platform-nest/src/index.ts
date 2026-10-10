@@ -10,6 +10,7 @@ export {
 export { type PlatformEnv, platformEnv } from "./config/platform-env.js";
 export {
   CONNECT_TIMEOUT_MS,
+  createPool,
   DatabaseModule,
   type DatabaseModuleOptions,
   poolConfig,

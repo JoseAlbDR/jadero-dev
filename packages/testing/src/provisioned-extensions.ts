@@ -68,6 +68,18 @@ export function parseProvisionedExtensions(sql: string, database: string): strin
 }
 
 /**
+ * Reads the provisioning script: the repo's init script by default.
+ * @param script absolute path of a provisioning script; defaults to the repo's init script.
+ * @returns the script's text.
+ * @throws when the script is missing.
+ */
+export function readProvisioningScript(script?: string): string {
+  const path = script ?? join(repositoryRoot(), INIT_SCRIPT);
+  if (!existsSync(path)) throw new Error(`Provisioning script not found: ${path}`);
+  return readFileSync(path, "utf8");
+}
+
+/**
  * The untrusted extensions provisioning creates as superuser in one service database, read from
  * `infra/compose/init/01-databases.sql`, the single source of truth (WP-12 step 1b). Pass the
  * result to `createTestDatabase({ superuserExtensions })`, so the test harness cannot drift from
@@ -79,7 +91,5 @@ export function parseProvisionedExtensions(sql: string, database: string): strin
  * @throws when the script is missing or {@link parseProvisionedExtensions} rejects it.
  */
 export function provisionedExtensions(database: string, script?: string): string[] {
-  const path = script ?? join(repositoryRoot(), INIT_SCRIPT);
-  if (!existsSync(path)) throw new Error(`Provisioning script not found: ${path}`);
-  return parseProvisionedExtensions(readFileSync(path, "utf8"), database);
+  return parseProvisionedExtensions(readProvisioningScript(script), database);
 }

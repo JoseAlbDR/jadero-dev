@@ -38,7 +38,8 @@ const useCases = [
  * The content module (ADR-003, hexagonal; ADR-011, ADR-031). This wiring is the only place that
  * knows which adapter backs each port: the Drizzle unit of work on the global pool of
  * `DatabaseModule` (imported once by the root module), the system clock and UUIDv7 ids. No
- * controller yet: the public reads arrive in step 7, the admin writes with WP-13 (Q2 A).
+ * controller: the public reads are `PublicContentModule` (read side, its own read-only pool), the
+ * admin writes arrive with WP-13 (Q2 A).
  */
 @Module({
   providers: [

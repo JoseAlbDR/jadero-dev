@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { runMigrations } from "@jadero/platform-nest";
-import { createTestDatabase } from "@jadero/testing";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createContentTestDatabase } from "./setup/content-database.js";
 
 // WP-12 step 5: the guards the content schema adds, proved on the migrated database as the ordinary
 // owner role (WP-10 D4), with plain SQL so no repository can hide a missing constraint. Each test
@@ -12,7 +12,7 @@ let client: pg.Client;
 let drop: () => Promise<void>;
 
 beforeAll(async () => {
-  const database = await createTestDatabase();
+  const database = await createContentTestDatabase();
   drop = database.drop;
   await runMigrations({
     service: "api",

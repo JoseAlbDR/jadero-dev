@@ -21,6 +21,10 @@ describe("api-worker config", () => {
     });
   });
 
+  it("never holds the read-only credential of the public reads", () => {
+    expect(toApiWorkerConfig(apiWorkerEnv.parse(env))).not.toHaveProperty("databaseReadUrl");
+  });
+
   it("refuses to start without the broker URL", () => {
     const { RABBITMQ_URL: _, ...withoutBroker } = env;
     expect(apiWorkerEnv.safeParse(withoutBroker).success).toBe(false);

@@ -3,9 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { MigrationError, migrationJournal, runMigrations } from "@jadero/platform-nest";
-import { createTestDatabase, type TestDatabase } from "@jadero/testing";
+import type { TestDatabase } from "@jadero/testing";
 import pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
+import { createContentTestDatabase } from "./setup/content-database.js";
 
 // WP-10 D7 suite 1: api's committed drizzle/ applied to an empty database by the deploy's own
 // entry (runMigrations), as an ordinary owner role like production (D4), never the superuser.
@@ -17,7 +18,7 @@ const databases: TestDatabase[] = [];
 
 /** A fresh database owned by an ordinary role, dropped after the file. */
 async function emptyDatabase(): Promise<string> {
-  const database = await createTestDatabase();
+  const database = await createContentTestDatabase();
   databases.push(database);
   return database.url;
 }
@@ -87,6 +88,60 @@ describe("api migrations from zero, as an ordinary role", () => {
     expect(applied.map((row) => Number(row.created_at))).toEqual(
       journal.entries.map((entry) => entry.when),
     );
+  });
+
+  it("grant content_reader SELECT on exactly the tables the public reads use, never the provenance", async () => {
+    const url = await emptyDatabase();
+    await runMigrations({ service: "api", url, migrationsFolder: folder });
+    const grants = await rows(
+      url,
+      `SELECT table_schema || '.' || table_name AS name, string_agg(privilege_type, ',') AS privileges
+       FROM information_schema.role_table_grants WHERE grantee = 'content_reader'
+       GROUP BY 1 ORDER BY 1`,
+    );
+    expect(grants.every((grant) => grant.privileges === "SELECT")).toBe(true);
+    expect(grants.map((grant) => grant.name)).toEqual([
+      "content.cv_bullet_revisions",
+      "content.cv_bullet_translations",
+      "content.cv_bullets",
+      "content.experience_item_revisions",
+      "content.experience_item_translations",
+      "content.experience_items",
+      "content.knowledge_entries",
+      "content.knowledge_entry_revisions",
+      "content.post_revisions",
+      "content.post_translations",
+      "content.posts",
+      "content.profile_revisions",
+      "content.profile_translations",
+      "content.project_revisions",
+      "content.project_translations",
+      "content.projects",
+      "content.skill_revisions",
+      "content.skill_translations",
+      "content.skills",
+    ]);
+  });
+
+  it("refuse to grant to a reader role provisioning did not create, and roll back the batch", async () => {
+    // The real 0002 with the role renamed to one no provisioning creates: the guard must stop it.
+    const copy = mkdtempSync(join(tmpdir(), "api-drizzle-"));
+    try {
+      cpSync(folder, copy, { recursive: true });
+      const reader = journal.entries.find((entry) => entry.tag.endsWith("_content_reader"));
+      if (!reader) throw new Error("api has no content_reader migration");
+      const file = join(copy, `${reader.tag}.sql`);
+      writeFileSync(file, readFileSync(file, "utf8").replaceAll("content_reader", "ghost_reader"));
+      const url = await emptyDatabase();
+      const failure = runMigrations({ service: "api", url, migrationsFolder: copy });
+      await expect(failure).rejects.toBeInstanceOf(MigrationError);
+      await expect(failure).rejects.toThrow(/role ghost_reader does not exist/);
+      expect(
+        await rows(url, "SELECT count(*)::int AS n FROM drizzle.__drizzle_migrations"),
+      ).toEqual([{ n: 0 }]);
+    } finally {
+      rmSync(copy, { recursive: true, force: true });
+    }
   });
 
   it("refuse a migration that needs a superuser and roll back the whole batch (Trace 2c)", async () => {

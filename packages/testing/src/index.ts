@@ -5,6 +5,11 @@ export { useDockerContextHost } from "./docker-host.js";
 export { POSTGRES_IMAGE } from "./images.js";
 export { parseProvisionedExtensions, provisionedExtensions } from "./provisioned-extensions.js";
 export {
+  type ProvisionedRole,
+  parseProvisionedRoles,
+  provisionedRoles,
+} from "./provisioned-roles.js";
+export {
   createTestDatabase,
   type TestDatabase,
   type TestDatabaseOptions,

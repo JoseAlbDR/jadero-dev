@@ -1,10 +1,10 @@
 import { fileURLToPath } from "node:url";
 import { runMigrations } from "@jadero/platform-nest";
-import { createTestDatabase } from "@jadero/testing";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentSeed } from "../src/seed/content-seed-data.js";
 import { runSeed, type SeedDatabase } from "../src/seed/seed.module.js";
+import { createContentTestDatabase } from "./setup/content-database.js";
 
 // WP-12 step 6: `db:seed`'s own path (a Nest application context without HTTP, the Drizzle unit of
 // work, the content use cases) run twice against the migrated content schema. Owner decision A:
@@ -15,7 +15,7 @@ let drop: () => Promise<void>;
 let database: SeedDatabase;
 
 beforeAll(async () => {
-  const created = await createTestDatabase();
+  const created = await createContentTestDatabase();
   drop = created.drop;
   await runMigrations({
     service: "api",

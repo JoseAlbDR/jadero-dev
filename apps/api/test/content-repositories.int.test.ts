@@ -1,6 +1,5 @@
 import { fileURLToPath } from "node:url";
 import { drizzleOn, runMigrations } from "@jadero/platform-nest";
-import { createTestDatabase } from "@jadero/testing";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -38,6 +37,7 @@ import { DrizzlePostRepository } from "../src/modules/content/infrastructure/dri
 import { DrizzleProfileRepository } from "../src/modules/content/infrastructure/drizzle-profile.repository.js";
 import { DrizzleProjectRepository } from "../src/modules/content/infrastructure/drizzle-project.repository.js";
 import { DrizzleSkillRepository } from "../src/modules/content/infrastructure/drizzle-skill.repository.js";
+import { createContentTestDatabase } from "./setup/content-database.js";
 
 // WP-12 steps 5b and 5c: the contract suites the in-memory fakes pass in `pnpm verify`, here on the
 // Drizzle adapters and the migrated content schema, as the ordinary owner role. Then what only
@@ -49,7 +49,7 @@ let pool: pg.Pool;
 let drop: () => Promise<void>;
 
 beforeAll(async () => {
-  const database = await createTestDatabase();
+  const database = await createContentTestDatabase();
   drop = database.drop;
   await runMigrations({
     service: "api",

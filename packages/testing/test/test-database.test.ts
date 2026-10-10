@@ -7,4 +7,15 @@ describe("createTestDatabase", () => {
       createTestDatabase({ superuserExtensions: ["vector; DROP ROLE test"] }),
     ).rejects.toThrow("Not a plain extension name");
   });
+
+  it("refuses a role whose name or setting is not plain, before touching any database", async () => {
+    await expect(
+      createTestDatabase({ roles: [{ name: "reader; DROP ROLE test", settings: {} }] }),
+    ).rejects.toThrow("Not a plain role name");
+    await expect(
+      createTestDatabase({
+        roles: [{ name: "reader", settings: { search_path: "'x'; DROP ROLE test" } }],
+      }),
+    ).rejects.toThrow("Not a plain setting");
+  });
 });

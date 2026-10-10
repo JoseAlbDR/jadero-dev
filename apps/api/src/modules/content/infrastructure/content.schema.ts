@@ -97,7 +97,7 @@ export function revisionTable<TName extends string, TItemId extends PgColumnBuil
  * extra ones a type adds (`publishedSlug`) by key.
  */
 type TranslationColumns<TExtraKey extends string = never> = Readonly<
-  Record<"locale" | "publishedRevisionId" | TExtraKey, AnyPgColumn>
+  Record<"itemId" | "locale" | "publishedRevisionId" | "firstPublishedAt" | TExtraKey, AnyPgColumn>
 >;
 
 /** The columns of a revision table a translation's pointers reference. */
@@ -288,13 +288,20 @@ export const posts = content.table(
 
 export const postRevisions = revisionTable("post_revisions", uuid("post_id").notNull(), posts.id);
 
+/**
+ * The posts feed is a keyset page on `(first_published_at, post_id)` newest first, per locale
+ * (WP-12 step 7): the composite index serves it scanned backwards.
+ */
 export const postTranslations = translationTable(
   "post_translations",
   uuid("post_id").notNull(),
   posts.id,
   postRevisions,
   publishedSlug.columns,
-  publishedSlug.constraints("post_translations"),
+  (t) => [
+    ...publishedSlug.constraints("post_translations")(t),
+    index("post_translations_feed_idx").on(t.locale, t.firstPublishedAt, t.itemId),
+  ],
 );
 
 /** One row per skill. */
