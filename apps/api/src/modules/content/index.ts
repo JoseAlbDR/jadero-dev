@@ -6,4 +6,5 @@ export type {
 } from "./application/use-cases/seed-content.use-case.js";
 export { SeedContent } from "./application/use-cases/seed-content.use-case.js";
 export { ContentModule } from "./content.module.js";
+export { ContentReaderReadinessCheck } from "./infrastructure/content-reader-pool.js";
 export { type ContentReaderOptions, PublicContentModule } from "./public-content.module.js";

@@ -39,6 +39,7 @@ function asExposedClientError(exception: unknown): { status: number; message: st
  * HTTP exceptions keep their status; anything else is a 500 whose message and stack go to the
  * log only (exception shielding). Every body carries the request id from the logging module and,
  * when telemetry is on, the trace id, so one id from a client finds the log lines and the trace.
+ * Every error carries `Cache-Control: no-store` (WP-12 D6).
  */
 @Catch()
 export class ProblemDetailsFilter implements ExceptionFilter {
@@ -60,8 +61,11 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     const problem = url === path ? found : { ...found, detail: found.detail.replaceAll(url, path) };
     const requestId = typeof request.id === "string" ? request.id : undefined;
     const traceId = currentTraceId();
+    // An error is never stored by any cache: a cached 404 would hide an item published a moment
+    // later, and this also replaces a success header (`public, max-age=60`) set before the throw.
     response
       .status(problem.status)
+      .setHeader("Cache-Control", "no-store")
       .type("application/problem+json")
       .json({ ...problem, ...(requestId && { requestId }), ...(traceId && { traceId }) });
   }

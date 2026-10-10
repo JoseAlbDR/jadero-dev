@@ -2,8 +2,8 @@ import { Controller, Get, type INestApplication, Injectable, Module } from "@nes
 import { Test } from "@nestjs/testing";
 import { PinoLogger } from "nestjs-pino";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { configureApp } from "../src/bootstrap/configure-app.js";
 import { LoggingModule } from "../src/logging/logging.module.js";
+import { createApp } from "./create-app.js";
 import { memoryStream } from "./memory-stream.js";
 
 /** A singleton provider: its log line must still carry the current request's id. */
@@ -52,7 +52,7 @@ describe("LoggingModule", () => {
         ProbeModule,
       ],
     }).compile();
-    app = configureApp(moduleRef.createNestApplication({ bufferLogs: true }));
+    app = createApp(moduleRef);
     await app.listen(0, "127.0.0.1");
     base = await app.getUrl();
   });

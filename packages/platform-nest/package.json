@@ -35,6 +35,7 @@
     "@opentelemetry/instrumentation-pino": "catalog:",
     "@opentelemetry/sdk-node": "catalog:",
     "drizzle-orm": "catalog:",
+    "helmet": "catalog:",
     "nestjs-pino": "catalog:",
     "pg": "catalog:",
     "pino": "catalog:",
@@ -44,6 +45,7 @@
   "peerDependencies": {
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
+    "@nestjs/platform-express": "catalog:",
     "rxjs": "catalog:",
     "zod": "catalog:"
   },

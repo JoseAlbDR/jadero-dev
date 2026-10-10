@@ -22,14 +22,18 @@ describe("api health with its database down", () => {
     expect((await fetch(`${base}/health/live`)).status).toBe(200);
   });
 
-  it("is not ready, and the body names the database without the connection details", async () => {
+  it("is not ready, and the body names both pools without the connection details", async () => {
     const res = await fetch(`${base}/health/ready`);
     expect(res.status).toBe(503);
     const body = await res.json();
     expect(body).toMatchObject({
       status: "error",
-      error: { database: { status: "down", message: "unavailable" } },
+      error: {
+        database: { status: "down", message: "unavailable" },
+        "content-reader": { status: "down", message: "unavailable" },
+      },
     });
+    expect(res.headers.get("cache-control")).toBe("no-store");
     expect(JSON.stringify(body)).not.toContain("127.0.0.1");
   });
 

@@ -68,6 +68,7 @@ describe("trace id in problem details", () => {
       let sent: Record<string, unknown> = {};
       const response = {
         status: () => response,
+        setHeader: () => response,
         type: () => response,
         json: (body: Record<string, unknown>) => {
           sent = body;

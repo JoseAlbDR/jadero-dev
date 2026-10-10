@@ -6,10 +6,12 @@ import {
   type OnApplicationShutdown,
   VERSION_NEUTRAL,
 } from "@nestjs/common";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
 import { describe, expect, it } from "vitest";
-import { configureApp } from "../src/bootstrap/configure-app.js";
+import { APP_OPTIONS, configureApp } from "../src/bootstrap/configure-app.js";
 import { LoggingModule } from "../src/logging/logging.module.js";
+import { createApp } from "./create-app.js";
 import { memoryStream } from "./memory-stream.js";
 
 @Injectable()
@@ -58,8 +60,8 @@ describe("configureApp", () => {
         ProbeModule,
       ],
     }).compile();
-    const app = moduleRef.createNestApplication({ bufferLogs: true });
-    expect(configureApp(app)).toBe(app);
+    const app = moduleRef.createNestApplication<NestExpressApplication>(APP_OPTIONS);
+    expect(configureApp(app, { HTTP_JSON_BODY_LIMIT: "100kb" })).toBe(app);
     await app.init();
     const probe = app.get(ShutdownProbe);
     await app.close();
@@ -78,7 +80,7 @@ describe("configureApp", () => {
         RoutesModule,
       ],
     }).compile();
-    const app = configureApp(moduleRef.createNestApplication({ bufferLogs: true }));
+    const app = createApp(moduleRef);
     await app.listen(0, "127.0.0.1");
     const base = await app.getUrl();
     try {

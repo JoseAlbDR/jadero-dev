@@ -270,7 +270,7 @@ describe("GET /v1/content over HTTP, against Postgres", () => {
     // The case study has a German version, so its English slug is not a German page.
     const res = await fetch(`${base}/v1/content/de/projects/sample-case-study`);
     expect(res.status).toBe(404);
-    expect(res.headers.get("cache-control")).not.toBe(PUBLIC_CACHE_CONTROL);
+    expect(res.headers.get("cache-control")).toBe("no-store");
   });
 
   it("hides an archived project from the list and its page", async () => {

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, type Type } from "@nestjs/common";
 import type { Pool, QueryConfig } from "pg";
 import { CHECK_TIMEOUT_MS } from "../health/health.controller.js";
 import { ReadinessCheck } from "../health/readiness-check.js";
@@ -11,14 +11,18 @@ const SELECT_ONE: QueryConfig & { query_timeout: number } = {
 };
 
 /**
- * Readiness of the service's own database: one `SELECT 1` through the pool. Register it with
- * `HealthModule.forRoot({ checks: [PostgresReadinessCheck] })` next to `DatabaseModule.forRoot`.
+ * Readiness of one `pg` pool: one `SELECT 1` through it. Not injectable on its own: build a check
+ * for a pool with {@link postgresReadinessCheck}.
  */
-@Injectable()
-export class PostgresReadinessCheck extends ReadinessCheck {
-  readonly name = "database";
-
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {
+export class PoolReadinessCheck extends ReadinessCheck {
+  /**
+   * @param name the key in the health body.
+   * @param pool the pool to check.
+   */
+  constructor(
+    readonly name: string,
+    private readonly pool: Pool,
+  ) {
     super();
   }
 
@@ -31,3 +35,33 @@ export class PostgresReadinessCheck extends ReadinessCheck {
     await this.pool.query(SELECT_ONE);
   }
 }
+
+/**
+ * Builds the readiness check of the `pg` pool under a DI token, reported under `name` on
+ * `/health/ready`. A service with a second pool (api's read-only `content_reader` pool) registers
+ * one check per pool, so a wrong credential on either fails readiness instead of every request
+ * that uses it. Extend the result to give the check its own class name:
+ * `class ReaderCheck extends postgresReadinessCheck(READER_POOL, "reader") {}`.
+ * @param poolToken the DI token of the pool.
+ * @param name the key in the health body.
+ * @returns an injectable check class for `HealthModule.forRoot({ checks })`.
+ */
+export function postgresReadinessCheck(
+  poolToken: symbol | string,
+  name: string,
+): Type<PoolReadinessCheck> {
+  @Injectable()
+  class TokenPoolReadinessCheck extends PoolReadinessCheck {
+    constructor(@Inject(poolToken) pool: Pool) {
+      super(name, pool);
+    }
+  }
+  return TokenPoolReadinessCheck;
+}
+
+/**
+ * Readiness of the service's own database through `DatabaseModule`'s pool, as `database`. Register
+ * it with `HealthModule.forRoot({ checks: [PostgresReadinessCheck] })` next to
+ * `DatabaseModule.forRoot`.
+ */
+export class PostgresReadinessCheck extends postgresReadinessCheck(PG_POOL, "database") {}

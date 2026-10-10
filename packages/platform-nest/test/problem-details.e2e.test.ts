@@ -1,9 +1,9 @@
 import { type INestApplication, Module } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { configureApp } from "../src/bootstrap/configure-app.js";
 import { toJsonPointer } from "../src/errors/request-validation.exception.js";
 import { LoggingModule } from "../src/logging/logging.module.js";
+import { createApp } from "./create-app.js";
 import { EchoController } from "./fixtures/echo.controller.js";
 import { memoryStream } from "./memory-stream.js";
 
@@ -27,7 +27,7 @@ describe("problem details (RFC 9457)", () => {
         FixtureModule,
       ],
     }).compile();
-    app = configureApp(moduleRef.createNestApplication({ bufferLogs: true }));
+    app = createApp(moduleRef);
     await app.listen(0, "127.0.0.1");
     base = await app.getUrl();
   });

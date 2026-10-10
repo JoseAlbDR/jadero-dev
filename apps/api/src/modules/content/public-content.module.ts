@@ -24,6 +24,8 @@ export interface ContentReaderOptions {
  * migration did not grant (never `knowledge_entry_provenance`). Separate from `ContentModule`,
  * whose write use cases run on the owner pool and are also booted by `db:seed`, which needs no
  * reader. The pool connects lazily (like `DatabaseModule`'s) and closes after the HTTP server.
+ * It is exported for `ContentReaderReadinessCheck`: pass the same `forRoot` result to
+ * `HealthModule.forRoot({ imports })`, so both share one module instance and one pool.
  */
 @Module({})
 export class PublicContentModule {
@@ -44,6 +46,7 @@ export class PublicContentModule {
           inject: [CONTENT_READER_POOL],
         },
       ],
+      exports: [CONTENT_READER_POOL],
     };
   }
 }

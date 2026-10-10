@@ -39,6 +39,23 @@ describe("public content reads over HTTP", () => {
     expect(await res.json()).toMatchObject({ locale: "es", name: "Alex Example" });
   });
 
+  it("sends the JSON API security headers on a public read, and no CORS nor X-Powered-By", async () => {
+    const res = await fetch(`${base}/v1/content/en/skills`, {
+      headers: { origin: "https://evil.example" },
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(res.headers.get("content-security-policy")).toBe(
+      "default-src 'none';frame-ancestors 'none'",
+    );
+    expect(res.headers.get("cross-origin-resource-policy")).toBe("same-origin");
+    expect(res.headers.get("referrer-policy")).toBe("no-referrer");
+    expect(res.headers.get("x-powered-by")).toBeNull();
+    expect([...res.headers.keys()].filter((name) => name.startsWith("access-control-"))).toEqual(
+      [],
+    );
+  });
+
   it("answers a matching If-None-Match with 304, no body, the same validators and cache headers", async () => {
     const url = `${base}/v1/content/en/projects/sample-project`;
     const first = await rawGet(url);
@@ -64,11 +81,11 @@ describe("public content reads over HTTP", () => {
     expect(res.headers.get("content-language")).toBe("de, en");
   });
 
-  it("is a 404 problem without a public cache header when the item is absent", async () => {
+  it("is a 404 problem marked no-store when the item is absent", async () => {
     const res = await fetch(`${base}/v1/content/en/projects/no-such-project`);
     expect(res.status).toBe(404);
     expect(res.headers.get("content-type")).toContain("application/problem+json");
-    expect(res.headers.get("cache-control")).not.toBe(PUBLIC_CACHE_CONTROL);
+    expect(res.headers.get("cache-control")).toBe("no-store");
     expect(res.headers.get("content-language")).toBeNull();
   });
 
@@ -76,7 +93,7 @@ describe("public content reads over HTTP", () => {
     const res = await fetch(`${base}/v1/content/fr/profile`);
     expect(res.status).toBe(400);
     expect(await res.json()).toMatchObject({ errors: [{ pointer: "#/locale" }] });
-    expect(res.headers.get("cache-control")).not.toBe(PUBLIC_CACHE_CONTROL);
+    expect(res.headers.get("cache-control")).toBe("no-store");
   });
 
   it("is a 400 problem for a malformed cursor or kind; a valid cursor reaches the query decoded", async () => {

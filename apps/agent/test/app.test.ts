@@ -1,5 +1,6 @@
 import { JADERO_QUEUES, MessageBus, RabbitMqMessageBus } from "@jadero/messaging";
-import { configureApp, PG_POOL } from "@jadero/platform-nest";
+import { APP_OPTIONS, configureApp, PG_POOL } from "@jadero/platform-nest";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
 import type { Pool } from "pg";
 import { describe, expect, it } from "vitest";
@@ -47,10 +48,14 @@ describe("agent config", () => {
 
 describe("agent HTTP process with its database down", () => {
   it("boots, is live, and is not ready", async () => {
+    const env = agentEnv.parse(base);
     const moduleRef = await Test.createTestingModule({
-      imports: [AppModule.forRoot(toAgentConfig(agentEnv.parse(base)))],
+      imports: [AppModule.forRoot(toAgentConfig(env))],
     }).compile();
-    const app = configureApp(moduleRef.createNestApplication({ bufferLogs: true }));
+    const app = configureApp(
+      moduleRef.createNestApplication<NestExpressApplication>(APP_OPTIONS),
+      env,
+    );
     await app.listen(0, "127.0.0.1");
     const url = await app.getUrl();
     expect((await fetch(`${url}/health/live`)).status).toBe(200);

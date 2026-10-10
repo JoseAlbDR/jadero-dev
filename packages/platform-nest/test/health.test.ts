@@ -1,12 +1,12 @@
 import { type INestApplication, Injectable } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { configureApp } from "../src/bootstrap/configure-app.js";
 import { CHECK_TIMEOUT_MS } from "../src/health/health.controller.js";
 import { HealthModule } from "../src/health/health.module.js";
 import { ReadinessCheck } from "../src/health/readiness-check.js";
 import { ShutdownState } from "../src/health/shutdown-state.js";
 import { LoggingModule } from "../src/logging/logging.module.js";
+import { createApp } from "./create-app.js";
 import { memoryStream } from "./memory-stream.js";
 
 /** A dependency whose answer each test controls. */
@@ -41,7 +41,7 @@ describe("HealthModule", () => {
         HealthModule.forRoot({ checks: [FakeDatabaseCheck] }),
       ],
     }).compile();
-    app = configureApp(moduleRef.createNestApplication({ bufferLogs: true }));
+    app = createApp(moduleRef);
     await app.listen(0, "127.0.0.1");
     base = await app.getUrl();
     database = app.get(FakeDatabaseCheck);

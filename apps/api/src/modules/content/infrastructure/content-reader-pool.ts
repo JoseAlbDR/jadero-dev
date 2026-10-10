@@ -1,3 +1,4 @@
+import { postgresReadinessCheck } from "@jadero/platform-nest";
 import { Inject, Injectable, type OnApplicationShutdown } from "@nestjs/common";
 import type { Pool } from "pg";
 
@@ -21,3 +22,13 @@ export class ContentReaderPoolCloser implements OnApplicationShutdown {
     await this.pool.end();
   }
 }
+
+/**
+ * Readiness of the reader pool, as `content-reader` on `/health/ready` (WP-12 step 7b): a wrong
+ * `DATABASE_READ_URL` password or a missing grant on the database fails readiness, so the instance
+ * gets no traffic, instead of passing it and answering 500 on every public read.
+ */
+export class ContentReaderReadinessCheck extends postgresReadinessCheck(
+  CONTENT_READER_POOL,
+  "content-reader",
+) {}
