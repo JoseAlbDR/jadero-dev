@@ -9,29 +9,10 @@ import {
 import type { Request, Response } from "express";
 import { currentTraceId } from "../telemetry/trace-id.js";
 import { PROBLEM_TYPE_BASE, type ProblemDetails } from "./problem-details.js";
+import { isExposedClientError, requestBodyErrorDetail } from "./request-body-errors.js";
 import { RequestValidationException } from "./request-validation.exception.js";
 
 const UNEXPECTED = "An unexpected error occurred.";
-
-/**
- * Express middleware errors that are the client's fault (body-parser's 413 payload too large,
- * 415 unsupported media type, 400 request aborted) are `http-errors` instances, not Nest
- * exceptions: they carry a 4xx `status` and `expose: true` when their message is safe to show.
- */
-function asExposedClientError(exception: unknown): { status: number; message: string } | undefined {
-  if (typeof exception !== "object" || exception === null) return undefined;
-  const { status, expose, message } = exception as {
-    status?: unknown;
-    expose?: unknown;
-    message?: unknown;
-  };
-  if (typeof status !== "number" || status < 400 || status > 499 || expose !== true)
-    return undefined;
-  return {
-    status,
-    message: typeof message === "string" ? message : (STATUS_CODES[status] ?? "Error"),
-  };
-}
 
 /**
  * The one exception filter of a service (ADR-006): every error leaves as
@@ -92,14 +73,15 @@ export class ProblemDetailsFilter implements ExceptionFilter {
         instance,
       };
     }
-    const clientError = asExposedClientError(exception);
-    if (clientError) {
-      const { status, message } = clientError;
+    // Express middleware client errors (body-parser's 400, 413, 415): a fixed detail per type,
+    // never the error's message, which can quote the body or a header (WP-12 step 8d).
+    if (isExposedClientError(exception)) {
+      const { status, type } = exception;
       return {
         type: "about:blank",
         title: STATUS_CODES[status] ?? "Error",
         status,
-        detail: message,
+        detail: requestBodyErrorDetail(status, type),
         instance,
       };
     }

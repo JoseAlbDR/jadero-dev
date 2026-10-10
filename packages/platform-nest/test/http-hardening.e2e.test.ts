@@ -89,6 +89,7 @@ describe("HTTP hardening of every service (ADR-047)", () => {
       type: "about:blank",
       title: "Payload Too Large",
       status: 413,
+      detail: "request entity too large",
       instance: "/__fixtures/echo",
     });
   });
@@ -149,6 +150,63 @@ describe("HTTP hardening of every service (ADR-047)", () => {
     expect(all).not.toContain("body-marker");
     expect(all).not.toContain("query-marker");
   });
+
+  // Owner decision A (2026-10-10, WP-12 step 8d): an error response never reflects client input.
+  // JSON.parse's message quotes a fragment of the body and changes between Node versions.
+  it("answers malformed JSON with a fixed detail that quotes nothing of the body", async () => {
+    const res = await request(app.getHttpServer())
+      .post("/__fixtures/echo")
+      .set("Content-Type", "application/json")
+      .send('{"email": parse-marker-not-json}');
+    expect(res.status).toBe(400);
+    expect(res.headers["cache-control"]).toBe("no-store");
+    const id = res.headers["x-request-id"] ?? "";
+    expect(res.body).toEqual({
+      type: "about:blank",
+      title: "Bad Request",
+      status: 400,
+      detail: "The request body is not valid JSON.",
+      instance: "/__fixtures/echo",
+      requestId: id,
+    });
+    for (const leak of ["parse-marker", "position", "Unexpected token"]) {
+      expect(res.text, leak).not.toContain(leak);
+    }
+    const all = JSON.stringify(stream.lines);
+    expect(all).not.toContain("parse-marker");
+    expect(all).not.toContain("Unexpected token");
+  });
+
+  it.each([
+    [
+      "an unsupported content encoding",
+      { "Content-Type": "application/json", "Content-Encoding": "header-marker-enc" },
+      "The request body's content encoding is not supported.",
+    ],
+    [
+      "an unsupported charset",
+      { "Content-Type": "application/json; charset=header-marker-cs" },
+      "The request body's charset is not supported.",
+    ],
+  ])(
+    "answers %s with a fixed 415 detail that does not echo the header",
+    async (_case, headers, detail) => {
+      const res = await request(app.getHttpServer())
+        .post("/__fixtures/echo")
+        .set(headers)
+        .send('{"email":"ada@example.com","locale":"es"}');
+      expect(res.status).toBe(415);
+      expect(res.headers["cache-control"]).toBe("no-store");
+      expect(res.body).toMatchObject({
+        type: "about:blank",
+        title: "Unsupported Media Type",
+        status: 415,
+        detail,
+        instance: "/__fixtures/echo",
+      });
+      expect(res.text.toLowerCase()).not.toContain("header-marker");
+    },
+  );
 
   it("logs a failed query with its code and SQL, never its values", async () => {
     const res = await request(app.getHttpServer())

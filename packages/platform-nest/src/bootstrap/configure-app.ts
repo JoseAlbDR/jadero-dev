@@ -9,6 +9,7 @@ import { Logger } from "nestjs-pino";
 import type { HttpLogger } from "pino-http";
 import type { PlatformEnv } from "../config/platform-env.js";
 import { ProblemDetailsFilter } from "../errors/problem-details.filter.js";
+import { shieldRequestBodyErrors } from "../errors/request-body-errors.js";
 import { RequestValidationException } from "../errors/request-validation.exception.js";
 import { REQUEST_LOGGER } from "../logging/logging.module.js";
 
@@ -56,7 +57,9 @@ const jsonApiHelmet = helmet({
  * - the JSON API security headers through Helmet, and no `X-Powered-By` (ADR-047). CORS stays
  *   closed: no service calls `enableCors`, so no response carries an `Access-Control-*` header;
  * - one body parser, JSON, with the configured limit (`HTTP_JSON_BODY_LIMIT`); a larger body is a
- *   413 problem. Create the app with {@link APP_OPTIONS}, which turns Nest's defaults off;
+ *   413 problem. Create the app with {@link APP_OPTIONS}, which turns Nest's defaults off. A
+ *   parser error (malformed JSON, an unsupported charset or encoding) gets a fixed detail that
+ *   never quotes the body or a header (WP-12 step 8d);
  * - Nest's own logs go through pino (the logs wait in the buffer `APP_OPTIONS` turns on);
  * - every `@Body({ schema })`, `@Query({ schema })` and `@Param({ schema })` is validated, and a
  *   failure keeps its structured issues;
@@ -81,6 +84,8 @@ export function configureApp<T extends NestExpressApplication>(
   app.use(app.get<HttpLogger>(REQUEST_LOGGER));
   app.use(jsonApiHelmet);
   app.useBodyParser("json", { limit: env.HTTP_JSON_BODY_LIMIT });
+  // Right after the parser: its errors reach the filter with a fixed detail, never JSON.parse's.
+  app.use(shieldRequestBodyErrors);
   app.useLogger(app.get(Logger));
   app.useGlobalPipes(
     new StandardSchemaValidationPipe({
