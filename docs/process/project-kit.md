@@ -29,7 +29,7 @@ Approved by the owner on 2026-10-04. A template repository, `project-kit`, that 
 
 ## How it stays in sync
 
-Process changes land in jadero-dev first, where they are tried on a real work package. Once they work, a `chore/` PR in `project-kit` ports them, with project specifics replaced by placeholders. jadero-dev stays the reference, because it is where the flow runs live; the kit never leads until the owner names it the source of truth.
+Process changes land in jadero-dev first, where they run on a real work package, and a `chore/` PR in `project-kit` opened at the same time ports them, with project specifics replaced by placeholders. jadero-dev stays the reference, because it is where the flow runs live; the kit never leads until the owner names it the source of truth.
 
 Generic process files are the ones the kit copies: `AGENTS.md` sections 5 to 8, `CLAUDE.md`, `.claude/` (agents, skills, rules, hooks, settings), `docs/sessions.md`, `docs/agent-tooling.md`, `docs/local-playbook.md`, `docs/learning/wp-template.md`, `docs/adr/0000-template.md`, `docs/process/`, `scripts/github/` and the repo tooling configs. Project content (ADRs, the plan, explainers, code) is never ported.
 
