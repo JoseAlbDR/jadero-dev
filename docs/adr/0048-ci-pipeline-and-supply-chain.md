@@ -1,7 +1,7 @@
 ---
 id: ADR-048
 title: "CI pipeline and supply chain"
-status: proposed
+status: accepted
 date: 2026-10-11
 deciders: [owner]
 decisions: [D-29, D-32, D-78]
@@ -12,7 +12,7 @@ source: docs/learning/wp-6.md (Decision)
 
 # ADR-048: CI pipeline and supply chain
 
-**Status:** Proposed (WP-6, 2026-10-11). Supersedes ADR-026 as a whole. It changes the CI and security workflows (integration tests on Testcontainers instead of service containers, how affected runs are made safe and backed up, `security.yml` on every pull request with OSV-Scanner, CodeQL default setup) and adds a supply chain section from the 2026-10-09 audit and the owner's answers in WP-6. The per-service pipeline, repository visibility (now resolved: public), `release.yml`, `deploy.yml`, images, deploy mechanics (option B with the forced command), the deploy script steps and downtime are restated from ADR-026 unchanged.
+**Status:** Accepted (owner, WP-6, 2026-10-11). Supersedes ADR-026 as a whole. It changes the CI and security workflows (integration tests on Testcontainers instead of service containers, how affected runs are made safe and backed up, `security.yml` on every pull request with OSV-Scanner, CodeQL default setup) and adds a supply chain section from the 2026-10-09 audit and the owner's answers in WP-6. The per-service pipeline, repository visibility (now resolved: public), `release.yml`, `deploy.yml`, images, deploy mechanics (option B with the forced command), the deploy script steps and downtime are restated from ADR-026 unchanged.
 
 ## Context
 

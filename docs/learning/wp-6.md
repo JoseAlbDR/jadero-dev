@@ -1,7 +1,7 @@
 ---
 wp: 6
-decision: pending
-adr: [ADR-026, ADR-009, ADR-024, ADR-025, ADR-001, ADR-029, ADR-041]
+decision: recorded
+adr: [ADR-048, ADR-026, ADR-009, ADR-024, ADR-025, ADR-001, ADR-029, ADR-041]
 ---
 
 # WP-6: CI pipeline
@@ -459,9 +459,14 @@ The explainer is the gate, not a step. Each step ends with a green `pnpm verify`
 
 ## Decision
 
-Pending: say go, object to any choice, or answer Q1 to Q3.
+Recorded 2026-10-11 ([ADR-048](../adr/0048-ci-pipeline-and-supply-chain.md), accepted by the owner; D-78). The owner said go to D1 to D10 and the implementation choices, and answered:
+- **Q1: A.** Dependency review for licenses only (AGPL and GPL denied, vulnerability check off because Q2 is OSV-Scanner); Scorecard with the public badge and a README note that Code-Review scores low with one reviewer; `SECURITY.md`; CodeQL default setup for JavaScript/TypeScript and Actions; the setting that requires SHA pinning; Dependabot security updates off, alerts on.
+- **Q2: A.** OSV-Scanner as the pull request diff gate plus a weekly full scan; `pnpm audit` stays local.
+- **Q3: B, weekly.** A cached full run on every push to `main` and a weekly uncached (`--force`) full run; a failed scheduled run opens an issue.
 
-**What the ADR superseding ADR-026 would change** (written in step 1 after your answers; lines quoted from ADR-026's "Workflows" section):
+All three match the recommendations, so there was nothing to challenge.
+
+**What ADR-048 changes against ADR-026** (lines quoted from ADR-026's "Workflows" section):
 1. `ci.yml`: "integration tests with `pgvector/pgvector` and `rabbitmq` service containers" becomes "integration and end-to-end tests on Testcontainers through `packages/testing`, on the runner's Docker". Decided by you on 2026-10-10 (D4); not pending.
 2. `ci.yml`: "`turbo run lint typecheck test build --affected`" gains how affected is made safe: the PR base SHA as `TURBO_SCM_BASE`, full history, task-level affected detection with every out-of-package read declared, and the backstop chosen in Q3 (D2).
 3. `ci.yml`: "Docker build without push (validates Dockerfiles)" stays, marked as arriving with WP-7 (no Dockerfiles yet). Timing only.
