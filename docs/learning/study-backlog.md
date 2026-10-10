@@ -7,13 +7,18 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 - A line is added in the step where it shows up (`/step` step 6): a check question or explain-back answered wrong or partly (**weak**), something the owner found worth more time (**interesting**), or something the main session recommends studying in depth because it recurs in other projects and interviews (**recommended**).
 - Lines go under a **theme**, not under a WP. A new topic close to an existing one joins that theme instead of opening a new one. `/wrap-wp` (step 8c) merges duplicates and marks what the explain-back showed is now solid.
 - Each line: topic, WP, kind, link to the step log entry, optional resource.
+- Each `weak` line also carries a short `Question feedback:` note, written when the line is added or marked `weak again` (`/step` step 6, the warm-up mark in `/step` step 2, `/wrap-wp` step 8c): how the question failed (too abstract, missing context, an unhelpful hint) and what helped, so the next asking changes form. Example: "Question feedback: the question named the mechanism but gave no failure; a concrete crash between the two writes helped, so next time start from the crash and ask what the customer sees."
 
 ## How it is used
 
-- One `/teach` run per closed release, on that release's open themes, two to four themes per run: as few runs as possible for as much learning as possible. A theme with one small topic waits for the next release instead of getting its own run.
-- Between runs, each `/step` opens with one warm-up recall question on an open line (`/step` step 2): a right answer marks it `solid <date> (warm-up)`, a wrong one `weak again <date>`, so the weakest lines show before the `/teach` run.
-- After the run, the studied lines are marked `studied <date>`; what the run showed is still weak stays open.
-- At the end of the project, one last run on whatever is left, plus a review pass of the themes marked weak more than once.
+- Between releases, each `/step` opens with one warm-up recall question on an open line (`/step` step 2): a right answer marks it `solid <date> (warm-up)`, a wrong one `weak again <date>` with an updated feedback note, so the weakest lines show before the release review.
+- Closing a release runs `/review-release R<n>`, a loop in four phases (test, teach, retest):
+  1. **Cold diagnostic**: one self-contained question per open `weak` or `weak again` line of the release, with no explanation first. A right answer closes the line: `solid <date> (review)`.
+  2. **`/teach`** only on the themes still failing plus the `interesting` lines, two to four themes per run; the owner reviews what it generates. Covered lines are marked `studied <date>`.
+  3. **Mastery loop**: the questions on those themes again, reformulated from each line's feedback note, each time with a new explanation and example, until answered right. An `interesting` line closes with one transfer question (the same pattern in another domain, no project names).
+  4. **Spaced re-check**: the lines closed in the review come back as warm-ups in the next release's `/step` runs.
+- A release is closed only when no line of it stays open. Why this order: answering before studying (pretesting) and recalling instead of rereading (retrieval practice) make learning stick, spacing keeps it, and the diagnostic keeps `/teach` off what the owner already knows.
+- At the end of the project, one last review on whatever is left, plus a pass over the lines marked weak more than once.
 
 ## R1 (open)
 

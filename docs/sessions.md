@@ -107,13 +107,29 @@ continue with /step N 2.
 
 ## Prompt: study a release
 
-Run locally, where the `teach` skill is in the owner's profile, in a folder outside the repo or in `study/`.
+Closing a release runs `/review-release R<n>` in a normal session in the repo, in four phases: test, teach, retest. A release is not closed until no line of it stays open in `docs/learning/study-backlog.md`.
+
+1. **Cold diagnostic** in the session: one question per open weak line, no explanation first; a right answer closes the line.
+2. **`/teach`**, run locally by the owner where the skill is in the owner's profile, in the separate `study/` folder, only on the themes still failing plus the `interesting` lines. The session prints the prompt below with those lines filled in; the owner reviews what it generates.
+3. **Mastery loop** back in the session: the questions again, reformulated from each line's `Question feedback:` note, with a new explanation and example each time, until answered right; `interesting` lines close with one transfer question.
+4. **Spaced re-check**: the closed lines come back as warm-ups in the next release's `/step` runs.
+
+Start it:
 
 ```
-/teach Release R<n> of jadero.dev v2. Mission: understand in depth the open themes of R<n> in
-docs/learning/study-backlog.md (read them, and the step log entries they link to, as the evidence of
-what I got wrong). Cover the themes in one mission, two to four themes, the weak lines first. At the
-end, tell me which lines I can mark studied and which stay open.
+In jadero-dev, release R<n> is closed. Fetch origin, then /review-release R<n>: branch docs/review-R<n>
+from origin/main, read only the R<n> section of docs/learning/study-backlog.md, run the cold diagnostic
+one question at a time, record the marks and feedback, and stop with the /teach prompt for what still
+fails.
+```
+
+The `/teach` prompt (phase 2):
+
+```
+/teach Release R<n> of jadero.dev v2. Mission: understand in depth these lines of
+docs/learning/study-backlog.md that I still got wrong in the diagnostic, plus the interesting ones:
+<lines>. Read the step log entries they link to as the evidence of what I got wrong, and each line's
+Question feedback note for what helped. Two to four themes, the weak lines first.
 ```
 
 ## Prompt: a chore outside a work package

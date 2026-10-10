@@ -22,7 +22,7 @@ The main session keeps only what needs its context: teaching, decisions, challen
 | A `chore/` PR changes a generic process file (`docs/process/project-kit.md`, "How it stays in sync") | open the port PR in `project-kit` at the same time (clone it to the scratchpad when it is not attached); the backlog only for a port that cannot be done at once |
 | The last step of a learning WP | the journal draft in `/wrap-wp` (an agent writes `docs/journal/wp-N.md`, the owner corrects) |
 | A step is closed (check question answered and logged, branch pushed) | print the ready-to-copy `/compact` line of `/step` step 7, so the main session does not carry finished steps |
-| A release milestone is closed | the owner runs `/teach` once on that release's themes in `docs/learning/study-backlog.md` (`docs/sessions.md`, "Study a release") |
+| A release milestone is closed | `/review-release R<n>` in the main session: cold diagnostic, `/teach` (the owner, in the `study/` folder) only on what still fails plus the interesting lines, mastery loop, spaced re-check; the release stays open until no line of it in `docs/learning/study-backlog.md` is open (`docs/sessions.md`, "Study a release") |
 
 Context budget: a new WP starts in a fresh session (or after `/clear`); within a WP, compact after each closed step. WP-10 showed why: work from an earlier session carried into the WP pushed the main context past 400k tokens.
 
