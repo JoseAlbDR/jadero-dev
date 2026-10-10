@@ -3,6 +3,7 @@ import { APP_OPTIONS, configureApp, PG_POOL } from "@jadero/platform-nest";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
 import type { Pool } from "pg";
+import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module.js";
 import {
@@ -56,10 +57,9 @@ describe("agent HTTP process with its database down", () => {
       moduleRef.createNestApplication<NestExpressApplication>(APP_OPTIONS),
       env,
     );
-    await app.listen(0, "127.0.0.1");
-    const url = await app.getUrl();
-    expect((await fetch(`${url}/health/live`)).status).toBe(200);
-    expect((await fetch(`${url}/health/ready`)).status).toBe(503);
+    await app.init();
+    expect((await request(app.getHttpServer()).get("/health/live")).status).toBe(200);
+    expect((await request(app.getHttpServer()).get("/health/ready")).status).toBe(503);
     const pool = app.get<Pool>(PG_POOL);
     expect(pool.options.max).toBe(6);
     await app.close();
