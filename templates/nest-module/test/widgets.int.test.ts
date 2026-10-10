@@ -1,11 +1,11 @@
 import { drizzleOn } from "@jadero/platform-nest";
+import { createTestDatabase } from "@jadero/testing";
 import pg from "pg";
 import { afterAll, beforeAll } from "vitest";
 import { widgetRepositoryContract } from "../src/modules/widgets/application/widget.repository.contract.js";
 import { widgetsUnitOfWorkContract } from "../src/modules/widgets/application/widgets.unit-of-work.contract.js";
 import { DrizzleWidgetRepository } from "../src/modules/widgets/infrastructure/drizzle-widget.repository.js";
 import { DrizzleWidgetsUnitOfWork } from "../src/modules/widgets/infrastructure/drizzle-widgets.unit-of-work.js";
-import { createTestDatabase } from "./setup/test-database.js";
 import { widgetsDdl } from "./support/widgets-ddl.js";
 
 // WP-10 D7 suite 2: the same contract suites the in-memory fakes pass in `pnpm verify`, here on the

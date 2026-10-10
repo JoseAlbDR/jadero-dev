@@ -4,21 +4,21 @@ import { addToOutbox } from "@jadero/messaging";
 import { PG_POOL, runMigrations, withTransaction } from "@jadero/platform-nest";
 import type { INestApplication } from "@nestjs/common";
 import type { Pool } from "pg";
+import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { bootApi } from "./setup/boot.js";
-import { createTestDatabase } from "./setup/test-database.js";
+import { createContentTestDatabase } from "./setup/content-database.js";
 
 // WP-10 D7 suites 3 and 4 where the outbox lives today (api): the outbox row commits with the
 // transaction that writes it and disappears with its rollback (ADR-012, D6). The domain-row
 // rollback of a hexagonal module is the unit of work contract suite on Postgres (the template);
 // the first module that emits a real event adds the outbox to its unit of work (WP-11/12).
 let app: INestApplication;
-let base: string;
 let pool: Pool;
 let drop: () => Promise<void>;
 
 beforeAll(async () => {
-  const database = await createTestDatabase();
+  const database = await createContentTestDatabase();
   drop = database.drop;
   await runMigrations({
     service: "api",
@@ -26,7 +26,7 @@ beforeAll(async () => {
     migrationsFolder: fileURLToPath(new URL("../drizzle", import.meta.url)),
   });
   // development registers POST /dev/ping (WP-5 W1 c).
-  ({ app, base } = await bootApi({ DATABASE_URL: database.url, NODE_ENV: "development" }));
+  app = await bootApi({ DATABASE_URL: database.url, NODE_ENV: "development" });
   pool = app.get<Pool>(PG_POOL);
 });
 
@@ -49,9 +49,9 @@ async function outboxRows(): Promise<Record<string, unknown>[]> {
 
 describe("atomic outbox (suite 4)", () => {
   it("a committed POST /dev/ping leaves exactly one unsent row for system.ping.v1", async () => {
-    const response = await fetch(`${base}/dev/ping`, { method: "POST" });
+    const response = await request(app.getHttpServer()).post("/dev/ping");
     expect(response.status).toBe(202);
-    const { eventId } = (await response.json()) as { eventId: string };
+    const { eventId } = response.body as { eventId: string };
     expect(await outboxRows()).toEqual([
       { id: eventId, routing_key: systemPingV1.routingKey, published_at: null },
     ]);

@@ -13,12 +13,24 @@
  * - `meta/_journal.json` may only grow: `main`'s entries must stay, unchanged and first;
  * - any other change (modified, deleted, renamed, type changed) fails.
  *
- * Base: `origin/main`, else `main`; with neither (a shallow clone) it prints a notice and passes.
+ * The same migrator applies, in one transaction, only the journal entries whose `when` is greater
+ * than the `created_at` of the newest row in `drizzle.__drizzle_migrations` (drizzle-orm
+ * `pg-core/dialect.js`). So an entry whose `when` is not above every earlier entry's (a hand-merged
+ * `_journal.json`, a migration generated before `main` gained a newer one) is skipped silently in
+ * every database that already ran the later one (WP-12 step 1c). For every service's journal in
+ * the working tree:
+ * - entries are in `idx` order 0..n with no gap, each `tag` starts with its padded `idx`, and
+ *   `when` is strictly increasing;
+ * - every entry the branch adds (a tag `main`'s journal lacks) has a `when` above the last one on
+ *   `main`.
+ *
+ * Base: `origin/main`, else `main`; with neither (a shallow clone) the checks against it print a
+ * notice and pass, while the order check still runs.
  * Usage: pnpm check:migrations (part of pnpm verify and pnpm verify:all). It runs after Turborepo,
  * not as a cached task: its input is git history, which no cache key sees.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 /** A path under a service's migration folder. */
@@ -26,6 +38,9 @@ export const MIGRATION_PATH = /^apps\/[^/]+\/drizzle\//;
 
 /** A service's migration journal. */
 const JOURNAL_PATH = /^apps\/[^/]+\/drizzle\/meta\/_journal\.json$/;
+
+/** The fix for an entry the migrator would skip. */
+const REGENERATE = "regenerate the migration after rebasing: delete it and run db:generate again";
 
 /**
  * Parses `git diff --name-status --no-renames` output.
@@ -98,6 +113,108 @@ export function migrationViolations(changes, facts) {
   return problems;
 }
 
+/**
+ * Parses a journal's entries, or returns null when the text is not a journal.
+ * @param {string} text
+ * @returns {{ idx: unknown, when: unknown, tag: unknown }[] | null}
+ */
+function journalEntries(text) {
+  try {
+    const journal = JSON.parse(text);
+    return Array.isArray(journal?.entries) ? journal.entries : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Checks that the migrator would apply every entry of a journal in order: `idx` runs 0..n with no
+ * gap or duplicate, each `tag` starts with its `idx` padded to four digits (drizzle-kit's default
+ * prefix), and `when` is a number strictly greater than the previous entry's. Pure.
+ * @param {string} path the journal's path, for the messages.
+ * @param {string} text the journal's content.
+ * @returns {string[]} one line per problem; empty when the journal is in order.
+ */
+export function journalOrderProblems(path, text) {
+  const entries = journalEntries(text);
+  if (entries === null) return [`${path}: not a journal (invalid JSON or no entries array)`];
+  const problems = [];
+  let previous;
+  entries.forEach((entry, position) => {
+    const name = `entry ${entry?.tag ?? "(no tag)"} (idx ${entry?.idx})`;
+    if (entry?.idx !== position) {
+      problems.push(
+        `${path}: ${name} sits at position ${position}; idx must run 0..n with no gap or duplicate; ${REGENERATE}`,
+      );
+    }
+    const prefix = `${String(entry?.idx).padStart(4, "0")}_`;
+    if (typeof entry?.tag !== "string" || !entry.tag.startsWith(prefix)) {
+      problems.push(`${path}: ${name} has a tag that does not start with ${prefix}; ${REGENERATE}`);
+    }
+    if (typeof entry?.when !== "number") {
+      problems.push(`${path}: ${name} has no numeric when; ${REGENERATE}`);
+      return;
+    }
+    if (previous !== undefined && entry.when <= previous.when) {
+      problems.push(
+        `${path}: ${name} has when ${entry.when}, not after ${previous.tag} (${previous.when}); the migrator would skip it in a database that already ran ${previous.tag}; ${REGENERATE}`,
+      );
+    }
+    previous = entry;
+  });
+  return problems;
+}
+
+/**
+ * Checks that every entry the branch adds to a journal (a tag the base journal lacks) has a `when`
+ * greater than the last `when` on the base: otherwise a database that already ran the base's newest
+ * migration skips it after the merge. Pure; a missing or unreadable base journal (a new service)
+ * passes.
+ * @param {string} path the journal's path, for the messages.
+ * @param {string | null} baseText the journal on `main`, or null when `main` has none.
+ * @param {string} currentText the journal in the working tree.
+ * @returns {string[]} one line per entry older than `main`'s last; empty otherwise.
+ */
+export function entriesOlderThanBase(path, baseText, currentText) {
+  const baseEntries = baseText === null ? null : journalEntries(baseText);
+  const currentEntries = journalEntries(currentText);
+  if (!baseEntries || baseEntries.length === 0 || !currentEntries) return [];
+  const baseTags = new Set(baseEntries.map((entry) => entry?.tag));
+  const last = baseEntries.reduce((latest, entry) =>
+    typeof entry?.when === "number" && entry.when > latest.when ? entry : latest,
+  );
+  return currentEntries
+    .filter((entry) => !baseTags.has(entry?.tag))
+    .filter((entry) => typeof entry?.when === "number" && entry.when <= last.when)
+    .map(
+      (entry) =>
+        `${path}: entry ${entry.tag} has when ${entry.when}, not after main's last ${last.tag} (${last.when}); every database that ran ${last.tag} would skip it; merge main, then ${REGENERATE}`,
+    );
+}
+
+/**
+ * Lists every service's migration journal in the working tree, tracked or not.
+ * @returns {string[]} paths relative to the repository root.
+ */
+function journalPaths() {
+  if (!existsSync("apps")) return [];
+  return readdirSync("apps", { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => `apps/${entry.name}/drizzle/meta/_journal.json`)
+    .filter((path) => existsSync(path));
+}
+
+/**
+ * Prints one group of problems under its heading and marks the run as failed.
+ * @param {string} heading
+ * @param {string[]} problems
+ */
+function report(heading, problems) {
+  if (problems.length === 0) return;
+  console.error(`check:migrations: ${heading}\n${problems.map((line) => `  ${line}`).join("\n")}`);
+  process.exitCode = 1;
+}
+
 /** Runs git and returns its output, or null when it fails. */
 function git(args) {
   try {
@@ -107,42 +224,57 @@ function git(args) {
   }
 }
 
-/** Runs the check on this repository and exits 1 on a violation. */
+/** Runs the checks on this repository and exits 1 on a violation. */
 function main() {
   const root = git(["rev-parse", "--show-toplevel"])?.trim();
   if (root) process.chdir(root);
+  const journals = journalPaths().map((path) => ({ path, text: readFileSync(path, "utf8") }));
+  const skipHeading =
+    "the migrator applies only journal entries newer than the last one applied, so these would be skipped silently (WP-12 step 1c).";
+  const ordered = [];
+  const orderProblems = journals.flatMap((journal) => {
+    const problems = journalOrderProblems(journal.path, journal.text);
+    if (problems.length === 0) ordered.push(journal);
+    return problems;
+  });
+  report(skipHeading, orderProblems);
   const base = ["origin/main", "main"].find(
     (ref) => git(["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]) !== null,
   );
   if (!base) {
-    console.log("check:migrations: skipped, neither origin/main nor main exists in this clone");
+    console.log(
+      "check:migrations: base checks skipped, neither origin/main nor main exists in this clone",
+    );
     return;
   }
   const mergeBase = git(["merge-base", base, "HEAD"])?.trim();
   if (!mergeBase) {
-    console.log(`check:migrations: skipped, no merge base with ${base}`);
+    console.log(`check:migrations: base checks skipped, no merge base with ${base}`);
     return;
   }
   const changes = parseNameStatus(
     git(["diff", "--name-status", "--no-renames", mergeBase, "--", "apps"]) ?? "",
   );
-  const problems = migrationViolations(changes, {
-    journalOnlyGrew: (path) =>
-      existsSync(path) &&
-      journalOnlyGrew(git(["show", `${mergeBase}:${path}`]) ?? "", readFileSync(path, "utf8")),
-    differsOnBase: (path) => {
-      const onBase = git(["rev-parse", "--verify", "--quiet", `${base}:${path}`])?.trim();
-      return Boolean(onBase) && onBase !== git(["hash-object", path])?.trim();
-    },
-  });
-  if (problems.length > 0) {
-    console.error(
-      `check:migrations: applied migrations are immutable; write a new migration instead (WP-10).\n${problems.map((line) => `  ${line}`).join("\n")}`,
-    );
-    process.exitCode = 1;
-    return;
-  }
-  console.log(`check:migrations: ok (base ${base})`);
+  report(
+    "applied migrations are immutable; write a new migration instead (WP-10).",
+    migrationViolations(changes, {
+      journalOnlyGrew: (path) =>
+        existsSync(path) &&
+        journalOnlyGrew(git(["show", `${mergeBase}:${path}`]) ?? "", readFileSync(path, "utf8")),
+      differsOnBase: (path) => {
+        const onBase = git(["rev-parse", "--verify", "--quiet", `${base}:${path}`])?.trim();
+        return Boolean(onBase) && onBase !== git(["hash-object", path])?.trim();
+      },
+    }),
+  );
+  // A journal out of order is already reported: regenerating its entry fixes both rules.
+  report(
+    skipHeading,
+    ordered.flatMap(({ path, text }) =>
+      entriesOlderThanBase(path, git(["show", `${base}:${path}`]), text),
+    ),
+  );
+  if (process.exitCode !== 1) console.log(`check:migrations: ok (base ${base})`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();

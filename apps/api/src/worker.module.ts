@@ -6,7 +6,7 @@ import {
   TelemetryModule,
 } from "@jadero/platform-nest";
 import { type DynamicModule, Module } from "@nestjs/common";
-import { ApiConfig, ApiWorkerConfig } from "./config/api-config.js";
+import { ApiWorkerConfig } from "./config/api-config.js";
 import { BrokerReadinessCheck, RelayModule } from "./modules/relay/index.js";
 
 /**
@@ -18,7 +18,7 @@ import { BrokerReadinessCheck, RelayModule } from "./modules/relay/index.js";
 export class WorkerModule {
   /**
    * @param config the parsed configuration from `toApiWorkerConfig(loadConfig(apiWorkerEnv))`.
-   * @returns the root module, with `ApiWorkerConfig` and `ApiConfig` provided globally.
+   * @returns the root module, with `ApiWorkerConfig` provided globally.
    */
   static forRoot(config: ApiWorkerConfig): DynamicModule {
     return {
@@ -38,11 +38,8 @@ export class WorkerModule {
         TelemetryModule,
         RelayModule,
       ],
-      providers: [
-        { provide: ApiWorkerConfig, useValue: config },
-        { provide: ApiConfig, useValue: config },
-      ],
-      exports: [ApiWorkerConfig, ApiConfig],
+      providers: [{ provide: ApiWorkerConfig, useValue: config }],
+      exports: [ApiWorkerConfig],
     };
   }
 }

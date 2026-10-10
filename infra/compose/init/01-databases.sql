@@ -7,6 +7,14 @@ CREATE ROLE content LOGIN PASSWORD 'content';
 CREATE DATABASE content_dev OWNER content;
 REVOKE CONNECT ON DATABASE content_dev FROM PUBLIC;
 
+-- The read-only role of api's public content reads (WP-12 step 7, least privilege): it may
+-- connect to content_dev, every transaction it opens is read-only, and api's migration
+-- 0002_content_reader grants it SELECT table by table (never the private entry provenance).
+-- @jadero/testing reads these lines, so the integration tests create the same role.
+CREATE ROLE content_reader LOGIN PASSWORD 'content_reader';
+GRANT CONNECT ON DATABASE content_dev TO content_reader;
+ALTER ROLE content_reader SET default_transaction_read_only = on;
+
 CREATE ROLE agent LOGIN PASSWORD 'agent';
 CREATE DATABASE agent_dev OWNER agent;
 REVOKE CONNECT ON DATABASE agent_dev FROM PUBLIC;

@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { fileURLToPath } from "node:url";
 import type { Params } from "nestjs-pino";
-import type { DestinationStream, Level } from "pino";
+import type { DestinationStream, Level, LogFn } from "pino";
+import { type HttpLogger, type Options, pinoHttp } from "pino-http";
+import { redactQueryErrors, serializeError } from "./error-serializer.js";
 
 /** What a service tells the logging module about itself. */
 export interface LoggingOptions {
@@ -58,14 +60,32 @@ export function requestLogLevel(req: IncomingMessage, res: ServerResponse, error
 }
 
 /**
- * Builds the nestjs-pino configuration. Request lines carry method, URL, status and `req_id`;
- * headers, bodies and the client IP are never logged (AGENTS.md section 7), and the auth headers
- * are redacted in case a custom log line includes them.
- * @param options the service's logging options.
- * @returns the parameters for `LoggerModule.forRoot`.
+ * Swaps a database error passed to a log call (`logger.error(err)` or `logger.error({ err })`) for
+ * its redacted copy before pino sees it: with no message argument, pino writes the error's own
+ * message as `msg`, and Drizzle's carries the bound parameters.
+ * @param args the arguments of the log call.
+ * @returns the arguments to log, the same array when nothing changed.
  */
-export function loggerParams(options: LoggingOptions): Params {
-  const pinoOptions = {
+export function redactLogArguments(args: Parameters<LogFn>): Parameters<LogFn> {
+  const [first, ...rest] = args as unknown[];
+  if (first instanceof Error) {
+    const safe = redactQueryErrors(first);
+    return safe === first ? args : ([safe, ...rest] as Parameters<LogFn>);
+  }
+  const err = (first as { err?: unknown } | null)?.err;
+  if (typeof first !== "object" || !(err instanceof Error)) return args;
+  const safe = redactQueryErrors(err);
+  return safe === err ? args : ([{ ...first, err: safe }, ...rest] as Parameters<LogFn>);
+}
+
+/**
+ * The pino-http options and destination behind {@link loggerParams} and
+ * {@link createRequestLogger}.
+ * @param options the service's logging options.
+ * @returns the options and the test destination, if any (stdout otherwise).
+ */
+function pinoHttpArguments(options: LoggingOptions): [Options, DestinationStream | undefined] {
+  const pinoOptions: Options = {
     level: options.level,
     base: { service: options.serviceName },
     genReqId: requestId,
@@ -78,6 +98,12 @@ export function loggerParams(options: LoggingOptions): Params {
         url: req.url.split("?")[0],
       }),
       res: (res: { statusCode: number }) => ({ statusCode: res.statusCode }),
+      err: serializeError,
+    },
+    hooks: {
+      logMethod(this: unknown, args: Parameters<LogFn>, method: LogFn): void {
+        method.apply(this, redactLogArguments(args));
+      },
     },
     redact: ["req.headers.authorization", "req.headers.cookie", 'res.headers["set-cookie"]'],
     ...(options.pretty && !options.destination
@@ -89,5 +115,32 @@ export function loggerParams(options: LoggingOptions): Params {
         }
       : {}),
   };
-  return { pinoHttp: options.destination ? [pinoOptions, options.destination] : pinoOptions };
+  return [pinoOptions, options.destination];
+}
+
+/**
+ * Builds the pino-http configuration, in the shape of nestjs-pino's `Params`. Request lines carry
+ * method, URL, status and `req_id`; headers, bodies and the client IP are never logged (AGENTS.md
+ * section 7), and the auth headers are redacted in case a custom log line includes them. A logged
+ * database error keeps its code, constraint, table and SQL text, never its bound parameters nor
+ * Postgres's `detail`.
+ * @param options the service's logging options.
+ * @returns the pino-http options, with the destination when one is given.
+ */
+export function loggerParams(options: LoggingOptions): Params {
+  const [pinoOptions, destination] = pinoHttpArguments(options);
+  return { pinoHttp: destination ? [pinoOptions, destination] : pinoOptions };
+}
+
+/**
+ * Builds the one pino-http middleware of a process, from {@link loggerParams}: its `logger` is the
+ * pino instance every line goes through (one transport), and `configureApp` mounts it first in
+ * the Express pipeline, so a request Helmet or the JSON parser rejects still gets its id and its
+ * one line (WP-12 step 8c).
+ * @param options the service's logging options.
+ * @returns the middleware, with the root pino logger as `logger`.
+ */
+export function createRequestLogger(options: LoggingOptions): HttpLogger {
+  const [pinoOptions, destination] = pinoHttpArguments(options);
+  return pinoHttp(pinoOptions, destination);
 }

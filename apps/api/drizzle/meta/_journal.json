@@ -8,6 +8,27 @@
       "when": 1791180788585,
       "tag": "0000_messaging",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791585787317,
+      "tag": "0001_content",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791627683877,
+      "tag": "0002_content_reader",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791627883803,
+      "tag": "0003_posts_feed_index",
+      "breakpoints": true
     }
   ]
 }

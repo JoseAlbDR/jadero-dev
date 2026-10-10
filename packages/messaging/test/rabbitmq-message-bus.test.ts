@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { RabbitMqMessageBus } from "../src/index.js";
-import { POSTGRES_IMAGE, RABBITMQ_IMAGE } from "./setup/images.js";
+import { RABBITMQ_IMAGE } from "./setup/images.js";
 
 const silent = { log() {}, error() {}, warn() {}, debug() {}, verbose() {} };
 
@@ -52,12 +52,11 @@ describe("RabbitMqMessageBus shutdown with the broker down since boot", () => {
 });
 
 describe("test images", () => {
-  it("use the same RabbitMQ and Postgres tags as the dev stack, so dev and tests cannot drift", () => {
+  it("use the same RabbitMQ tag as the dev stack, so dev and tests cannot drift", () => {
     const compose = readFileSync(
       new URL("../../../infra/compose/compose.dev.yml", import.meta.url),
       "utf8",
     );
     expect(compose).toContain(`image: ${RABBITMQ_IMAGE}`);
-    expect(compose).toContain(`image: ${POSTGRES_IMAGE}`);
   });
 });

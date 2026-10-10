@@ -1,0 +1,36 @@
+{
+  "id": "kb-outbox-relay",
+  "title": "Outbox relay",
+  "type": "feature",
+  "domain": "platform",
+  "period": { "from": "2025-03", "to": "2025-05" },
+  "role": "sole author",
+  "stack": ["NestJS", "PostgreSQL", "RabbitMQ"],
+  "patterns": ["transactional outbox", "idempotent consumer"],
+  "indexable": true,
+  "cvBullet": "backend-10",
+  "related": ["kb-inbox-dedup"],
+  "sections": [
+    {
+      "key": "summary",
+      "body": "He built a relay that publishes events written in the same transaction as the change."
+    },
+    {
+      "key": "problem",
+      "body": "Events published after the commit were lost when the process died in between."
+    },
+    {
+      "key": "whatHeBuilt",
+      "body": "An outbox table, a relay that claims rows and a publisher with confirms."
+    },
+    {
+      "key": "tradeoffs",
+      "body": "Change data capture was considered and rejected as one more piece of infrastructure."
+    },
+    {
+      "key": "lessons",
+      "body": "Claiming rows with `FOR UPDATE SKIP LOCKED` keeps several relays from colliding."
+    }
+  ],
+  "questions": ["How does the outbox relay avoid losing events?", "Why not change data capture?"]
+}

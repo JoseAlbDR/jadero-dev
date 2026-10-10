@@ -29,7 +29,15 @@ describe("parseConfig", () => {
       PORT: 3001,
       LOG_LEVEL: "info",
       SERVICE_NAME: "api",
+      HTTP_JSON_BODY_LIMIT: "100kb",
     });
+  });
+
+  it("refuses a body limit that is not a size", () => {
+    expect(platformEnv.safeParse({ ...valid, HTTP_JSON_BODY_LIMIT: "lots" }).success).toBe(false);
+    expect(platformEnv.parse({ ...valid, HTTP_JSON_BODY_LIMIT: "1mb" }).HTTP_JSON_BODY_LIMIT).toBe(
+      "1mb",
+    );
   });
 
   it("names every bad variable", () => {

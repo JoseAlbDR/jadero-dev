@@ -1,0 +1,10 @@
+{
+  "locale": "en",
+  "name": "Alex Example",
+  "headline": "Backend engineer",
+  "summary": "Builds **event-driven** services with NestJS and PostgreSQL.",
+  "links": [
+    { "kind": "email", "url": "mailto:hello@example.com" },
+    { "kind": "github", "url": "https://github.com/example" }
+  ]
+}

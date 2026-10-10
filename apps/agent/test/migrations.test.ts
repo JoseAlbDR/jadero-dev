@@ -1,9 +1,11 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { migrationFolderProblems, migrationJournal } from "@jadero/platform-nest";
+import { pendingSchemaChanges } from "@jadero/testing/drizzle";
 import { describe, expect, it } from "vitest";
-import { pendingSchemaChanges } from "./setup/pending-schema-changes.js";
+import config from "../drizzle.config.js";
 
+const root = fileURLToPath(new URL("..", import.meta.url));
 const folder = fileURLToPath(new URL("../drizzle", import.meta.url));
 
 describe("agent migrations (drizzle/)", () => {
@@ -26,6 +28,6 @@ describe("agent migrations (drizzle/)", () => {
   it("agree with the schema files: db:generate would write nothing (No schema changes)", async () => {
     // A schema file changed without its migration would reach no database; a migration edited by
     // hand would make the next db:generate repeat or undo it (WP-10 D7, suite 1).
-    expect(await pendingSchemaChanges()).toEqual([]);
+    expect(await pendingSchemaChanges({ root, config })).toEqual([]);
   });
 });

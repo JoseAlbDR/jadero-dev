@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Logger, UseFilters } from "@nestjs/common";
+import { Controller, Get, Inject, Logger, UseFilters, VERSION_NEUTRAL } from "@nestjs/common";
 import {
   HealthCheck,
   type HealthCheckResult,
@@ -16,8 +16,11 @@ export const READINESS_CHECKS = Symbol("READINESS_CHECKS");
 /** A check that has not answered within this time counts as down, so a probe never hangs. */
 export const CHECK_TIMEOUT_MS = 1000;
 
-/** `GET /health/live` and `GET /health/ready`, identical in every service. */
-@Controller("health")
+/**
+ * `GET /health/live` and `GET /health/ready`, identical in every service. Version neutral: probes
+ * and orchestrators call the same path whatever version the service's API is at.
+ */
+@Controller({ path: "health", version: VERSION_NEUTRAL })
 @UseFilters(HealthBodyFilter)
 export class HealthController {
   private readonly logger = new Logger(HealthController.name);

@@ -1,5 +1,5 @@
 export { PinoLogger } from "nestjs-pino";
-export { configureApp } from "./bootstrap/configure-app.js";
+export { APP_OPTIONS, configureApp } from "./bootstrap/configure-app.js";
 export {
   ConfigError,
   type ConfigIssue,
@@ -7,9 +7,14 @@ export {
   loadConfig,
   parseConfig,
 } from "./config/load-config.js";
-export { type PlatformEnv, platformEnv } from "./config/platform-env.js";
+export {
+  DEFAULT_JSON_BODY_LIMIT,
+  type PlatformEnv,
+  platformEnv,
+} from "./config/platform-env.js";
 export {
   CONNECT_TIMEOUT_MS,
+  createPool,
   DatabaseModule,
   type DatabaseModuleOptions,
   poolConfig,
@@ -26,7 +31,11 @@ export {
   type RunMigrationsOptions,
   runMigrations,
 } from "./database/migrations.js";
-export { PostgresReadinessCheck } from "./database/postgres.readiness-check.js";
+export {
+  type PoolReadinessOptions,
+  PostgresReadinessCheck,
+  postgresReadinessCheck,
+} from "./database/postgres.readiness-check.js";
 export {
   type ConnectionSource,
   drizzleOn,

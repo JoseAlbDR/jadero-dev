@@ -1,0 +1,13 @@
+{
+  "slug": "jobportal",
+  "locale": "de",
+  "kind": "project",
+  "title": "Jobportal",
+  "summary": "Eine Jobbörse mit Volltextsuche und Filtern.",
+  "stackTags": ["NestJS", "PostgreSQL"],
+  "featured": true,
+  "alternates": { "es": "portal-de-empleo", "en": "jobs-hub", "de": "jobportal" },
+  "body": "## Problem\n\nEine Beispielseite.",
+  "repoUrl": "https://github.com/example/jobs-hub",
+  "demoUrl": null
+}

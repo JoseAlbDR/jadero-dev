@@ -42,10 +42,10 @@
   },
   "devDependencies": {
     "@jadero/config": "workspace:*",
+    "@jadero/testing": "workspace:*",
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
     "@opentelemetry/context-async-hooks": "catalog:",
-    "@testcontainers/postgresql": "catalog:",
     "@types/amqplib": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
