@@ -107,14 +107,14 @@ async function isNotFoundProblem(response: Response): Promise<boolean> {
  * @param path the path under the base URL, already encoded.
  * @param schema the contract schema of the response.
  * @param tags the cache tags of the response.
- * @returns the parsed response.
+ * @returns the parsed response, or `null` when the API answers with its 404 problem.
  */
-async function getContent<S extends z.ZodType>(
+async function fetchContent<S extends z.ZodType>(
   resource: string,
   path: string,
   schema: S,
   tags: string[],
-): Promise<z.output<S>> {
+): Promise<z.output<S> | null> {
   const url = `${contentApiUrl()}${path}`;
   let response: Response;
   try {
@@ -126,7 +126,7 @@ async function getContent<S extends z.ZodType>(
     // The cause names the host and port of the API; it stays out of the error on purpose.
     throw new ContentApiError(resource, null, `Content API unreachable for ${resource}`);
   }
-  if (response.status === 404 && (await isNotFoundProblem(response))) notFound();
+  if (response.status === 404 && (await isNotFoundProblem(response))) return null;
   if (!response.ok) {
     throw new ContentApiError(
       resource,
@@ -143,6 +143,23 @@ async function getContent<S extends z.ZodType>(
     );
   }
   return parsed.data;
+}
+
+/**
+ * Like `fetchContent`, but the API's 404 problem becomes the page's 404 (`notFound()`).
+ * @param resource the resource name used in errors.
+ * @param path the path under the base URL, already encoded.
+ * @param schema the contract schema of the response.
+ * @param tags the cache tags of the response.
+ * @returns the parsed response.
+ */
+async function getContent<S extends z.ZodType>(
+  resource: string,
+  path: string,
+  schema: S,
+  tags: string[],
+): Promise<z.output<S>> {
+  return (await fetchContent(resource, path, schema, tags)) ?? notFound();
 }
 
 /**
@@ -205,7 +222,8 @@ export async function getProject(locale: Locale, projectSlug: string): Promise<P
 /**
  * `GET /v1/content/:locale/posts?cursor=`: one page of published posts, newest first.
  * @param locale the page locale.
- * @param cursor the `nextCursor` of the previous page; the first page when absent.
+ * @param cursor the `nextCursor` of the previous page, or a visitor's cursor already checked and
+ *   rebuilt by `postCursorParam`; the first page when absent.
  * @returns the page and the cursor of the next one.
  */
 export async function getPosts(locale: Locale, cursor?: string): Promise<PostPageDto> {
@@ -222,8 +240,20 @@ export async function getPosts(locale: Locale, cursor?: string): Promise<PostPag
  * @returns the post; calls `notFound()` when it is not published or the slug is malformed.
  */
 export async function getPost(locale: Locale, postSlug: string): Promise<PostDto> {
+  return (await findPost(locale, postSlug)) ?? notFound();
+}
+
+/**
+ * `GET /v1/content/:locale/posts/:slug` without the 404 page: a post page asks for its own slug
+ * first and looks for another locale's slug only when the API does not know this one.
+ * @param locale the page locale.
+ * @param postSlug the localized slug from the page URL.
+ * @returns the post, or `null` when no post is published with that slug in the locale; calls
+ *   `notFound()` when the slug is malformed.
+ */
+export async function findPost(locale: Locale, postSlug: string): Promise<PostDto | null> {
   const segment = requireParam(slug, postSlug);
-  return getContent("post", `/v1/content/${locale}/posts/${segment}`, postDto, [
+  return fetchContent("post", `/v1/content/${locale}/posts/${segment}`, postDto, [
     contentTags.posts,
     contentTags.post(postSlug),
   ]);

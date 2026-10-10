@@ -50,6 +50,26 @@
     "demo": "Demo en vivo",
     "back": "Todos los proyectos"
   },
+  "BlogPage": {
+    "metaTitle": "Blog",
+    "metaDescription": "Notas sobre cómo construyo este sitio y sobre trabajo de backend.",
+    "eyebrow": "Blog",
+    "title": "Lo que escribo",
+    "lead": "Notas sobre lo que construyo y lo que aprendo por el camino, primero lo más reciente.",
+    "empty": "Todavía no hay entradas publicadas.",
+    "tags": "Etiquetas",
+    "pagination": "Más entradas",
+    "older": "Entradas anteriores",
+    "back": "Todas las entradas"
+  },
+  "StackPage": {
+    "metaTitle": "Stack",
+    "metaDescription": "Los lenguajes, herramientas y plataformas con los que trabajo, agrupados por área.",
+    "eyebrow": "Stack",
+    "title": "Con qué trabajo",
+    "lead": "Lenguajes, herramientas y plataformas, agrupados por área.",
+    "empty": "Todavía no hay tecnologías publicadas."
+  },
   "NotFound": {
     "title": "Página no encontrada",
     "description": "La página que buscas no existe."
@@ -66,7 +86,9 @@
     "label": "Principal",
     "home": "Inicio",
     "experience": "Experiencia",
-    "projects": "Proyectos"
+    "projects": "Proyectos",
+    "stack": "Stack",
+    "blog": "Blog"
   },
   "Footer": {
     "copyright": "© {year} jadero.dev",

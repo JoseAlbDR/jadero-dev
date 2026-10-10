@@ -50,6 +50,26 @@
     "demo": "Live-Demo",
     "back": "Alle Projekte"
   },
+  "BlogPage": {
+    "metaTitle": "Blog",
+    "metaDescription": "Notizen zum Bau dieser Website und zur Arbeit im Backend.",
+    "eyebrow": "Blog",
+    "title": "Was ich schreibe",
+    "lead": "Notizen zu dem, was ich baue und dabei lerne, die neuesten zuerst.",
+    "empty": "Noch keine Beiträge veröffentlicht.",
+    "tags": "Schlagwörter",
+    "pagination": "Weitere Beiträge",
+    "older": "Ältere Beiträge",
+    "back": "Alle Beiträge"
+  },
+  "StackPage": {
+    "metaTitle": "Stack",
+    "metaDescription": "Die Sprachen, Werkzeuge und Plattformen, mit denen ich arbeite, nach Bereich gruppiert.",
+    "eyebrow": "Stack",
+    "title": "Womit ich arbeite",
+    "lead": "Sprachen, Werkzeuge und Plattformen, nach Bereich gruppiert.",
+    "empty": "Noch keine Kenntnisse veröffentlicht."
+  },
   "NotFound": {
     "title": "Seite nicht gefunden",
     "description": "Die gesuchte Seite existiert nicht."
@@ -66,7 +86,9 @@
     "label": "Hauptnavigation",
     "home": "Startseite",
     "experience": "Erfahrung",
-    "projects": "Projekte"
+    "projects": "Projekte",
+    "stack": "Stack",
+    "blog": "Blog"
   },
   "Footer": {
     "copyright": "© {year} jadero.dev",

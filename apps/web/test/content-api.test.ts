@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CONTENT_REVALIDATE_SECONDS,
   ContentApiError,
+  findPost,
+  getPost,
   getPosts,
   getProfile,
   getProject,
@@ -100,6 +102,16 @@ describe("content API client", () => {
     fetchMock.mockResolvedValue(json(NOT_FOUND_PROBLEM, 404, "application/problem+json"));
 
     await expectNotFound(getProject("en", "missing"));
+  });
+
+  it("lets a post lookup answer null for the 404 problem, so the page can look further", async () => {
+    // A fresh response per call: a body can be read once.
+    fetchMock.mockImplementation(async () =>
+      json(NOT_FOUND_PROBLEM, 404, "application/problem+json"),
+    );
+
+    await expect(findPost("en", "missing")).resolves.toBeNull();
+    await expectNotFound(getPost("en", "missing"));
   });
 
   it("treats a 404 without a problem body as an error, not a missing page", async () => {

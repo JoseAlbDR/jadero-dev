@@ -16,6 +16,10 @@ export const routing = defineRouting({
     "/projects": { en: "/projects", es: "/proyectos", de: "/projekte" },
     // The slug is the project's own localized slug (`sample-project`, `proyecto-de-ejemplo`).
     "/projects/[slug]": { en: "/projects/[slug]", es: "/proyectos/[slug]", de: "/projekte/[slug]" },
+    // The same word in every locale (owner's choice); a post's slug is its own localized slug.
+    "/stack": "/stack",
+    "/blog": "/blog",
+    "/blog/[slug]": "/blog/[slug]",
     // WP-15 throwaway mockups; removed once the owner picks a direction.
     "/mockups": "/mockups",
     "/mockups/terminal": "/mockups/terminal",

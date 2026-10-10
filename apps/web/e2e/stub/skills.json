@@ -1,0 +1,75 @@
+{
+  "en": {
+    "items": [
+      {
+        "locale": "en",
+        "name": "NestJS",
+        "category": "Backend",
+        "projectSlugs": ["message-relay"]
+      },
+      { "locale": "en", "name": "Node.js", "category": "Backend", "projectSlugs": [] },
+      { "locale": "en", "name": "PostgreSQL", "category": "Backend", "projectSlugs": [] },
+      { "locale": "en", "name": "RabbitMQ", "category": "Backend", "projectSlugs": [] },
+      { "locale": "en", "name": "Drizzle ORM", "category": "Backend", "projectSlugs": [] },
+      { "locale": "en", "name": "Zod", "category": "Backend", "projectSlugs": [] },
+      { "locale": "en", "name": "Vitest", "category": "Testing", "projectSlugs": [] },
+      { "locale": "en", "name": "Testcontainers", "category": "Testing", "projectSlugs": [] },
+      { "locale": "en", "name": "Playwright", "category": "Testing", "projectSlugs": [] },
+      { "locale": "en", "name": "Docker", "category": "Infrastructure", "projectSlugs": [] },
+      {
+        "locale": "en",
+        "name": "GitHub Actions",
+        "category": "Infrastructure",
+        "projectSlugs": []
+      },
+      { "locale": "en", "name": "LangGraph", "category": "Applied AI", "projectSlugs": [] }
+    ]
+  },
+  "es": {
+    "items": [
+      {
+        "locale": "es",
+        "name": "NestJS",
+        "category": "Backend",
+        "projectSlugs": ["message-relay"]
+      },
+      { "locale": "es", "name": "Node.js", "category": "Backend", "projectSlugs": [] },
+      { "locale": "es", "name": "PostgreSQL", "category": "Backend", "projectSlugs": [] },
+      { "locale": "es", "name": "RabbitMQ", "category": "Backend", "projectSlugs": [] },
+      { "locale": "es", "name": "Drizzle ORM", "category": "Backend", "projectSlugs": [] },
+      { "locale": "es", "name": "Zod", "category": "Backend", "projectSlugs": [] },
+      { "locale": "es", "name": "Vitest", "category": "Pruebas", "projectSlugs": [] },
+      { "locale": "es", "name": "Testcontainers", "category": "Pruebas", "projectSlugs": [] },
+      { "locale": "es", "name": "Playwright", "category": "Pruebas", "projectSlugs": [] },
+      { "locale": "es", "name": "Docker", "category": "Infraestructura", "projectSlugs": [] },
+      {
+        "locale": "es",
+        "name": "GitHub Actions",
+        "category": "Infraestructura",
+        "projectSlugs": []
+      },
+      { "locale": "es", "name": "LangGraph", "category": "IA aplicada", "projectSlugs": [] }
+    ]
+  },
+  "de": {
+    "items": [
+      {
+        "locale": "de",
+        "name": "NestJS",
+        "category": "Backend",
+        "projectSlugs": ["message-relay"]
+      },
+      { "locale": "de", "name": "Node.js", "category": "Backend", "projectSlugs": [] },
+      { "locale": "de", "name": "PostgreSQL", "category": "Backend", "projectSlugs": [] },
+      { "locale": "de", "name": "RabbitMQ", "category": "Backend", "projectSlugs": [] },
+      { "locale": "de", "name": "Drizzle ORM", "category": "Backend", "projectSlugs": [] },
+      { "locale": "de", "name": "Zod", "category": "Backend", "projectSlugs": [] },
+      { "locale": "de", "name": "Vitest", "category": "Tests", "projectSlugs": [] },
+      { "locale": "de", "name": "Testcontainers", "category": "Tests", "projectSlugs": [] },
+      { "locale": "de", "name": "Playwright", "category": "Tests", "projectSlugs": [] },
+      { "locale": "de", "name": "Docker", "category": "Infrastruktur", "projectSlugs": [] },
+      { "locale": "de", "name": "GitHub Actions", "category": "Infrastruktur", "projectSlugs": [] },
+      { "locale": "en", "name": "LangGraph", "category": "Applied AI", "projectSlugs": [] }
+    ]
+  }
+}
