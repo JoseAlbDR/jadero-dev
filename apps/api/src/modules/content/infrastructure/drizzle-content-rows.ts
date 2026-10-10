@@ -6,7 +6,7 @@ import { pointedRevisionIds, type RevisionRow, type TranslationRow } from "./rev
 
 // The SQL every content repository shares: the compare-and-set on an aggregate's root row (D5) and
 // the reads and writes of a localized type's revision and translation tables (Q1 B, D3). Each type's
-// repository adds its root columns; step 5c's five types reuse both as they are.
+// repository adds its root columns; every localized type reuses both.
 
 /** Drizzle with any schema: the repositories use only the query builder. */
 export type ContentDatabase = Database<Record<string, unknown>>;
@@ -34,6 +34,9 @@ export type TranslationTable = Columns<keyof TranslationRow & string>;
  * @param expectedVersion the version the caller loaded, 0 for a new item.
  * @param insert every root column but `version`, for a create.
  * @param set the root columns an update changes, besides `version`.
+ * @param conflict which conflict a create absorbs: `id` (`ON CONFLICT (id) DO NOTHING`, the default,
+ * so any other unique index still fails loudly) or `any` (`ON CONFLICT DO NOTHING` with no target,
+ * for the profile, whose singleton index on a constant must be a conflict too).
  * @throws {ConcurrentModification} when no row was written.
  */
 export async function compareAndSet(
@@ -43,6 +46,7 @@ export async function compareAndSet(
   expectedVersion: number,
   insert: Readonly<Record<string, unknown>>,
   set: Readonly<Record<string, unknown>>,
+  conflict: "id" | "any" = "id",
 ): Promise<void> {
   const version = expectedVersion + 1;
   const written =
@@ -50,7 +54,7 @@ export async function compareAndSet(
       ? await db
           .insert(table)
           .values({ ...insert, version })
-          .onConflictDoNothing({ target: table.id })
+          .onConflictDoNothing(conflict === "id" ? { target: table.id } : undefined)
           .returning({ id: table.id })
       : await db
           .update(table)
@@ -127,6 +131,19 @@ export class DrizzleLocalizedRows<TRow extends TranslationRow> {
   async insertRevisions(rows: readonly RevisionRow[]): Promise<void> {
     if (rows.length > 0)
       await this.db.insert(this.revisions).values(rows.map((row) => ({ ...row })));
+  }
+
+  /**
+   * Writes what a save adds after the root's compare-and-set: the new revisions first, then every
+   * locale's pointers, whose composite foreign keys need those revisions' rows.
+   * @param rows the mapper's translation rows and unsaved revision rows.
+   */
+  async store(rows: {
+    readonly revisions: readonly RevisionRow[];
+    readonly translations: readonly TRow[];
+  }): Promise<void> {
+    await this.insertRevisions(rows.revisions);
+    await this.upsertTranslations(rows.translations);
   }
 
   /**

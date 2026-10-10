@@ -7,15 +7,25 @@ import {
   InMemoryContentStore,
   InMemoryContentUnitOfWork,
 } from "./in-memory-content.unit-of-work.js";
+import { InMemoryCvBulletRepository } from "./in-memory-cv-bullet.repository.js";
+import { InMemoryExperienceItemRepository } from "./in-memory-experience-item.repository.js";
 import { InMemoryKnowledgeEntryRepository } from "./in-memory-knowledge-entry.repository.js";
+import { InMemoryPostRepository } from "./in-memory-post.repository.js";
+import { InMemoryProfileRepository } from "./in-memory-profile.repository.js";
 import { InMemoryProjectRepository } from "./in-memory-project.repository.js";
+import { InMemorySkillRepository } from "./in-memory-skill.repository.js";
 
 /** A unit of work and readers over one fresh store. */
 function fixture() {
   const store = new InMemoryContentStore();
   return {
     unitOfWork: new InMemoryContentUnitOfWork(store),
+    profile: new InMemoryProfileRepository(store.profile),
+    experienceItems: new InMemoryExperienceItemRepository(store.experienceItems),
     projects: new InMemoryProjectRepository(store.projects),
+    posts: new InMemoryPostRepository(store.posts),
+    skills: new InMemorySkillRepository(store.skills),
+    cvBullets: new InMemoryCvBulletRepository(store.cvBullets, store),
     knowledgeEntries: new InMemoryKnowledgeEntryRepository(store.knowledgeEntries),
   };
 }

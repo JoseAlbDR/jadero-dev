@@ -1,21 +1,22 @@
 import { ProjectRepository } from "../application/project.repository.js";
 import type { Project } from "../domain/project.js";
-import { appendRows, InMemoryRecords, type RecordStore } from "./in-memory-records.js";
+import {
+  appendRows,
+  InMemoryRecords,
+  type LocalizedRecord,
+  pointedRevisions,
+  type RecordStore,
+  storedRevisions,
+} from "./in-memory-records.js";
 import {
   type ProjectBaseRow,
   type ProjectTranslationRow,
   projectFromRows,
   projectToRows,
 } from "./project-rows.js";
-import { pointedRevisionIds, type RevisionRow } from "./revision-rows.js";
 
 /** What the fake stores per project: the rows of its three tables. */
-export interface ProjectRecord {
-  readonly base: ProjectBaseRow;
-  readonly translations: readonly ProjectTranslationRow[];
-  /** Every revision ever saved, append-only, like the table. */
-  readonly revisions: readonly RevisionRow[];
-}
+export type ProjectRecord = LocalizedRecord<ProjectBaseRow, ProjectTranslationRow>;
 
 /**
  * The fake adapter of `ProjectRepository` (ADR-009: fakes at ports). It stores the same rows as the
@@ -36,12 +37,7 @@ export class InMemoryProjectRepository extends ProjectRepository {
   async get(id: string): Promise<Project | undefined> {
     const record = this.records.read(id);
     if (!record) return undefined;
-    const pointed = new Set(pointedRevisionIds(record.translations));
-    return projectFromRows(
-      record.base,
-      record.translations,
-      record.revisions.filter((revision) => pointed.has(revision.id)),
-    );
+    return projectFromRows(record.base, record.translations, pointedRevisions(record));
   }
 
   /**
@@ -51,11 +47,13 @@ export class InMemoryProjectRepository extends ProjectRepository {
    */
   async save(project: Project, expectedVersion: number): Promise<void> {
     const rows = projectToRows(project, expectedVersion + 1);
-    const stored = expectedVersion === 0 ? [] : (this.records.read(project.id)?.revisions ?? []);
     this.records.write(expectedVersion, {
       base: rows.base,
       translations: rows.translations,
-      revisions: appendRows(stored, rows.revisions),
+      revisions: appendRows(
+        storedRevisions(this.records, project.id, expectedVersion),
+        rows.revisions,
+      ),
     });
   }
 }

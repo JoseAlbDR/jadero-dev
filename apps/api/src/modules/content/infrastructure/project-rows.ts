@@ -1,13 +1,15 @@
 import { z } from "zod";
-import { StoredStateInvalid } from "../domain/content.errors.js";
 import { Project, type ProjectDocument, type ProjectKind } from "../domain/project.js";
 import {
+  keysOf,
+  type LocalizedItemRows,
+  localizedRows,
   localizedSnapshot,
+  publishedSlugOf,
+  publishedSlugRule,
   type RevisionRow,
   readStored,
-  revisionRow,
-  type TranslationRow,
-  translationRows,
+  type SlugTranslationRow,
 } from "./revision-rows.js";
 
 /**
@@ -30,7 +32,7 @@ const projectKinds = {
   early: true,
 } as const satisfies Record<ProjectKind, true>;
 
-const projectKindSchema = z.enum(Object.keys(projectKinds) as [ProjectKind, ...ProjectKind[]]);
+const projectKindSchema = z.enum(keysOf(projectKinds));
 
 /** A `content.projects` row. */
 export interface ProjectBaseRow {
@@ -44,18 +46,10 @@ export interface ProjectBaseRow {
 }
 
 /** A `content.project_translations` row: the shared pointers plus the published slug. */
-export interface ProjectTranslationRow extends TranslationRow {
-  readonly publishedSlug: string | null;
-}
+export type ProjectTranslationRow = SlugTranslationRow;
 
 /** What one project save writes. */
-export interface ProjectRows {
-  readonly base: ProjectBaseRow;
-  /** Every locale's row, upserted. */
-  readonly translations: readonly ProjectTranslationRow[];
-  /** Only the revisions saved since the project was loaded, inserted (append-only). */
-  readonly revisions: readonly RevisionRow[];
-}
+export type ProjectRows = LocalizedItemRows<ProjectBaseRow, ProjectTranslationRow>;
 
 /**
  * The rows of a project at its next version. Each locale's published slug is copied from its
@@ -76,12 +70,13 @@ export function projectToRows(project: Project, version: number): ProjectRows {
       archivedAt: stored.translations.archivedAt,
       version,
     },
-    translations: translationRows(stored.id, stored.translations, (locale) => ({
-      publishedSlug: locale.published?.document.slug ?? null,
-    })),
-    revisions: project
-      .unsavedRevisions()
-      .map((revision) => revisionRow(revision, projectDocumentSchema)),
+    ...localizedRows(
+      stored.id,
+      stored.translations,
+      project.unsavedRevisions(),
+      projectDocumentSchema,
+      publishedSlugOf,
+    ),
   };
 }
 
@@ -113,14 +108,7 @@ export function projectFromRows(
       revisions,
       projectDocumentSchema,
       base.archivedAt,
-      (row, locale) => {
-        if (row.publishedSlug !== (locale.published?.document.slug ?? null)) {
-          throw new StoredStateInvalid(
-            base.id,
-            `its ${row.locale} published slug differs from its published revision's slug`,
-          );
-        }
-      },
+      publishedSlugRule(base.id),
     ),
   });
 }

@@ -1,8 +1,13 @@
 import { type ConnectionSource, PG_POOL, withTransaction } from "@jadero/platform-nest";
 import { Inject, Injectable } from "@nestjs/common";
 import { type ContentScope, ContentUnitOfWork } from "../application/content.unit-of-work.js";
+import { DrizzleCvBulletRepository } from "./drizzle-cv-bullet.repository.js";
+import { DrizzleExperienceItemRepository } from "./drizzle-experience-item.repository.js";
 import { DrizzleKnowledgeEntryRepository } from "./drizzle-knowledge-entry.repository.js";
+import { DrizzlePostRepository } from "./drizzle-post.repository.js";
+import { DrizzleProfileRepository } from "./drizzle-profile.repository.js";
 import { DrizzleProjectRepository } from "./drizzle-project.repository.js";
+import { DrizzleSkillRepository } from "./drizzle-skill.repository.js";
 
 /**
  * The real unit of work (WP-10 D6): platform-nest's `withTransaction` checks out one connection and
@@ -25,7 +30,12 @@ export class DrizzleContentUnitOfWork extends ContentUnitOfWork {
   run<T>(work: (scope: ContentScope) => Promise<T>): Promise<T> {
     return withTransaction(this.pool, ({ db }) =>
       work({
+        profile: new DrizzleProfileRepository(db),
+        experienceItems: new DrizzleExperienceItemRepository(db),
         projects: new DrizzleProjectRepository(db),
+        posts: new DrizzlePostRepository(db),
+        skills: new DrizzleSkillRepository(db),
+        cvBullets: new DrizzleCvBulletRepository(db),
         knowledgeEntries: new DrizzleKnowledgeEntryRepository(db),
       }),
     );

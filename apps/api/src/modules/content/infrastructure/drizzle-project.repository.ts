@@ -63,7 +63,6 @@ export class DrizzleProjectRepository extends ProjectRepository {
     const rows = projectToRows(project, expectedVersion + 1);
     const { id, version: _version, ...layout } = rows.base;
     await compareAndSet(this.db, projects, id, expectedVersion, { id, ...layout }, layout);
-    await this.localized.insertRevisions(rows.revisions);
-    await this.localized.upsertTranslations(rows.translations);
+    await this.localized.store(rows);
   }
 }

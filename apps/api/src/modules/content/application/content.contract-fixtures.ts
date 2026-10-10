@@ -1,12 +1,17 @@
 import { randomUUID } from "node:crypto";
 import type { ApprovalChecklist } from "../domain/approval-checklist.js";
+import { CvBullet, type CvBulletParent } from "../domain/cv-bullet.js";
+import { ExperienceItem } from "../domain/experience-item.js";
 import {
   KnowledgeEntry,
   type KnowledgeEntryDocument,
   type KnowledgeEntryProvenance,
 } from "../domain/knowledge-entry.js";
 import type { Locale } from "../domain/locale.js";
+import { Post } from "../domain/post.js";
+import { Profile } from "../domain/profile.js";
 import { Project, type ProjectDocument } from "../domain/project.js";
+import { Skill } from "../domain/skill.js";
 
 // Placeholder content for the content contract suites (ADR-031: no real names). Ids are fresh per
 // call, so the Drizzle runs share one database without seeing each other's rows; slugs carry a
@@ -139,4 +144,168 @@ export function newEntry(): KnowledgeEntry {
     revisionId: randomUUID(),
     at: at(),
   });
+}
+
+/**
+ * A new profile with no revision, never stored.
+ * @returns the profile at version 0.
+ */
+export function newProfile(): Profile {
+  return Profile.create(randomUUID());
+}
+
+/**
+ * Saves one complete owner revision of a profile's locale with a fresh id.
+ * @param profile the profile.
+ * @param locale the locale.
+ * @param minutes the save time, minutes after `at()`.
+ * @param title the headline, to tell revisions apart.
+ * @returns the new revision's id.
+ */
+export function saveProfileRevision(
+  profile: Profile,
+  locale: Locale,
+  minutes = 0,
+  title = "Placeholder",
+): string {
+  const document = {
+    name: "Placeholder Name",
+    headline: `${title} (${locale})`,
+    summary: "A placeholder summary.",
+    links: [{ kind: "website" as const, url: "https://example.com/placeholder" }],
+  };
+  return profile.saveRevision(locale, document, "owner", randomUUID(), at(minutes)).id;
+}
+
+/**
+ * A new experience item with no revision, never stored.
+ * @returns the item at version 0.
+ */
+export function newExperienceItem(): ExperienceItem {
+  return ExperienceItem.create({ id: randomUUID(), sortOrder: 2 });
+}
+
+/**
+ * Saves one complete owner revision of an experience item's locale with a fresh id.
+ * @param item the item.
+ * @param locale the locale.
+ * @param minutes the save time, minutes after `at()`.
+ * @param title the role, to tell revisions apart.
+ * @returns the new revision's id.
+ */
+export function saveExperienceItemRevision(
+  item: ExperienceItem,
+  locale: Locale,
+  minutes = 0,
+  title = "Placeholder",
+): string {
+  const document = {
+    organization: "Placeholder Organization",
+    role: `${title} (${locale})`,
+    period: { from: "2024-01", to: null },
+    locationType: "remote" as const,
+    stackTags: ["TypeScript"],
+  };
+  return item.saveRevision(locale, document, "owner", randomUUID(), at(minutes)).id;
+}
+
+/**
+ * A new post with no revision, never stored.
+ * @returns the post at version 0.
+ */
+export function newPost(): Post {
+  const id = randomUUID();
+  return Post.create({ id, slug: `placeholder-${id.slice(0, 8)}` });
+}
+
+/**
+ * Saves one complete owner revision of a post's locale with a fresh id; the localized slug carries
+ * a piece of the id, because published slugs are unique per locale.
+ * @param post the post.
+ * @param locale the locale.
+ * @param minutes the save time, minutes after `at()`.
+ * @param title the title, to tell revisions apart.
+ * @returns the new revision's id.
+ */
+export function savePostRevision(
+  post: Post,
+  locale: Locale,
+  minutes = 0,
+  title = "Placeholder",
+): string {
+  const document = {
+    slug: `${locale}-placeholder-${post.id.slice(0, 8)}`,
+    title: `${title} (${locale})`,
+    excerpt: "A placeholder post.",
+    body: "Placeholder text.",
+    tags: ["placeholder"],
+  };
+  return post.saveRevision(locale, document, "owner", randomUUID(), at(minutes)).id;
+}
+
+/**
+ * A new skill with no revision, never stored.
+ * @returns the skill at version 0.
+ */
+export function newSkill(): Skill {
+  return Skill.create({ id: randomUUID(), sortOrder: 3 });
+}
+
+/**
+ * Saves one complete owner revision of a skill's locale with a fresh id.
+ * @param skill the skill.
+ * @param locale the locale.
+ * @param minutes the save time, minutes after `at()`.
+ * @param title the name, to tell revisions apart.
+ * @returns the new revision's id.
+ */
+export function saveSkillRevision(
+  skill: Skill,
+  locale: Locale,
+  minutes = 0,
+  title = "Placeholder",
+): string {
+  const document = {
+    name: `${title} (${locale})`,
+    category: "Placeholder category",
+    projectSlugs: ["placeholder-project"],
+  };
+  return skill.saveRevision(locale, document, "owner", randomUUID(), at(minutes)).id;
+}
+
+/**
+ * A new CV bullet with no revision, never stored.
+ * @param parent the experience item or project it details, fixed from now on.
+ * @returns the bullet at version 0.
+ */
+export function newCvBullet(parent: CvBulletParent): CvBullet {
+  return CvBullet.create({
+    id: `placeholder-${randomUUID().slice(0, 8)}`,
+    parent,
+    sortOrder: 1,
+    importance: 2,
+  });
+}
+
+/**
+ * Saves one complete owner revision of a CV bullet's locale with a fresh id.
+ * @param bullet the bullet.
+ * @param locale the locale.
+ * @param minutes the save time, minutes after `at()`.
+ * @param title the text, to tell revisions apart.
+ * @returns the new revision's id.
+ */
+export function saveCvBulletRevision(
+  bullet: CvBullet,
+  locale: Locale,
+  minutes = 0,
+  title = "Placeholder",
+): string {
+  return bullet.saveRevision(
+    locale,
+    { text: `${title} (${locale})` },
+    "owner",
+    randomUUID(),
+    at(minutes),
+  ).id;
 }

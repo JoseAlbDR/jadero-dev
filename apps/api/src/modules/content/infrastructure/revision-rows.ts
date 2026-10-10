@@ -8,7 +8,7 @@ import { REVISION_ORIGINS } from "./content.schema.js";
 // The mapper every content repository shares (Q1 B): revision rows and translation rows to and from
 // the domain's snapshots, for both adapters, so the Drizzle repository and the in-memory fake store
 // exactly the same rows and read them back through the same checks. A type adds only its document
-// schema and its root row (`project-rows.ts`, `knowledge-entry-rows.ts`).
+// schema and its root row (`project-rows.ts`, `post-rows.ts`, `knowledge-entry-rows.ts`, ...).
 
 /** A row of a `*_revisions` table built by `revisionTable`, as both adapters store it. */
 export interface RevisionRow {
@@ -32,8 +32,32 @@ export interface TranslationRow {
   readonly firstPublishedAt: Date | null;
 }
 
+/** The rows of a localized type's three tables that one save writes. */
+export interface LocalizedItemRows<B, T extends TranslationRow = TranslationRow> {
+  readonly base: B;
+  /** Every locale's row, upserted. */
+  readonly translations: readonly T[];
+  /** Only the revisions saved since the item was loaded, inserted (append-only). */
+  readonly revisions: readonly RevisionRow[];
+}
+
+/** A translation row of a slug-addressed type (projects, posts): plus the published slug. */
+export interface SlugTranslationRow extends TranslationRow {
+  readonly publishedSlug: string | null;
+}
+
 const localeSchema = z.enum(LOCALES);
 const originSchema = z.enum(REVISION_ORIGINS);
+
+/**
+ * The keys of a union as the tuple `z.enum` takes; a `satisfies Record<Union, true>` on the
+ * argument makes each list complete, so a value added to the domain's union fails to compile here.
+ * @param record one `true` per member of the union.
+ * @returns the members.
+ */
+export function keysOf<T extends string>(record: Record<T, true>): [T, ...T[]] {
+  return Object.keys(record) as [T, ...T[]];
+}
 
 /**
  * Parses a stored value with its schema (the tolerant reader of Q1 B: unknown keys are dropped,
@@ -135,6 +159,60 @@ export function translationRows<TDoc extends object, TExtra extends object>(
       },
     ];
   });
+}
+
+/**
+ * The translation rows and the new revision rows of a localized item: what every localized type's
+ * mapper writes besides its root row.
+ * @param itemId the item's id.
+ * @param snapshot the item's per-locale snapshot.
+ * @param unsaved the aggregate's `unsavedRevisions()`.
+ * @param documentSchema the type's document schema, which every new document passes on the way in.
+ * @param extra the type's extra columns of one locale (`publishedSlugOf`); none by default.
+ * @returns the rows to upsert and to insert.
+ */
+export function localizedRows<TDoc extends object, TExtra extends object = Record<never, never>>(
+  itemId: string,
+  snapshot: LocalizedRevisionsSnapshot<TDoc>,
+  unsaved: readonly Revision<TDoc>[],
+  documentSchema: z.ZodType<TDoc>,
+  extra: (locale: LocaleSnapshot<TDoc>) => TExtra = () => ({}) as TExtra,
+): Pick<LocalizedItemRows<unknown, TranslationRow & TExtra>, "translations" | "revisions"> {
+  return {
+    translations: translationRows(itemId, snapshot, extra),
+    revisions: unsaved.map((revision) => revisionRow(revision, documentSchema)),
+  };
+}
+
+/**
+ * The published slug of one locale of a slug-addressed type, copied from its published revision's
+ * document, so `(locale, published_slug)` finds the page (D3).
+ * @param locale one locale's snapshot.
+ * @returns the extra translation column.
+ */
+export function publishedSlugOf<TDoc extends { readonly slug: string }>(
+  locale: LocaleSnapshot<TDoc>,
+): Pick<SlugTranslationRow, "publishedSlug"> {
+  return { publishedSlug: locale.published?.document.slug ?? null };
+}
+
+/**
+ * The rule the database cannot prove for a slug-addressed type: each locale's published slug is
+ * its published revision's slug (a mapper bug would otherwise route a URL to another text).
+ * @param itemId the item's id, for the error.
+ * @returns the `check` that `localizedSnapshot` runs on every translation row.
+ */
+export function publishedSlugRule<TDoc extends { readonly slug: string }>(
+  itemId: string,
+): (row: SlugTranslationRow, locale: LocaleSnapshot<TDoc>) => void {
+  return (row, locale) => {
+    if (row.publishedSlug !== (locale.published?.document.slug ?? null)) {
+      throw new StoredStateInvalid(
+        itemId,
+        `its ${row.locale} published slug differs from its published revision's slug`,
+      );
+    }
+  };
 }
 
 /**

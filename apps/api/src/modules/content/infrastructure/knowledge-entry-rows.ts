@@ -13,12 +13,7 @@ import {
   type KnowledgeEntryRole,
   type KnowledgeEntryType,
 } from "../domain/knowledge-entry.js";
-import { readStored, revisionFromRow } from "./revision-rows.js";
-
-/** The keys of a union as the tuple `z.enum` takes; the `satisfies` below makes each list complete. */
-function keysOf<T extends string>(record: Record<T, true>): [T, ...T[]] {
-  return Object.keys(record) as [T, ...T[]];
-}
+import { keysOf, readStored, revisionFromRow } from "./revision-rows.js";
 
 const entryTypes = {
   feature: true,

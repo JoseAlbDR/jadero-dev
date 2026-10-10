@@ -1,14 +1,28 @@
+import type { CvBulletRepository } from "./cv-bullet.repository.js";
+import type { ExperienceItemRepository } from "./experience-item.repository.js";
 import type { KnowledgeEntryRepository } from "./knowledge-entry.repository.js";
+import type { PostRepository } from "./post.repository.js";
+import type { ProfileRepository } from "./profile.repository.js";
 import type { ProjectRepository } from "./project.repository.js";
+import type { SkillRepository } from "./skill.repository.js";
 
 /**
  * What a unit of work hands its work: one repository per content aggregate, all bound to one
- * transaction. Each aggregate type adds its repository here (step 5c adds the other five), and
- * WP-14 adds the outbox writer, so a publish and its event commit together.
+ * transaction. WP-14 adds the outbox writer, so a publish and its event commit together.
  */
 export interface ContentScope {
+  /** The profile repository (a singleton), bound to the transaction. */
+  readonly profile: ProfileRepository;
+  /** The experience items repository, bound to the transaction. */
+  readonly experienceItems: ExperienceItemRepository;
   /** The projects repository, bound to the transaction. */
   readonly projects: ProjectRepository;
+  /** The posts repository, bound to the transaction. */
+  readonly posts: PostRepository;
+  /** The skills repository, bound to the transaction. */
+  readonly skills: SkillRepository;
+  /** The CV bullets repository, bound to the transaction; save a new bullet's parent first. */
+  readonly cvBullets: CvBulletRepository;
   /** The knowledge entries repository, bound to the transaction. */
   readonly knowledgeEntries: KnowledgeEntryRepository;
 }
