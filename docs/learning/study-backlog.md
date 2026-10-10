@@ -24,6 +24,7 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 - Fakes versus mocks, and test double drift: a fake is trustworthy only in what the shared contract suite checks; the rest belongs to integration tests (test pyramid). WP-10, weak on the remedy, the risk was right (step 6 check question). Step log.
 - Which invariants belong in the database (keys, FKs, single-row checks, anything racy as check-then-act) and which stay in the domain (state-dependent, cross-table, inside a document), and what a trigger would cost; the owner wanted a constraint for a rule a CHECK cannot read. WP-12, weak (step 5a check question). `docs/learning/wp-12.md`, Step log.
 - One aggregate per transaction: the unit of work is the use case's consistency boundary; independent aggregates get their own run, the aggregate and its outbox row share one, batches commit per item and report failures. WP-12, interesting (owner asked after the step 5b check question). `docs/learning/wp-12.md`, Step log.
+- How a unique index serializes concurrent inserts (the second waits on the first's uncommitted row) and what `ON CONFLICT` absorbs with and without a target; the owner thought two singleton creates with different ids both succeed. WP-12, weak (step 5c check question). `docs/learning/wp-12.md`, Step log.
 - Extracting a module into its own service: no cross-module foreign keys, no transaction across databases, events and read models instead, eventual consistency and sagas. WP-10, weak (explain-back Q3). Recap.
 
 ### Theme: migrations as append-only history
