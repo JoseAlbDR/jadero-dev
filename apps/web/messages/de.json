@@ -4,6 +4,7 @@
     "description": "Persönliche Website und Portfolio eines Softwareentwicklers."
   },
   "HomePage": {
+    "eyebrow": "Version 2",
     "title": "jadero.dev",
     "lead": "Die neue Version dieser Website ist im Aufbau."
   },
@@ -13,6 +14,14 @@
   },
   "Header": {
     "home": "Startseite"
+  },
+  "Nav": {
+    "label": "Hauptnavigation",
+    "home": "Startseite"
+  },
+  "Footer": {
+    "copyright": "© {year} jadero.dev",
+    "note": "Gebaut, ein Release nach dem anderen."
   },
   "ThemeToggle": {
     "label": "Farbschema",

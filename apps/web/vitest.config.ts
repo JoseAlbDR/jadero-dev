@@ -1,8 +1,13 @@
+import { fileURLToPath } from "node:url";
 import { baseConfig } from "@jadero/config/vitest";
 import { defineConfig, mergeConfig } from "vitest/config";
 
 // Component tests are .tsx; they opt into jsdom per file with `// @vitest-environment jsdom`.
+// `@/` is the app's source alias (tsconfig `paths`), resolved here the same way Next resolves it.
 export default mergeConfig(
   baseConfig(),
-  defineConfig({ test: { include: ["src/**/*.test.{ts,tsx}", "test/**/*.test.{ts,tsx}"] } }),
+  defineConfig({
+    resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
+    test: { include: ["src/**/*.test.{ts,tsx}", "test/**/*.test.{ts,tsx}"] },
+  }),
 );

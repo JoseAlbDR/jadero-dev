@@ -4,6 +4,7 @@
     "description": "Personal site and portfolio of a software engineer."
   },
   "HomePage": {
+    "eyebrow": "Version 2",
     "title": "jadero.dev",
     "lead": "The new version of this site is under construction."
   },
@@ -13,6 +14,14 @@
   },
   "Header": {
     "home": "Home"
+  },
+  "Nav": {
+    "label": "Main",
+    "home": "Home"
+  },
+  "Footer": {
+    "copyright": "© {year} jadero.dev",
+    "note": "Built one release at a time."
   },
   "ThemeToggle": {
     "label": "Color theme",

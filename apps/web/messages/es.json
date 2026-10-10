@@ -4,6 +4,7 @@
     "description": "Web personal y portfolio de un ingeniero de software."
   },
   "HomePage": {
+    "eyebrow": "Versión 2",
     "title": "jadero.dev",
     "lead": "La nueva versión de esta web está en construcción."
   },
@@ -13,6 +14,14 @@
   },
   "Header": {
     "home": "Inicio"
+  },
+  "Nav": {
+    "label": "Principal",
+    "home": "Inicio"
+  },
+  "Footer": {
+    "copyright": "© {year} jadero.dev",
+    "note": "Construida versión a versión."
   },
   "ThemeToggle": {
     "label": "Tema de color",

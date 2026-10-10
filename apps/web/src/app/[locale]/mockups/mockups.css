@@ -16,6 +16,11 @@
   max-width: 64rem;
 }
 
+/* Each mockup paints its own background; the site aurora of the layout stays out of it. */
+:root:has([data-direction]) [data-aurora] {
+  display: none;
+}
+
 @keyframes mockup-caret {
   50% {
     opacity: 0;

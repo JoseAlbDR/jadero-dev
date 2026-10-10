@@ -2,7 +2,7 @@
   "name": "@jadero/web",
   "version": "0.0.0",
   "private": true,
-  "description": "Public site (ADR-001, ADR-022, ADR-023). WP-4: the skeleton.",
+  "description": "Public site (ADR-001, ADR-022, ADR-045).",
   "type": "module",
   "scripts": {
     "build": "next build && node scripts/copy-standalone-assets.mjs",
@@ -13,7 +13,9 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@jadero/contracts": "workspace:*",
     "@jadero/ui": "workspace:*",
+    "geist": "catalog:",
     "lucide-react": "catalog:",
     "next": "catalog:",
     "next-intl": "catalog:",

@@ -1,7 +1,11 @@
+import { Aurora } from "@jadero/ui/components/aurora";
+import { GeistMono } from "geist/font/mono";
+import { GeistSans } from "geist/font/sans";
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { ReactNode } from "react";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SITE_URL } from "@/config/site";
@@ -36,8 +40,12 @@ export async function generateMetadata({
   };
 }
 
+/** Geist and Geist Mono, self-hosted from the `geist` package (ADR-045): no font CDN request. */
+const fontVariables = `${GeistSans.variable} ${GeistMono.variable}`;
+
 /**
- * Locale layout: validates the locale, enables static rendering for it and renders the document.
+ * Locale layout: validates the locale, enables static rendering for it and renders the document:
+ * the aurora behind the page, the header, the page and the footer.
  * @param props.children the page.
  * @param props.params the route params with the locale segment.
  */
@@ -47,12 +55,16 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
 
   return (
     // next-themes sets the theme class on <html> before React hydrates; that difference is expected.
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} className={fontVariables} suppressHydrationWarning>
       <body>
         <NextIntlClientProvider>
           <ThemeProvider>
-            <SiteHeader />
-            {children}
+            <div className="relative isolate flex min-h-dvh flex-col overflow-x-clip">
+              <Aurora className="bottom-auto h-[60rem] max-h-full" />
+              <SiteHeader />
+              {children}
+              <SiteFooter />
+            </div>
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>
