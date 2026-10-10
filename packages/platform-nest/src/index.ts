@@ -32,6 +32,7 @@ export {
   runMigrations,
 } from "./database/migrations.js";
 export {
+  type PoolReadinessOptions,
   PostgresReadinessCheck,
   postgresReadinessCheck,
 } from "./database/postgres.readiness-check.js";

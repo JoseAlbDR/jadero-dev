@@ -24,11 +24,19 @@ export class ContentReaderPoolCloser implements OnApplicationShutdown {
 }
 
 /**
+ * The reader's readiness probe: a table every page reads (the profile), granted by migration 0002.
+ * `LIMIT 0` reads no row, but Postgres still checks the table exists and the role holds `SELECT`
+ * on it, so a missing migration or grant fails readiness, not only a refused login.
+ */
+const CONTENT_READER_PROBE = "SELECT 1 FROM content.profile_translations LIMIT 0";
+
+/**
  * Readiness of the reader pool, as `content-reader` on `/health/ready` (WP-12 step 7b): a wrong
- * `DATABASE_READ_URL` password or a missing grant on the database fails readiness, so the instance
- * gets no traffic, instead of passing it and answering 500 on every public read.
+ * `DATABASE_READ_URL` password, migration 0002 not applied or a missing grant fails readiness, so
+ * the instance gets no traffic, instead of passing it and answering 500 on every public read.
  */
 export class ContentReaderReadinessCheck extends postgresReadinessCheck(
   CONTENT_READER_POOL,
   "content-reader",
+  { probe: CONTENT_READER_PROBE },
 ) {}

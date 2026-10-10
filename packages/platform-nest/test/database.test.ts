@@ -132,6 +132,19 @@ describe("DatabaseModule", () => {
     await withReader.close();
   });
 
+  it("runs a pool's own probe when one is given, with the same budget", async () => {
+    const READER_POOL = Symbol("READER_POOL");
+    const probe = "SELECT 1 FROM content.profile_translations LIMIT 0";
+    class ReaderCheck extends postgresReadinessCheck(READER_POOL, "reader", { probe }) {}
+    const reader = { query: vi.fn().mockResolvedValue({ rows: [] }) };
+    const moduleRef = await Test.createTestingModule({
+      providers: [{ provide: READER_POOL, useValue: reader }, ReaderCheck],
+    }).compile();
+    await moduleRef.get(ReaderCheck).check();
+    expect(reader.query).toHaveBeenCalledWith({ text: probe, query_timeout: CHECK_TIMEOUT_MS });
+    await moduleRef.close();
+  });
+
   it("survives an idle client's error: warns with the code only, never the message", async () => {
     const warn = vi.fn();
     const pool = createPool({ url: URL, poolMax: 1 }, { warn });
