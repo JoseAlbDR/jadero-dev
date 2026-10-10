@@ -10,7 +10,7 @@ Issue #<n>, branch `wp/N-slug`, release RN, size S/M/L. Deliverable in one parag
 
 ## Decisions explained
 
-<!-- One block per decision this WP implements, phrased as a question. A Mermaid diagram only when it helps. Decisions explained in an earlier WP: one sentence and a pointer, unless used differently here. -->
+<!-- One block per decision this WP implements, phrased as a question. A Mermaid diagram only when it helps. Decisions explained in an earlier WP: a short recap of the mechanism, what differs here and a pointer; the full block when used differently here. -->
 
 ### D1. Why <X> and not <Y>?
 

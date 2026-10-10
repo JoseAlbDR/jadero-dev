@@ -158,4 +158,5 @@ A session that can publish artifacts republishes them; one that cannot edits the
 | `/wp NN`, `/learn-step NN`, `/step NN M`, `/map`, `/wrap-wp NN`, `/explain X`, `/adr Title` | the seven skills |
 | `@agent-reviewer` | ten-point review before the owner looks at a PR |
 | `LEFTHOOK=0 git commit ...` | skip hooks once; CI runs the same checks |
+| `LEFTHOOK=0 git push` | skip the pre-push `pnpm verify` once (a docs-only push when the cache is cold); CI still runs it |
 | `node scripts/github/seed.mjs` | re-seed issues and the Project after adding a WP |

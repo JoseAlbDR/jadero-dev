@@ -11,6 +11,7 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 ## How it is used
 
 - One `/teach` run per closed release, on that release's open themes, two to four themes per run: as few runs as possible for as much learning as possible. A theme with one small topic waits for the next release instead of getting its own run.
+- Between runs, each `/step` opens with one warm-up recall question on an open line (`/step` step 2): a right answer marks it `solid <date> (warm-up)`, a wrong one `weak again <date>`, so the weakest lines show before the `/teach` run.
 - After the run, the studied lines are marked `studied <date>`; what the run showed is still weak stays open.
 - At the end of the project, one last run on whatever is left, plus a review pass of the themes marked weak more than once.
 
