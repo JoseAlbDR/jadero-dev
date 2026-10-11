@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_RETRY_TIERS_MS, dead, dispose, done, retry } from "../src/index.js";
+import { attemptOf, DEFAULT_RETRY_TIERS_MS, dead, dispose, done, retry } from "../src/index.js";
 
 describe("dispose (the retry and dead-letter policy)", () => {
   it("acks a done", () => {
@@ -26,6 +26,27 @@ describe("dispose (the retry and dead-letter policy)", () => {
     expect(dispose(dead("bad payload"), 1)).toEqual({
       action: "dead-letter",
       reason: "bad payload",
+    });
+  });
+});
+
+describe("attemptOf (the attempt header of a delivery)", () => {
+  it("reads the number the adapter writes on a retry copy, also as a string", () => {
+    expect([attemptOf(2), attemptOf("3")]).toEqual([2, 3]);
+  });
+
+  it("counts a missing header as the first attempt", () => {
+    expect([attemptOf(undefined), attemptOf(null)]).toEqual([1, 1]);
+  });
+
+  it("counts a malformed header as the first attempt, so a retry keeps its tiers", () => {
+    // Before attemptOf, Number("abc") gave NaN and dispose dead-lettered the message at once as
+    // "retries exhausted after NaN attempts".
+    for (const header of ["abc", 0, -1, 2.5, "", {}]) expect(attemptOf(header)).toBe(1);
+    expect(dispose(retry("db down"), attemptOf("abc"))).toEqual({
+      action: "retry",
+      delayMs: 10_000,
+      nextAttempt: 2,
     });
   });
 });
