@@ -47,6 +47,14 @@ export function widgetsUnitOfWorkContract(
       expect(seen).toEqual(widget);
     });
 
+    it("lets the work read what an earlier run committed", async () => {
+      const { unitOfWork } = await make();
+      const widget = Widget.create(randomUUID(), "lamp");
+      await unitOfWork.run(async (scope) => scope.widgets.save(widget));
+      const seen = await unitOfWork.run(async (scope) => scope.widgets.findById(widget.id));
+      expect(seen).toEqual(widget);
+    });
+
     it("discards everything when the work throws, and rethrows the same error", async () => {
       const { unitOfWork, widgets } = await make();
       const widget = Widget.create(randomUUID(), "lamp");
