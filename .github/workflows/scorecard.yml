@@ -1,0 +1,50 @@
+# OpenSSF Scorecard (ADR-048 "Supply chain and repository settings", WP-6 Q1 answer A): scores the
+# repo's supply-chain practices, uploads the result to the Security tab and publishes it for the
+# README badge. Code-Review stays low while one person writes and merges every change.
+# Publishing imposes Scorecard's workflow restrictions on this job: only approved actions, no `run`
+# steps, no containers or services, no workflow-level env, defaults or write permissions.
+name: scorecard
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Weekly, Tuesday 04:37 UTC (an off-hour minute, away from the top of the hour).
+    - cron: "37 4 * * 2"
+  workflow_dispatch:
+
+# Nothing by default; Scorecard rejects write permissions at the top level.
+permissions: {}
+
+# One run at a time: a newer push or schedule supersedes the running analysis.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  analysis:
+    name: scorecard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read # read the repo's files and workflows
+      actions: read # read the workflow runs Scorecard scores
+      security-events: write # upload the SARIF result to the Security tab
+      id-token: write # prove to the Scorecard API that the result comes from this workflow
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run Scorecard
+        uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Upload the result to the Security tab
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          sarif_file: results.sarif

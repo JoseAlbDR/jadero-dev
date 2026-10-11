@@ -1,5 +1,7 @@
 # jadero.dev
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/JoseAlbDR/jadero-dev/badge)](https://scorecard.dev/viewer/?uri=github.com/JoseAlbDR/jadero-dev)
+
 Personal site v2: a multilingual portfolio (es, en, de) with an ask-me AI agent. Backend in NestJS (modular monolith plus services over RabbitMQ), frontend in Next.js, agent in LangGraph.js, hosted on the owner's Hetzner server.
 
 Work in progress. Where things live:
@@ -35,6 +37,8 @@ Every change starts from a GitHub issue. The plan's work packages (WP-0 to WP-56
 4. Small steps, each with a green `pnpm verify` and one conventional commit (`feat(api): ...`).
 5. A pull request with `Closes #<issue>`; CI and the reviewer agent check it; the owner explains the design back and records gaps in the explainer's Recap.
 6. Squash merge. The pull request title becomes the commit on `main` and the changelog line; release-please reads its type (`feat`, `fix`) to version each service. Branch names play no part in versioning.
+
+The OpenSSF Scorecard badge above scores the repo's supply-chain practices. Its Code-Review check stays low on purpose: one person writes and merges every change, so there is no second reviewer to approve. Security reports go through `SECURITY.md`.
 
 Hands-on guide for a local machine: `docs/local-playbook.md`. Tooling and the flow in detail: `docs/agent-tooling.md`.
 
