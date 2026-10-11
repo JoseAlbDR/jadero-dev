@@ -9,11 +9,12 @@ import { contentAlternates } from "@/i18n/alternates";
 import { requireLocale } from "@/i18n/locale";
 import { Link } from "@/i18n/navigation";
 import { Markdown } from "@/markdown/markdown";
+import { pageMetadata } from "@/seo/page-metadata";
 
 type ProjectPageProps = Readonly<{ params: Promise<{ locale: string; slug: string }> }>;
 
 /**
- * Title (the project's), description (its summary), canonical and hreflang links of a project
+ * Title (the project's), description (its summary), canonical and hreflang links and Open Graph card of a project
  * page. The hreflang links use the project's slug in each locale it is published in.
  * @param props.params the route params with the locale and the localized slug.
  */
@@ -21,11 +22,14 @@ export async function generateMetadata({ params }: ProjectPageProps): Promise<Me
   const { locale: segment, slug } = await params;
   const locale = requireLocale(segment);
   const project = await loadProjectPage(locale, slug);
-  return {
+  return pageMetadata({
+    locale,
     title: project.title,
     description: project.summary,
     alternates: contentAlternates("/projects/[slug]", project),
-  };
+    contentLocale: project.locale,
+    article: { tags: project.stackTags },
+  });
 }
 
 /**

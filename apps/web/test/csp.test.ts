@@ -47,16 +47,16 @@ describe("buildContentSecurityPolicy (ADR-047)", () => {
 });
 
 describe("CSP mode", () => {
-  it("defaults to report-only and names the matching header", () => {
+  it("defaults to enforce and names the matching header", () => {
     vi.stubEnv("CSP_MODE", "");
-    expect(cspMode()).toBe("report-only");
-    expect(cspHeaderName("report-only")).toBe("Content-Security-Policy-Report-Only");
-  });
-
-  it("switches to enforce with one value", () => {
-    vi.stubEnv("CSP_MODE", "enforce");
     expect(cspMode()).toBe("enforce");
     expect(cspHeaderName("enforce")).toBe("Content-Security-Policy");
+  });
+
+  it("switches to report-only with one value", () => {
+    vi.stubEnv("CSP_MODE", "report-only");
+    expect(cspMode()).toBe("report-only");
+    expect(cspHeaderName("report-only")).toBe("Content-Security-Policy-Report-Only");
   });
 
   it("fails loudly on any other value", () => {

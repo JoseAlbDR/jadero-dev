@@ -49,7 +49,9 @@ export default defineConfig({
     },
     {
       command: "node .next/standalone/apps/web/server.js",
-      // CSP_MODE=enforce runs the suite under the enforced CSP (ADR-047); unset, it is report-only.
+      // Unset, the server enforces the CSP (ADR-047); CSP_MODE=report-only runs the suite with the
+      // policy reported only. Turborepo's strict env mode drops CSP_MODE from the shell, so that
+      // pass runs Playwright directly (apps/web/AGENTS.md); `.env` is read here and still applies.
       // HOSTNAME must be "localhost" (or unset, or 0.0.0.0 as in a container): Next builds the
       // proxy's request URL on localhost, and with HOSTNAME=127.0.0.1 it takes next-intl's rewrite
       // of a localized pathname (/es/experiencia to /es/experience) for an external one, runs it

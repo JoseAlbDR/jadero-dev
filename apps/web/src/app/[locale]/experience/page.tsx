@@ -5,22 +5,24 @@ import { ExperienceTimeline } from "@/components/experience-timeline";
 import { getExperience } from "@/content/api";
 import { localeAlternates } from "@/i18n/alternates";
 import { requireLocale } from "@/i18n/locale";
+import { pageMetadata } from "@/seo/page-metadata";
 
 type ExperiencePageProps = Readonly<{ params: Promise<{ locale: string }> }>;
 
 /**
- * Title, description, canonical and hreflang links of the experience page
+ * Title, description, canonical and hreflang links and Open Graph card of the experience page
  * (`/en/experience`, `/es/experiencia`, `/de/erfahrung`).
  * @param props.params the route params with the locale segment.
  */
 export async function generateMetadata({ params }: ExperiencePageProps): Promise<Metadata> {
   const locale = requireLocale((await params).locale);
   const t = await getTranslations({ locale, namespace: "ExperiencePage" });
-  return {
+  return pageMetadata({
+    locale,
     title: t("metaTitle"),
     description: t("metaDescription"),
     alternates: localeAlternates("/experience", locale),
-  };
+  });
 }
 
 /**

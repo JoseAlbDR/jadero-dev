@@ -6,6 +6,7 @@ import { ProjectSection } from "@/components/project-sections";
 import { getProjects } from "@/content/api";
 import { localeAlternates } from "@/i18n/alternates";
 import { requireLocale } from "@/i18n/locale";
+import { pageMetadata } from "@/seo/page-metadata";
 
 type ProjectsPageProps = Readonly<{ params: Promise<{ locale: string }> }>;
 
@@ -13,18 +14,19 @@ type ProjectsPageProps = Readonly<{ params: Promise<{ locale: string }> }>;
 const SECTIONS: readonly ProjectKind[] = ["case_study", "project", "early"];
 
 /**
- * Title, description, canonical and hreflang links of the projects page
+ * Title, description, canonical and hreflang links and Open Graph card of the projects page
  * (`/en/projects`, `/es/proyectos`, `/de/projekte`).
  * @param props.params the route params with the locale segment.
  */
 export async function generateMetadata({ params }: ProjectsPageProps): Promise<Metadata> {
   const locale = requireLocale((await params).locale);
   const t = await getTranslations({ locale, namespace: "ProjectsPage" });
-  return {
+  return pageMetadata({
+    locale,
     title: t("metaTitle"),
     description: t("metaDescription"),
     alternates: localeAlternates("/projects", locale),
-  };
+  });
 }
 
 /**

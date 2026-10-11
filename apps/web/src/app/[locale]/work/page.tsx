@@ -5,11 +5,12 @@ import { EnglishOnlyNote, WorkEntryList } from "@/components/work-log";
 import { getWorkLog } from "@/content/api";
 import { localeAlternates } from "@/i18n/alternates";
 import { requireLocale } from "@/i18n/locale";
+import { pageMetadata } from "@/seo/page-metadata";
 
 type WorkPageProps = Readonly<{ params: Promise<{ locale: string }> }>;
 
 /**
- * Title, description, canonical and hreflang links of the work log (`/en/work`, `/es/trabajo`,
+ * Title, description, canonical and hreflang links and Open Graph card of the work log (`/en/work`, `/es/trabajo`,
  * `/de/arbeit`). The list's own texts are translated, so each locale's list is its own page with
  * its own canonical; only the entry pages point at English (D-50).
  * @param props.params the route params with the locale segment.
@@ -17,11 +18,12 @@ type WorkPageProps = Readonly<{ params: Promise<{ locale: string }> }>;
 export async function generateMetadata({ params }: WorkPageProps): Promise<Metadata> {
   const locale = requireLocale((await params).locale);
   const t = await getTranslations({ locale, namespace: "WorkPage" });
-  return {
+  return pageMetadata({
+    locale,
     title: t("metaTitle"),
     description: t("metaDescription"),
     alternates: localeAlternates("/work", locale),
-  };
+  });
 }
 
 /**

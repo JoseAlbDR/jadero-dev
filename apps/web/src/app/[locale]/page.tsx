@@ -3,7 +3,7 @@ import { Card } from "@jadero/ui/components/card";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import type { Metadata } from "next";
 import { type Locale, useTranslations } from "next-intl";
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { AgentTerminal } from "@/components/agent-terminal";
 import { ASK_QUERY_PARAM } from "@/components/ask-about-link";
 import { PillarStrip } from "@/components/pillar-strip";
@@ -15,6 +15,7 @@ import { localeAlternates } from "@/i18n/alternates";
 import { requireLocale } from "@/i18n/locale";
 import { Link } from "@/i18n/navigation";
 import { Markdown } from "@/markdown/markdown";
+import { pageMetadata } from "@/seo/page-metadata";
 
 type HomePageProps = Readonly<{
   params: Promise<{ locale: string }>;
@@ -28,13 +29,19 @@ const STACK_TILE_MAX = 12;
 const TILE_LABEL = "font-mono text-muted-foreground text-xs uppercase tracking-widest";
 
 /**
- * Canonical and hreflang links of the home. They never carry the query: `?ask=` only fills the
- * terminal's prompt.
+ * Description, canonical and hreflang links and Open Graph card of the home (the title is the
+ * site's, from the layout). The links never carry the query: `?ask=` only fills the terminal's
+ * prompt.
  * @param props.params the route params with the locale segment.
  */
 export async function generateMetadata({ params }: HomePageProps): Promise<Metadata> {
   const locale = requireLocale((await params).locale);
-  return { alternates: localeAlternates("/", locale) };
+  const t = await getTranslations({ locale, namespace: "Metadata" });
+  return pageMetadata({
+    locale,
+    description: t("description"),
+    alternates: localeAlternates("/", locale),
+  });
 }
 
 /**

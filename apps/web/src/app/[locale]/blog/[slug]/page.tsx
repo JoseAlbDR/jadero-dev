@@ -10,11 +10,12 @@ import { contentAlternates } from "@/i18n/alternates";
 import { requireLocale } from "@/i18n/locale";
 import { Link } from "@/i18n/navigation";
 import { Markdown } from "@/markdown/markdown";
+import { pageMetadata } from "@/seo/page-metadata";
 
 type PostPageProps = Readonly<{ params: Promise<{ locale: string; slug: string }> }>;
 
 /**
- * Title (the post's), description (its excerpt), canonical and hreflang links of a post page. The
+ * Title (the post's), description (its excerpt), canonical and hreflang links and Open Graph card of a post page. The
  * hreflang links use the post's slug in each locale it is published in; on the German fallback the
  * canonical is the English page.
  * @param props.params the route params with the locale and the localized slug.
@@ -23,11 +24,14 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   const { locale: segment, slug } = await params;
   const locale = requireLocale(segment);
   const post = await loadPostPage(locale, slug);
-  return {
+  return pageMetadata({
+    locale,
     title: post.title,
     description: post.excerpt,
     alternates: contentAlternates("/blog/[slug]", post),
-  };
+    contentLocale: post.locale,
+    article: { publishedTime: post.publishedAt, tags: post.tags },
+  });
 }
 
 /**

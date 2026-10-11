@@ -23,23 +23,24 @@ afterEach(() => {
 });
 
 describe("proxy: CSP (ADR-047)", () => {
-  it("sends a report-only policy by default and hands the same nonce to the render", () => {
+  it("enforces the policy by default and hands the same nonce to the render", () => {
+    vi.stubEnv("CSP_MODE", "");
     const response = proxy(request("/en"));
-    const policy = response.headers.get("content-security-policy-report-only");
-    expect(response.headers.get("content-security-policy")).toBeNull();
+    const policy = response.headers.get("content-security-policy");
+    expect(response.headers.get("content-security-policy-report-only")).toBeNull();
     const nonce = policy?.match(/'nonce-([^']+)'/)?.[1];
     expect(nonce).toBeTruthy();
     expect(forwarded(response, "x-nonce")).toBe(nonce);
-    expect(forwarded(response, "content-security-policy-report-only")).toBe(policy);
+    expect(forwarded(response, "content-security-policy")).toBe(policy);
     // next-intl's own forwarded header survives the composition.
     expect(forwarded(response, "x-next-intl-locale")).toBe("en");
   });
 
-  it("enforces the policy when CSP_MODE=enforce", () => {
-    vi.stubEnv("CSP_MODE", "enforce");
+  it("only reports the policy when CSP_MODE=report-only", () => {
+    vi.stubEnv("CSP_MODE", "report-only");
     const response = proxy(request("/de"));
-    expect(response.headers.get("content-security-policy")).toMatch(/'strict-dynamic'/);
-    expect(response.headers.get("content-security-policy-report-only")).toBeNull();
+    expect(response.headers.get("content-security-policy-report-only")).toMatch(/'strict-dynamic'/);
+    expect(response.headers.get("content-security-policy")).toBeNull();
   });
 
   it("uses a fresh nonce for every request", () => {
@@ -53,7 +54,7 @@ describe("proxy: locale redirects follow the open-redirect rule (ADR-047)", () =
     const response = proxy(request("/", { language: "de-DE" }));
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(`${SITE}/de`);
-    expect(response.headers.get("content-security-policy-report-only")).toBeTruthy();
+    expect(response.headers.get("content-security-policy")).toBeTruthy();
   });
 
   it("keeps the path and query of a localized redirect", () => {

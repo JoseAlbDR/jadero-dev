@@ -9,6 +9,7 @@ import { postCursorParam } from "@/content/posts";
 import { localeAlternates } from "@/i18n/alternates";
 import { requireLocale } from "@/i18n/locale";
 import { getPathname } from "@/i18n/navigation";
+import { pageMetadata } from "@/seo/page-metadata";
 
 type BlogPageProps = Readonly<{
   params: Promise<{ locale: string }>;
@@ -16,7 +17,7 @@ type BlogPageProps = Readonly<{
 }>;
 
 /**
- * Title, description, canonical and hreflang links of the blog (`/<locale>/blog`). A later page
+ * Title, description, canonical and hreflang links and Open Graph card of the blog (`/<locale>/blog`). A later page
  * (`?cursor=`) is `noindex, follow`: crawlers follow its posts but index only the first page, and it
  * carries no canonical or hreflang links, so no link is ever built from the visitor's query.
  * @param props.params the route params with the locale segment.
@@ -26,13 +27,14 @@ export async function generateMetadata({ params, searchParams }: BlogPageProps):
   const locale = requireLocale((await params).locale);
   const t = await getTranslations({ locale, namespace: "BlogPage" });
   const later = (await searchParams).cursor !== undefined;
-  return {
+  return pageMetadata({
+    locale,
     title: t("metaTitle"),
     description: t("metaDescription"),
     ...(later
       ? { robots: { index: false, follow: true } }
       : { alternates: localeAlternates("/blog", locale) }),
-  };
+  });
 }
 
 /**

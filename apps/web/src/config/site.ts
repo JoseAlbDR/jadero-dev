@@ -58,16 +58,19 @@ export function contentApiDebug(): boolean {
   return isDevelopment() && contentApiDebugSchema.safeParse(process.env.CONTENT_API_DEBUG).success;
 }
 
-const cspModeSchema = z.enum(["report-only", "enforce"]).default("report-only");
+const cspModeSchema = z.enum(["report-only", "enforce"]).default("enforce");
 
 /** How the browser applies the Content-Security-Policy (ADR-047): report it only, or enforce it. */
 export type CspMode = z.infer<typeof cspModeSchema>;
 
 /**
- * Mode of the nonce-based CSP (`CSP_MODE`), read per request by the proxy. ADR-047 rolls the policy
+ * Mode of the nonce-based CSP (`CSP_MODE`), read per request by the proxy. ADR-047 rolled the policy
  * out report-only first (`Content-Security-Policy-Report-Only`: the browser logs a violation but
- * still runs the script) and enforces it once the reports are clean; switching is this one value.
- * @returns `report-only` when `CSP_MODE` is unset or empty, else the parsed value.
+ * still runs the script) and enforces it once the reports are clean. They were (the e2e suite runs
+ * every page type under the enforced policy with no violation), so enforcing is the default since
+ * WP-16 step 8; `report-only` stays as the opt-out to diagnose a new violation without breaking
+ * the page.
+ * @returns `enforce` when `CSP_MODE` is unset or empty, else the parsed value.
  * @throws {Error} when `CSP_MODE` holds anything else, so a typo fails loudly instead of silently
  *   picking a mode.
  */

@@ -11,6 +11,7 @@ import { englishOnlyAlternates } from "@/i18n/alternates";
 import { requireLocale } from "@/i18n/locale";
 import { Link } from "@/i18n/navigation";
 import { Markdown } from "@/markdown/markdown";
+import { pageMetadata } from "@/seo/page-metadata";
 
 type WorkEntryPageProps = Readonly<{ params: Promise<{ locale: string; entryId: string }> }>;
 
@@ -18,18 +19,22 @@ type WorkEntryPageProps = Readonly<{ params: Promise<{ locale: string; entryId: 
  * Title (the entry's), description (its Summary as plain text), canonical and hreflang links and
  * robots of an entry page. Entries are English only (D-50), so every locale's canonical is the
  * English page and the only hreflang links are `en` and `x-default`; `indexable: false` adds
- * `noindex, follow` (D-52).
+ * `noindex, follow` (D-52). The Open Graph card is an English article.
  * @param props.params the route params with the locale and the entry id.
  */
 export async function generateMetadata({ params }: WorkEntryPageProps): Promise<Metadata> {
-  const { entryId } = await params;
+  const { locale: segment, entryId } = await params;
+  const locale = requireLocale(segment);
   const entry = await getWorkEntry(entryId);
-  return {
+  return pageMetadata({
+    locale,
     title: entry.title,
     description: entryDescription(entry),
     alternates: englishOnlyAlternates(workEntryHref(entry.id)),
+    contentLocale: ENTRY_LOCALE,
+    article: { tags: entry.stack },
     robots: entryRobots(entry.indexable),
-  };
+  });
 }
 
 /**

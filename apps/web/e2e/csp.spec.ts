@@ -2,11 +2,12 @@ import { expect, type Page, test } from "@playwright/test";
 import de from "../messages/de.json" with { type: "json" };
 import en from "../messages/en.json" with { type: "json" };
 import es from "../messages/es.json" with { type: "json" };
+import { PAGE_TYPES } from "./pages";
 
 const LOCALES = { en, es, de } as const;
 
-// The server runs report-only unless CSP_MODE=enforce (src/config/site.ts, ADR-047).
-const ENFORCED = process.env.CSP_MODE === "enforce";
+// The server enforces the policy unless CSP_MODE=report-only (src/config/site.ts, ADR-047).
+const ENFORCED = process.env.CSP_MODE !== "report-only";
 const HEADER = ENFORCED ? "content-security-policy" : "content-security-policy-report-only";
 const OTHER = ENFORCED ? "content-security-policy-report-only" : "content-security-policy";
 
@@ -93,6 +94,24 @@ test.describe(`content security policy, ${ENFORCED ? "enforced" : "report-only"}
       await page.waitForLoadState("networkidle");
 
       expect(await violations(page)).toEqual([]);
+      expect(consoleViolations).toEqual([]);
+    });
+  }
+
+  for (const [locale, pages] of Object.entries(PAGE_TYPES)) {
+    test(`every page type under /${locale} loads with no CSP violation`, async ({ page }) => {
+      await recordViolations(page);
+      const consoleViolations: string[] = [];
+      page.on("console", (message) => {
+        if (/Content Security Policy/i.test(message.text())) consoleViolations.push(message.text());
+      });
+
+      for (const [type, path] of Object.entries(pages)) {
+        const response = await page.goto(path);
+        expect(response?.status(), `${type} ${path}`).toBe(200);
+        await page.waitForLoadState("networkidle");
+        expect(await violations(page), `${type} ${path}`).toEqual([]);
+      }
       expect(consoleViolations).toEqual([]);
     });
   }

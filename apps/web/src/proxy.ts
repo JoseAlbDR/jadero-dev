@@ -14,7 +14,7 @@ const handleLocale = createMiddleware(routing);
 
 /**
  * Next 16 proxy (formerly middleware), run on every page request:
- * 1. A fresh nonce and the CSP built with it (ADR-047), report-only or enforced by `CSP_MODE`.
+ * 1. A fresh nonce and the CSP built with it (ADR-047), enforced unless `CSP_MODE=report-only`.
  *    The policy and the nonce travel on the request to the render, where Next.js reads the nonce
  *    from the policy for its own scripts and the layout reads `x-nonce` for the theme script; the
  *    policy also goes on the response for the browser.
