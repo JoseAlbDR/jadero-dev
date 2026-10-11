@@ -8,7 +8,7 @@ import { getPosts } from "@/content/api";
 import { postCursorParam } from "@/content/posts";
 import { localeAlternates } from "@/i18n/alternates";
 import { requireLocale } from "@/i18n/locale";
-import { Link } from "@/i18n/navigation";
+import { getPathname } from "@/i18n/navigation";
 
 type BlogPageProps = Readonly<{
   params: Promise<{ locale: string }>;
@@ -38,8 +38,9 @@ export async function generateMetadata({ params, searchParams }: BlogPageProps):
 /**
  * The blog: one page of posts, newest first, from `GET /v1/content/:locale/posts?cursor=` (cached
  * 60 s under `content:posts`; the API sets the page size, 20). The next page is a plain link with
- * the API's `nextCursor` in `?cursor=`; the API gives no cursor back, so there is no "newer" link
- * (the nav's Blog entry is the first page). A `cursor` that is not one the API could have built is
+ * the API's `nextCursor` in `?cursor=`, followed as a document navigation so its head is rendered
+ * fresh; the API gives no cursor back, so there is no "newer" link (the nav's Blog entry is the
+ * first page). A `cursor` that is not one the API could have built is
  * the page's 404, and a valid one is rebuilt before it is forwarded (`postCursorParam`). A failed
  * call lands in the locale's error boundary.
  * @param props.params the route params with the locale segment.
@@ -75,13 +76,22 @@ export default async function BlogPage({ params, searchParams }: BlogPageProps) 
       )}
       {page.nextCursor !== null && (
         <nav aria-label={t("pagination")} className="mt-8 flex justify-end">
-          <Link
-            href={{ pathname: "/blog", query: { cursor: page.nextCursor } }}
+          {/*
+           * A plain <a>, not the router's Link: a document navigation renders the later page's head
+           * on the server. With a client navigation, Next 16.3 can reuse the head it prefetched for
+           * the nav's Blog link (same route, no cursor), so the page kept the first page's
+           * canonical and hreflang links and lost its `noindex` (e2e/blog.spec.ts).
+           */}
+          <a
+            href={getPathname({
+              href: { pathname: "/blog", query: { cursor: page.nextCursor } },
+              locale,
+            })}
             className="glass inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-sm outline-none transition-colors hover:text-signal focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
             {t("older")}
             <ArrowRight aria-hidden className="size-4" />
-          </Link>
+          </a>
         </nav>
       )}
     </main>

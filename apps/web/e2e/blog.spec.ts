@@ -77,6 +77,10 @@ for (const [key, messages] of Object.entries(MESSAGES)) {
       page,
     }) => {
       await page.goto(list);
+      // Click once the router's prefetches have landed: the nav's Blog link prefetches this same
+      // route without a cursor, and a client navigation used to show that cached head (canonical,
+      // no robots) on the cursor page. The Older posts link is a document navigation instead.
+      await page.waitForLoadState("networkidle");
       const pagination = page.getByRole("navigation", { name: t.pagination });
       await pagination.getByRole("link", { name: t.older }).click();
       await expect(page).toHaveURL(new RegExp(`^${SITE}${list}\\?cursor=[A-Za-z0-9_-]+$`));
