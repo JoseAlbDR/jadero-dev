@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "test:int": "vitest run -c vitest.int.config.ts"
   },
   "dependencies": {
@@ -26,6 +26,7 @@
     "@nestjs/testing": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "drizzle-kit": "catalog:",
     "pg": "catalog:",
     "typescript": "catalog:",

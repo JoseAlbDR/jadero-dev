@@ -83,6 +83,13 @@ jobs:
         if: github.event_name == 'push'
         run: pnpm verify:all
 
+      # ADR-009 "reported per package in CI": one table of lines and branches per package on the
+      # run page. The thresholds already gated inside each `test` task; this only reports, also
+      # when verify failed, and writes a short note when no package's tests ran.
+      - name: Coverage summary
+        if: always()
+        run: node scripts/ci/coverage-summary.mjs
+
       - name: Save the Turborepo cache
         if: github.event_name == 'push' && steps.turbo-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

@@ -20,7 +20,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
     "asyncapi": "tsc -p tsconfig.build.json && node scripts/write-asyncapi.mjs",
     "compat:accept": "tsc -p tsconfig.build.json && node scripts/accept-compat.mjs"
@@ -32,6 +32,7 @@
     "@asyncapi/parser": "catalog:",
     "@jadero/config": "workspace:*",
     "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
     "zod": "catalog:"
