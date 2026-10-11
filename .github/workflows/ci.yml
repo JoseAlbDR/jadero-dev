@@ -1,7 +1,7 @@
 # CI for every pull request and every push to main (ADR-048, WP-6 D1 to D3).
 # Pull requests run `pnpm verify` on the affected tasks against the PR's base commit and only
 # restore the caches; main runs the full `pnpm verify:all` and is the only run that saves them.
-# The integration job runs next to verify; the web and secrets jobs arrive in later WP-6 steps.
+# The integration and web jobs run next to verify; the secrets job arrives in a later WP-6 step.
 name: ci
 
 on:
@@ -165,3 +165,76 @@ jobs:
       - name: Integration tests of every package
         if: github.event_name == 'push'
         run: pnpm test:int
+
+  # The public site's standalone build and its Playwright smoke, SEO, CSP and axe checks per locale
+  # (ADR-048; ADR-009: no coverage percentage for the frontend). Runs in parallel with verify and
+  # always reports a result, so it can be a required check (WP-6 D10): on a pull request Turborepo
+  # selects `test:e2e` only when `web` or one of its dependencies changed and runs nothing
+  # otherwise. Only the enforced CSP runs here; the report-only pass stays a local diagnosis.
+  # Playwright uses the runner's preinstalled Google Chrome (`channel: "chrome"`): no browser
+  # download. `playwright.config.ts` starts the content API stub and the server and sets SITE_URL
+  # itself; the build needs none, because every page, the sitemap and robots render per request.
+  web:
+    name: web
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      # Full history: Turborepo diffs against the PR base.
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pnpm and Node
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: false
+          install: false
+
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+
+      # `test:e2e` itself is never cached (`cache: false`); this replays the `build` tasks it
+      # depends on when an earlier run already produced them.
+      - name: Restore the Turborepo cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Web checks when web is affected
+        if: github.event_name == 'pull_request'
+        env:
+          TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha }}
+        run: pnpm exec turbo run test:e2e --affected
+
+      - name: Web checks
+        if: github.event_name == 'push'
+        run: pnpm test:e2e
+
+      # Traces of the failed tests (`trace: "retain-on-failure"`): pages of the public site rendered
+      # from the stub's fixture data, no secrets. Open one with `pnpm exec playwright show-trace`.
+      - name: Upload the Playwright results
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-results
+          path: apps/web/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
