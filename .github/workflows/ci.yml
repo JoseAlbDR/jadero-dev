@@ -90,6 +90,18 @@ jobs:
         if: always()
         run: node scripts/ci/coverage-summary.mjs
 
+      # Each save on main carries every entry it restored plus this run's, so without pruning the
+      # cache only grows. Turborepo writes each entry once and never touches it on a hit, and the
+      # cache's tar keeps file times across save and restore, so an entry not written for 7 days
+      # (10080 minutes) is dropped; if a task still needs it, it runs once and writes it again.
+      - name: Prune the Turborepo cache
+        if: github.event_name == 'push' && steps.turbo-cache.outputs.cache-hit != 'true'
+        run: |
+          if [ -d .turbo/cache ]; then
+            echo "Pruning $(find .turbo/cache -type f -mmin +10080 | wc -l) files older than 7 days"
+            find .turbo/cache -type f -mmin +10080 -delete
+          fi
+
       - name: Save the Turborepo cache
         if: github.event_name == 'push' && steps.turbo-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
