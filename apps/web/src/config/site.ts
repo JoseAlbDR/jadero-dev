@@ -44,6 +44,20 @@ export function contentApiUrl(): string {
   return parsed.data.replace(/\/+$/, "");
 }
 
+const contentApiDebugSchema = z.literal("1");
+
+/**
+ * Whether the content client logs each of its requests to the server console (`CONTENT_API_DEBUG`),
+ * read per request: server-side fetches never show in the browser's Network tab. Development
+ * only: a production build, the standalone server and tests stay silent even when the variable is
+ * set, because the log line carries the full URL and the response body.
+ * @returns `true` only when `CONTENT_API_DEBUG=1` and the app runs under `next dev`; any other
+ *   value, or none, is off.
+ */
+export function contentApiDebug(): boolean {
+  return isDevelopment() && contentApiDebugSchema.safeParse(process.env.CONTENT_API_DEBUG).success;
+}
+
 const cspModeSchema = z.enum(["report-only", "enforce"]).default("report-only");
 
 /** How the browser applies the Content-Security-Policy (ADR-047): report it only, or enforce it. */

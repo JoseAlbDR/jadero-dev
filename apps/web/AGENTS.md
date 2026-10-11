@@ -16,6 +16,12 @@ pnpm test:e2e                            # from the root: build, then Playwright
 
 `playwright.config.ts` loads `apps/web/.env` when it exists and hands `CSP_MODE` to the server (a value exported in the shell wins over the file). `SITE_URL` is always the test server's own origin, whatever `.env` says, because the proxy resolves every redirect on `SITE_URL`; the tests expect that same value in canonical and hreflang links. `CSP_MODE=enforce pnpm test:e2e` runs the suite under the enforced CSP.
 
+Debugging content fetches: Server Components fetch the content API on the server, so those requests never show in the browser's Network tab. Under `next dev`, Next logs each fetch with its full URL and cache hit or miss (`logging.fetches` in `next.config.ts`), and `CONTENT_API_DEBUG=1` makes `src/content/api.ts` log one line per request (method, URL, status, duration, `Cache-Control`) followed by the parsed body, the problem body of an error status or the contract's issues for a refused payload. Both are development only: a production server ignores the variable. From `apps/web`, against a local `api` on port 3116:
+
+```sh
+CONTENT_API_DEBUG=1 CONTENT_API_URL=http://127.0.0.1:3116 SITE_URL=http://localhost:3200 pnpm exec next dev --port 3200
+```
+
 ## Layout
 
 - `src/proxy.ts` (Next 16's name for middleware): per request, a fresh nonce and the CSP built with it, then the next-intl middleware. A path without a locale gets a 307 to the cookie locale, else Accept-Language, else `en`; that `Location` passes the open-redirect rule first, checked and resolved on the `SITE_URL` origin (the request's own origin only under `next dev`), never on the Host header.
@@ -40,7 +46,7 @@ pnpm test:e2e                            # from the root: build, then Playwright
 - Every page is rendered per request because of the CSP nonce (ADR-047, `docs/learning/wp-16.md`): the locale layout calls `connection()` once, for every route under it. Data is cached with `fetch` `revalidate` and tags (`src/content/api.ts`). Never `export const dynamic = "force-dynamic"`: it drops that cache.
 - The CSP is report-only until `CSP_MODE=enforce`. There is no report endpoint, so the clean signal ADR-047 waits for is the Playwright suite passing with `CSP_MODE=enforce` on every page; enforcement is switched on in step 8 of WP-16. An inline `<script>` or `<style>` needs the nonce (Next adds it to its own tags; `headers().get("x-nonce")` gives it to anything else), and a `style` attribute in server HTML is blocked outright (no nonce covers it): use classes.
 - Colors and radii come from the tokens in `packages/ui/src/theme.css` (`bg-background`, `text-muted-foreground`); no raw color values in components.
-- App code (`src/`) reads the environment only in `src/config/site.ts`. `SITE_URL` is read when the server starts (pages render per request): set it where the server runs, to the public origin, because redirects are pinned to it; the build checks it too. `NODE_ENV` is read through `isDevelopment()`. `CSP_MODE` (`report-only` by default, or `enforce`) is read per request by the proxy. `CONTENT_API_URL` is server only and read at request time (`contentApiUrl()`); it has no default, so a missing value fails the content fetch with a clear error.
+- App code (`src/`) reads the environment only in `src/config/site.ts`. `SITE_URL` is read when the server starts (pages render per request): set it where the server runs, to the public origin, because redirects are pinned to it; the build checks it too. `NODE_ENV` is read through `isDevelopment()`. `CSP_MODE` (`report-only` by default, or `enforce`) is read per request by the proxy. `CONTENT_API_URL` is server only and read at request time (`contentApiUrl()`); it has no default, so a missing value fails the content fetch with a clear error. `CONTENT_API_DEBUG` (`contentApiDebug()`) is off unless it is `1` and the app runs under `next dev`.
 - Colors, glass and the aurora come from tokens and utilities (`text-signal`, `bg-term`, `glass`, `aurora`, `rounded-card`); accessibility checks hide `[data-aurora]` so contrast is measured on the solid surface (ADR-045).
 - Every page sets its own canonical and hreflang links with `localeAlternates` in its `generateMetadata`; the layout sets none.
 - The map of this app is section 7 of `docs/architecture/code-map.html`; update it when the request path changes.

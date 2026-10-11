@@ -170,3 +170,77 @@ describe("content API client", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe("content fetch log (CONTENT_API_DEBUG)", () => {
+  const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+
+  afterEach(() => {
+    info.mockClear();
+  });
+
+  /** The lines the client logged, one string per call. */
+  const logged = () => info.mock.calls.map(([line]) => String(line));
+
+  it("logs the URL, status, duration, cache hint and parsed body under next dev with the flag", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("CONTENT_API_DEBUG", "1");
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify(profile), {
+        headers: { "content-type": "application/json", "cache-control": "public, max-age=60" },
+      }),
+    );
+
+    await getProfile("en");
+
+    expect(logged()).toHaveLength(1);
+    const [statusLine, ...rest] = (logged()[0] ?? "").split("\n");
+    expect(statusLine).toMatch(
+      new RegExp(
+        `^\\[content-api\\] GET ${BASE}/v1/content/en/profile 200 in \\d+ms cache-control="public, max-age=60"$`,
+      ),
+    );
+    expect(rest.join("\n")).toBe(`body: ${JSON.stringify(profile, null, 2)}`);
+  });
+
+  it("logs the problem body of an error status and the contract's issues of a refused payload", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("CONTENT_API_DEBUG", "1");
+    fetchMock.mockResolvedValueOnce(json({ title: "Internal Server Error", status: 500 }, 500));
+    fetchMock.mockResolvedValueOnce(json({ ...workEntry, sections: [] }));
+
+    const failed = await rejection(getProfile("en"));
+    const invalid = await rejection(getWorkEntry("kb-outbox-relay"));
+
+    const [problem, issues] = logged();
+    expect(problem).toContain(" 500 in ");
+    expect(problem).toContain('problem: {\n  "title": "Internal Server Error"');
+    expect(issues).toContain("invalid payload: [");
+    expect(issues).toContain('"sections"');
+    // The errors thrown to the page still carry neither the URL nor a body.
+    for (const error of [failed, invalid]) {
+      expect(error.message).not.toContain("api.internal");
+      expect(error.message).not.toContain("Internal Server Error");
+    }
+  });
+
+  it("stays silent under next dev without the flag", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    fetchMock.mockResolvedValue(json(profile));
+
+    await getProfile("en");
+
+    expect(info).not.toHaveBeenCalled();
+  });
+
+  it("stays silent in production even with the flag set", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("CONTENT_API_DEBUG", "1");
+    fetchMock.mockResolvedValueOnce(json(profile));
+    fetchMock.mockResolvedValueOnce(json({ detail: "stack trace" }, 500));
+
+    await getProfile("en");
+    await rejection(getProfile("en"));
+
+    expect(info).not.toHaveBeenCalled();
+  });
+});

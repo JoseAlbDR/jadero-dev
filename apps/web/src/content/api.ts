@@ -24,7 +24,7 @@ import {
 } from "@jadero/contracts";
 import { notFound } from "next/navigation";
 import { z } from "zod";
-import { contentApiUrl } from "@/config/site";
+import { contentApiDebug, contentApiUrl } from "@/config/site";
 
 /*
  * Client of the public content API of `api` (`/v1/content`, WP-12), for Server Components only.
@@ -32,7 +32,9 @@ import { contentApiUrl } from "@/config/site";
  * `fetch` cache for CONTENT_REVALIDATE_SECONDS under content tags, so a revalidation consumer
  * (WP-14) can drop it early with `revalidateTag`. A 404 problem becomes the page's 404. Any other
  * failure throws a ContentApiError that names the resource only: never the URL, the status line's
- * body or the payload, so nothing a visitor sent or the API returned reaches a log line.
+ * body or the payload, so nothing a visitor sent or the API returned reaches a log line. The one
+ * exception is opt-in and development only: with `CONTENT_API_DEBUG=1` under `next dev`, each
+ * request is logged to the server console with its URL and body (`logContentFetch`).
  */
 
 /** Seconds a cached content response stays fresh; the same as the API's `max-age=60`. */
@@ -95,10 +97,63 @@ const notFoundProblem = z.object({ status: z.literal(404), title: z.string() });
  * True when a 404 response is the API's problem body, not a 404 from a wrong base URL or proxy,
  * which must surface as an error instead of a quiet "not found" page.
  */
-async function isNotFoundProblem(response: Response): Promise<boolean> {
+function isNotFoundProblem(response: Response, body: unknown): boolean {
   if (!response.headers.get("content-type")?.includes("application/problem+json")) return false;
-  const body: unknown = await response.json().catch(() => undefined);
   return notFoundProblem.safeParse(body).success;
+}
+
+/** A response body read once: parsed when it is JSON, and the raw text for the debug log. */
+type ResponseBody = Readonly<{ json: unknown; raw: string }>;
+
+/** Reads a response body once; `json` is `undefined` when the body is empty or not JSON. */
+async function readBody(response: Response): Promise<ResponseBody> {
+  const raw = await response.text().catch(() => "");
+  try {
+    return { json: JSON.parse(raw), raw };
+  } catch {
+    return { json: undefined, raw };
+  }
+}
+
+/** One content request as the development log shows it. */
+type FetchLogEntry = Readonly<{
+  url: string;
+  /** The HTTP status, or `null` when no response arrived. */
+  status: number | null;
+  /** `performance.now()` when the request started. */
+  started: number;
+  /** The response's `Cache-Control`; on a hit of Next's fetch cache it is the stored one. */
+  cacheControl: string | null;
+  /** What follows the status line: the parsed body, a problem body or the contract's issues. */
+  label: "body" | "problem" | "invalid payload" | "unreachable";
+  detail: unknown;
+}>;
+
+/**
+ * Logs one content request to the server console: method, full URL, status, duration and cache
+ * hint on one line, then the detail pretty-printed. Does nothing unless `contentApiDebug()` is on
+ * (`CONTENT_API_DEBUG=1` under `next dev`), so a production server never logs a URL or a body.
+ * Next's own fetch log (`logging.fetches` in `next.config.ts`) adds the hit or miss of its cache.
+ * @param entry the request and what to show after its status line.
+ */
+function logContentFetch(entry: FetchLogEntry): void {
+  if (!contentApiDebug()) return;
+  const duration = Math.round(performance.now() - entry.started);
+  const cache = entry.cacheControl ? ` cache-control="${entry.cacheControl}"` : "";
+  const detail =
+    typeof entry.detail === "string"
+      ? entry.detail
+      : (JSON.stringify(entry.detail, null, 2) ?? "(empty)");
+  console.info(
+    `[content-api] GET ${entry.url} ${entry.status ?? "unreachable"} in ${duration}ms${cache}\n` +
+      `${entry.label}: ${detail}`,
+  );
+}
+
+/** The cause of a failed `fetch`, for the development log only (it names the host and port). */
+function describeFetchError(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  return error.cause instanceof Error ? `${error.message}: ${error.cause.message}` : error.message;
 }
 
 /**
@@ -116,32 +171,57 @@ async function fetchContent<S extends z.ZodType>(
   tags: string[],
 ): Promise<z.output<S> | null> {
   const url = `${contentApiUrl()}${path}`;
+  const started = performance.now();
   let response: Response;
   try {
     response = await fetch(url, {
       headers: { accept: "application/json" },
       next: { revalidate: CONTENT_REVALIDATE_SECONDS, tags },
     });
-  } catch {
+  } catch (error) {
+    logContentFetch({
+      url,
+      status: null,
+      started,
+      cacheControl: null,
+      label: "unreachable",
+      detail: describeFetchError(error),
+    });
     // The cause names the host and port of the API; it stays out of the error on purpose.
     throw new ContentApiError(resource, null, `Content API unreachable for ${resource}`);
   }
-  if (response.status === 404 && (await isNotFoundProblem(response))) return null;
+  const body = await readBody(response);
+  const log = (label: FetchLogEntry["label"], detail: unknown) =>
+    logContentFetch({
+      url,
+      status: response.status,
+      started,
+      cacheControl: response.headers.get("cache-control"),
+      label,
+      detail,
+    });
+  if (response.status === 404 && isNotFoundProblem(response, body.json)) {
+    log("problem", body.json);
+    return null;
+  }
   if (!response.ok) {
+    log("problem", body.json ?? body.raw);
     throw new ContentApiError(
       resource,
       response.status,
       `Content API answered ${response.status} for ${resource}`,
     );
   }
-  const parsed = schema.safeParse(await response.json().catch(() => undefined));
+  const parsed = schema.safeParse(body.json);
   if (!parsed.success) {
+    log("invalid payload", parsed.error.issues);
     throw new ContentApiError(
       resource,
       response.status,
       `Content API returned an invalid ${resource} payload`,
     );
   }
+  log("body", parsed.data);
   return parsed.data;
 }
 
