@@ -32,7 +32,7 @@ Every action is pinned by commit SHA, every workflow starts from `permissions: {
 
 **Readiness should check only what a request cannot work without.** If six replicas all check a shared service for readiness, one outage drops them all at once. That is a cascading failure.
 
-Two surprises came from the repo itself: an untracked `.mcp.json` made `verify` look complete on my machine, and the migration check passed quietly on a shallow clone. Both fail open. <!-- owner: check -->
+Two surprises came from the repo itself: in a clean checkout, a PR that touched only package files skipped Biome and dependency-cruiser, and the migration check passed quietly when `origin/main` was missing. Both failed open, and both now fail closed. <!-- owner: check -->
 
 ## What I would change
 
