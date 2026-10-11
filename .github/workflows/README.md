@@ -129,5 +129,8 @@ the entry once the version is three days old.
   reusable workflow. Renaming a job silently turns its required check into one that never
   reports.
 - The owner edits the `protect-main` ruleset in the repository settings (Rules, Rulesets).
-  Rename in two steps: add the new name to the ruleset after its first green run, then remove
-  the old one.
+  Every name in the ruleset is required on every PR (an AND), and a required name that nothing
+  reports stays waiting, it never fails. So rename by expand/contract, never by listing both
+  names: the rename PR adds the new job and keeps a thin job with the old `name:` that
+  `needs:` the new one; once every open PR reports both names (rebase or merge `main` into
+  them), swap the name in the ruleset; then a later PR removes the thin job.
