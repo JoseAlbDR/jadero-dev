@@ -57,8 +57,8 @@ describe("proxy: locale redirects follow the open-redirect rule (ADR-047)", () =
   });
 
   it("keeps the path and query of a localized redirect", () => {
-    const response = proxy(request("/mockups?x=1", { language: "es" }));
-    expect(response.headers.get("location")).toBe(`${SITE}/es/mockups?x=1`);
+    const response = proxy(request("/blog?x=1", { language: "es" }));
+    expect(response.headers.get("location")).toBe(`${SITE}/es/blog?x=1`);
   });
 
   it.each([

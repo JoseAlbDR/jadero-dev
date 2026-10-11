@@ -14,7 +14,7 @@ export async function expectAccessible(page: Page): Promise<void> {
     const sheet = new CSSStyleSheet();
     sheet.replaceSync(css);
     document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
-  }, "[data-aurora], .mockup-dot-grid, .mockup-aurora { display: none !important; }");
+  }, "[data-aurora] { display: none !important; }");
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();

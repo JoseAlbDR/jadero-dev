@@ -50,7 +50,12 @@ for (const [key, messages] of Object.entries(MESSAGES)) {
         ["x-default", `${SITE}/en/work`],
       ]);
       await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
-      // Not in the main nav yet: reached from the footer.
+      // In the main nav (current page) and in the footer.
+      const nav = page.getByRole("navigation", { name: messages.Nav.label });
+      await expect(nav.getByRole("link", { name: messages.Nav.work })).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
       await expect(
         page.getByRole("contentinfo").getByRole("link", { name: messages.Footer.work }),
       ).toHaveAttribute("href", list);

@@ -2,9 +2,9 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
 /**
- * Site footer: the copyright line, the link to the work log and the one-line note. The work log is
- * linked here, not in the main nav, until the header is redesigned for mobile. Links to pages of
- * later WPs (/now, the journal, Under the hood) are added with those pages, never before.
+ * Site footer: the copyright line, the link to the work log (also in the main nav) and the one-line
+ * note. Links to pages of later WPs (/now, the journal, Under the hood) are added with those pages,
+ * never before.
  */
 export function SiteFooter() {
   const t = useTranslations("Footer");

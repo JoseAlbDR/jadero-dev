@@ -24,12 +24,5 @@ export const routing = defineRouting({
     // id (`kb-...`) in every locale, the target of a citation (`/en/work/<id>#tradeoffs`).
     "/work": { en: "/work", es: "/trabajo", de: "/arbeit" },
     "/work/[entryId]": { en: "/work/[entryId]", es: "/trabajo/[entryId]", de: "/arbeit/[entryId]" },
-    // WP-15 throwaway mockups; removed once the owner picks a direction.
-    "/mockups": "/mockups",
-    "/mockups/terminal": "/mockups/terminal",
-    "/mockups/editorial": "/mockups/editorial",
-    "/mockups/bento": "/mockups/bento",
-    "/mockups/hybrid": "/mockups/hybrid",
-    "/mockups/bento-agent": "/mockups/bento-agent",
   },
 });

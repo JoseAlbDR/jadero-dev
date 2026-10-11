@@ -3,6 +3,7 @@ import de from "../messages/de.json" with { type: "json" };
 import en from "../messages/en.json" with { type: "json" };
 import es from "../messages/es.json" with { type: "json" };
 import { expectAccessible } from "./accessibility";
+import profiles from "./stub/profile.json" with { type: "json" };
 
 const LOCALES = { en, es, de } as const;
 // The server puts SITE_URL in canonical and hreflang links; the default matches src/config/site.ts.
@@ -42,8 +43,10 @@ for (const [locale, messages] of Object.entries(LOCALES)) {
     test("renders the home in its language with hreflang alternates", async ({ page }) => {
       await page.goto(`/${locale}`);
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
-      await expect(page.getByRole("heading", { level: 1 })).toHaveText(messages.HomePage.title);
-      await expect(page.getByText(messages.HomePage.lead)).toBeVisible();
+      // The h1 is the profile headline from the stub content API.
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+        profiles[locale as keyof typeof profiles].headline,
+      );
       await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
         "href",
         `${SITE}/${locale}`,
@@ -144,30 +147,4 @@ test.describe("theme (ADR-023)", () => {
     await page.goto("/es");
     await expect(page.locator("html")).toHaveClass(/\bdark\b/);
   });
-});
-
-// WP-15 throwaway mockups: each direction must meet the same bar before the owner picks one.
-test.describe("design direction mockups (ADR-023)", () => {
-  for (const direction of [
-    "",
-    "/terminal",
-    "/editorial",
-    "/bento",
-    "/hybrid",
-    "/bento-agent",
-  ] as const) {
-    for (const colorScheme of ["light", "dark"] as const) {
-      test(`mockups${direction} has no WCAG 2.2 AA violations in ${colorScheme} mode`, async ({
-        page,
-      }) => {
-        await page.emulateMedia({ colorScheme });
-        await page.goto(`/en/mockups${direction}`);
-        await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
-          "content",
-          "noindex, nofollow",
-        );
-        await expectAccessible(page);
-      });
-    }
-  }
 });

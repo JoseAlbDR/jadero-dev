@@ -1,7 +1,8 @@
 /*
  * A stub of the public content API for the e2e suite, started by playwright.config.ts next to the
  * standalone server, so `pnpm test:e2e` never needs Docker, Postgres or `api`. It answers
- * `GET /v1/content/:locale/experience` from `experience.json`, `GET /v1/content/:locale/projects`
+ * `GET /v1/content/:locale/profile` from `profile.json`, `GET /v1/content/:locale/experience` from
+ * `experience.json`, `GET /v1/content/:locale/projects`
  * (with `?kind=`) and `GET /v1/content/:locale/projects/:slug` from `projects.json`,
  * `GET /v1/content/:locale/posts` (with `?cursor=`) and `GET /v1/content/:locale/posts/:slug` from
  * `posts.json`, `GET /v1/content/:locale/skills` from `skills.json`, `GET /v1/content/work` and
@@ -23,6 +24,7 @@ import {
   postCursor,
   postDto,
   postPageDto,
+  profileDto,
   projectDto,
   projectKind,
   projectListDto,
@@ -31,10 +33,12 @@ import {
 import { z } from "zod";
 import experience from "./experience.json" with { type: "json" };
 import posts from "./posts.json" with { type: "json" };
+import profile from "./profile.json" with { type: "json" };
 import projects from "./projects.json" with { type: "json" };
 import skills from "./skills.json" with { type: "json" };
 import work from "./work.json" with { type: "json" };
 
+const profileFixtures = z.record(locale, profileDto).parse(profile);
 const experienceFixtures = z.record(locale, experienceListDto).parse(experience);
 const projectFixtures = z.record(locale, z.array(projectDto)).parse(projects);
 const postFixtures = z.record(locale, z.array(postDto)).parse(posts);
@@ -52,6 +56,7 @@ const port = z.coerce
   .positive()
   .parse(process.env.E2E_API_PORT ?? "3211");
 
+const PROFILE_PATH = /^\/v1\/content\/(es|en|de)\/profile$/;
 const EXPERIENCE_PATH = /^\/v1\/content\/(es|en|de)\/experience$/;
 const PROJECTS_PATH = /^\/v1\/content\/(es|en|de)\/projects$/;
 const PROJECT_PATH = /^\/v1\/content\/(es|en|de)\/projects\/([a-z0-9-]+)$/;
@@ -98,6 +103,9 @@ function postPage(postLocale: Locale, cursor: string | null): unknown {
  */
 function answer(url: URL): unknown {
   const path = url.pathname;
+  const profileMatch = PROFILE_PATH.exec(path);
+  if (profileMatch) return profileFixtures[locale.parse(profileMatch[1])];
+
   const experienceMatch = EXPERIENCE_PATH.exec(path);
   if (experienceMatch) return experienceFixtures[locale.parse(experienceMatch[1])];
 

@@ -141,6 +141,18 @@
   box-shadow: 0 24px 60px -20px color-mix(in srgb, var(--signal) 45%, transparent);
 }
 
+/* The blinking caret of the agent terminal's prompt line: four blinks, then it stays, under the
+   5 s limit of WCAG 2.2.2; the reduced-motion block below stops it at once. */
+@keyframes term-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+@utility term-caret {
+  animation: term-caret 1.1s steps(1) 4;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
