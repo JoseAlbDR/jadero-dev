@@ -33,10 +33,12 @@ export function baseConfig() {
         // A package adds its own exclusions with `mergeConfig` (arrays concatenate). ADR-009 allows
         // excluding only code that something else proves; each entry names what does.
         exclude: [
-          // Composition roots: they read the config, build the Nest app or call one helper, and hold
-          // no logic of their own. The boot (`pnpm dev`, the deploy smoke) proves them; the modules
+          // Composition roots: they read the config and build and listen with the Nest app, and hold
+          // no logic of their own. What proves them today is a manual boot (`pnpm dev`); the modules
           // they build are proven by the app tests and the integration suites (`*.int.test.ts`).
-          "src/{main,worker,consumer,migrate}.ts",
+          // WP-9's deploy smoke will be the first automatic boot check. `src/migrate.ts` is not
+          // excluded: its failure exit (code 1) has a unit test in each app (`test/migrate.test.ts`).
+          "src/{main,worker,consumer}.ts",
           // Contract suites are test code kept next to the port they describe, run against every
           // adapter (the fake in `pnpm verify`, the real one in `pnpm test:int`).
           "**/*.contract.ts",
