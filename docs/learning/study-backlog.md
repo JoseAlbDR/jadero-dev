@@ -48,7 +48,7 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 
 ### Theme: migrations as append-only history
 - An edited applied migration is skipped silently; schema drift between environments. WP-10, weak (step 3 check question), weak again 2026-10-11 (warm-up, WP-6 step 2: the skip was right, the drift between migrated and fresh databases came after the hint). Step log.
-- `drizzle-kit generate` diffs schema files against the last snapshot and never reads the database; the runtime migrator keeps `drizzle.__drizzle_migrations`. WP-10, weak (step 4 check question). Step log.
+- `drizzle-kit generate` diffs schema files against the last snapshot and never reads the database; the runtime migrator keeps `drizzle.__drizzle_migrations`. WP-10, weak (step 4 check question). Step log. Solid 2026-10-11 (warm-up, WP-6 step 6: a column added by hand and then to the schema makes generate emit `ADD COLUMN`, which fails on that local database and works on a fresh one; taught after: that is schema drift, fix the local database by dropping the column and letting the migration add it).
 
 - Untrusted Postgres extensions: who creates them (provisioning as superuser) versus who asserts them (the service's migration as owner); environment parity between the test harness and provisioning; least privilege for migration roles. WP-12, weak (step 1 check question). `docs/learning/wp-12.md`, Step log.
 
