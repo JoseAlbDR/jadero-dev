@@ -1,18 +1,206 @@
 {
   "Metadata": {
     "title": "jadero.dev",
-    "description": "Web personal y portfolio de un ingeniero de software."
+    "description": "Web personal y portfolio de un ingeniero de software.",
+    "titleTemplate": "%s · jadero.dev"
   },
   "HomePage": {
-    "title": "jadero.dev",
-    "lead": "La nueva versión de esta web está en construcción."
+    "ctaProjects": "Leer los casos de estudio",
+    "ctaExperience": "Ver mi experiencia",
+    "pillarsTitle": "Lo que demuestra esta web",
+    "provenBy": "Se demuestra en",
+    "pillars": {
+      "backend": {
+        "title": "Arquitectura backend",
+        "line": "Un monolito modular y unos pocos servicios, con módulos hexagonales donde hay reglas de verdad."
+      },
+      "reliability": {
+        "title": "Fiabilidad y mensajería",
+        "line": "Los eventos salen por un outbox, los consumidores son idempotentes y los mensajes fallidos acaban en colas de dead-letter."
+      },
+      "testing": {
+        "title": "Testing y calidad",
+        "line": "Una pirámide de tests con tests de contrato, bases de datos reales en contenedores y umbrales de cobertura en CI."
+      },
+      "cicd": {
+        "title": "CI/CD e infraestructura",
+        "line": "Un pipeline y un changelog por servicio, Docker, nginx y copias de seguridad que se prueban restaurándolas."
+      },
+      "security": {
+        "title": "Seguridad",
+        "line": "Login de administración, controles de OWASP en las funciones de IA y una aprobación humana antes de que un agente pueda cambiar nada."
+      },
+      "delivery": {
+        "title": "Entrega de producto",
+        "line": "Una web rápida y accesible en tres idiomas, y El Refugio en producción con usuarios reales."
+      },
+      "ai": {
+        "title": "IA aplicada",
+        "line": "Recuperación, filtros de seguridad y evals detrás de un agente que responde preguntas sobre mi trabajo."
+      },
+      "process": {
+        "title": "Proceso de ingeniería",
+        "line": "Un registro de decisión por cada elección de diseño, el trabajo a la vista y agentes de código que trabajan bajo revisión."
+      }
+    },
+    "evidence": {
+      "caseStudies": "Casos de estudio",
+      "workLog": "Registro de trabajo",
+      "underTheHood": "Página Under the hood",
+      "publicRepo": "Repositorio público",
+      "changelogs": "Changelogs por servicio",
+      "thisSite": "Esta web",
+      "elRefugio": "El Refugio",
+      "agent": "El agente de preguntas",
+      "mcp": "Servidor MCP público",
+      "langChainAssistant": "LangChainAssistant",
+      "frameworkCase": "Caso de estudio del framework",
+      "journal": "Diario de construcción"
+    },
+    "stackTitle": "Stack",
+    "stackLink": "Ver todo el stack",
+    "caseTitle": "Caso de estudio destacado"
+  },
+  "AgentTerminal": {
+    "title": "Pregúntame sobre mi trabajo",
+    "placeholder": "Pregúntame lo que quieras sobre mi trabajo",
+    "question": "Cuéntame más sobre «<bullet></bullet>»",
+    "send": "Enviar",
+    "hint": "Prueba con una de estas",
+    "questions": {
+      "deploy": "¿Cómo se despliega esta web?",
+      "outbox": "¿Por qué un outbox entre los servicios?",
+      "tests": "¿Qué tests corren en cada pull request?"
+    },
+    "resting": "El asistente llega en una versión posterior. Todo lo demás funciona sin él."
+  },
+  "ExperiencePage": {
+    "metaTitle": "Experiencia",
+    "metaDescription": "Puestos, fechas y lo que hice en cada uno, con el trabajo detrás de cada punto.",
+    "eyebrow": "Experiencia",
+    "title": "Dónde he trabajado",
+    "lead": "Cada puesto con los puntos de mi CV, los más importantes primero. Pregunta por cualquiera.",
+    "empty": "Todavía no hay experiencia publicada.",
+    "period": "<from>{fromLabel}</from> – <to>{toLabel}</to>",
+    "present": "actualidad",
+    "location": {
+      "remote": "Remoto",
+      "hybrid": "Híbrido",
+      "onsite": "Presencial"
+    },
+    "stack": "Tecnologías",
+    "highlights": "Puntos destacados",
+    "ask": "Pregunta por esto"
+  },
+  "ProjectsPage": {
+    "metaTitle": "Proyectos",
+    "metaDescription": "Casos de estudio, proyectos y primeros trabajos, con las tecnologías de cada uno.",
+    "eyebrow": "Proyectos",
+    "title": "Lo que he construido",
+    "lead": "Primero los casos de estudio, después proyectos más pequeños y un archivo de primeros trabajos.",
+    "empty": "Todavía no hay proyectos publicados.",
+    "sections": {
+      "case_study": "Casos de estudio",
+      "project": "Proyectos",
+      "early": "Primeros trabajos"
+    },
+    "kind": {
+      "case_study": "Caso de estudio",
+      "project": "Proyecto",
+      "early": "Primer trabajo"
+    },
+    "stack": "Tecnologías",
+    "links": "Enlaces",
+    "repo": "Código fuente",
+    "demo": "Demo en vivo",
+    "back": "Todos los proyectos"
+  },
+  "BlogPage": {
+    "metaTitle": "Blog",
+    "metaDescription": "Notas sobre cómo construyo este sitio y sobre trabajo de backend.",
+    "eyebrow": "Blog",
+    "title": "Lo que escribo",
+    "lead": "Notas sobre lo que construyo y lo que aprendo por el camino, primero lo más reciente.",
+    "empty": "Todavía no hay entradas publicadas.",
+    "tags": "Etiquetas",
+    "pagination": "Más entradas",
+    "older": "Entradas anteriores",
+    "back": "Todas las entradas"
+  },
+  "StackPage": {
+    "metaTitle": "Stack",
+    "metaDescription": "Los lenguajes, herramientas y plataformas con los que trabajo, agrupados por área.",
+    "eyebrow": "Stack",
+    "title": "Con qué trabajo",
+    "lead": "Lenguajes, herramientas y plataformas, agrupados por área.",
+    "empty": "Todavía no hay tecnologías publicadas."
+  },
+  "WorkPage": {
+    "metaTitle": "Registro de trabajo",
+    "metaDescription": "Una entrada por cada trabajo: el problema, lo que construí, las alternativas y el resultado.",
+    "eyebrow": "Registro de trabajo",
+    "title": "El trabajo detrás del CV",
+    "lead": "Una entrada por cada trabajo: el problema, lo que construí, las alternativas y cómo salió.",
+    "empty": "Aún no hay entradas publicadas.",
+    "listNote": "Las entradas solo están disponibles en inglés.",
+    "entryNote": "Esta entrada solo está disponible en inglés.",
+    "period": "<from>{fromLabel}</from> – <to>{toLabel}</to>",
+    "present": "actualidad",
+    "type": {
+      "feature": "Funcionalidad",
+      "improvement": "Mejora",
+      "tech-debt": "Deuda técnica",
+      "integration": "Integración",
+      "performance": "Rendimiento",
+      "tooling": "Herramientas",
+      "workshop": "Taller"
+    },
+    "role": {
+      "soleAuthor": "Autor único",
+      "lead": "Responsable",
+      "contributor": "Colaborador"
+    },
+    "stack": "Stack",
+    "patterns": "Patrones",
+    "sections": {
+      "summary": "Resumen",
+      "problem": "Problema",
+      "whatHeBuilt": "Lo que construí",
+      "howItWorks": "Cómo funciona",
+      "tradeoffs": "Compromisos y alternativas",
+      "testingRollout": "Pruebas y despliegue",
+      "outcome": "Resultado",
+      "lessons": "Lecciones"
+    },
+    "questions": "Preguntas que responde",
+    "back": "Todas las entradas"
   },
   "NotFound": {
     "title": "Página no encontrada",
     "description": "La página que buscas no existe."
   },
+  "ErrorPage": {
+    "title": "No se pudo cargar esta página",
+    "description": "Algo ha fallado de nuestro lado. Inténtalo de nuevo en un momento.",
+    "retry": "Reintentar"
+  },
   "Header": {
-    "home": "Inicio"
+    "home": "Inicio",
+    "menu": "Menú"
+  },
+  "Nav": {
+    "label": "Principal",
+    "home": "Inicio",
+    "experience": "Experiencia",
+    "projects": "Proyectos",
+    "stack": "Stack",
+    "blog": "Blog",
+    "work": "Registro de trabajo"
+  },
+  "Footer": {
+    "copyright": "© {year} jadero.dev",
+    "note": "Construida versión a versión.",
+    "work": "Registro de trabajo"
   },
   "ThemeToggle": {
     "label": "Tema de color",
@@ -22,55 +210,5 @@
   },
   "LocaleSwitcher": {
     "label": "Idioma"
-  },
-  "Mockups": {
-    "metaTitle": "Direcciones de diseño",
-    "indexTitle": "Direcciones de diseño",
-    "indexLead": "Tres maquetas desechables de la portada para elegir la dirección visual. El texto es provisional.",
-    "notice": "Maqueta, no es la web real",
-    "directions": {
-      "terminal": "Editorial de terminal",
-      "editorial": "Editorial suizo",
-      "bento": "Bento de cristal",
-      "hybrid": "Editorial suizo + bloque de terminal",
-      "bento-agent": "Bento de cristal + terminal del agente"
-    },
-    "summaries": {
-      "terminal": "Nativo para desarrolladores: una sans con acento monoespaciado, casi negro con un acento vivo, el prompt como portada.",
-      "editorial": "Sereno y maduro: un titular serif en una rejilla de 12 columnas, un acento apagado, el prompt como un elemento discreto.",
-      "bento": "Actual: una rejilla de tarjetas de cristal sobre un degradado suave, esquinas grandes, pequeños movimientos al pasar el ratón.",
-      "hybrid": "La dirección 2 con el bloque completo del prompt de la 1: el titular serif y la rejilla, más la tarjeta de terminal.",
-      "bento-agent": "Bento de cristal con el agente como tarjeta de terminal oscura, tan grande como la portada y a su lado."
-    },
-    "role": "Ingeniero backend",
-    "headline": "Diseño, pruebo, despliego y opero sistemas backend, desde el modelo de datos hasta el servidor donde corren.",
-    "lead": "Esta web es uno de ellos: explora el código, las decisiones y la arquitectura en vivo.",
-    "ctaWork": "Leer los casos de estudio",
-    "ctaArchitecture": "Ver la arquitectura",
-    "promptLabel": "Pregúntame lo que quieras sobre mi trabajo",
-    "promptHint": "Prueba con una de estas",
-    "questions": {
-      "deploy": "¿Cómo se despliega esta web?",
-      "outbox": "¿Por qué un outbox entre los servicios?",
-      "tests": "¿Qué tests corren en cada pull request?"
-    },
-    "resting": "El asistente llega en una versión posterior. Todo lo demás funciona sin él.",
-    "pillarsTitle": "Lo que demuestra esta web",
-    "pillars": {
-      "backend": "Arquitectura backend",
-      "reliability": "Fiabilidad y mensajería",
-      "testing": "Testing y calidad",
-      "cicd": "CI/CD e infraestructura",
-      "security": "Seguridad",
-      "delivery": "Entrega de producto",
-      "ai": "IA aplicada",
-      "process": "Proceso de ingeniería"
-    },
-    "stackTitle": "Stack",
-    "nowTitle": "Ahora",
-    "nowBody": "Construyendo jadero.dev v2 en público, una versión tras otra.",
-    "caseTitle": "Caso de estudio destacado",
-    "caseName": "jadero.dev",
-    "caseBody": "Servicios, mensajería, tests y despliegues detrás de una web personal."
   }
 }

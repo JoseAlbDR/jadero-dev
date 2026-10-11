@@ -1,18 +1,30 @@
 "use client";
 
 import { cn } from "@jadero/ui/cn";
+import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import type { ComponentProps } from "react";
 import { Link, usePathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 
 /** Each language's name in that language, for screen readers and tooltips. */
 const LANGUAGE_NAMES = { en: "English", es: "Español", de: "Deutsch" } as const;
 
-/** Links to the current page in the other locales; the choice is kept in the locale cookie. */
+type Href = ComponentProps<typeof Link>["href"];
+
+/**
+ * Links to the current page in the other locales; the choice is kept in the locale cookie. On a
+ * page with a dynamic segment (`/projects/[slug]`), `usePathname` returns the template, so the
+ * route's params fill it in. A content slug is the current locale's; the item page redirects it to
+ * the target locale's own slug.
+ */
 export function LocaleSwitcher() {
   const t = useTranslations("LocaleSwitcher");
   const current = useLocale();
-  const pathname = usePathname();
+  const template = usePathname();
+  const params = useParams();
+  // The pathname and the params come from the same matched route, which the types cannot express.
+  const pathname = { pathname: template, params } as Href;
 
   return (
     <nav aria-label={t("label")}>

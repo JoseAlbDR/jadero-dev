@@ -1,0 +1,98 @@
+{
+  "en": [
+    {
+      "slug": "why-an-outbox",
+      "locale": "en",
+      "title": "Why an outbox",
+      "excerpt": "Saving a row and publishing an event are two writes; the outbox makes them one.",
+      "tags": ["messaging", "PostgreSQL"],
+      "publishedAt": "2026-10-08T09:30:00.000Z",
+      "alternates": { "en": "why-an-outbox", "es": "por-que-un-outbox", "de": "warum-ein-outbox" },
+      "body": "## The problem\n\nA service saves a row and must publish an event for it.\n\n:::callout\nBoth go in **one** transaction.\n:::\n\nSee the [relay](https://example.com/relay) or [this link](javascript:alert(1)).\n\n<script>window.__xss = true</script>\n"
+    },
+    {
+      "slug": "tests-with-containers",
+      "locale": "en",
+      "title": "Tests with real containers",
+      "excerpt": "Why the repository tests run against a real PostgreSQL.",
+      "tags": ["testing"],
+      "publishedAt": "2026-09-20T07:00:00.000Z",
+      "alternates": { "en": "tests-with-containers", "es": "pruebas-con-contenedores" },
+      "body": "## Approach\n\nOne database per test file."
+    },
+    {
+      "slug": "first-notes",
+      "locale": "en",
+      "title": "First notes",
+      "excerpt": "What this blog is for.",
+      "tags": [],
+      "publishedAt": "2026-09-01T12:00:00.000Z",
+      "alternates": { "en": "first-notes", "es": "primeras-notas" },
+      "body": "Short notes while the site is built."
+    }
+  ],
+  "es": [
+    {
+      "slug": "por-que-un-outbox",
+      "locale": "es",
+      "title": "Por qué un outbox",
+      "excerpt": "Guardar una fila y publicar un evento son dos escrituras; el outbox las hace una.",
+      "tags": ["mensajería", "PostgreSQL"],
+      "publishedAt": "2026-10-08T09:30:00.000Z",
+      "alternates": { "en": "why-an-outbox", "es": "por-que-un-outbox", "de": "warum-ein-outbox" },
+      "body": "## El problema\n\nUn servicio guarda una fila y debe publicar un evento.\n\n:::callout\nAmbas cosas van en **una** transacción.\n:::\n\n<script>window.__xss = true</script>\n"
+    },
+    {
+      "slug": "pruebas-con-contenedores",
+      "locale": "es",
+      "title": "Pruebas con contenedores reales",
+      "excerpt": "Por qué los tests de repositorio usan un PostgreSQL real.",
+      "tags": ["pruebas"],
+      "publishedAt": "2026-09-20T07:00:00.000Z",
+      "alternates": { "en": "tests-with-containers", "es": "pruebas-con-contenedores" },
+      "body": "## Enfoque\n\nUna base de datos por archivo de test."
+    },
+    {
+      "slug": "primeras-notas",
+      "locale": "es",
+      "title": "Primeras notas",
+      "excerpt": "Para qué sirve este blog.",
+      "tags": [],
+      "publishedAt": "2026-09-01T12:00:00.000Z",
+      "alternates": { "en": "first-notes", "es": "primeras-notas" },
+      "body": "Notas cortas mientras se construye el sitio."
+    }
+  ],
+  "de": [
+    {
+      "slug": "warum-ein-outbox",
+      "locale": "de",
+      "title": "Warum ein Outbox",
+      "excerpt": "Eine Zeile speichern und ein Event veröffentlichen sind zwei Schreibvorgänge; der Outbox macht einen daraus.",
+      "tags": ["Messaging", "PostgreSQL"],
+      "publishedAt": "2026-10-08T09:30:00.000Z",
+      "alternates": { "en": "why-an-outbox", "es": "por-que-un-outbox", "de": "warum-ein-outbox" },
+      "body": "## Das Problem\n\nEin Dienst speichert eine Zeile und muss ein Event veröffentlichen.\n\n<script>window.__xss = true</script>\n"
+    },
+    {
+      "slug": "tests-with-containers",
+      "locale": "en",
+      "title": "Tests with real containers",
+      "excerpt": "Why the repository tests run against a real PostgreSQL.",
+      "tags": ["testing"],
+      "publishedAt": "2026-09-20T07:00:00.000Z",
+      "alternates": { "en": "tests-with-containers", "es": "pruebas-con-contenedores" },
+      "body": "## Approach\n\nOne database per test file."
+    },
+    {
+      "slug": "first-notes",
+      "locale": "en",
+      "title": "First notes",
+      "excerpt": "What this blog is for.",
+      "tags": [],
+      "publishedAt": "2026-09-01T12:00:00.000Z",
+      "alternates": { "en": "first-notes", "es": "primeras-notas" },
+      "body": "Short notes while the site is built."
+    }
+  ]
+}

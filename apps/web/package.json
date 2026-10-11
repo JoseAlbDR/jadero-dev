@@ -2,7 +2,7 @@
   "name": "@jadero/web",
   "version": "0.0.0",
   "private": true,
-  "description": "Public site (ADR-001, ADR-022, ADR-023). WP-4: the skeleton.",
+  "description": "Public site (ADR-001, ADR-022, ADR-045).",
   "type": "module",
   "scripts": {
     "build": "next build && node scripts/copy-standalone-assets.mjs",
@@ -13,13 +13,23 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@jadero/contracts": "workspace:*",
     "@jadero/ui": "workspace:*",
+    "geist": "catalog:",
+    "hast-util-to-jsx-runtime": "catalog:",
     "lucide-react": "catalog:",
     "next": "catalog:",
     "next-intl": "catalog:",
     "next-themes": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "rehype-sanitize": "catalog:",
+    "remark-directive": "catalog:",
+    "remark-gfm": "catalog:",
+    "remark-parse": "catalog:",
+    "remark-rehype": "catalog:",
+    "unified": "catalog:",
+    "unist-util-visit": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -27,6 +37,8 @@
     "@jadero/config": "workspace:*",
     "@playwright/test": "catalog:",
     "@tailwindcss/postcss": "catalog:",
+    "@types/hast": "catalog:",
+    "@types/mdast": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",

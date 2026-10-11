@@ -12,12 +12,17 @@ export const routing = defineRouting({
   localePrefix: "always",
   pathnames: {
     "/": "/",
-    // WP-15 throwaway mockups; removed once the owner picks a direction.
-    "/mockups": "/mockups",
-    "/mockups/terminal": "/mockups/terminal",
-    "/mockups/editorial": "/mockups/editorial",
-    "/mockups/bento": "/mockups/bento",
-    "/mockups/hybrid": "/mockups/hybrid",
-    "/mockups/bento-agent": "/mockups/bento-agent",
+    "/experience": { en: "/experience", es: "/experiencia", de: "/erfahrung" },
+    "/projects": { en: "/projects", es: "/proyectos", de: "/projekte" },
+    // The slug is the project's own localized slug (`sample-project`, `proyecto-de-ejemplo`).
+    "/projects/[slug]": { en: "/projects/[slug]", es: "/proyectos/[slug]", de: "/projekte/[slug]" },
+    // The same word in every locale (owner's choice); a post's slug is its own localized slug.
+    "/stack": "/stack",
+    "/blog": "/blog",
+    "/blog/[slug]": "/blog/[slug]",
+    // The work log (ADR-031, D-52): entries are English only (D-50) and addressed by their stable
+    // id (`kb-...`) in every locale, the target of a citation (`/en/work/<id>#tradeoffs`).
+    "/work": { en: "/work", es: "/trabajo", de: "/arbeit" },
+    "/work/[entryId]": { en: "/work/[entryId]", es: "/trabajo/[entryId]", de: "/arbeit/[entryId]" },
   },
 });

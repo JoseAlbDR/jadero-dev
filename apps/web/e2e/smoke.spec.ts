@@ -1,11 +1,12 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import de from "../messages/de.json" with { type: "json" };
 import en from "../messages/en.json" with { type: "json" };
 import es from "../messages/es.json" with { type: "json" };
+import { expectAccessible } from "./accessibility";
+import profiles from "./stub/profile.json" with { type: "json" };
 
 const LOCALES = { en, es, de } as const;
-// The build bakes SITE_URL into the prerendered HTML; the default matches src/config/site.ts.
+// The server puts SITE_URL in canonical and hreflang links; the default matches src/config/site.ts.
 const SITE = (process.env.SITE_URL ?? "https://jadero.dev").replace(/\/$/, "");
 
 test.describe("locale routing (ADR-022)", () => {
@@ -42,8 +43,10 @@ for (const [locale, messages] of Object.entries(LOCALES)) {
     test("renders the home in its language with hreflang alternates", async ({ page }) => {
       await page.goto(`/${locale}`);
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
-      await expect(page.getByRole("heading", { level: 1 })).toHaveText(messages.HomePage.title);
-      await expect(page.getByText(messages.HomePage.lead)).toBeVisible();
+      // The h1 is the profile headline from the stub content API.
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+        profiles[locale as keyof typeof profiles].headline,
+      );
       await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
         "href",
         `${SITE}/${locale}`,
@@ -61,6 +64,16 @@ for (const [locale, messages] of Object.entries(LOCALES)) {
       ]);
     });
 
+    test("renders the site shell around the page", async ({ page }) => {
+      await page.goto(`/${locale}`);
+      const nav = page.getByRole("navigation", { name: messages.Nav.label });
+      await expect(nav.getByRole("link", { name: messages.Nav.home })).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+      await expect(page.getByRole("contentinfo")).toContainText(messages.Footer.note);
+    });
+
     test("renders the localized 404", async ({ page }) => {
       const response = await page.goto(`/${locale}/does-not-exist`);
       expect(response?.status()).toBe(404);
@@ -72,14 +85,26 @@ for (const [locale, messages] of Object.entries(LOCALES)) {
       test(`has no WCAG 2.2 AA violations in ${colorScheme} mode`, async ({ page }) => {
         await page.emulateMedia({ colorScheme });
         await page.goto(`/${locale}`);
-        const results = await new AxeBuilder({ page })
-          .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-          .analyze();
-        expect(results.violations).toEqual([]);
+        await expectAccessible(page);
       });
     }
   });
 }
+
+test.describe("fonts (ADR-045)", () => {
+  test("loads Geist from the site itself, never from a font CDN", async ({ page }) => {
+    const fontHosts: string[] = [];
+    page.on("request", (request) => {
+      if (request.resourceType() === "font") fontHosts.push(new URL(request.url()).host);
+    });
+    await page.goto("/en");
+    await page.evaluate(() => document.fonts.ready.then(() => undefined));
+    const family = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
+    expect(family).toMatch(/Geist/);
+    expect(fontHosts.length).toBeGreaterThan(0);
+    expect(new Set(fontHosts)).toEqual(new Set([new URL(page.url()).host]));
+  });
+});
 
 test.describe("theme (ADR-023)", () => {
   test("switches to dark and keeps it across a reload without a flash", async ({ page }) => {
@@ -122,46 +147,4 @@ test.describe("theme (ADR-023)", () => {
     await page.goto("/es");
     await expect(page.locator("html")).toHaveClass(/\bdark\b/);
   });
-});
-
-// WP-15 throwaway mockups: each direction must meet the same bar before the owner picks one.
-test.describe("design direction mockups (ADR-023)", () => {
-  for (const direction of [
-    "",
-    "/terminal",
-    "/editorial",
-    "/bento",
-    "/hybrid",
-    "/bento-agent",
-  ] as const) {
-    for (const colorScheme of ["light", "dark"] as const) {
-      test(`mockups${direction} has no WCAG 2.2 AA violations in ${colorScheme} mode`, async ({
-        page,
-      }) => {
-        await page.emulateMedia({ colorScheme });
-        await page.goto(`/en/mockups${direction}`);
-        await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
-          "content",
-          "noindex, nofollow",
-        );
-        // The dot grid and the aurora are decorative gradients axe cannot measure text against;
-        // hide them so contrast is checked on the solid surface instead of being skipped.
-        await page.addStyleTag({
-          content: ".mockup-dot-grid, .mockup-aurora { display: none !important; }",
-        });
-        const results = await new AxeBuilder({ page })
-          .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-          .analyze();
-        expect(results.violations).toEqual([]);
-        // An axe crash (for example a color it cannot parse) lands in `incomplete`, not `violations`.
-        expect(results.incomplete.filter((r) => r.error)).toEqual([]);
-        // Every text node gets a contrast verdict; axe never measures symbol glyphs (the
-        // decorative arrows), which it reports as "nonBmp".
-        const unchecked = (
-          results.incomplete.find((r) => r.id === "color-contrast")?.nodes ?? []
-        ).filter((n) => n.any[0]?.data?.messageKey !== "nonBmp");
-        expect(unchecked.map((n) => n.html)).toEqual([]);
-      });
-    }
-  }
 });
