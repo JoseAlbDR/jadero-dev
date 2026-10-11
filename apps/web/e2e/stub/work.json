@@ -1,0 +1,75 @@
+[
+  {
+    "id": "kb-outbox-relay",
+    "title": "Outbox relay for domain events",
+    "type": "feature",
+    "domain": "messaging",
+    "period": { "from": "2025-03", "to": "2025-06" },
+    "role": "sole author",
+    "stack": ["NestJS", "PostgreSQL", "RabbitMQ"],
+    "patterns": ["outbox", "idempotent consumer"],
+    "indexable": true,
+    "cvBullet": "backend-10",
+    "related": ["kb-inbox-dedup"],
+    "sections": [
+      {
+        "key": "summary",
+        "body": "A relay that publishes domain events from an **outbox** table, so a saved row and its event never drift apart."
+      },
+      {
+        "key": "problem",
+        "body": "Saving a row and publishing an event are two writes; a crash between them lost events."
+      },
+      {
+        "key": "whatHeBuilt",
+        "body": "An outbox table written in the same transaction as the row, and a relay that claims rows and publishes them.\n\n- claim with `FOR UPDATE SKIP LOCKED`\n- publish with confirms\n- mark as sent"
+      },
+      {
+        "key": "howItWorks",
+        "body": "The relay polls every second and claims a batch, so two relays never publish the same row."
+      },
+      {
+        "key": "tradeoffs",
+        "body": "Polling adds up to a second of delay; change data capture would remove it but adds a component to run.\n\n<script>window.__xss = true</script>"
+      },
+      {
+        "key": "testingRollout",
+        "body": "Integration tests against a real PostgreSQL and broker; rolled out behind a flag."
+      },
+      { "key": "outcome", "body": "No lost events since the rollout." },
+      {
+        "key": "lessons",
+        "body": "Make the consumer idempotent first; the relay delivers at least once."
+      }
+    ],
+    "questions": [
+      "Why an outbox instead of publishing after the commit?",
+      "How are duplicates handled?"
+    ]
+  },
+  {
+    "id": "kb-inbox-dedup",
+    "title": "Inbox table for duplicate messages",
+    "type": "improvement",
+    "domain": "messaging",
+    "period": { "from": "2025-07", "to": null },
+    "role": "contributor",
+    "stack": ["PostgreSQL"],
+    "patterns": ["inbox"],
+    "indexable": false,
+    "cvBullet": null,
+    "related": ["kb-outbox-relay"],
+    "sections": [
+      {
+        "key": "summary",
+        "body": "An inbox table that drops a message the consumer has already handled."
+      },
+      { "key": "problem", "body": "At-least-once delivery sent some messages twice." },
+      {
+        "key": "whatHeBuilt",
+        "body": "A unique key on the message id, written in the handler's transaction."
+      }
+    ],
+    "questions": ["What happens when the same message arrives twice?"]
+  }
+]

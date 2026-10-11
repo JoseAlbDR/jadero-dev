@@ -1,18 +1,206 @@
 {
   "Metadata": {
     "title": "jadero.dev",
-    "description": "Persönliche Website und Portfolio eines Softwareentwicklers."
+    "description": "Persönliche Website und Portfolio eines Softwareentwicklers.",
+    "titleTemplate": "%s · jadero.dev"
   },
   "HomePage": {
-    "title": "jadero.dev",
-    "lead": "Die neue Version dieser Website ist im Aufbau."
+    "ctaProjects": "Fallstudien lesen",
+    "ctaExperience": "Meine Erfahrung ansehen",
+    "pillarsTitle": "Was diese Website zeigt",
+    "provenBy": "Belegt durch",
+    "pillars": {
+      "backend": {
+        "title": "Backend-Architektur",
+        "line": "Ein modularer Monolith und einige Services, mit hexagonalen Modulen dort, wo es echte Regeln gibt."
+      },
+      "reliability": {
+        "title": "Zuverlässigkeit und Messaging",
+        "line": "Events gehen über eine Outbox raus, Consumer sind idempotent und fehlgeschlagene Nachrichten landen in Dead-Letter-Queues."
+      },
+      "testing": {
+        "title": "Testen und Qualität",
+        "line": "Eine Testpyramide mit Contract-Tests, echten Datenbanken in Containern und Coverage-Grenzen in der CI."
+      },
+      "cicd": {
+        "title": "CI/CD und Infrastruktur",
+        "line": "Eine Pipeline und ein Changelog pro Service, Docker, nginx und Backups, die per Wiederherstellung getestet werden."
+      },
+      "security": {
+        "title": "Sicherheit",
+        "line": "Admin-Login, OWASP-Kontrollen für die KI-Funktionen und eine menschliche Freigabe, bevor ein Agent etwas ändern kann."
+      },
+      "delivery": {
+        "title": "Produktlieferung",
+        "line": "Eine schnelle, barrierefreie Website in drei Sprachen und El Refugio in Produktion mit echten Nutzern."
+      },
+      "ai": {
+        "title": "Angewandte KI",
+        "line": "Retrieval, Schutzmechanismen und Evals hinter einem Agenten, der Fragen zu meiner Arbeit beantwortet."
+      },
+      "process": {
+        "title": "Engineering-Prozess",
+        "line": "Ein Decision Record für jede Designentscheidung, offen nachverfolgte Arbeit und Coding-Agenten, die unter Review arbeiten."
+      }
+    },
+    "evidence": {
+      "caseStudies": "Fallstudien",
+      "workLog": "Arbeitsprotokoll",
+      "underTheHood": "Under-the-hood-Seite",
+      "publicRepo": "Öffentliches Repo",
+      "changelogs": "Changelogs pro Service",
+      "thisSite": "Diese Website",
+      "elRefugio": "El Refugio",
+      "agent": "Der Frage-Agent",
+      "mcp": "Öffentlicher MCP-Server",
+      "langChainAssistant": "LangChainAssistant",
+      "frameworkCase": "Fallstudie zum Framework",
+      "journal": "Bau-Journal"
+    },
+    "stackTitle": "Stack",
+    "stackLink": "Den ganzen Stack ansehen",
+    "caseTitle": "Ausgewählte Fallstudie"
+  },
+  "AgentTerminal": {
+    "title": "Frag mich zu meiner Arbeit",
+    "placeholder": "Frag mich alles über meine Arbeit",
+    "question": "Erzähl mir mehr über „<bullet></bullet>“",
+    "send": "Senden",
+    "hint": "Probier eine davon",
+    "questions": {
+      "deploy": "Wie wird diese Website deployt?",
+      "outbox": "Warum eine Outbox zwischen den Services?",
+      "tests": "Welche Tests laufen bei jedem Pull Request?"
+    },
+    "resting": "Der Assistent kommt in einem späteren Release. Alles andere funktioniert ohne ihn."
+  },
+  "ExperiencePage": {
+    "metaTitle": "Erfahrung",
+    "metaDescription": "Stationen, Zeiträume und was ich jeweils gemacht habe, mit der Arbeit hinter jedem Punkt.",
+    "eyebrow": "Erfahrung",
+    "title": "Wo ich gearbeitet habe",
+    "lead": "Jede Station mit den Punkten aus meinem Lebenslauf, die wichtigsten zuerst. Frag nach jedem davon.",
+    "empty": "Noch keine Erfahrung veröffentlicht.",
+    "period": "<from>{fromLabel}</from> – <to>{toLabel}</to>",
+    "present": "heute",
+    "location": {
+      "remote": "Remote",
+      "hybrid": "Hybrid",
+      "onsite": "Vor Ort"
+    },
+    "stack": "Technologien",
+    "highlights": "Schwerpunkte",
+    "ask": "Danach fragen"
+  },
+  "ProjectsPage": {
+    "metaTitle": "Projekte",
+    "metaDescription": "Fallstudien, Projekte und frühe Arbeiten, mit den Technologien dahinter.",
+    "eyebrow": "Projekte",
+    "title": "Was ich gebaut habe",
+    "lead": "Zuerst die Fallstudien, dann kleinere Projekte und ein Archiv früher Arbeiten.",
+    "empty": "Noch keine Projekte veröffentlicht.",
+    "sections": {
+      "case_study": "Fallstudien",
+      "project": "Projekte",
+      "early": "Frühe Arbeiten"
+    },
+    "kind": {
+      "case_study": "Fallstudie",
+      "project": "Projekt",
+      "early": "Frühe Arbeit"
+    },
+    "stack": "Technologien",
+    "links": "Links",
+    "repo": "Quellcode",
+    "demo": "Live-Demo",
+    "back": "Alle Projekte"
+  },
+  "BlogPage": {
+    "metaTitle": "Blog",
+    "metaDescription": "Notizen zum Bau dieser Website und zur Arbeit im Backend.",
+    "eyebrow": "Blog",
+    "title": "Was ich schreibe",
+    "lead": "Notizen zu dem, was ich baue und dabei lerne, die neuesten zuerst.",
+    "empty": "Noch keine Beiträge veröffentlicht.",
+    "tags": "Schlagwörter",
+    "pagination": "Weitere Beiträge",
+    "older": "Ältere Beiträge",
+    "back": "Alle Beiträge"
+  },
+  "StackPage": {
+    "metaTitle": "Stack",
+    "metaDescription": "Die Sprachen, Werkzeuge und Plattformen, mit denen ich arbeite, nach Bereich gruppiert.",
+    "eyebrow": "Stack",
+    "title": "Womit ich arbeite",
+    "lead": "Sprachen, Werkzeuge und Plattformen, nach Bereich gruppiert.",
+    "empty": "Noch keine Kenntnisse veröffentlicht."
+  },
+  "WorkPage": {
+    "metaTitle": "Arbeitsprotokoll",
+    "metaDescription": "Ein Eintrag pro Arbeit: das Problem, was ich gebaut habe, die Abwägungen und das Ergebnis.",
+    "eyebrow": "Arbeitsprotokoll",
+    "title": "Die Arbeit hinter dem Lebenslauf",
+    "lead": "Ein Eintrag pro Arbeit: das Problem, was ich gebaut habe, die Abwägungen und wie es ausging.",
+    "empty": "Noch keine Einträge veröffentlicht.",
+    "listNote": "Die Einträge gibt es nur auf Englisch.",
+    "entryNote": "Diesen Eintrag gibt es nur auf Englisch.",
+    "period": "<from>{fromLabel}</from> – <to>{toLabel}</to>",
+    "present": "heute",
+    "type": {
+      "feature": "Feature",
+      "improvement": "Verbesserung",
+      "tech-debt": "Technische Schulden",
+      "integration": "Integration",
+      "performance": "Performance",
+      "tooling": "Tooling",
+      "workshop": "Workshop"
+    },
+    "role": {
+      "soleAuthor": "Alleinautor",
+      "lead": "Leitung",
+      "contributor": "Mitwirkung"
+    },
+    "stack": "Stack",
+    "patterns": "Muster",
+    "sections": {
+      "summary": "Zusammenfassung",
+      "problem": "Problem",
+      "whatHeBuilt": "Was ich gebaut habe",
+      "howItWorks": "Wie es funktioniert",
+      "tradeoffs": "Abwägungen und Alternativen",
+      "testingRollout": "Tests und Rollout",
+      "outcome": "Ergebnis",
+      "lessons": "Erkenntnisse"
+    },
+    "questions": "Fragen, die dieser Eintrag beantwortet",
+    "back": "Alle Einträge"
   },
   "NotFound": {
     "title": "Seite nicht gefunden",
     "description": "Die gesuchte Seite existiert nicht."
   },
+  "ErrorPage": {
+    "title": "Diese Seite konnte nicht geladen werden",
+    "description": "Bei uns ist etwas schiefgelaufen. Bitte versuche es gleich noch einmal.",
+    "retry": "Erneut versuchen"
+  },
   "Header": {
-    "home": "Startseite"
+    "home": "Startseite",
+    "menu": "Menü"
+  },
+  "Nav": {
+    "label": "Hauptnavigation",
+    "home": "Startseite",
+    "experience": "Erfahrung",
+    "projects": "Projekte",
+    "stack": "Stack",
+    "blog": "Blog",
+    "work": "Arbeitsprotokoll"
+  },
+  "Footer": {
+    "copyright": "© {year} jadero.dev",
+    "note": "Gebaut, ein Release nach dem anderen.",
+    "work": "Arbeitsprotokoll"
   },
   "ThemeToggle": {
     "label": "Farbschema",
@@ -22,55 +210,5 @@
   },
   "LocaleSwitcher": {
     "label": "Sprache"
-  },
-  "Mockups": {
-    "metaTitle": "Designrichtungen",
-    "indexTitle": "Designrichtungen",
-    "indexLead": "Drei Wegwerf-Entwürfe der Startseite, um die visuelle Richtung zu wählen. Der Text ist ein Platzhalter.",
-    "notice": "Entwurf, nicht die echte Website",
-    "directions": {
-      "terminal": "Terminal-Editorial",
-      "editorial": "Schweizer Editorial",
-      "bento": "Bento aus Glas",
-      "hybrid": "Schweizer Editorial + Terminal-Block",
-      "bento-agent": "Bento aus Glas + Agent-Terminal"
-    },
-    "summaries": {
-      "terminal": "Für Entwickler: eine Sans mit Monospace-Akzent, fast schwarz mit einem kräftigen Akzent, der Prompt als Hero.",
-      "editorial": "Ruhig und erfahren: eine Serifen-Überschrift im 12-Spalten-Raster, ein gedämpfter Akzent, der Prompt als ein stilles Element.",
-      "bento": "Zeitgemäß: ein Raster aus Glaskarten über einem weichen Verlauf, große Radien, kleine Hover-Bewegungen.",
-      "hybrid": "Richtung 2 mit dem ganzen Prompt-Block aus Richtung 1: Serifen-Überschrift und Raster, dazu die Terminal-Karte.",
-      "bento-agent": "Bento aus Glas mit dem Agenten als dunkler Terminal-Karte, so groß wie der Hero und direkt daneben."
-    },
-    "role": "Backend-Entwickler",
-    "headline": "Ich entwerfe, teste, liefere und betreibe Backend-Systeme, vom Datenmodell bis zum Server, auf dem sie laufen.",
-    "lead": "Diese Website ist eines davon: Code, Entscheidungen und die Live-Architektur sind offen.",
-    "ctaWork": "Fallstudien lesen",
-    "ctaArchitecture": "Architektur ansehen",
-    "promptLabel": "Frag mich alles über meine Arbeit",
-    "promptHint": "Probier eine davon",
-    "questions": {
-      "deploy": "Wie wird diese Website deployt?",
-      "outbox": "Warum eine Outbox zwischen den Services?",
-      "tests": "Welche Tests laufen bei jedem Pull Request?"
-    },
-    "resting": "Der Assistent kommt in einem späteren Release. Alles andere funktioniert ohne ihn.",
-    "pillarsTitle": "Was diese Website zeigt",
-    "pillars": {
-      "backend": "Backend-Architektur",
-      "reliability": "Zuverlässigkeit und Messaging",
-      "testing": "Testen und Qualität",
-      "cicd": "CI/CD und Infrastruktur",
-      "security": "Sicherheit",
-      "delivery": "Produktlieferung",
-      "ai": "Angewandte KI",
-      "process": "Engineering-Prozess"
-    },
-    "stackTitle": "Stack",
-    "nowTitle": "Jetzt",
-    "nowBody": "Ich baue jadero.dev v2 öffentlich, ein Release nach dem anderen.",
-    "caseTitle": "Ausgewählte Fallstudie",
-    "caseName": "jadero.dev",
-    "caseBody": "Services, Messaging, Tests und Deployments hinter einer persönlichen Website."
   }
 }

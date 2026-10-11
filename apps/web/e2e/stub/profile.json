@@ -1,0 +1,23 @@
+{
+  "en": {
+    "locale": "en",
+    "name": "Sam Example",
+    "headline": "I design, test, ship and run backend systems, from the data model to the server they run on.",
+    "summary": "This site is one of them: browse the code, the decisions and the **live architecture**.",
+    "links": [{ "kind": "website", "url": "https://example.com" }]
+  },
+  "es": {
+    "locale": "es",
+    "name": "Sam Ejemplo",
+    "headline": "Diseño, pruebo, despliego y opero sistemas backend, del modelo de datos al servidor donde corren.",
+    "summary": "Esta web es uno de ellos: mira el código, las decisiones y la **arquitectura en vivo**.",
+    "links": [{ "kind": "website", "url": "https://example.com" }]
+  },
+  "de": {
+    "locale": "en",
+    "name": "Sam Example",
+    "headline": "I design, test, ship and run backend systems, from the data model to the server they run on.",
+    "summary": "This site is one of them: browse the code, the decisions and the **live architecture**.",
+    "links": [{ "kind": "website", "url": "https://example.com" }]
+  }
+}

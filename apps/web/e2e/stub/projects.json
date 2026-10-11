@@ -1,0 +1,209 @@
+{
+  "en": [
+    {
+      "slug": "message-relay",
+      "locale": "en",
+      "kind": "case_study",
+      "title": "Message relay",
+      "summary": "Publishing events without losing any when the broker is down.",
+      "stackTags": ["NestJS", "PostgreSQL", "RabbitMQ"],
+      "featured": true,
+      "alternates": {
+        "en": "message-relay",
+        "es": "relay-de-mensajes",
+        "de": "nachrichten-relay"
+      },
+      "body": "## Problem\n\nA service must publish an event for every change, even when the broker is down.\n\n:::callout\nThe change and its event are saved **together**, in one transaction.\n:::\n\n## Options\n\n| Option | Result |\n|---|---|\n| Dual write | Loses events |\n| Outbox | Chosen |\n\n- A relay reads the outbox and publishes.\n- Consumers drop duplicates with an inbox.\n\nRead about the [pattern](https://example.com/outbox) or [this link](javascript:alert(1)).\n\n<script>window.__xss = true</script>\n\n:::embed\nHidden embed\n:::\n",
+      "repoUrl": "https://github.com/example/message-relay",
+      "demoUrl": null
+    },
+    {
+      "slug": "search-index",
+      "locale": "en",
+      "kind": "case_study",
+      "title": "Search index",
+      "summary": "Full-text search per language on plain PostgreSQL.",
+      "stackTags": ["PostgreSQL"],
+      "featured": false,
+      "alternates": {
+        "en": "search-index",
+        "es": "indice-de-busqueda"
+      },
+      "body": "## Approach\n\nOne text-search configuration per locale.",
+      "repoUrl": null,
+      "demoUrl": "https://example.com/search"
+    },
+    {
+      "slug": "cli-toolkit",
+      "locale": "en",
+      "kind": "project",
+      "title": "CLI toolkit",
+      "summary": "Small commands for everyday repository chores.",
+      "stackTags": ["TypeScript"],
+      "featured": false,
+      "alternates": {
+        "en": "cli-toolkit",
+        "es": "kit-de-cli",
+        "de": "cli-werkzeuge"
+      },
+      "body": "A few commands, tested.",
+      "repoUrl": "https://github.com/example/cli-toolkit",
+      "demoUrl": null
+    },
+    {
+      "slug": "first-portfolio",
+      "locale": "en",
+      "kind": "early",
+      "title": "First portfolio",
+      "summary": "A static page, my first site.",
+      "stackTags": ["JavaScript"],
+      "featured": false,
+      "alternates": {
+        "en": "first-portfolio",
+        "es": "primer-portfolio",
+        "de": "erstes-portfolio"
+      },
+      "body": "Plain HTML and CSS.",
+      "repoUrl": null,
+      "demoUrl": null
+    }
+  ],
+  "es": [
+    {
+      "slug": "relay-de-mensajes",
+      "locale": "es",
+      "kind": "case_study",
+      "title": "Relay de mensajes",
+      "summary": "Publicar eventos sin perder ninguno cuando el broker está caído.",
+      "stackTags": ["NestJS", "PostgreSQL", "RabbitMQ"],
+      "featured": true,
+      "alternates": {
+        "en": "message-relay",
+        "es": "relay-de-mensajes",
+        "de": "nachrichten-relay"
+      },
+      "body": "## Problema\n\nUn servicio debe publicar un evento por cada cambio, aunque el broker esté caído.\n\n:::callout\nEl cambio y su evento se guardan **juntos**, en una transacción.\n:::\n\n## Opciones\n\n| Opción | Resultado |\n|---|---|\n| Doble escritura | Pierde eventos |\n| Outbox | Elegida |\n\n- Un relay lee el outbox y publica.\n- Los consumidores descartan duplicados con un inbox.\n\nLee sobre el [patrón](https://example.com/outbox) o [este enlace](javascript:alert(1)).\n\n<script>window.__xss = true</script>\n\n:::embed\nHidden embed\n:::\n",
+      "repoUrl": "https://github.com/example/message-relay",
+      "demoUrl": null
+    },
+    {
+      "slug": "indice-de-busqueda",
+      "locale": "es",
+      "kind": "case_study",
+      "title": "Índice de búsqueda",
+      "summary": "Búsqueda de texto completo por idioma sobre PostgreSQL.",
+      "stackTags": ["PostgreSQL"],
+      "featured": false,
+      "alternates": {
+        "en": "search-index",
+        "es": "indice-de-busqueda"
+      },
+      "body": "## Enfoque\n\nUna configuración de búsqueda por idioma.",
+      "repoUrl": null,
+      "demoUrl": "https://example.com/search"
+    },
+    {
+      "slug": "kit-de-cli",
+      "locale": "es",
+      "kind": "project",
+      "title": "Kit de CLI",
+      "summary": "Comandos pequeños para las tareas diarias del repositorio.",
+      "stackTags": ["TypeScript"],
+      "featured": false,
+      "alternates": {
+        "en": "cli-toolkit",
+        "es": "kit-de-cli",
+        "de": "cli-werkzeuge"
+      },
+      "body": "Unos pocos comandos, con tests.",
+      "repoUrl": "https://github.com/example/cli-toolkit",
+      "demoUrl": null
+    },
+    {
+      "slug": "primer-portfolio",
+      "locale": "es",
+      "kind": "early",
+      "title": "Primer portfolio",
+      "summary": "Una página estática, mi primer sitio.",
+      "stackTags": ["JavaScript"],
+      "featured": false,
+      "alternates": {
+        "en": "first-portfolio",
+        "es": "primer-portfolio",
+        "de": "erstes-portfolio"
+      },
+      "body": "HTML y CSS sin más.",
+      "repoUrl": null,
+      "demoUrl": null
+    }
+  ],
+  "de": [
+    {
+      "slug": "nachrichten-relay",
+      "locale": "de",
+      "kind": "case_study",
+      "title": "Nachrichten-Relay",
+      "summary": "Events veröffentlichen, ohne eines zu verlieren, wenn der Broker ausfällt.",
+      "stackTags": ["NestJS", "PostgreSQL", "RabbitMQ"],
+      "featured": true,
+      "alternates": {
+        "en": "message-relay",
+        "es": "relay-de-mensajes",
+        "de": "nachrichten-relay"
+      },
+      "body": "## Problem\n\nEin Dienst muss für jede Änderung ein Event veröffentlichen, auch wenn der Broker ausfällt.\n\n:::callout\nDie Änderung und ihr Event werden **zusammen** gespeichert, in einer Transaktion.\n:::\n\n## Optionen\n\n| Option | Ergebnis |\n|---|---|\n| Doppeltes Schreiben | Verliert Events |\n| Outbox | Gewählt |\n\n- Ein Relay liest die Outbox und veröffentlicht.\n- Consumer verwerfen Duplikate mit einer Inbox.\n\nMehr zum [Muster](https://example.com/outbox) oder [dieser Link](javascript:alert(1)).\n\n<script>window.__xss = true</script>\n\n:::embed\nHidden embed\n:::\n",
+      "repoUrl": "https://github.com/example/message-relay",
+      "demoUrl": null
+    },
+    {
+      "slug": "search-index",
+      "locale": "en",
+      "kind": "case_study",
+      "title": "Search index",
+      "summary": "Full-text search per language on plain PostgreSQL.",
+      "stackTags": ["PostgreSQL"],
+      "featured": false,
+      "alternates": {
+        "en": "search-index",
+        "es": "indice-de-busqueda"
+      },
+      "body": "## Approach\n\nOne text-search configuration per locale.",
+      "repoUrl": null,
+      "demoUrl": "https://example.com/search"
+    },
+    {
+      "slug": "cli-werkzeuge",
+      "locale": "de",
+      "kind": "project",
+      "title": "CLI-Werkzeuge",
+      "summary": "Kleine Befehle für die tägliche Arbeit im Repository.",
+      "stackTags": ["TypeScript"],
+      "featured": false,
+      "alternates": {
+        "en": "cli-toolkit",
+        "es": "kit-de-cli",
+        "de": "cli-werkzeuge"
+      },
+      "body": "Ein paar Befehle, getestet.",
+      "repoUrl": "https://github.com/example/cli-toolkit",
+      "demoUrl": null
+    },
+    {
+      "slug": "erstes-portfolio",
+      "locale": "de",
+      "kind": "early",
+      "title": "Erstes Portfolio",
+      "summary": "Eine statische Seite, meine erste Website.",
+      "stackTags": ["JavaScript"],
+      "featured": false,
+      "alternates": {
+        "en": "first-portfolio",
+        "es": "primer-portfolio",
+        "de": "erstes-portfolio"
+      },
+      "body": "Einfaches HTML und CSS.",
+      "repoUrl": null,
+      "demoUrl": null
+    }
+  ]
+}

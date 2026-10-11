@@ -2,7 +2,7 @@
   "name": "@jadero/ui",
   "version": "0.0.0",
   "private": true,
-  "description": "Design tokens and shadcn/ui components owned by the repo (ADR-023). Just-in-time package: apps compile its source.",
+  "description": "Design tokens and shadcn/ui components owned by the repo (ADR-023, ADR-045). Just-in-time package: apps compile its source.",
   "type": "module",
   "sideEffects": [
     "*.css"
