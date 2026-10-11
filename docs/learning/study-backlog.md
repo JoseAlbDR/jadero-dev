@@ -56,7 +56,7 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 - Keyset (cursor) pagination with `(created_at, id)` and a composite index; why time-ordered ids are a storage optimization, not a meaningful order; `now()` is the transaction start, so `created_at` order is not commit order. WP-10, interesting (step 8 check question). Step log.
 
 ### Theme: process health and startup
-- Liveness versus readiness probes (the owner had them swapped). WP-10, weak (step 2 check question), weak again 2026-10-10 (WP-12 explain-back E4: swapped them again for a wrong database password). Step log.
+- Liveness versus readiness probes (the owner had them swapped). WP-10, weak (step 2 check question), weak again 2026-10-10 (WP-12 explain-back E4: swapped them again for a wrong database password)., solid 2026-10-11 (warm-up, WP-6 step 5: wrong database password fails readiness, a deadlock fails liveness, with the reason: a restart fixes only the second). Step log.
 - Readiness must not depend on a shared external dependency: it fails on every replica at once and turns a partial outage into a total one (cascading failure); circuit breaker and graceful degradation instead. WP-12, weak (explain-back transfer T3). `docs/learning/wp-12.md`, Recap.
 - Fail fast at boot versus lazy connection plus readiness, and when each wins. WP-10, recommended. Step log.
 - A lazy pool boots without its database, so readiness must check every dependency a request needs, or a broken one passes the deploy and fails every request (the owner thought the deploy would fail before the reader check existed). WP-12, weak (step 7b check question). `docs/learning/wp-12.md`, Step log.
