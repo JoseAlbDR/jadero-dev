@@ -9,8 +9,11 @@ export default mergeConfig(
     test: {
       coverage: {
         exclude: [
-          // test/rabbitmq-message-bus.int.test.ts: the bus contract suite, retry tiers, dead letters
-          // and broker permissions on a real RabbitMQ.
+          // test/rabbitmq-message-bus.int.test.ts on a real RabbitMQ: the bus contract suite
+          // (publish-subscribe, retry tiers, dead letters, invalid data, unrouted messages, a stopped
+          // consumer), a body that is not JSON, a copy the broker refuses (held, put back with a nack,
+          // copied once when it accepts) and a malformed attempt header. The pure parts it calls (dispatch, dispose, attemptOf)
+          // have unit tests.
           "src/rabbitmq-message-bus.ts",
           // test/outbox-inbox.int.test.ts: the outbox insert commits and rolls back with the caller's
           // transaction on real Postgres.
@@ -18,9 +21,6 @@ export default mergeConfig(
           // test/outbox-inbox.int.test.ts: the inbox applies an event once per consumer, rolls back
           // with a failed effect, and the cleanup keeps 30 days.
           "src/inbox/idempotent.ts",
-          // test/outbox-inbox.int.test.ts: every case runs inside inTransaction, the commit and the
-          // rollback paths both.
-          "src/sql/sql-executor.ts",
         ],
       },
     },
