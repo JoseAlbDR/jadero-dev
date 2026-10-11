@@ -1,0 +1,68 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Dependency updates (ADR-048 'Supply chain and repository settings', WP-6 D9): grouped, weekly, three days after release, never merged without a review.",
+  "extends": ["config:best-practices", "schedule:weekly"],
+  "timezone": "Etc/UTC",
+  "minimumReleaseAge": "3 days",
+  "internalChecksFilter": "strict",
+  "dependencyDashboard": true,
+  "automerge": false,
+  "semanticCommits": "enabled",
+  "semanticCommitScope": "deps",
+  "packageRules": [
+    {
+      "description": "Development tools, non-major updates in one pull request. Matched by name: the catalog in pnpm-workspace.yaml has no dependency type.",
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchPackageNames": [
+        "@asyncapi/parser",
+        "@axe-core/playwright",
+        "@biomejs/biome",
+        "@commitlint/**",
+        "@playwright/test",
+        "@testcontainers/**",
+        "@types/**",
+        "@vitest/**",
+        "dependency-cruiser",
+        "drizzle-kit",
+        "jsdom",
+        "lefthook",
+        "pino-pretty",
+        "supertest",
+        "testcontainers",
+        "turbo",
+        "typescript",
+        "vitest"
+      ],
+      "groupName": "dev tools"
+    },
+    {
+      "description": "The Nest family, non-major updates in one pull request.",
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchPackageNames": ["@nestjs/**", "@golevelup/nestjs-*", "nestjs-pino"],
+      "groupName": "nest"
+    },
+    {
+      "description": "OpenTelemetry, non-major updates in one pull request.",
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchPackageNames": ["@opentelemetry/**"],
+      "groupName": "opentelemetry"
+    },
+    {
+      "description": "GitHub Actions, SHA and version comment together, in one pull request. Majors stay alone. A digest update with no version change means a moved tag: review it as a warning sign.",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "digest", "pinDigest"],
+      "groupName": "github actions"
+    }
+  ],
+  "customManagers": [
+    {
+      "description": "Container images run with `docker run` in the workflows and the root scripts (gitleaks, zizmor), written as name:tag@digest. One pull request updates every file that names the image. GHCR returns no release dates, so the cooldown holds these updates on the dependency dashboard until a box there is ticked.",
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/", "/^package\\.json$/"],
+      "matchStrings": [
+        "(?<depName>ghcr\\.io/[a-z0-9._/-]+):(?<currentValue>v?\\d[\\w.-]*)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ]
+}

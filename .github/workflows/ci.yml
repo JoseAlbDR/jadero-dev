@@ -1,23 +1,31 @@
-# CI for every pull request and every push to main (ADR-048, WP-6 D1 to D3).
+# CI for every pull request, every push to main and a weekly backstop (ADR-048, WP-6 D1 to D3, Q3).
 # Pull requests run `pnpm verify` on the affected tasks against the PR's base commit and only
-# restore the caches; main runs the full `pnpm verify:all` and is the only run that saves them.
-# The integration, web, secrets and workflows-lint jobs run next to verify on every event, and
-# dependency-review on pull requests. The tools run as containers (gitleaks, zizmor) are pinned by
-# digest, the same digests as the root `scan:secrets` and `lint:workflows` scripts: change both.
+# restore the caches; a push to main runs the full `pnpm verify:all` with the cache and is the only
+# run that saves the caches. The weekly scheduled run (and a manual run) repeats the full run
+# without the Turborepo cache (`TURBO_FORCE`), unit, integration and web, so a test that reads a
+# file no task declares fails within a week; when it fails, the last job opens an issue.
+# The integration, web and workflows-lint jobs run next to verify on every event; gitleaks and
+# dependency review live in `security.yml`. The zizmor image is pinned by digest, the same digest
+# as the root `lint:workflows` script: change both (Renovate updates both in one pull request).
 name: ci
 
 on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    # Weekly, Monday 05:17 UTC (an off-hour minute, away from the top of the hour).
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
 
 # Nothing by default; each job lists what it needs.
 permissions: {}
 
-# One group per pull request: a new push cancels the outdated run. On main every commit has its
-# own group and nothing is cancelled.
+# One group per pull request: a new push cancels the outdated run. Other events get a group per
+# event and commit, so the scheduled run never replaces a pending push run of the same commit;
+# nothing on main is cancelled.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || format('{0}-{1}', github.event_name, github.sha) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -56,8 +64,10 @@ jobs:
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: pnpm-store-${{ runner.os }}-
 
+      # Not on the backstop runs: they ignore the cache on purpose.
       - name: Restore the Turborepo cache
         id: turbo-cache
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .turbo/cache
@@ -81,8 +91,11 @@ jobs:
           TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha }}
         run: pnpm verify
 
+      # Push to main: with the cache. Schedule and manual runs: every task runs again (backstop).
       - name: Verify everything
-        if: github.event_name == 'push'
+        if: github.event_name != 'pull_request'
+        env:
+          TURBO_FORCE: ${{ github.event_name != 'push' }}
         run: pnpm verify:all
 
       # ADR-009 "reported per package in CI": one table of lines and branches per package on the
@@ -148,7 +161,9 @@ jobs:
           restore-keys: pnpm-store-${{ runner.os }}-
 
       # `test:int` itself is never cached (`cache: false`); this replays the `^build` it depends on.
+      # Not on the backstop runs: they ignore the cache on purpose.
       - name: Restore the Turborepo cache
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .turbo/cache
@@ -165,7 +180,9 @@ jobs:
         run: pnpm exec turbo run test:int --affected
 
       - name: Integration tests of every package
-        if: github.event_name == 'push'
+        if: github.event_name != 'pull_request'
+        env:
+          TURBO_FORCE: ${{ github.event_name != 'push' }}
         run: pnpm test:int
 
   # The public site's standalone build and its Playwright smoke, SEO, CSP and axe checks per locale
@@ -209,8 +226,9 @@ jobs:
           restore-keys: pnpm-store-${{ runner.os }}-
 
       # `test:e2e` itself is never cached (`cache: false`); this replays the `build` tasks it
-      # depends on when an earlier run already produced them.
+      # depends on when an earlier run already produced them. Not on the backstop runs.
       - name: Restore the Turborepo cache
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .turbo/cache
@@ -227,7 +245,9 @@ jobs:
         run: pnpm exec turbo run test:e2e --affected
 
       - name: Web checks
-        if: github.event_name == 'push'
+        if: github.event_name != 'pull_request'
+        env:
+          TURBO_FORCE: ${{ github.event_name != 'push' }}
         run: pnpm test:e2e
 
       # Traces of the failed tests (`trace: "retain-on-failure"`): pages of the public site rendered
@@ -240,44 +260,6 @@ jobs:
           path: apps/web/test-results/
           if-no-files-found: ignore
           retention-days: 7
-
-  # gitleaks over every commit of the pull request, so a key added and removed inside the PR is
-  # still caught, and over the whole history (every ref) on main (ADR-026, WP-6 D7). Findings are
-  # redacted in the log; reviewed false positives live in `.gitleaksignore` by fingerprint. A real
-  # finding means rotate the key first, rewrite history second. Same command locally:
-  # `pnpm scan:secrets`.
-  secrets:
-    name: secrets
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      # Full history: the PR range and the full scan both read old commits.
-      - name: Check out
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      # The PR's own commits, base (exclusive) to head; the merge commit is not scanned, it only
-      # joins them. The SHAs reach the shell as environment variables.
-      - name: Scan the pull request's commits
-        if: github.event_name == 'pull_request'
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: >-
-          docker run --rm --network none -v "$GITHUB_WORKSPACE:/repo:ro" -w /repo
-          ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
-          git . --redact --verbose --no-banner --log-opts="${BASE_SHA}..${HEAD_SHA}"
-
-      - name: Scan the full history
-        if: github.event_name == 'push'
-        run: >-
-          docker run --rm --network none -v "$GITHUB_WORKSPACE:/repo:ro" -w /repo
-          ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
-          git . --redact --verbose --no-banner
 
   # zizmor over the workflows themselves (WP-6, implementation choice "Workflow lint"): template
   # injection, unpinned or excessive permissions, credentials left in checkouts, dangerous
@@ -299,28 +281,35 @@ jobs:
       - name: Lint the workflows
         run: >-
           docker run --rm --network none -v "$GITHUB_WORKSPACE:/repo:ro" -w /repo
-          ghcr.io/zizmorcore/zizmor@sha256:a2eb396d886c053073405c7a980f2139ba2248ec172243cfa3841e57196e8101
+          ghcr.io/zizmorcore/zizmor:1.30.1@sha256:a2eb396d886c053073405c7a980f2139ba2248ec172243cfa3841e57196e8101
           --offline --format plain .github/workflows/
 
-  # Licenses of the dependencies a pull request adds or changes, from GitHub's dependency graph
-  # (WP-6 Q1 answer A). The vulnerability check is off: OSV-Scanner gates vulnerabilities (Q2), so
-  # one advisory does not fail two checks. AGPL and GPL are denied for a network service that is
-  # deployed; LGPL (sharp's libvips) and the permissive licenses pass. The action diffs base and
-  # head through the API, so it needs no checkout. It only means something on a pull request; on
-  # main the job is skipped, which GitHub reports as success.
-  dependency-review:
-    name: dependency-review
-    if: github.event_name == 'pull_request'
+  # The backstop's alarm (WP-6 Q3): when the weekly uncached run fails, open an issue, or comment
+  # on the one still open, so a red scheduled run is not missed. The only job with a write token,
+  # and it runs no repository code. Deduplicated by the fixed title; the run URL reaches the shell
+  # as an environment variable. A manual run that fails shows only on the run page.
+  backstop-issue:
+    name: backstop-issue
+    if: failure() && github.event_name == 'schedule'
+    needs: [verify, integration, web]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
-      contents: read
+      issues: write # open the backstop issue, or comment on the open one
     steps:
-      - name: Review the dependency changes
-        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
-        with:
-          license-check: true
-          vulnerability-check: false
-          deny-licenses: >-
-            AGPL-1.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later, GPL-2.0-only, GPL-2.0-or-later,
-            GPL-3.0-only, GPL-3.0-or-later
+      - name: Open or update the backstop issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TITLE: "Weekly uncached CI run failed"
+        run: |
+          number="$(gh issue list --state open --limit 100 --json number,title \
+            | jq -r --arg title "$TITLE" 'map(select(.title == $title)) | first | .number // empty')"
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "It failed again: $RUN_URL"
+          else
+            gh issue create --title "$TITLE" --body "$(printf '%s\n\n%s\n' \
+              "The weekly run of ci.yml without the Turborepo cache failed: $RUN_URL" \
+              "A task that passes on pull requests failed when run from scratch. Look for a file a test reads that its task's inputs do not declare (WP-6 D2), or a flaky test. Close this issue when main is green again.")"
+          fi
