@@ -173,11 +173,15 @@ describe("CreateContentItem", () => {
     expect(item?.version).toBe(1);
   });
 
-  it("takes a UUIDv7 from the IdGenerator when the command has no id", async () => {
-    const result = await create.execute({ type: "skill", sortOrder: 3 });
-    expect(result.id).toBe("0199ffff-0000-7000-8000-000000000001");
-    expect((await stored("skill", result.id))?.version).toBe(1);
-  });
+  it.each(["experience-item", "project", "post", "skill"] as const)(
+    "takes a UUIDv7 from the IdGenerator when a %s command has no id",
+    async (type) => {
+      const { id: _clientId, ...withoutId } = TYPES[type].create;
+      const result = await create.execute(withoutId as CreateContentItemCommand);
+      expect(result.id).toBe("0199ffff-0000-7000-8000-000000000001");
+      expect((await stored(type, result.id))?.version).toBe(1);
+    },
+  );
 
   it("refuses a second profile, even with another id, and keeps the first", async () => {
     await create.execute(TYPES.profile.create);

@@ -8,6 +8,8 @@ declare module "vitest" {
   export interface ProvidedContext {
     serviceUri: string;
     adminUri: string;
+    /** The management HTTP API with the admin's credentials, for policies set during a test. */
+    managementUrl: string;
   }
 }
 
@@ -15,7 +17,8 @@ let container: StartedTestContainer | undefined;
 
 /**
  * Starts one RabbitMQ container per `pnpm test:int` run, loaded with the test definitions the
- * same way compose loads the dev ones (`load_definitions`), and hands the URIs to the tests.
+ * same way compose loads the dev ones (`load_definitions`), and hands the URIs to the tests
+ * (AMQP for the bus and the admin, HTTP for the management API).
  * @param project the Vitest project, to provide the URIs.
  */
 export async function setup(project: TestProject): Promise<void> {
@@ -28,13 +31,17 @@ export async function setup(project: TestProject): Promise<void> {
         target: "/etc/rabbitmq/conf.d/20-jadero.conf",
       },
     ])
-    .withExposedPorts(5672)
+    .withExposedPorts(5672, 15672)
     .withWaitStrategy(Wait.forLogMessage(/Server startup complete/))
     .withStartupTimeout(120_000)
     .start();
   const base = `${container.getHost()}:${container.getMappedPort(5672)}/${TEST_VHOST}`;
   project.provide("serviceUri", `amqp://test:test@${base}`);
   project.provide("adminUri", `amqp://admin:admin@${base}`);
+  project.provide(
+    "managementUrl",
+    `http://${container.getHost()}:${container.getMappedPort(15672)}/api`,
+  );
 }
 
 /** Stops the container. */

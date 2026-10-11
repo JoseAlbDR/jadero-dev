@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /** The handler finished; the message is acknowledged and removed. */
 export interface DoneOutcome {
   readonly kind: "done";
@@ -61,4 +63,21 @@ export function dispose(
     };
   }
   return { action: "retry", delayMs, nextAttempt: attempt + 1 };
+}
+
+/** A delivery's attempt number: a whole number from 1 up. */
+const attemptNumber = z.coerce.number().int().min(1);
+
+/**
+ * Reads the attempt header of a delivery (`x-jadero-attempt`), a boundary: the adapter writes it
+ * as a number on every retry copy, but any publisher can set it. A missing or malformed value
+ * (`"abc"`, `0`, `2.5`) counts as the first attempt, so the message gets its full retries instead
+ * of `NaN` reaching `dispose`, which would dead-letter it at once as "retries exhausted after NaN
+ * attempts".
+ * @param header the raw header value, if any.
+ * @returns the attempt number, starting at 1.
+ */
+export function attemptOf(header: unknown): number {
+  const parsed = attemptNumber.safeParse(header);
+  return parsed.success ? parsed.data : 1;
 }

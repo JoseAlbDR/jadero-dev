@@ -28,8 +28,21 @@ export function baseConfig() {
       maxWorkers: workersFromLoad(),
       coverage: {
         provider: "v8",
-        reporter: ["text", "lcov"],
+        reporter: ["text", "lcov", "json-summary"],
         include: ["src/**"],
+        // A package adds its own exclusions with `mergeConfig` (arrays concatenate). ADR-009 allows
+        // excluding only code that something else proves; each entry names what does.
+        exclude: [
+          // Composition roots: they read the config and build and listen with the Nest app, and hold
+          // no logic of their own. What proves them today is a manual boot (`pnpm dev`); the modules
+          // they build are proven by the app tests and the integration suites (`*.int.test.ts`).
+          // WP-9's deploy smoke will be the first automatic boot check. `src/migrate.ts` is not
+          // excluded: its failure exit (code 1) has a unit test in each app (`test/migrate.test.ts`).
+          "src/{main,worker,consumer}.ts",
+          // Contract suites are test code kept next to the port they describe, run against every
+          // adapter (the fake in `pnpm verify`, the real one in `pnpm test:int`).
+          "**/*.contract.ts",
+        ],
         thresholds: { lines: 80, branches: 70 },
       },
     },

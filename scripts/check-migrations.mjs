@@ -24,8 +24,10 @@
  * - every entry the branch adds (a tag `main`'s journal lacks) has a `when` above the last one on
  *   `main`.
  *
- * Base: `origin/main`, else `main`; with neither (a shallow clone) the checks against it print a
- * notice and pass, while the order check still runs.
+ * Base: `origin/main`, else `main`. With neither, or with no merge base (a shallow clone), the
+ * checks against it print a notice and pass on a developer machine, while the order check still
+ * runs. In CI (`CI` set, as GitHub Actions does) the same case fails (WP-6 D2, ADR-048): a checkout
+ * without history must not turn this gate into a silent pass.
  * Usage: pnpm check:migrations (part of pnpm verify and pnpm verify:all). It runs after Turborepo,
  * not as a cached task: its input is git history, which no cache key sees.
  */
@@ -215,6 +217,49 @@ function report(heading, problems) {
   process.exitCode = 1;
 }
 
+/**
+ * Whether the script runs in CI: `CI` is set to anything but an empty string, `0` or `false`.
+ * GitHub Actions sets `CI=true` on every runner.
+ * @param {Record<string, string | undefined>} env the environment, usually `process.env`.
+ * @returns {boolean}
+ */
+export function runsInCi(env) {
+  const value = env.CI?.trim().toLowerCase();
+  return value !== undefined && value !== "" && value !== "0" && value !== "false";
+}
+
+/**
+ * Decides what happens when the base branch cannot be compared: a notice and a pass on a
+ * developer machine (a fresh shallow clone has nothing to protect), a failure in CI, where a
+ * missing base means the checkout lost the history the gate needs (fail closed). Pure.
+ * @param {string} reason why the base checks cannot run, for the message.
+ * @param {Record<string, string | undefined>} env the environment, usually `process.env`.
+ * @returns {{ exitCode: 0 | 1, message: string }}
+ */
+export function missingBaseOutcome(reason, env) {
+  if (runsInCi(env)) {
+    return {
+      exitCode: 1,
+      message: `check:migrations: ${reason}, and CI must compare with main; check out the full history (actions/checkout with fetch-depth: 0) so origin/main exists`,
+    };
+  }
+  return { exitCode: 0, message: `check:migrations: base checks skipped, ${reason}` };
+}
+
+/**
+ * Prints the outcome of a missing base and sets the exit code.
+ * @param {string} reason
+ */
+function skipBase(reason) {
+  const { exitCode, message } = missingBaseOutcome(reason, process.env);
+  if (exitCode === 0) {
+    console.log(message);
+    return;
+  }
+  console.error(message);
+  process.exitCode = 1;
+}
+
 /** Runs git and returns its output, or null when it fails. */
 function git(args) {
   try {
@@ -242,14 +287,12 @@ function main() {
     (ref) => git(["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]) !== null,
   );
   if (!base) {
-    console.log(
-      "check:migrations: base checks skipped, neither origin/main nor main exists in this clone",
-    );
+    skipBase("neither origin/main nor main exists in this clone");
     return;
   }
   const mergeBase = git(["merge-base", base, "HEAD"])?.trim();
   if (!mergeBase) {
-    console.log(`check:migrations: base checks skipped, no merge base with ${base}`);
+    skipBase(`no merge base with ${base}`);
     return;
   }
   const changes = parseNameStatus(

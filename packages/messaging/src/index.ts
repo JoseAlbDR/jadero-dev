@@ -22,6 +22,7 @@ export {
   type RelayRun,
 } from "./outbox/outbox-relay.js";
 export {
+  attemptOf,
   DEFAULT_RETRY_TIERS_MS,
   type DeadOutcome,
   type Disposition,

@@ -1,5 +1,7 @@
 # jadero.dev
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/JoseAlbDR/jadero-dev/badge)](https://scorecard.dev/viewer/?uri=github.com/JoseAlbDR/jadero-dev)
+
 Personal site v2: a multilingual portfolio (es, en, de) with an ask-me AI agent. Backend in NestJS (modular monolith plus services over RabbitMQ), frontend in Next.js, agent in LangGraph.js, hosted on the owner's Hetzner server.
 
 Work in progress. Where things live:
@@ -36,8 +38,10 @@ Every change starts from a GitHub issue. The plan's work packages (WP-0 to WP-56
 5. A pull request with `Closes #<issue>`; CI and the reviewer agent check it; the owner explains the design back and records gaps in the explainer's Recap.
 6. Squash merge. The pull request title becomes the commit on `main` and the changelog line; release-please reads its type (`feat`, `fix`) to version each service. Branch names play no part in versioning.
 
+The OpenSSF Scorecard badge above scores the repo's supply-chain practices. Its Code-Review check stays low on purpose: one person writes and merges every change, so there is no second reviewer to approve. Security reports go through `SECURITY.md`.
+
 Hands-on guide for a local machine: `docs/local-playbook.md`. Tooling and the flow in detail: `docs/agent-tooling.md`.
 
 ## Status
 
-Release R0 (walking skeleton) in progress. Done: the plan, the ADRs, GitHub tracking, the agent tooling, the repo foundation (WP-1), the service platform with the API skeleton (WP-3), the web skeleton (WP-4), the design directions (WP-15) and the messaging foundation with the agent skeleton (WP-5). Next: the data layer (WP-10), then CI (WP-6). The map of the code is `docs/architecture/code-map.html`.
+Release R0 (walking skeleton) in progress. Done: the plan, the ADRs, GitHub tracking, the agent tooling, the repo foundation (WP-1), the service platform with the API skeleton (WP-3), the web skeleton (WP-4), the design directions (WP-15), the messaging foundation with the agent skeleton (WP-5), the data layer (WP-10), the content domain (WP-12), the site pages (WP-16) and the CI pipeline (WP-6). The map of the code is `docs/architecture/code-map.html`.

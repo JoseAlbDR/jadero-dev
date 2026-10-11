@@ -1,0 +1,315 @@
+# CI for every pull request, every push to main and a weekly backstop (ADR-048, WP-6 D1 to D3, Q3).
+# Pull requests run `pnpm verify` on the affected tasks against the PR's base commit and only
+# restore the caches; a push to main runs the full `pnpm verify:all` with the cache and is the only
+# run that saves the caches. The weekly scheduled run (and a manual run) repeats the full run
+# without the Turborepo cache (`TURBO_FORCE`), unit, integration and web, so a test that reads a
+# file no task declares fails within a week; when it fails, the last job opens an issue.
+# The integration, web and workflows-lint jobs run next to verify on every event; gitleaks and
+# dependency review live in `security.yml`. The zizmor image is pinned by digest, the same digest
+# as the root `lint:workflows` script: change both (Renovate updates both in one pull request).
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Weekly, Monday 05:17 UTC (an off-hour minute, away from the top of the hour).
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+# Nothing by default; each job lists what it needs.
+permissions: {}
+
+# One group per pull request: a new push cancels the outdated run. Other events get a group per
+# event and commit, so the scheduled run never replaces a pending push run of the same commit;
+# nothing on main is cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || format('{0}-{1}', github.event_name, github.sha) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      # Full history: Turborepo diffs against the PR base, check:migrations reads origin/main.
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Node from .nvmrc and pnpm from packageManager. Its store cache stays off (the default):
+      # the steps below restore it on every run and save it on main only.
+      - name: Set up pnpm and Node
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: false
+          install: false
+
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the pnpm store
+        id: store-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+
+      # Not on the backstop runs: they ignore the cache on purpose.
+      - name: Restore the Turborepo cache
+        id: turbo-cache
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Save the pnpm store
+        if: github.event_name == 'push' && steps.store-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      # The checkout is the merge commit, whose first parent is the base SHA: the diff is the PR.
+      - name: Verify the affected tasks
+        if: github.event_name == 'pull_request'
+        env:
+          TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha }}
+        run: pnpm verify
+
+      # Push to main: with the cache. Schedule and manual runs: every task runs again (backstop).
+      - name: Verify everything
+        if: github.event_name != 'pull_request'
+        env:
+          TURBO_FORCE: ${{ github.event_name != 'push' }}
+        run: pnpm verify:all
+
+      # ADR-009 "reported per package in CI": one table of lines and branches per package on the
+      # run page. The thresholds already gated inside each `test` task; this only reports, also
+      # when verify failed, and writes a short note when no package's tests ran.
+      - name: Coverage summary
+        if: always()
+        run: node scripts/ci/coverage-summary.mjs
+
+      # Each save on main carries every entry it restored plus this run's, so without pruning the
+      # cache only grows. Turborepo writes each entry once and never touches it on a hit, and the
+      # cache's tar keeps file times across save and restore, so an entry not written for 7 days
+      # (10080 minutes) is dropped; if a task still needs it, it runs once and writes it again.
+      - name: Prune the Turborepo cache
+        if: github.event_name == 'push' && steps.turbo-cache.outputs.cache-hit != 'true'
+        run: |
+          if [ -d .turbo/cache ]; then
+            echo "Pruning $(find .turbo/cache -type f -mmin +10080 | wc -l) files older than 7 days"
+            find .turbo/cache -type f -mmin +10080 -delete
+          fi
+
+      - name: Save the Turborepo cache
+        if: github.event_name == 'push' && steps.turbo-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+
+  # Integration tests (`*.int.test.ts`) on the runner's Docker through Testcontainers, the same
+  # harness as locally (`packages/testing`, ADR-048 change 1, WP-6 D4). Runs in parallel with verify.
+  # Ryuk stays on: it removes the containers even when a test run crashes. This job only restores
+  # caches: verify's run on main already saves the same pnpm store and Turborepo cache.
+  integration:
+    name: integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      # Full history: Turborepo diffs against the PR base.
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pnpm and Node
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: false
+          install: false
+
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+
+      # `test:int` itself is never cached (`cache: false`); this replays the `^build` it depends on.
+      # Not on the backstop runs: they ignore the cache on purpose.
+      - name: Restore the Turborepo cache
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Integration tests of the affected packages
+        if: github.event_name == 'pull_request'
+        env:
+          TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha }}
+        run: pnpm exec turbo run test:int --affected
+
+      - name: Integration tests of every package
+        if: github.event_name != 'pull_request'
+        env:
+          TURBO_FORCE: ${{ github.event_name != 'push' }}
+        run: pnpm test:int
+
+  # The public site's standalone build and its Playwright smoke, SEO, CSP and axe checks per locale
+  # (ADR-048; ADR-009: no coverage percentage for the frontend). Runs in parallel with verify and
+  # always reports a result, so it can be a required check (WP-6 D10): on a pull request Turborepo
+  # selects `test:e2e` only when `web` or one of its dependencies changed and runs nothing
+  # otherwise. Only the enforced CSP runs here; the report-only pass stays a local diagnosis.
+  # Playwright uses the runner's preinstalled Google Chrome (`channel: "chrome"`): no browser
+  # download. `playwright.config.ts` starts the content API stub and the server and sets SITE_URL
+  # itself; the build needs none, because every page, the sitemap and robots render per request.
+  web:
+    name: web
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      # Full history: Turborepo diffs against the PR base.
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pnpm and Node
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: false
+          install: false
+
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+
+      # `test:e2e` itself is never cached (`cache: false`); this replays the `build` tasks it
+      # depends on when an earlier run already produced them. Not on the backstop runs.
+      - name: Restore the Turborepo cache
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Web checks when web is affected
+        if: github.event_name == 'pull_request'
+        env:
+          TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha }}
+        run: pnpm exec turbo run test:e2e --affected
+
+      - name: Web checks
+        if: github.event_name != 'pull_request'
+        env:
+          TURBO_FORCE: ${{ github.event_name != 'push' }}
+        run: pnpm test:e2e
+
+      # Traces of the failed tests (`trace: "retain-on-failure"`): pages of the public site rendered
+      # from the stub's fixture data, no secrets. Open one with `pnpm exec playwright show-trace`.
+      - name: Upload the Playwright results
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-results
+          path: apps/web/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # zizmor over the workflows themselves (WP-6, implementation choice "Workflow lint"): template
+  # injection, unpinned or excessive permissions, credentials left in checkouts, dangerous
+  # triggers. Offline mode, so no token and no network; plain output, no SARIF upload. Runs on
+  # every event, not only when a workflow changed, so it can be a required check (D10).
+  # Same command locally: `pnpm lint:workflows`.
+  workflows-lint:
+    name: workflows-lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Lint the workflows
+        run: >-
+          docker run --rm --network none -v "$GITHUB_WORKSPACE:/repo:ro" -w /repo
+          ghcr.io/zizmorcore/zizmor:1.30.1@sha256:a2eb396d886c053073405c7a980f2139ba2248ec172243cfa3841e57196e8101
+          --offline --format plain .github/workflows/
+
+  # The backstop's alarm (WP-6 Q3): when the weekly uncached run fails, open an issue, or comment
+  # on the one still open, so a red scheduled run is not missed. The only job with a write token,
+  # and it runs no repository code. Deduplicated by the fixed title; the run URL reaches the shell
+  # as an environment variable. A manual run that fails shows only on the run page.
+  backstop-issue:
+    name: backstop-issue
+    if: failure() && github.event_name == 'schedule'
+    needs: [verify, integration, web]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      issues: write # open the backstop issue, or comment on the open one
+    steps:
+      - name: Open or update the backstop issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TITLE: "Weekly uncached CI run failed"
+        run: |
+          number="$(gh issue list --state open --limit 100 --json number,title \
+            | jq -r --arg title "$TITLE" 'map(select(.title == $title)) | first | .number // empty')"
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "It failed again: $RUN_URL"
+          else
+            gh issue create --title "$TITLE" --body "$(printf '%s\n\n%s\n' \
+              "The weekly run of ci.yml without the Turborepo cache failed: $RUN_URL" \
+              "A task that passes on pull requests failed when run from scratch. Look for a file a test reads that its task's inputs do not declare (WP-6 D2), or a flaky test. Close this issue when main is green again.")"
+          fi
