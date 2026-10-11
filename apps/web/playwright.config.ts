@@ -21,7 +21,7 @@ process.env.SITE_URL = SITE_URL;
 /**
  * Smoke tests per locale against the standalone build (ADR-009, ADR-026): `pnpm test:e2e` builds
  * first (Turborepo `dependsOn: ["build"]`), then serves `server.js` exactly as the image will.
- * Uses the installed Chrome; CI installs it with `playwright install chrome`.
+ * Uses the installed Google Chrome (`channel: "chrome"`); in CI the runner image already has it.
  *
  * Content pages read the content API, so the suite starts a stub of it first (`e2e/stub/`): fixed
  * fixtures parsed with the `@jadero/contracts` schemas, no Docker, no database, no `api`. The web

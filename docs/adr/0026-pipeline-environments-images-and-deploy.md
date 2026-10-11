@@ -1,18 +1,18 @@
 ---
 id: ADR-026
 title: "Pipeline, environments, images and deploy"
-status: accepted
+status: superseded
 date: 2026-10-03
 deciders: [owner]
 decisions: [D-29, D-32]
 supersedes: []
-superseded_by: null
+superseded_by: ADR-048
 source: docs/plan/report.md ("ADR-026: Pipeline, environments, images and deploy (amended 2026-10-02; reframed 2026-10-03)")
 ---
 
 # ADR-026: Pipeline, environments, images and deploy
 
-**Status:** Accepted (owner review 2026-10-03, D-29 and D-32).
+**Status:** Superseded by ADR-048 (integration tests on Testcontainers instead of service containers, safe affected runs with a weekly uncached backstop, `security.yml` on every pull request with OSV-Scanner, CodeQL default setup, and a new supply chain section; every other part is restated there unchanged). Previously: accepted (owner review 2026-10-03, D-29 and D-32).
 
 Decided by the owner in the plan review of 2026-10-02 and 2026-10-03 (decisions D-29, D-32). This record was extracted verbatim from `docs/plan/report.md`; the narrative, traces and sources stay there. From now on this file is the canonical record: a new decision is a new ADR that supersedes this one, never an edit.
 

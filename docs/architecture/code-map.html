@@ -285,7 +285,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 <script type="application/json" id="map-data">
 {
   "meta": {
-    "lastUpdated": "end of WP-16 · every public page on the content API, sitemap and robots, enforced CSP, 2026-10-11",
+    "lastUpdated": "end of WP-6 · the CI pipeline on GitHub Actions, coverage gates per package and layer, declared task inputs, the consumer contract test, 2026-10-11",
     "kinds": {
       "app": "deployable app", "pkg": "library package", "module": "Nest module", "provider": "provider",
       "token": "DI token", "ext": "external library", "global": "app-level wiring", "env": "environment",
@@ -604,7 +604,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     {
       "id": "build", "eyebrow": "6 · Build and tooling", "title": "From source to a checked commit",
-      "intro": "platform-nest is a real compiled package, not a path alias. Turborepo builds it before anything that depends on it, pnpm dev keeps both dist folders fresh while you edit, and the same checks run in pnpm verify and in the git hooks.",
+      "intro": "platform-nest is a real compiled package, not a path alias. Turborepo builds it before anything that depends on it, pnpm dev keeps both dist folders fresh while you edit, and the same checks run in pnpm verify and in the git hooks. Since WP-6 they also run on GitHub Actions for every pull request (ADR-048), with coverage gates, security scans and a release cooldown around them.",
       "figures": [
         {
           "type": "steps", "title": "How api gets platform-nest",
@@ -616,8 +616,13 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
         },
         {
           "type": "cards", "title": "Checks and when they run",
-          "caption": "pnpm verify is the single \"am I done\" command; lefthook runs Biome and commitlint at commit time.",
-          "cards": ["c-verify", "c-build", "c-biome", "c-depcruise", "c-typecheck", "c-vitest", "c-migrations", "c-testint", "c-e2e", "c-precommit", "c-commitlint", "c-compose"]
+          "caption": "pnpm verify is the single \"am I done\" command; lefthook runs Biome and commitlint at commit time and pnpm verify before every push.",
+          "cards": ["c-verify", "c-build", "c-biome", "c-depcruise", "c-typecheck", "c-vitest", "c-inputs", "c-contract", "c-migrations", "c-testint", "c-e2e", "c-precommit", "c-commitlint", "c-compose"]
+        },
+        {
+          "type": "cards", "title": "What runs on GitHub (ADR-048, WP-6)",
+          "caption": "Eight required checks guard main: verify, integration, web, workflows-lint, pr-title, osv-scanner / osv-scan, dependency-review and secrets. Only pull_request triggers, permissions empty by default, actions pinned by SHA, caches saved only on a push to main.",
+          "cards": ["ci-ci", "ci-security", "ci-prtitle", "ci-supply"]
         }
       ]
     },
@@ -1731,16 +1736,16 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["pnpm-workspace.yaml", "apps/api/package.json"]
     },
     "k-turbo": {
-      "label": "turbo ^build", "sub": "build deps first, cache dist/**", "kind": "step", "status": "real", "wp": "WP-1, WP-3",
+      "label": "turbo ^build", "sub": "build deps first, cache dist/**", "kind": "step", "status": "real", "wp": "WP-1, WP-3, WP-6",
       "what": "Builds every dependency before a package's build, typecheck or test.",
-      "how": "In `turbo.json`, `build`, `typecheck`, `test` and `test:int` all have `dependsOn: [\"^build\"]`; `build` caches `dist/**`, `test:int` is never cached. config has no build, so it is skipped.",
+      "how": "In `turbo.json`, `build`, `typecheck`, `test` and `test:int` all have `dependsOn: [\"^build\"]`; `build` caches `dist/**`, `test` caches `coverage/**`, `test:int` is never cached. config has no build, so it is skipped. Since WP-6 the future flag `affectedUsingTaskInputs` makes `--affected` select a task by its declared `inputs`, and a task that reads a file outside its package declares it (`$TURBO_ROOT$/infra/compose/**` on `test:int`, the compose files and `definitions.json` on messaging's `test`).",
       "why": "api's typecheck and tests always see a fresh platform-nest dist, and cached builds keep `pnpm verify` fast (ADR-001).",
       "files": ["turbo.json"]
     },
     "c-verify": {
-      "label": "pnpm verify", "sub": "turbo run lint depcruise typecheck test test:scripts --affected && pnpm check:migrations", "kind": "check", "status": "real", "wp": "WP-1",
+      "label": "pnpm verify", "sub": "turbo run lint depcruise typecheck test test:scripts --affected && pnpm check:migrations", "kind": "check", "status": "real", "wp": "WP-1, WP-6",
       "what": "The single \"am I done\" command, run before every commit and again after merging main.",
-      "how": "Turborepo runs Biome, dependency-cruiser, typecheck and unit tests for affected packages only, cached; then `pnpm check:migrations` runs outside Turborepo, because its input is git history, which no cache key sees. `pnpm verify:all` runs everything (on main and, from WP-6, in CI).",
+      "how": "Turborepo runs Biome, dependency-cruiser, typecheck, unit tests with coverage and the script tests for affected packages only, cached; then `pnpm check:migrations` runs outside Turborepo, because its input is git history, which no cache key sees. `pnpm verify:all` runs everything (on main and in CI on a push to main and weekly). The lefthook `pre-push` hook fetches main and runs `pnpm verify`, so a red verify never reaches the remote; CI's `verify` job runs it again on the pull request.",
       "why": "One command, one answer (AGENTS.md section 3).",
       "files": ["package.json", "turbo.json", "scripts/check-migrations.mjs"]
     },
@@ -1766,24 +1771,38 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["apps/api/tsconfig.json", "packages/platform-nest/tsconfig.json"]
     },
     "c-vitest": {
-      "label": "Vitest", "sub": "vitest run · unit and e2e", "kind": "check", "status": "real", "wp": "WP-1, WP-3",
-      "what": "Unit tests and in-process end-to-end tests.",
-      "how": "Each package uses `baseConfig()` from config: workers sized from load (at most 6), coverage gates 80% lines and 70% branches, and `*.int.test.ts` excluded. Vitest compiles with Oxc and reads decorator metadata from tsconfig, so no SWC plugin. api's unit tests boot the real app with `bootApi()`, the same module and `configureApp` as `main.ts`.",
-      "why": "ADR-009 testing strategy; spike row 1 confirmed DI under Vitest.",
-      "files": ["packages/config/vitest/base.js", "apps/api/vitest.config.ts", "packages/platform-nest/vitest.config.ts"]
+      "label": "Vitest", "sub": "vitest run --coverage · unit and e2e", "kind": "check", "status": "real", "wp": "WP-1, WP-3, WP-6",
+      "what": "Unit tests and in-process end-to-end tests, with coverage gates per package and layer.",
+      "how": "Each package uses `baseConfig()` from config: workers sized from load (at most 6), `*.int.test.ts` excluded, and since WP-6 every `test` script runs with `--coverage` (v8): 80% lines and 70% branches per package, and api raises its rule layers (`src/modules/*/domain/**` and `application/**`) to 90% and 85%. The composition roots (`src/{main,worker,consumer}.ts`) and `*.contract.ts` suites stay out of the number; a package leaves out an adapter only when an integration suite proves it, named in a comment beside the entry (messaging's RabbitMQ bus, outbox and inbox; the template's Drizzle adapters; testing's helpers). The `json-summary` reporter feeds the coverage table on the CI run page (`scripts/ci/coverage-summary.mjs`). Vitest compiles with Oxc and reads decorator metadata from tsconfig, so no SWC plugin. api's unit tests boot the real app with `bootApi()`, the same module and `configureApp` as `main.ts`.",
+      "why": "ADR-009 testing strategy and its coverage gates per package and layer (WP-6 D5); spike row 1 confirmed DI under Vitest.",
+      "files": ["packages/config/vitest/base.js", "apps/api/vitest.config.ts", "packages/messaging/vitest.config.ts", "packages/testing/vitest.config.ts", "scripts/ci/coverage-summary.mjs"]
+    },
+    "c-inputs": {
+      "label": "declared task inputs", "sub": "scripts/out-of-package-reads.mjs · in pnpm verify", "kind": "check", "status": "real", "wp": "WP-6",
+      "what": "Fails when a package's tests read a file outside the package that the reading task does not declare in its Turborepo `inputs`.",
+      "how": "Scans `src/` and `test/` of every workspace package for reads with literal paths (`new URL(..., import.meta.url)`, `join(import.meta.dirname, ...)`, a path starting at `infra` or `docs`). A read in `*.int.*` code belongs to that package's `test:int`, any other test file to its `test`, and a read in `src/` also to the `test:int` of each direct dependent (`@jadero/testing` reads the dev Postgres init script for agent's suites). Runs through `pnpm test:scripts`.",
+      "why": "An undeclared read is invisible twice: a PR that changes only that file selects no task under `--affected`, and the cache replays the old green. The weekly uncached CI run is the backstop for what this static scan misses (WP-6 D2).",
+      "files": ["scripts/out-of-package-reads.mjs", "scripts/out-of-package-reads.test.mjs", "turbo.json", "packages/messaging/turbo.json", "packages/testing/turbo.json"]
+    },
+    "c-contract": {
+      "label": "consumer contract test", "sub": "agent · system.ping.v1 fixture", "kind": "check", "status": "real", "wp": "WP-6",
+      "what": "Proves that the producer's example of `system.ping.v1` parses with the contract agent's `HeartbeatConsumer` registers, and carries every field its handler reads.",
+      "how": "A fake `MessageBus` captures the subscription `HeartbeatConsumer.onModuleInit()` registers; the test checks its queue and contract type, then parses `@jadero/contracts/fixtures/system.ping.v1.json` with that contract's envelope and checks `source`, `id`, `data.trigger` and a valid `time`. A unit test, so it runs in `pnpm verify`; a change to the fixture or the contract selects it, because agent depends on contracts.",
+      "why": "ADR-009 contract tests between services and ADR-029 rule 4 (WP-6 D6): a consumer that starts requiring a field the producer does not send fails in agent, even when contracts did not change. Each new consumer adds one per event it subscribes to.",
+      "files": ["apps/agent/test/heartbeat.contract.test.ts", "packages/contracts/fixtures/system.ping.v1.json"]
     },
     "c-testint": {
       "label": "pnpm test:int", "sub": "Testcontainers · needs Docker", "kind": "check", "status": "real", "wp": "WP-3 step 6",
       "what": "Integration tests against real containers, kept out of `pnpm verify`.",
       "how": "`turbo run test:int` runs each package's `vitest.int.config.ts`, built from `integrationConfig()`: only `test/**/*.int.test.ts`, longer timeouts, and a global setup. The Postgres global setup of api, agent, messaging and the module template is the shared one in `@jadero/testing` (WP-12 step 1): it first calls `useDockerContextHost()`, then starts one `pgvector/pgvector:0.8.7-pg18` container per run and provides its URL; each test file creates and drops its own database with `createTestDatabase({ superuserExtensions, roles })`, owned by an ordinary role. The extensions and login roles it creates are parsed from `infra/compose/init/01-databases.sql` (`provisionedExtensions`, `provisionedRoles`), so the tests provision exactly what development does: api's tests get the `content_reader` role with its read-only default. A unit test keeps the image tag equal to `compose.dev.yml`. They prove the data layer: migrations from zero as an ordinary role, the repository and unit of work contracts on Drizzle, rollback and the atomic outbox, and since WP-12 the content repositories, the seed, the public reads over HTTP and what `content_reader` may not do.",
-      "why": "WP-3 decision H: one container per run, one database per file, so files run in parallel without sharing rows. `pnpm verify` stays fast and Docker-free; CI runs these from WP-6. Testcontainers looks only at `DOCKER_HOST`, `~/.testcontainers.properties` and `/var/run/docker.sock`, not at the Docker CLI context that OrbStack, Colima and Docker Desktop use on macOS. `useDockerContextHost()` asks `docker context inspect` and sets `DOCKER_HOST` when none is set, so `pnpm test:int` works wherever `pnpm dev:up` works. WP-12 moved the four copies of these helpers into one package before a fifth appeared.",
-      "files": ["apps/api/vitest.int.config.ts", "packages/testing/src/postgres.global-setup.ts", "packages/testing/src/test-database.ts", "packages/testing/src/provisioned-roles.ts", "packages/testing/src/docker-host.ts", "apps/api/test/content-public.int.test.ts", "apps/api/test/outbox.int.test.ts", "packages/config/vitest/base.js"]
+      "why": "WP-3 decision H: one container per run, one database per file, so files run in parallel without sharing rows. `pnpm verify` stays fast and Docker-free; CI's `integration` job runs them on the runner's Docker (affected only on a PR, all on main and weekly). WP-6 added a RabbitMQ global setup in messaging and `rabbitmq-message-bus.int.test.ts`, the bus contract suite on a real broker. Testcontainers looks only at `DOCKER_HOST`, `~/.testcontainers.properties` and `/var/run/docker.sock`, not at the Docker CLI context that OrbStack, Colima and Docker Desktop use on macOS. `useDockerContextHost()` asks `docker context inspect` and sets `DOCKER_HOST` when none is set, so `pnpm test:int` works wherever `pnpm dev:up` works. WP-12 moved the four copies of these helpers into one package before a fifth appeared.",
+      "files": ["apps/api/vitest.int.config.ts", "packages/testing/src/postgres.global-setup.ts", "packages/testing/src/test-database.ts", "packages/testing/src/provisioned-roles.ts", "packages/testing/src/docker-host.ts", "apps/api/test/content-public.int.test.ts", "apps/api/test/outbox.int.test.ts", "packages/messaging/test/setup/rabbitmq.global-setup.ts", "packages/messaging/test/rabbitmq-message-bus.int.test.ts", "packages/config/vitest/base.js"]
     },
     "c-e2e": {
       "label": "pnpm test:e2e", "sub": "Playwright · axe · standalone build", "kind": "check", "status": "real", "wp": "WP-4, WP-16",
       "what": "Smoke tests per locale for web, kept out of `pnpm verify`.",
       "how": "`turbo run test:e2e` builds web first (`dependsOn: [\"build\"]`), then Playwright starts the stub content API and the standalone `server.js` (pointed at the stub, `SITE_URL` set to its own origin) and checks: the redirect from `/` by Accept-Language and by cookie, each locale's `lang`, heading and hreflang links, the site shell and the phone menu, the localized 404, Geist loaded from the site, the theme class surviving a reload, the CSP with a nonce that changes per request and no violation on any page type, every page (home with `?ask=`, experience, projects, stack, blog with its cursor, posts, the work log and its entries: order, `lang` on fallback texts, Markdown bodies, slug redirects, the locale switcher, 404s), the Open Graph fields, `/sitemap.xml` and `/robots.txt`, the JavaScript budget, and no axe WCAG 2.2 AA violation in light and dark mode. It runs under the enforced CSP; `CSP_MODE=report-only pnpm exec playwright test` from `apps/web` runs the report-only pass. It drives the installed Chrome (`channel: \"chrome\"`).",
-      "why": "ADR-009 (Playwright smoke per locale for the web, no coverage percentage), ADR-023 (axe in CI) and ADR-047 (the CSP checked in a real browser). CI runs it from WP-6.",
+      "why": "ADR-009 (Playwright smoke per locale for the web, no coverage percentage), ADR-023 (axe in CI) and ADR-047 (the CSP checked in a real browser). CI's `web` job runs it on every PR where web is affected, and uploads the Playwright results when it fails.",
       "files": ["apps/web/playwright.config.ts","apps/web/e2e/","apps/web/e2e/stub/content-api.ts","apps/web/turbo.json"]
     },
     "w-proxy": {
@@ -2009,6 +2028,34 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "how": "`infra/compose/compose.dev.yml`: pgvector on Postgres 18 and RabbitMQ with the management UI, ports bound to 127.0.0.1, healthchecks so `--wait` returns when ready.",
       "why": "ADR-027 and ADR-029. api's readiness check connects to Postgres (`content_dev`). Since WP-5 RabbitMQ loads vhost `dev`, its users, exchanges, queues and policies from `infra/rabbitmq/definitions.json`. The Postgres image tag is shared with the integration tests.",
       "files": ["infra/compose/compose.dev.yml"]
+    },
+    "ci-ci": {
+      "label": "ci.yml", "sub": "verify · integration · web · workflows-lint", "kind": "check", "status": "real", "wp": "WP-6",
+      "what": "The build and test workflow: on every pull request, on a push to main, weekly and by hand.",
+      "how": "`verify` runs `pnpm verify` on the tasks affected since the PR base, `pnpm verify:all` on main, and prints the coverage table. `integration` runs `test:int` and `web` runs `test:e2e`, both affected only on a PR. `workflows-lint` runs zizmor offline over the workflows (`pnpm lint:workflows` locally). The weekly run forces every task without the Turborepo cache, and `backstop-issue` opens or comments one issue when it fails. A new push cancels a PR's outdated run.",
+      "why": "ADR-048: the same commands as on the laptop, so CI never holds logic of its own. Restoring caches everywhere but saving them only on main means a PR cannot poison a cache main reads; the uncached weekly run catches a green replayed from a stale cache.",
+      "files": [".github/workflows/ci.yml", ".github/workflows/README.md", "scripts/ci/coverage-summary.mjs"]
+    },
+    "ci-security": {
+      "label": "security.yml", "sub": "OSV-Scanner · dependency-review · gitleaks", "kind": "check", "status": "real", "wp": "WP-6",
+      "what": "Vulnerabilities, licenses and secrets, on every pull request, on main and weekly.",
+      "how": "On a PR, OSV-Scanner scans the lockfiles at the base and at the merge commit and fails only on vulnerabilities the PR adds; on main and weekly a full scan reports findings to the Security tab without failing. `dependency-review` denies AGPL and GPL licenses. `secrets` runs gitleaks over the PR's commits, or the full history elsewhere (`pnpm scan:secrets` locally); a reviewed false positive goes in `.gitleaksignore` by fingerprint. No `paths:` filter, so the required checks always report.",
+      "why": "ADR-048: a diff gate keeps a PR from being blocked by an advisory published for something already on main, which the weekly scan and Renovate handle instead.",
+      "files": [".github/workflows/security.yml", ".gitleaksignore", "SECURITY.md"]
+    },
+    "ci-prtitle": {
+      "label": "pr-title.yml · scorecard.yml", "sub": "commitlint on the PR title · OpenSSF Scorecard", "kind": "check", "status": "real", "wp": "WP-6",
+      "what": "The PR title checked as a conventional commit, and a weekly supply chain score.",
+      "how": "`pr-title` runs on opened, edited, synchronize and reopened, so fixing the title on GitHub reruns it; the title reaches the shell as an environment variable, never pasted into the script. `scorecard` runs on main and weekly, uploads SARIF and feeds the README badge; it is not a gate.",
+      "why": "The squash merge uses the title as the commit on main and release-please reads it, so the title is what commitlint must check (ADR-048).",
+      "files": [".github/workflows/pr-title.yml", ".github/workflows/scorecard.yml", "commitlint.config.mjs"]
+    },
+    "ci-supply": {
+      "label": "Renovate · release cooldown", "sub": "renovate.json · minimumReleaseAge 3 days", "kind": "check", "status": "real", "wp": "WP-6",
+      "what": "Dependency updates grouped and weekly, and no install of a version younger than three days.",
+      "how": "Renovate opens grouped updates weekly, three days after release, never automerged, with a dashboard issue. pnpm's `minimumReleaseAge: 4320` (minutes) in `pnpm-workspace.yaml` makes the install fail in CI for a younger version; an urgent fix goes under `minimumReleaseAgeExclude` with a reason and a date to drop it.",
+      "why": "ADR-048 supply chain (WP-6 D9): most malicious npm releases are found and pulled within days, so waiting three keeps them out at little cost.",
+      "files": ["renovate.json", "pnpm-workspace.yaml"]
     },
     "c-build": {
       "label": "pnpm build", "sub": "turbo run build · every dist/", "kind": "check", "status": "real", "wp": "WP-3",
@@ -2328,9 +2375,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "ev-system-ping-v1": {
       "label": "system.ping.v1", "sub": "api → agent.system.ping", "kind": "file", "status": "real", "wp": "WP-5",
       "what": "A probe that crosses the whole messaging path. Data: `{ trigger: \"manual\" | \"heartbeat\" }`.",
-      "how": "Producer: api, through its outbox (`PingService`: `POST /dev/ping` in development, the heartbeat in api-worker every 5 minutes). Consumer: `agent.system.ping` (agent's consumer process) into `broker_heartbeat`. Type `dev.jadero.system.ping.v1`; schema, fixture and frozen compatibility snapshot in packages/contracts.",
+      "how": "Producer: api, through its outbox (`PingService`: `POST /dev/ping` in development, the heartbeat in api-worker every 5 minutes). Consumer: `agent.system.ping` (agent's consumer process) into `broker_heartbeat`. Type `dev.jadero.system.ping.v1`; schema, fixture and frozen compatibility snapshot in packages/contracts. Since WP-6 a consumer contract test in agent parses the fixture with the contract its consumer registers.",
       "why": "Decision W1 c: proves outbox, relay, broker, consumer, inbox and the trace in every environment.",
-      "files": ["packages/contracts/src/events/system-ping.v1.ts", "packages/contracts/fixtures/system.ping.v1.json", "packages/contracts/compat/system.ping.v1.json"]
+      "files": ["packages/contracts/src/events/system-ping.v1.ts", "packages/contracts/fixtures/system.ping.v1.json", "packages/contracts/compat/system.ping.v1.json", "apps/agent/test/heartbeat.contract.test.ts"]
     },
     "rule-messaging-drizzle": {
       "label": "messaging uses Drizzle only in its schema", "sub": "messaging-drizzle-only-in-schema · error", "kind": "rule", "status": "real", "wp": "WP-10",
@@ -2421,7 +2468,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "what": "Applies each `system.ping.v1` delivery once: the inbox row and the heartbeat upsert in one transaction.",
       "how": "Injects `MessageBus`, `PG_POOL`, `HeartbeatRepository` and `PinoLogger`. `handle` runs `withTransaction(pool, async ({ db, executor }) => ...)`: `recordInInbox(executor, queue, envelope)`, and only when that inserted a row, `heartbeats.record(db, ...)`. The daily inbox cleanup runs one statement on the pool, outside any transaction.",
       "why": "Idempotent consumer (ADR-012): a duplicate commits nothing new; a failure rolls back both writes and the bus retries the delivery from scratch.",
-      "files": ["apps/agent/src/modules/heartbeat/heartbeat.consumer.ts", "apps/agent/test/heartbeat.int.test.ts"]
+      "files": ["apps/agent/src/modules/heartbeat/heartbeat.consumer.ts", "apps/agent/test/heartbeat.int.test.ts", "apps/agent/test/heartbeat.consumer.test.ts", "apps/agent/test/heartbeat.contract.test.ts"]
     },
     "db-hbrepo": {
       "label": "HeartbeatRepository", "sub": "agent · Drizzle, no port", "kind": "provider", "status": "real", "wp": "WP-10 step 5",

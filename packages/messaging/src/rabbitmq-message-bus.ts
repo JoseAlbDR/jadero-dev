@@ -7,7 +7,7 @@ import type { z } from "zod";
 import { dispatch } from "./dispatch.js";
 import type { MessagingLog } from "./log.js";
 import { MessageBus, type OutgoingMessage, type Subscription } from "./message-bus.js";
-import { DEFAULT_RETRY_TIERS_MS, dispose } from "./outcome.js";
+import { attemptOf, DEFAULT_RETRY_TIERS_MS, dispose } from "./outcome.js";
 import {
   ATTEMPT_HEADER,
   deadLetterQueueName,
@@ -177,7 +177,7 @@ export class RabbitMqMessageBus extends MessageBus {
   }
 
   private async consume(queue: string, raw: ConsumeMessage): Promise<void> {
-    const attempt = Number(raw.properties.headers?.[ATTEMPT_HEADER] ?? 1);
+    const attempt = attemptOf(raw.properties.headers?.[ATTEMPT_HEADER]);
     let body: unknown;
     try {
       body = JSON.parse(raw.content.toString("utf8"));

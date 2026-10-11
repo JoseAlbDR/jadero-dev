@@ -20,7 +20,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "test:int": "vitest run -c vitest.int.config.ts",
     "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
     "topology": "tsc -p tsconfig.build.json && node scripts/write-definitions.mjs"
@@ -49,6 +49,7 @@
     "@types/amqplib": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "amqplib": "catalog:",
     "drizzle-kit": "catalog:",
     "drizzle-orm": "catalog:",

@@ -39,6 +39,7 @@ catalog:
   "@types/react": 19.3.0
   "@types/react-dom": 19.3.0
   "@types/supertest": 7.2.1
+  "@vitest/coverage-v8": 5.0.3
   class-variance-authority: 0.7.1
   clsx: 2.1.1
   amqp-connection-manager: 5.0.0
@@ -109,3 +110,15 @@ overrides:
 
 # Fail the install, instead of warning, when Node or pnpm is outside the root `engines` range.
 engineStrict: true
+
+# Release cooldown (ADR-048, WP-6 D9): refuse any version published less than three days ago
+# (4320 minutes). Most malicious npm releases are found and pulled within that window. pnpm
+# already defaults to one day, but softly (it falls back, or lets an exact pin through); setting
+# the value here makes it strict: the install fails in CI and asks on a developer's machine.
+# Renovate waits the same three days before it opens an update.
+# For an urgent fix that cannot wait, add the exact version below with a comment saying why
+# (advisory id or bug, date) and remove the entry once the version is three days old:
+# minimumReleaseAgeExclude:
+#   # GHSA-xxxx-xxxx-xxxx, 2026-10-11: fixes a remote code execution we ship; drop after 2026-10-14.
+#   - some-package@1.2.3
+minimumReleaseAge: 4320

@@ -1,0 +1,60 @@
+# Lints the pull request title with the repo's commitlint config (ADR-024, ADR-025, WP-6 D8).
+# The repo merges by squash with the title as the commit message, so the title is what lands on
+# main and what release-please reads; lefthook never sees a title typed into GitHub's form.
+name: pr-title
+
+on:
+  pull_request:
+    # `edited` is not in the default set; it is the event that fires when the title is fixed.
+    types: [opened, edited, synchronize, reopened]
+
+# Nothing by default; each job lists what it needs.
+permissions: {}
+
+# One group per pull request: a newer event cancels the outdated run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr-title:
+    name: pr-title
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      # Only commitlint.config.mjs and the lockfile are needed: no history.
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up pnpm and Node
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: false
+          install: false
+
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      # Read-only: ci.yml's verify job on main saves the same store.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # The title is attacker-controlled text: it reaches the shell only as an environment
+      # variable, never pasted into the script (D1).
+      - name: Lint the title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$PR_TITLE" | pnpm exec commitlint
