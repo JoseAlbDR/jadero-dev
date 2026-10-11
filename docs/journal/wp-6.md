@@ -8,7 +8,7 @@ locale: en
 
 # CI on someone else's machine: affected runs, a weekly backstop and a locked supply chain
 
-Until WP-6 every check in this repo ran only on my laptop, and `LEFTHOOK=0` skipped all of it. Now GitHub runs them on every pull request, on a machine I do not control, with a token. The work was deciding which shortcuts are safe there. <!-- owner: check -->
+Until WP-6 every check in this repo ran only on my laptop, behind a pre-push hook I could skip. Now GitHub runs them on every pull request, on a machine I do not control, with a token. The work was deciding which shortcuts are safe there.
 
 ## What I built
 
@@ -32,11 +32,11 @@ Every action is pinned by commit SHA, every workflow starts from `permissions: {
 
 **Readiness should check only what a request cannot work without.** If six replicas all check a shared service for readiness, one outage drops them all at once. That is a cascading failure.
 
-Two surprises came from the repo itself: in a clean checkout, a PR that touched only package files skipped Biome and dependency-cruiser, and the migration check passed quietly when `origin/main` was missing. Both failed open, and both now fail closed. <!-- owner: check -->
+Two surprises came from the repo itself: in a clean checkout, a PR that touched only package files skipped Biome and dependency-cruiser, and the migration check passed quietly when `origin/main` was missing. Both failed open, and both now fail closed.
 
 ## What I would change
 
-I would apply the repository settings (required checks, required SHA pinning) in the step that adds the jobs, not find out at the docs step that they were never set. <!-- owner: check -->
+I would apply the repository settings (required checks, required SHA pinning) in the step that adds the jobs, not find out at the docs step that they were never set.
 
 ADR-048 puts gitleaks in two different workflows. The build follows one of them, and the next ADR that supersedes it should fix the other.
 
