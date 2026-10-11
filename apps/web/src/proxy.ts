@@ -34,6 +34,9 @@ export default function proxy(request: NextRequest): NextResponse {
 
   // next-intl forwards the request headers it receives to the render, so they are set here.
   const headers = new Headers(request.headers);
+  // Next reads the nonce from either CSP request header, so a client-sent one never reaches the render.
+  headers.delete("content-security-policy");
+  headers.delete("content-security-policy-report-only");
   headers.set(NONCE_HEADER, nonce);
   headers.set(header, policy);
   const response = handleLocale(new NextRequest(request, { headers }));

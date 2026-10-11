@@ -43,6 +43,15 @@ describe("proxy: CSP (ADR-047)", () => {
     expect(response.headers.get("content-security-policy")).toBeNull();
   });
 
+  it("drops a client-sent CSP request header, so the client never picks the nonce", () => {
+    vi.stubEnv("CSP_MODE", "report-only");
+    const spoofed = request("/en");
+    spoofed.headers.set("content-security-policy", "script-src 'nonce-attacker'");
+    const response = proxy(spoofed);
+    expect(forwarded(response, "content-security-policy")).toBeNull();
+    expect(forwarded(response, "content-security-policy-report-only")).toMatch(/'strict-dynamic'/);
+  });
+
   it("uses a fresh nonce for every request", () => {
     const nonce = (r: Response) => forwarded(r, "x-nonce");
     expect(nonce(proxy(request("/en")))).not.toBe(nonce(proxy(request("/en"))));
