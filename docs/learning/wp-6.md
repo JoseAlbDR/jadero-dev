@@ -500,6 +500,14 @@ All three match the recommendations, so there was nothing to challenge.
 
 ## Recap
 
+Explain-back deferred by the owner on 2026-10-12 (late in the day); the questions are kept here and asked at `/review-release R0` (or at the start of the next WP), each in two halves, self-contained:
+- **E1. The whole run from memory.** Here: a PR changes a file in `packages/messaging`; walk through the PR checks (each job in one line, who reads and who writes the caches), the push to `main` after the squash, and Monday's scheduled run (what changes, what happens when it fails). Transfer: a shop monorepo with 30 services takes 40 minutes per PR; the three pieces to bring it to 5 (affected runs, write-protected shared cache, an uncached backstop).
+- **E2. When affected detection fails.** Here: why both the out-of-package read test and the weekly `--force` run, and which case each catches that the other misses (a read the test's pattern does not recognize). Transfer: a payments suite cached by file hash misses an environment variable and replays green for three weeks; one fix to prevent, one to shorten detection (defense in depth).
+- **E3. Why only `main` saves the cache.** Here: if PRs could save to `main`'s cache, a fork writes a fake green result for a task hash; what the next PR gets, the attack's name (cache poisoning), and what not saving on PRs costs. Transfer: a bookings company's shared build cache anyone can write; who writes, who reads, when laptops may write.
+- **E4. When to change the cooldown.** Here: a malicious release of a dependency; what happens when Renovate sees it the same day, when someone runs `pnpm add` by hand, and when npm pulls it the next day. Transfer: a critical HTTP library fix under active exploitation is blocked by the three-day cooldown in a payments service; remove the cooldown, exclude that version or wait, and what to record so the exception expires.
+
+Review notes (PR #118, 2026-10-12): the rename runbook in `.github/workflows/README.md` listed both names in the ruleset (blocks every PR; rewritten as expand/contract) and the root README status line was stale, both fixed in `a994fb2`; the PR body was rewritten from the template. ADR-048 places gitleaks in `ci.yml` at line 58 and in `security.yml` at line 61; the build follows line 61 (owner's call in step 7), left for the next superseding ADR since an accepted ADR is never edited.
+
 ## Named here
 
 | Name | What it is, in one line | When |
