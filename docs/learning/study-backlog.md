@@ -2,6 +2,8 @@
 
 Topics to study in depth, outside the work packages, with Matt Pocock's `teach` skill (github.com/mattpocock/skills, run from the owner's local profile in a separate `study/` folder, since it writes its own files where it runs). The work packages keep their own flow; this file only collects what they surface.
 
+Planned move (owner, 2026-10-12): this file moves to a private, shared learning repository (one learner model for every personal project, spaced repetition, an MCP server), started from project-kit after R0; the plan and the start prompt are in project-kit `docs/process/reusable-blocks.md` (PR #22). Until then it stays here.
+
 ## How it fills
 
 - A line is added in the step where it shows up (`/step` step 6): a check question or explain-back answered wrong or partly (**weak**), something the owner found worth more time (**interesting**), or something the main session recommends studying in depth because it recurs in other projects and interviews (**recommended**).
