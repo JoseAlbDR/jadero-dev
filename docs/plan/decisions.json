@@ -4451,6 +4451,63 @@
       "decidedBy": "owner",
       "decidedAt": "2026-10-11",
       "change": null
+    },
+    {
+      "id": "D-79",
+      "area": "delivery",
+      "title": "Images, release and image scanning",
+      "question": "What does the image scanner block, are the images public or private, how does a dependency-only change become a service release, and which token opens the Release PR?",
+      "context": "WP-7 builds the images and release.yml. An image scan is full-state, so gating on it turns unrelated pull requests red after every Debian fix. GHCR packages start private and public cannot be undone; GHCR accepts only classic tokens or a workflow's GITHUB_TOKEN. release-please attributes commits by path, so catalog and lockfile changes at the root release no service, and it has no option to add paths to a component. A Release PR opened with GITHUB_TOKEN gets no workflow runs unless GitHub's approval-required runs apply.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Private images, release-inputs files, diff-style image gate, job token for releases",
+          "description": "Trivy blocks only when a pull request changes what the image is built from (secrets always), reports otherwise, weekly scan of released images; private GHCR images pulled with the deploy job's short-lived GITHUB_TOKEN; apps/<service>/release-inputs.txt with a staleness test; release-please with GITHUB_TOKEN and a GitHub App as fallback.",
+          "pros": [
+            "No stored registry or release credential",
+            "Dependency fixes release the services they reach",
+            "Unrelated pull requests stay green"
+          ],
+          "cons": [
+            "WP-9 must hand a token to the server for each pull",
+            "Each dependency pull request regenerates a file"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "As a, with public images",
+          "description": "Anonymous pulls, no registry credential on the server.",
+          "pros": [
+            "No credential at all on the server",
+            "Anyone can verify attestations"
+          ],
+          "cons": [
+            "One-way: cannot be made private again"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Full-state image gate and the dependency gap accepted",
+          "description": "Trivy blocks every pull request that affects a service with a fixable HIGH or CRITICAL finding; dependency updates ship with the next feature or fix.",
+          "pros": [
+            "Simplest rules"
+          ],
+          "cons": [
+            "Unrelated pull requests turn red after each Debian fix",
+            "Dependency fixes can wait weeks"
+          ]
+        }
+      ],
+      "recommendation": "b",
+      "why": "The diff-style gate applies the WP-6 rule (block what a change brings in, report the rest) to images; release-inputs files make the root dependency inputs visible to path-based release attribution; the job token keeps release automation free of stored secrets. Public images were recommended because the repository is public; the owner kept them private.",
+      "adr": "ADR-049",
+      "learn": "Image layers, least-privilege containers, semver per service, diff versus full-state gates for images, short-lived credentials, keyless signing.",
+      "status": "decided",
+      "ownerNote": "Answered in WP-7 (2026-10-12): private GHCR packages pulled with the deploy job's short-lived GITHUB_TOKEN (packages: read) for that pull only, through a temporary DOCKER_CONFIG removed after the pull, never a classic token, going public kept possible on purpose; release-inputs files with a staleness test in pnpm verify and Renovate fix commits for production dependencies; Trivy in the ci.yml images job with the diff-style rule, secrets always blocking, releases scanned without blocking, a weekly scan opening an issue on a fixable CRITICAL; release-please with GITHUB_TOKEN and the setting that lets Actions create pull requests, a GitHub App as fallback.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-12",
+      "change": "Option b (public images) was recommended; the owner chose private images with the deploy job's short-lived token."
     }
   ],
   "workPackages": [
