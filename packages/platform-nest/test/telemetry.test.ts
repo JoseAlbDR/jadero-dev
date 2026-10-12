@@ -4,11 +4,12 @@ import { Logger } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { context, trace } from "@opentelemetry/api";
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
+import { PgInstrumentation } from "@opentelemetry/instrumentation-pg";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ConfigError, parseConfig } from "../src/config/load-config.js";
 import { ProblemDetailsFilter } from "../src/errors/problem-details.filter.js";
-import { createTelemetrySdk } from "../src/telemetry/create-sdk.js";
+import { createTelemetrySdk, telemetryInstrumentations } from "../src/telemetry/create-sdk.js";
 import { TelemetryModule } from "../src/telemetry/telemetry.module.js";
 import { telemetryEnv } from "../src/telemetry/telemetry-env.js";
 import { setTelemetrySdk } from "../src/telemetry/telemetry-state.js";
@@ -42,6 +43,11 @@ describe("createTelemetrySdk", () => {
     expect(
       createTelemetrySdk({ OTEL_SERVICE_NAME: "api", OTEL_TRACES_EXPORTER: "console" }),
     ).toBeInstanceOf(NodeSDK);
+  });
+
+  it("traces pg queries only inside a parent span", () => {
+    const pg = telemetryInstrumentations().find((i) => i instanceof PgInstrumentation);
+    expect(pg?.getConfig()).toMatchObject({ requireParentSpan: true });
   });
 });
 

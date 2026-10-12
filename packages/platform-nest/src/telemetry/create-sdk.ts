@@ -1,4 +1,5 @@
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
+import type { Instrumentation } from "@opentelemetry/instrumentation";
 import { AmqplibInstrumentation } from "@opentelemetry/instrumentation-amqplib";
 import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
@@ -36,18 +37,30 @@ export function createTelemetrySdk(env: TelemetryEnv): NodeSDK | undefined {
     // Without these, sdk-node starts OTLP metric and log exporters to :4318 on its own (spike row 6).
     metricReaders: [],
     logRecordProcessors: [],
-    instrumentations: [
-      // Visitor data stays out of spans (AGENTS.md section 7): the client address (from
-      // X-Forwarded-For behind nginx), the peer address and the user agent are overwritten.
-      new HttpInstrumentation({ startIncomingSpanHook: () => REDACTED_CLIENT_ATTRIBUTES }),
-      new ExpressInstrumentation(),
-      new PgInstrumentation(),
-      // Injects traceparent into RabbitMQ message headers on publish and continues the trace on
-      // consume (ADR-010). The relay restores each outbox row's stored context before publishing,
-      // so the trace runs from the HTTP request to the consumer (WP-5 decision E1).
-      new AmqplibInstrumentation(),
-      // Adds trace_id, span_id and trace_flags to every pino line; logs stay with pino.
-      new PinoInstrumentation({ disableLogSending: true }),
-    ],
+    instrumentations: telemetryInstrumentations(),
   });
+}
+
+/**
+ * The instrumentations the SDK registers, in one list so a test can check their config.
+ * @returns new, unregistered instrumentation instances.
+ */
+export function telemetryInstrumentations(): Instrumentation[] {
+  return [
+    // Visitor data stays out of spans (AGENTS.md section 7): the client address (from
+    // X-Forwarded-For behind nginx), the peer address and the user agent are overwritten.
+    new HttpInstrumentation({ startIncomingSpanHook: () => REDACTED_CLIENT_ATTRIBUTES }),
+    new ExpressInstrumentation(),
+    // Only queries inside a traced operation get a span, such as an HTTP request or a RabbitMQ
+    // consume. A query with no active span (startup, the heartbeat, the outbox cleanup, a poll)
+    // would otherwise open a one-span trace of its own and bury the useful traces. The relay
+    // already suppresses its own poll; this covers every other background query by default.
+    new PgInstrumentation({ requireParentSpan: true }),
+    // Injects traceparent into RabbitMQ message headers on publish and continues the trace on
+    // consume (ADR-010). The relay restores each outbox row's stored context before publishing,
+    // so the trace runs from the HTTP request to the consumer (WP-5 decision E1).
+    new AmqplibInstrumentation(),
+    // Adds trace_id, span_id and trace_flags to every pino line; logs stay with pino.
+    new PinoInstrumentation({ disableLogSending: true }),
+  ];
 }
