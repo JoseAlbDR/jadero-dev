@@ -1,0 +1,257 @@
+# Per-service releases (ADR-049, which supersedes ADR-025 and ADR-048; WP-7 D6 to D8, D10, D11).
+# On every push to main, release-please opens or updates the one combined Release PR from the
+# conventional commits, attributed to components by path (release-please-config.json). Merging
+# that PR tags each released component `<component>-v<version>`; for each released service the
+# images job builds the image once, smoke-tests it hardened, scans it with Trivy, pushes it to GHCR
+# as `:<version>` and `:sha-<short>` with a BuildKit SBOM, and signs a SLSA build provenance for
+# its digest (keyless: the job's OIDC token, a Sigstore certificate valid for minutes).
+# A manual run is the dry run: it builds, smoke-tests and scans one service, and never logs in,
+# pushes or attests. Images stay private (ADR-049, registry B): the first push creates each
+# package private and nothing here changes that. The staging deploy arrives with WP-9.
+name: release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: Service to build and scan without pushing (dry run)
+        required: true
+        type: choice
+        options: [api, agent, web]
+
+# Nothing by default; each job lists what it needs.
+permissions: {}
+
+# One run at a time per branch, never cancelled: a release half done (a tag without its image)
+# is worse than a queued run. A newer pending run replaces an older pending one, which is safe:
+# release-please reads every commit and every merged Release PR still marked pending.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # The job's GITHUB_TOKEN opens the Release PR (D11; needs the repository setting "Allow GitHub
+  # Actions to create and approve pull requests"). Its pull requests and tags start no workflow,
+  # so the images job lives in this workflow, after this job.
+  release-please:
+    name: release-please
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write # release branch, tags and GitHub releases
+      pull-requests: write # open and update the Release PR
+      issues: write # the autorelease labels
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
+      paths_released: ${{ steps.release.outputs.paths_released }}
+      services: ${{ steps.services.outputs.services }}
+    steps:
+      - name: Run release-please
+        id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+
+      # Shared packages release too (node-workspace plugin), but only apps ship an image.
+      - name: Select the released services
+        id: services
+        env:
+          PATHS_RELEASED: ${{ steps.release.outputs.paths_released }}
+        run: |
+          services="$(jq -c '[.[] | select(IN("apps/agent", "apps/api", "apps/web"))
+            | ltrimstr("apps/")] | sort' <<<"${PATHS_RELEASED:-[]}")"
+          echo "services=$services" >> "$GITHUB_OUTPUT"
+          echo "Released services: $services"
+
+  images:
+    name: images (${{ matrix.service }})
+    needs: release-please
+    # On a manual run release-please is skipped; !cancelled() lets this job run anyway.
+    if: >-
+      !cancelled() && (github.event_name == 'workflow_dispatch'
+      || (needs.release-please.result == 'success' && needs.release-please.outputs.services != '[]'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write # push to GHCR with the job's token (ADR-043)
+      id-token: write # the OIDC token Sigstore turns into a signing certificate
+      attestations: write # store the provenance
+      artifact-metadata: write # the artifact storage record of the attestation
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.service) || needs.release-please.outputs.services) }}
+    env:
+      DOCKER_BUILD_RECORD_UPLOAD: false
+      IMAGE_PREFIX: ghcr.io/josealbdr/jadero-dev
+      TRIVY_IMAGE: aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The version comes from the service's package.json, which the merged Release PR set to the
+      # version just tagged. On a manual run it is the current version, for the labels only.
+      - name: Name the image
+        id: meta
+        env:
+          SERVICE: ${{ matrix.service }}
+        run: |
+          case "$SERVICE" in agent|api|web) ;; *) echo "::error::unknown service"; exit 1 ;; esac
+          version="$(jq -r .version "apps/$SERVICE/package.json")"
+          image="$IMAGE_PREFIX-$SERVICE"
+          {
+            echo "version=$version"
+            echo "image=$image"
+            echo "tags<<EOF"
+            echo "$image:$version"
+            echo "$image:sha-${GITHUB_SHA::7}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "$image:$version and :sha-${GITHUB_SHA::7}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # Built once into the runner's Docker for the smoke run and the scan. The push below runs the
+      # same build again on this builder: every layer comes from its local cache, so the pushed
+      # image holds the bytes that were tested and scanned. Reads main's build cache, never writes.
+      - name: Build the image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: apps/${{ matrix.service }}/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          provenance: false
+          sbom: false
+          tags: jadero-${{ matrix.service }}:release
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+          cache-from: type=gha,scope=image-${{ matrix.service }}
+
+      # The same smoke run as the images job of ci.yml: hardened as in Compose, never root; the
+      # Nest services stop on their config error with every import resolved, web becomes healthy.
+      - name: Smoke-test the image
+        env:
+          SERVICE: ${{ matrix.service }}
+        run: |
+          image="jadero-$SERVICE:release"
+          uid="$(docker run --rm --entrypoint id "$image" -u)"
+          if [ "$uid" = 0 ]; then echo "::error::$SERVICE: the process runs as root"; exit 1; fi
+          echo "$SERVICE: runs as uid $uid"
+          if [ "$SERVICE" = web ]; then
+            container="$(docker run -d --read-only --cap-drop ALL \
+              --security-opt no-new-privileges:true --tmpfs /tmp:size=16m \
+              --tmpfs /app/apps/web/.next/cache:size=32m,uid=1000,gid=1000,mode=0700 \
+              -e SITE_URL=https://ci.invalid "$image")"
+            health=starting
+            for _ in $(seq 30); do
+              health="$(docker inspect --format '{{.State.Health.Status}}' "$container")"
+              [ "$health" = starting ] || break
+              sleep 2
+            done
+            docker logs "$container"
+            docker rm -f "$container" > /dev/null
+            if [ "$health" != healthy ]; then
+              echo "::error::$SERVICE: did not become healthy ($health)"; exit 1
+            fi
+            echo "$SERVICE: healthy"
+          else
+            set +e
+            output="$(docker run --rm --read-only --cap-drop ALL \
+              --security-opt no-new-privileges:true -e OTEL_SERVICE_NAME="$SERVICE-smoke" \
+              "$image" 2>&1)"
+            code=$?
+            set -e
+            echo "$output"
+            if [ "$code" -ne 0 ] && grep -q '^Invalid configuration, refusing to start' <<<"$output" \
+              && grep -q 'DATABASE_URL' <<<"$output" && ! grep -q ERR_MODULE_NOT_FOUND <<<"$output"; then
+              echo "$SERVICE: stops on the config error (exit $code), every import resolved"
+            else
+              echo "::error::$SERVICE: expected the config error naming DATABASE_URL (exit $code)"; exit 1
+            fi
+          fi
+
+      # The database cache that ci.yml saves on main; restored only, never written here.
+      - name: Restore the Trivy database
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/trivy-cache
+          key: trivy-${{ runner.os }}-release
+          restore-keys: trivy-${{ runner.os }}-
+
+      # D10: a secret in the image always fails. OS findings are reported, never blocking: a
+      # release may be the one that carries the fix; the weekly scan is the second channel.
+      - name: Scan the image
+        env:
+          SERVICE: ${{ matrix.service }}
+        run: |
+          cache="$RUNNER_TEMP/trivy-cache"
+          tar="$RUNNER_TEMP/$SERVICE.tar"
+          mkdir -p "$cache"
+          docker save "jadero-$SERVICE:release" -o "$tar"
+          trivy() {
+            docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
+              -v "$tar:/image.tar:ro" -v "$cache:/cache" \
+              -v "$GITHUB_WORKSPACE/.trivyignore.yaml:/trivyignore.yaml:ro" \
+              "$TRIVY_IMAGE" image --input /image.tar --cache-dir /cache \
+              --ignorefile /trivyignore.yaml --skip-version-check --disable-telemetry --quiet "$@"
+          }
+          if ! trivy --scanners secret --exit-code 1; then
+            echo "::error::$SERVICE: Trivy found a secret in the image"; exit 1
+          fi
+          report="$(trivy --scanners vuln --pkg-types os --severity HIGH,CRITICAL --ignore-unfixed \
+            --exit-code 0 --format table)"
+          echo "$report"
+          {
+            echo "### $SERVICE: fixable HIGH and CRITICAL OS findings (report only)"
+            echo
+            echo '```'
+            echo "${report:-none}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          rm -f "$tar"
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # BuildKit attaches the SBOM to the pushed image. Its own unsigned provenance stays off: the
+      # signed one comes from the attest step below.
+      - name: Push the image
+        id: push
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: apps/${{ matrix.service }}/Dockerfile
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          sbom: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+          cache-from: type=gha,scope=image-${{ matrix.service }}
+
+      # Verify from anywhere: gh attestation verify oci://<image>:<version> --owner JoseAlbDR
+      - name: Attest the build provenance
+        if: github.event_name == 'push'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.meta.outputs.image }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
