@@ -7,13 +7,13 @@
  * step completed; a one-off migrate never restarts and has no healthcheck. A fitness function:
  * the rules hold by test, not by review, like dependency-cruiser for imports.
  *
- * Run by `scripts/compose-hardening.test.mjs` through `pnpm test:scripts`, so `pnpm verify`. No
- * dependencies, like the other scripts: `parseComposeYaml` reads the YAML subset Compose files here
- * use and throws on anything else, so a new construct fails loudly instead of being misread.
+ * Run by `scripts/compose-hardening.test.mjs` through `pnpm test:scripts`, so `pnpm verify`. The
+ * file is read with the `yaml` package, merge keys on (`<<: *hardened`), as Compose reads it.
  */
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parse } from "yaml";
 
 /** The repository root. */
 export const REPO_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -25,29 +25,14 @@ export const COMPOSE_IMAGES = "infra/compose/compose.images.yml";
 const HEAP_SHARE = { min: 0.6, max: 0.8 };
 
 /**
- * Parses the YAML subset of the repository's Compose files: block maps and lists by indentation,
- * flow lists (`[a, "b"]`), quoted and plain scalars, `true` and `false`, comments, anchors
- * (`&name`), aliases (`*name`) and merge keys (`<<: *a` or `<<: [*a, *b]`, explicit keys win).
+ * Parses a Compose file as Compose does: YAML 1.2 with merge keys (`<<: *a` or `<<: [*a, *b]`,
+ * explicit keys win, the first merged map wins over the next).
  * @param source the file's text.
  * @returns the document as plain objects, arrays and scalars.
- * @throws Error on block scalars, flow maps, tabs, list items that are maps or bad indentation.
+ * @throws YAMLParseError on invalid YAML, an unknown alias or a duplicate key.
  */
 export function parseComposeYaml(source) {
-  const lines = source
-    .split("\n")
-    .map((text, index) => ({ number: index + 1, text: stripComment(text).trimEnd() }))
-    .filter((line) => line.text.trim() !== "")
-    .map((line) => {
-      if (/^\s*\t/.test(line.text)) fail(line, "tabs are not allowed for indentation");
-      const indent = line.text.length - line.text.trimStart().length;
-      return { ...line, indent, content: line.text.trim() };
-    });
-  const anchors = new Map();
-  const state = { index: 0 };
-  if (lines.length === 0) return {};
-  const document = parseBlock(lines, state, lines[0].indent, anchors);
-  if (state.index < lines.length) fail(lines[state.index], "unexpected indentation");
-  return document;
+  return parse(source, { merge: true }) ?? {};
 }
 
 /**
@@ -141,120 +126,4 @@ function maxOldSpace(nodeOptions) {
 
 function asList(value) {
   return Array.isArray(value) ? value.map(String) : [];
-}
-
-function fail(line, message) {
-  throw new Error(`line ${line.number}: ${message}: ${line.text.trim()}`);
-}
-
-/** Drops a comment: `#` at the start or after a space, outside quotes. */
-function stripComment(text) {
-  let quote = null;
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    if (quote) {
-      if (char === quote) quote = null;
-    } else if (char === '"' || char === "'") {
-      quote = char;
-    } else if (char === "#" && (i === 0 || /\s/.test(text[i - 1]))) {
-      return text.slice(0, i);
-    }
-  }
-  return text;
-}
-
-/** Parses the block (map or list) whose lines start at `indent`. */
-function parseBlock(lines, state, indent, anchors) {
-  return lines[state.index].content.startsWith("- ") || lines[state.index].content === "-"
-    ? parseList(lines, state, indent, anchors)
-    : parseMap(lines, state, indent, anchors);
-}
-
-function parseList(lines, state, indent, anchors) {
-  const list = [];
-  while (state.index < lines.length && lines[state.index].indent === indent) {
-    const line = lines[state.index];
-    if (!line.content.startsWith("- ")) fail(line, "expected a list item");
-    const item = line.content.slice(2).trim();
-    if (/^[\w.<-]+:(\s|$)/.test(item)) fail(line, "list items that are maps are not supported");
-    list.push(parseScalar(item, line, anchors));
-    state.index++;
-  }
-  return list;
-}
-
-function parseMap(lines, state, indent, anchors) {
-  const map = {};
-  const merged = [];
-  while (state.index < lines.length && lines[state.index].indent === indent) {
-    const line = lines[state.index];
-    const match = /^([\w.-]+|<<|"[^"]+"):(?:\s+(.*))?$/.exec(line.content);
-    if (!match) fail(line, "expected `key: value`");
-    const key = match[1].startsWith('"') ? JSON.parse(match[1]) : match[1];
-    let rest = match[2]?.trim() ?? "";
-    state.index++;
-    let anchor = null;
-    const anchorMatch = /^&([\w-]+)\s*(.*)$/.exec(rest);
-    if (anchorMatch) [, anchor, rest] = anchorMatch;
-    let value;
-    if (rest === "") {
-      const next = lines[state.index];
-      value = next && next.indent > indent ? parseBlock(lines, state, next.indent, anchors) : null;
-    } else {
-      value = parseScalar(rest, line, anchors);
-    }
-    if (anchor) anchors.set(anchor, value);
-    if (key === "<<") {
-      for (const source of Array.isArray(value) ? value : [value]) {
-        if (!source || typeof source !== "object" || Array.isArray(source))
-          fail(line, "a merge key needs maps");
-        merged.push(source);
-      }
-    } else {
-      if (Object.hasOwn(map, key)) fail(line, `duplicate key ${key}`);
-      map[key] = value;
-    }
-  }
-  // Merge semantics: explicit keys win; among merged maps, the first one listed wins.
-  return Object.assign({}, ...[...merged].reverse(), map);
-}
-
-function parseScalar(text, line, anchors) {
-  if (/^[|>{?]/.test(text))
-    fail(line, "block scalars, flow maps and complex keys are not supported");
-  if (text.startsWith("*")) {
-    const name = text.slice(1);
-    if (!anchors.has(name)) fail(line, `unknown alias *${name}`);
-    return anchors.get(name);
-  }
-  if (text.startsWith("[")) {
-    if (!text.endsWith("]")) fail(line, "a flow list must close on the same line");
-    return splitFlow(text.slice(1, -1)).map((item) => parseScalar(item, line, anchors));
-  }
-  if (text.startsWith('"')) return JSON.parse(text);
-  if (text.startsWith("'")) return text.slice(1, -1).replaceAll("''", "'");
-  if (text === "true") return true;
-  if (text === "false") return false;
-  return text;
-}
-
-/** Splits a flow list's inside on commas outside quotes. */
-function splitFlow(inside) {
-  const items = [];
-  let quote = null;
-  let current = "";
-  for (const char of inside) {
-    if (quote) {
-      if (char === quote) quote = null;
-    } else if (char === '"' || char === "'") {
-      quote = char;
-    } else if (char === ",") {
-      items.push(current.trim());
-      current = "";
-      continue;
-    }
-    current += char;
-  }
-  if (current.trim() !== "") items.push(current.trim());
-  return items;
 }

@@ -42,6 +42,7 @@
     "dependency-cruiser": "catalog:",
     "lefthook": "catalog:",
     "turbo": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "yaml": "catalog:"
   }
 }

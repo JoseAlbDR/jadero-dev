@@ -1,4 +1,4 @@
-// Runs with the Node test runner (`node --test`), like the other scripts: no dependencies.
+// Runs with the Node test runner (`node --test`), like the other scripts.
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { checkComposeHardening, checkRepository, parseComposeYaml } from "./compose-hardening.mjs";
@@ -118,34 +118,5 @@ services:
         'compose.yml: app-migrate is a one-off: set restart: "no" and disable its healthcheck',
       ),
     );
-  });
-});
-
-describe("parseComposeYaml", () => {
-  it("reads anchors, merge keys, flow lists, quotes and comments", () => {
-    const document = parseComposeYaml(`
-base: &base
-  a: 1 # a comment
-  list: [x, "y, z"]
-first: &first
-  a: first
-  b: first
-merged:
-  <<: [*first, *base]
-  c: "#not a comment"
-`);
-    assert.deepEqual(document.merged, {
-      a: "first",
-      b: "first",
-      list: ["x", "y, z"],
-      c: "#not a comment",
-    });
-  });
-
-  it("throws on constructs it does not read, instead of misreading them", () => {
-    assert.throws(() => parseComposeYaml("a: |\n  text\n"), /block scalars/);
-    assert.throws(() => parseComposeYaml("a:\n  - b: c\n"), /list items that are maps/);
-    assert.throws(() => parseComposeYaml("a: *missing\n"), /unknown alias/);
-    assert.throws(() => parseComposeYaml("a: 1\na: 2\n"), /duplicate key/);
   });
 });

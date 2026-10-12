@@ -234,6 +234,9 @@ catalogs:
     vitest:
       specifier: 5.0.3
       version: 5.0.3
+    yaml:
+      specifier: 2.9.1
+      version: 2.9.1
     zod:
       specifier: 4.6.5
       version: 4.6.5
@@ -266,6 +269,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+      yaml:
+        specifier: 'catalog:'
+        version: 2.9.1
 
   apps/agent:
     dependencies:
