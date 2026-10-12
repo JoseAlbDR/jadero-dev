@@ -24,6 +24,11 @@
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/infra/compose/**"],
       "cache": false
     },
+    "image": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/.dockerignore", "$TURBO_ROOT$/.trivyignore.yaml"],
+      "cache": false
+    },
     "db:generate": {
       "dependsOn": ["^build"],
       "cache": false

@@ -1,0 +1,10 @@
+# Trivy exceptions for the images job in ci.yml (ADR-049, docs/learning/wp-7.md D10). Prefer a fix
+# (a base image update) over an entry here. Every entry names the finding, says why it does not
+# apply or what fixes it and when, and carries an `expired_at` date: after it, Trivy reports the
+# finding again, so no exception outlives its reason. Changing this file reruns the blocking scan.
+#
+# vulnerabilities:
+#   - id: CVE-2026-00000
+#     statement: "Not reachable: <why>. Fixed by <update>, expected <date>."
+#     expired_at: 2026-12-31
+vulnerabilities: []

@@ -261,6 +261,277 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # The Docker build check of every service image, its smoke runs and its Trivy scan (ADR-049,
+  # docs/learning/wp-7.md D9 and D10). One job, so one check name: it always reports, and with no
+  # affected service it skips its steps and passes (WP-6 D10; never a `paths:` filter).
+  # - Which services: on a pull request, the `image` task of `turbo.json` (inputs: the package, its
+  #   dependencies through `^build`, the root `.dockerignore` and `.trivyignore.yaml`; each
+  #   Dockerfile is a file of its package) selected by `--affected`; no script runs, the dry run
+  #   only names the tasks. Push to main, the weekly and the manual runs build all three.
+  # - Build: amd64, loaded into the runner's Docker, never pushed (release.yml pushes). BuildKit's
+  #   GitHub cache is read on every run and written only on a push to main (WP-6 D3). That cache
+  #   does not carry the pnpm store cache mount, so after a cached `pnpm fetch` layer the install
+  #   and `pnpm deploy` download the packages again; accepted, the fetch layer is keyed by the
+  #   lockfile.
+  # - Smoke: the process is not root; api and agent started with no service configuration stop on
+  #   the config error (ADR-043) naming DATABASE_URL, which proves every import resolves; web, which
+  #   needs no configuration to start, must reach `healthy` through its own HEALTHCHECK (/robots.txt).
+  # - Trivy, run as its container pinned by digest (Renovate updates it), on the image saved with
+  #   `docker save`; its database is cached like the other caches. OS packages only, npm findings stay with OSV-Scanner (one tool per job). A
+  #   secret in an image always fails. Fixable HIGH and CRITICAL OS findings fail a pull request
+  #   that changes what the image is built from (its Dockerfile, which holds the base pin,
+  #   `.dockerignore`, `.trivyignore.yaml`); otherwise they are only reported in the job summary.
+  images:
+    name: images
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      # The build summary stays; the per-build record artifact is not needed for a check.
+      DOCKER_BUILD_RECORD_UPLOAD: false
+      TRIVY_IMAGE: aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa
+    steps:
+      # Full history: Turborepo and the gate diff against the PR base.
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Turborepo is only needed to select the affected services on a pull request.
+      - name: Set up pnpm and Node
+        if: github.event_name == 'pull_request'
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: false
+          install: false
+
+      - name: Locate the pnpm store
+        id: pnpm-store
+        if: github.event_name == 'pull_request'
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the pnpm store
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+
+      - name: Install
+        if: github.event_name == 'pull_request'
+        run: pnpm install --frozen-lockfile
+
+      - name: Select the affected services
+        id: affected
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$EVENT_NAME" = pull_request ]; then
+            services="$(pnpm exec turbo run image --affected --dry=json | jq -c '[.tasks[]
+              | select(.task == "image") | .package | ltrimstr("@jadero/")
+              | select(IN("agent", "api", "web"))] | sort')"
+          else
+            services='["agent","api","web"]'
+          fi
+          echo "services=$services" >> "$GITHUB_OUTPUT"
+          if [ "$services" = "[]" ]; then
+            echo "No service image is affected: nothing to build." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "Affected services: $services"
+
+      - name: Set up Docker Buildx
+        if: steps.affected.outputs.services != '[]'
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # One step per service: an action cannot run in a shell loop. Context `.` is the checkout
+      # (the action's default would fetch the repository again through git).
+      - name: Build the agent image
+        if: contains(fromJSON(steps.affected.outputs.services), 'agent')
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: apps/agent/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          provenance: false
+          sbom: false
+          tags: jadero-agent:ci
+          cache-from: type=gha,scope=image-agent
+          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max,scope=image-agent' || '' }}
+
+      - name: Build the api image
+        if: contains(fromJSON(steps.affected.outputs.services), 'api')
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          provenance: false
+          sbom: false
+          tags: jadero-api:ci
+          cache-from: type=gha,scope=image-api
+          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max,scope=image-api' || '' }}
+
+      - name: Build the web image
+        if: contains(fromJSON(steps.affected.outputs.services), 'web')
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          provenance: false
+          sbom: false
+          tags: jadero-web:ci
+          cache-from: type=gha,scope=image-web
+          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max,scope=image-web' || '' }}
+
+      # Run hardened as in Compose (read-only, no capabilities, no new privileges). Every service is
+      # checked even after one fails, so the log shows them all; the step fails at the end.
+      - name: Smoke-test the images
+        if: steps.affected.outputs.services != '[]'
+        env:
+          SERVICES: ${{ steps.affected.outputs.services }}
+        run: |
+          failed=0
+          for service in $(jq -r '.[]' <<<"$SERVICES"); do
+            image="jadero-$service:ci"
+            uid="$(docker run --rm --entrypoint id "$image" -u)"
+            if [ "$uid" = 0 ]; then
+              echo "::error::$service: the process runs as root"; failed=1
+            else
+              echo "$service: runs as uid $uid"
+            fi
+            if [ "$service" = web ]; then
+              container="$(docker run -d --read-only --cap-drop ALL \
+                --security-opt no-new-privileges:true --tmpfs /tmp:size=16m \
+                --tmpfs /app/apps/web/.next/cache:size=32m,uid=1000,gid=1000,mode=0700 \
+                -e SITE_URL=https://ci.invalid "$image")"
+              health=starting
+              for _ in $(seq 30); do
+                health="$(docker inspect --format '{{.State.Health.Status}}' "$container")"
+                [ "$health" = starting ] || break
+                sleep 2
+              done
+              docker logs "$container"
+              docker rm -f "$container" > /dev/null
+              if [ "$health" = healthy ]; then
+                echo "$service: healthy"
+              else
+                echo "::error::$service: did not become healthy ($health)"; failed=1
+              fi
+            else
+              # Only OTEL_SERVICE_NAME is set (the exporter defaults to none): without it the
+              # instrumentation preload stops on its own config error before dist/main.js loads,
+              # which would prove nothing about main's imports. With it, Node links main's whole
+              # static import graph before main runs and stops on its config (DATABASE_URL).
+              set +e
+              output="$(docker run --rm --read-only --cap-drop ALL \
+                --security-opt no-new-privileges:true -e OTEL_SERVICE_NAME="$service-smoke" \
+                "$image" 2>&1)"
+              code=$?
+              set -e
+              echo "$output"
+              if [ "$code" -ne 0 ] && grep -q '^Invalid configuration, refusing to start' <<<"$output" \
+                && grep -q 'DATABASE_URL' <<<"$output" && ! grep -q ERR_MODULE_NOT_FOUND <<<"$output"; then
+                echo "$service: stops on the config error (exit $code), every import resolved"
+              else
+                echo "::error::$service: expected the config error naming DATABASE_URL (exit $code)"; failed=1
+              fi
+            fi
+          done
+          exit "$failed"
+
+      # Trivy's database, about 80 MB, refreshed upstream every few hours: one cache entry per day,
+      # written only on a push to main; any run restores the newest one and Trivy tops it up.
+      - name: Date of the Trivy database
+        id: trivy-date
+        if: steps.affected.outputs.services != '[]'
+        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the Trivy database
+        id: trivy-cache
+        if: steps.affected.outputs.services != '[]'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/trivy-cache
+          key: trivy-${{ runner.os }}-${{ steps.trivy-date.outputs.date }}
+          restore-keys: trivy-${{ runner.os }}-
+
+      # Two scans per image: secrets always block; fixable HIGH and CRITICAL OS findings block only
+      # in the gate mode described at the top of this job. The findings table goes to the summary.
+      - name: Scan the images
+        if: steps.affected.outputs.services != '[]'
+        env:
+          SERVICES: ${{ steps.affected.outputs.services }}
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          cache="$RUNNER_TEMP/trivy-cache"
+          mkdir -p "$cache"
+          # Trivy on the saved image in $tar, as the runner's user so the cache stays writable.
+          trivy() {
+            docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
+              -v "$tar:/image.tar:ro" -v "$cache:/cache" \
+              -v "$GITHUB_WORKSPACE/.trivyignore.yaml:/trivyignore.yaml:ro" \
+              "$TRIVY_IMAGE" image --input /image.tar --cache-dir /cache \
+              --ignorefile /trivyignore.yaml --skip-version-check --disable-telemetry --quiet "$@"
+          }
+          failed=0
+          for service in $(jq -r '.[]' <<<"$SERVICES"); do
+            tar="$RUNNER_TEMP/$service.tar"
+            docker save "jadero-$service:ci" -o "$tar"
+            if ! trivy --scanners secret --exit-code 1; then
+              echo "::error::$service: Trivy found a secret in the image"; failed=1
+            fi
+            gate=0
+            if [ "$EVENT_NAME" = pull_request ] && [ -n "$(git diff --name-only "$BASE_SHA" HEAD -- \
+              "apps/$service/Dockerfile" .dockerignore .trivyignore.yaml)" ]; then
+              gate=1
+            fi
+            if [ "$gate" = 1 ]; then
+              mode="blocking: this pull request changes what the image is built from"
+            else
+              mode="report only"
+            fi
+            set +e
+            report="$(trivy --scanners vuln --pkg-types os --severity HIGH,CRITICAL --ignore-unfixed \
+              --exit-code "$gate" --format table)"
+            code=$?
+            set -e
+            echo "$report"
+            {
+              echo "### $service: fixable HIGH and CRITICAL OS findings ($mode)"
+              echo
+              echo '```'
+              echo "${report:-none}"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            if [ "$code" -ne 0 ]; then
+              echo "::error::$service: fixable HIGH or CRITICAL OS findings (exit $code)"; failed=1
+            fi
+            rm -f "$tar"
+          done
+          exit "$failed"
+
+      - name: Save the Trivy database
+        if: >-
+          always() && github.event_name == 'push' && steps.affected.outputs.services != '[]'
+          && steps.trivy-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/trivy-cache
+          key: trivy-${{ runner.os }}-${{ steps.trivy-date.outputs.date }}
+
   # zizmor over the workflows themselves (WP-6, implementation choice "Workflow lint"): template
   # injection, unpinned or excessive permissions, credentials left in checkouts, dangerous
   # triggers. Offline mode, so no token and no network; plain output, no SARIF upload. Runs on
