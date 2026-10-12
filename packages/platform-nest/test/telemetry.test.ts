@@ -4,6 +4,7 @@ import { Logger } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { context, trace } from "@opentelemetry/api";
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
+import { ExpressInstrumentation, ExpressLayerType } from "@opentelemetry/instrumentation-express";
 import { PgInstrumentation } from "@opentelemetry/instrumentation-pg";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -48,6 +49,11 @@ describe("createTelemetrySdk", () => {
   it("traces pg queries only inside a parent span", () => {
     const pg = telemetryInstrumentations().find((i) => i instanceof PgInstrumentation);
     expect(pg?.getConfig()).toMatchObject({ requireParentSpan: true });
+  });
+
+  it("skips express middleware spans, keeping routers and handlers", () => {
+    const express = telemetryInstrumentations().find((i) => i instanceof ExpressInstrumentation);
+    expect(express?.getConfig()).toMatchObject({ ignoreLayersType: [ExpressLayerType.MIDDLEWARE] });
   });
 });
 
