@@ -1,5 +1,21 @@
-# The build context of every image (WP-7): sources only. A small context builds faster, and no
-# local secret can reach a layer (ADR-043). Each image builds its own dist inside the build stage.
+# The build context of every image (WP-7): default deny. Everything is out unless a line below
+# lets it back in, so a new root file (an editor or agent config, a local note, a key) never enters
+# a build by accident: least privilege for the context, and no local secret can reach a layer
+# (ADR-043). The images need the workspace manifests and the sources; each builds its own dist.
+*
+
+# What the three Dockerfiles copy (`COPY package.json pnpm-lock.yaml pnpm-workspace.yaml`, then
+# `COPY . .` for the build): the workspace manifests, turbo's task graph and the sources. Every
+# workspace folder in pnpm-workspace.yaml must be here (templates/ too), or the frozen install fails.
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!turbo.json
+!apps/
+!packages/
+!templates/
+
+# Excluded again inside the re-included folders: the last matching line wins, so these come after.
 **/node_modules
 **/dist
 **/.next
@@ -8,11 +24,7 @@
 **/test-results
 **/playwright-report
 **/*.tsbuildinfo
-.git
-.claude
-docs
 
-# Secrets: every env file, the committed templates too. No image needs them, and an exception
-# would also re-include the copies under .claude/worktrees/, whose churn breaks the build cache.
+# Secrets: every env file, the committed templates too. No image needs them.
 **/.env
 **/.env.*

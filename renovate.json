@@ -52,6 +52,12 @@
       "matchManagers": ["github-actions"],
       "matchUpdateTypes": ["minor", "patch", "digest", "pinDigest"],
       "groupName": "github actions"
+    },
+    {
+      "description": "Node in one pull request: the version in .nvmrc (nvm manager) and the base image the Dockerfiles pin in `ARG NODE_IMAGE` (dockerfile manager, tag and digest) move together, as scripts/docker-base-image.test.mjs requires.",
+      "matchManagers": ["nvm", "dockerfile"],
+      "matchDepNames": ["node"],
+      "groupName": "node"
     }
   ],
   "customManagers": [

@@ -10,7 +10,9 @@
 # service waits for another at startup.
 # AI and mail providers stay fake (AGENTS.md section 7).
 # scripts/compose-hardening.test.mjs fails when a service loses the hardening, a memory limit or its
-# migrate dependency: a fitness function, like dependency-cruiser for imports.
+# migrate dependency, gains a privilege (privileged, cap_add, root, host namespaces, docker.sock), or
+# when a long-running service's heap plus its tmpfs sizes exceed 80% of mem_limit: a fitness
+# function, like dependency-cruiser for imports.
 
 # Least privilege in four layers (D4), merged into every service with `<<: *hardened`. The images
 # already run as `node` (uid 1000) and own nothing they run. The merge is shallow: a service that
@@ -39,7 +41,7 @@ services:
     command: ["node", "dist/migrate.js"]
     environment:
       DATABASE_URL: postgres://content:content@postgres:5432/content_dev
-      NODE_OPTIONS: --max-old-space-size=225
+      NODE_OPTIONS: --max-old-space-size=224
     # Same budget as the service it prepares (ADR-027 has no row for a one-off).
     mem_limit: 300m
     depends_on:
@@ -61,8 +63,9 @@ services:
       OTEL_SERVICE_NAME: api
       # One line per span on stdout, as in dev; staging and production use otlp.
       OTEL_TRACES_EXPORTER: pretty
-      # About 75% of mem_limit (ADR-027): V8 collects before the kernel kills the container.
-      NODE_OPTIONS: --max-old-space-size=225
+      # Heap plus every tmpfs at most 80% of mem_limit (ADR-027 limit): V8 collects before the
+      # kernel kills the container, and tmpfs pages count against the same limit.
+      NODE_OPTIONS: --max-old-space-size=224
     ports:
       - "127.0.0.1:3001:3001"
     mem_limit: 300m
@@ -87,7 +90,7 @@ services:
       HEARTBEAT_INTERVAL_MS: ${HEARTBEAT_INTERVAL_MS:-300000}
       OTEL_SERVICE_NAME: api-worker
       OTEL_TRACES_EXPORTER: pretty
-      NODE_OPTIONS: --max-old-space-size=225
+      NODE_OPTIONS: --max-old-space-size=224
     mem_limit: 300m
     depends_on:
       api-migrate:
@@ -152,7 +155,7 @@ services:
       AI_GUARD_PROVIDER: fake
       AI_EMBEDDINGS_PROVIDER: fake
       AI_RERANK_PROVIDER: fake
-      NODE_OPTIONS: --max-old-space-size=192
+      NODE_OPTIONS: --max-old-space-size=188
     mem_limit: 256m
     depends_on:
       agent-migrate:
@@ -168,16 +171,17 @@ services:
       dockerfile: apps/web/Dockerfile
     restart: unless-stopped
     # Next's server cache is on disk (fetch cache, optimized images): a second tmpfs, owned by the
-    # image's `node` user. Its pages count against mem_limit, like every tmpfs.
+    # image's `node` user. Its pages count against mem_limit, like every tmpfs: 208 heap + 16 + 32
+    # is 256 MB, 80% of 320.
     tmpfs:
       - /tmp:size=16m
-      - /app/apps/web/.next/cache:size=64m,uid=1000,gid=1000,mode=0700
+      - /app/apps/web/.next/cache:size=32m,uid=1000,gid=1000,mode=0700
     environment:
       SITE_URL: http://localhost:3000
       # The content API over the Compose network, read per request by the server.
       CONTENT_API_URL: http://api:3001
       CSP_MODE: enforce
-      NODE_OPTIONS: --max-old-space-size=240
+      NODE_OPTIONS: --max-old-space-size=208
     ports:
       - "127.0.0.1:3000:3000"
     mem_limit: 320m

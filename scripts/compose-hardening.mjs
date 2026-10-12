@@ -2,9 +2,11 @@
  * Checks the hardened runtime Compose file (WP-7 step 5; ADR-049 restating ADR-048 "Images";
  * ADR-027 memory budget and port binding; docs/learning/wp-7.md D2, D4, D5). Every service of
  * `infra/compose/compose.images.yml` runs read-only, without capabilities, without new privileges,
- * with a size-capped `/tmp` and a memory limit, and publishes ports on 127.0.0.1 only. A
- * long-running service keeps its heap near 75% of its limit and starts only after its own migrate
- * step completed; a one-off migrate never restarts and has no healthcheck. A fitness function:
+ * with a size-capped `/tmp` and a memory limit, and publishes ports on 127.0.0.1 only. No service
+ * gains a privilege back: no `privileged`, no `cap_add`, no root user, no host network, PID or IPC
+ * namespace, no Docker socket. A long-running service keeps its heap plus every tmpfs at most 80%
+ * of its limit (tmpfs pages count against `mem_limit`) and starts only after its own migrate step
+ * completed; a one-off migrate never restarts and has no healthcheck. A fitness function:
  * the rules hold by test, not by review, like dependency-cruiser for imports.
  *
  * Run by `scripts/compose-hardening.test.mjs` through `pnpm test:scripts`, so `pnpm verify`. The
@@ -21,8 +23,17 @@ export const REPO_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 /** The Compose file that runs the production images, relative to the root. */
 export const COMPOSE_IMAGES = "infra/compose/compose.images.yml";
 
-/** The share of `mem_limit` that `--max-old-space-size` may take (ADR-027: about 75%). */
-const HEAP_SHARE = { min: 0.6, max: 0.8 };
+/** The smallest share of `mem_limit` that `--max-old-space-size` may take (ADR-027: about 75%). */
+const HEAP_MIN_SHARE = 0.6;
+
+/**
+ * The largest share of `mem_limit` that the heap plus every tmpfs may take: tmpfs pages count
+ * against the same limit, and the rest leaves room for V8's young generation, code and native memory.
+ */
+const MEMORY_MAX_SHARE = 0.8;
+
+/** Namespaces a service must never share with the host. */
+const HOST_NAMESPACES = ["network_mode", "pid", "ipc"];
 
 /**
  * Parses a Compose file as Compose does: YAML 1.2 with merge keys (`<<: *a` or `<<: [*a, *b]`,
@@ -65,6 +76,9 @@ export function checkComposeHardening(document, path = COMPOSE_IMAGES) {
     if (!asList(service.tmpfs).some((mount) => /^\/tmp:(.*,)?size=\d+[kmg]?(,|$)/.test(mount))) {
       problems.push(`${at} must mount a size-capped tmpfs on /tmp`);
     }
+    problems.push(...privilegeProblems(service, at));
+    const tmpfs = tmpfsMegabytes(service.tmpfs);
+    if (tmpfs === null) problems.push(`${at} must cap every tmpfs with size=`);
     const limit = megabytes(service.mem_limit);
     if (limit === null) problems.push(`${at} must set mem_limit (ADR-027)`);
     for (const port of asList(service.ports)) {
@@ -76,11 +90,14 @@ export function checkComposeHardening(document, path = COMPOSE_IMAGES) {
     }
     if (isOneOff(service)) continue;
     const heap = maxOldSpace(service.environment?.NODE_OPTIONS);
-    if (
-      limit !== null &&
-      (heap === null || heap < limit * HEAP_SHARE.min || heap > limit * HEAP_SHARE.max)
-    ) {
-      problems.push(`${at} must set NODE_OPTIONS --max-old-space-size to about 75% of mem_limit`);
+    if (limit !== null && (heap === null || heap < limit * HEAP_MIN_SHARE)) {
+      problems.push(
+        `${at} must set NODE_OPTIONS --max-old-space-size to at least 60% of mem_limit`,
+      );
+    } else if (limit !== null && tmpfs !== null && heap + tmpfs > limit * MEMORY_MAX_SHARE) {
+      problems.push(
+        `${at} heap ${heap} MB plus tmpfs ${tmpfs} MB exceeds 80% of mem_limit (${limit * MEMORY_MAX_SHARE} MB)`,
+      );
     }
     const migrate = migrateOf.get(service.image);
     if (migrate && service.depends_on?.[migrate]?.condition !== "service_completed_successfully") {
@@ -103,6 +120,48 @@ export function checkRepository(root = REPO_ROOT) {
     services: Object.keys(document.services ?? {}).sort(),
     problems: checkComposeHardening(document),
   };
+}
+
+/**
+ * The privileges a service must not take back (D4): each one undoes a hardening layer or hands the
+ * container the host (the Docker socket is root on the host).
+ * @param service one parsed Compose service.
+ * @param at the message prefix.
+ * @returns the problems found.
+ */
+function privilegeProblems(service, at) {
+  const problems = [];
+  if (service.privileged === true) problems.push(`${at} must not set privileged: true`);
+  if (asList(service.cap_add).length > 0)
+    problems.push(`${at} must not add capabilities (cap_add)`);
+  if (/^(root|0)(:|$)/.test(String(service.user ?? "").trim())) {
+    problems.push(`${at} must not run as root (user: ${service.user})`);
+  }
+  for (const key of HOST_NAMESPACES) {
+    if (service[key] === "host") problems.push(`${at} must not set ${key}: host`);
+  }
+  for (const volume of Array.isArray(service.volumes) ? service.volumes : []) {
+    const source = typeof volume === "string" ? volume.split(":")[0] : volume?.source;
+    if (/docker\.sock$/.test(String(source ?? ""))) {
+      problems.push(`${at} must not mount the Docker socket`);
+    }
+  }
+  return problems;
+}
+
+/**
+ * The sum of a service's tmpfs `size=` values in megabytes; null when one has no size (an uncapped
+ * tmpfs can grow to half the host's memory).
+ */
+function tmpfsMegabytes(tmpfs) {
+  let total = 0;
+  for (const mount of asList(tmpfs)) {
+    const size = /(?:^|[:,])size=(\d+[bkmg]?)(?:,|$)/i.exec(mount);
+    const value = size ? megabytes(size[1]) : null;
+    if (value === null) return null;
+    total += value;
+  }
+  return total;
 }
 
 /** A one-off process: never restarted and without a healthcheck (D5, WP-10 D2). */
