@@ -18,6 +18,18 @@ commit-msg:
 
 pre-push:
   jobs:
+    - name: pr-not-merged
+      # Commits pushed to a branch whose PR is already merged never reach main; it happened more
+      # than once. Passes when the current branch has an open PR or no merged one; refuses when its
+      # PR is merged. Fails open without gh, a login or the network: the check is a guard, not a gate.
+      run: |
+        branch=$(git branch --show-current)
+        command -v gh >/dev/null && gh auth status >/dev/null 2>&1 || exit 0
+        [ -n "$(gh pr list --head "$branch" --state open --json number --jq '.[].number')" ] && exit 0
+        merged=$(gh pr list --head "$branch" --state merged --json number --jq '.[0].number // empty')
+        [ -z "$merged" ] && exit 0
+        echo "PR #$merged of branch $branch is already merged: move the commits to a new branch from main." >&2
+        exit 1
     - name: verify
       # The same "am I done" gate as before a commit, so a red verify never reaches the remote
       # (a `pnpm verify | tail && git push` chain once pushed a failure: the pipe kept tail's exit
