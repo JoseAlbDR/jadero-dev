@@ -1,0 +1,183 @@
+# The services from their production images, hardened, on a laptop (WP-7 step 5; ADR-049 restating
+# ADR-048 "Images"; ADR-027 memory budget and port binding; docs/learning/wp-7.md D2, D4, D5).
+# Used on top of compose.dev.yml, which brings Postgres and RabbitMQ:
+#   pnpm images:up     build the three images and start everything, waiting for every healthcheck
+#   pnpm images:down   stop and remove the containers (the pgdata volume stays)
+# The services reach Postgres and RabbitMQ by service name on the Compose network, never 127.0.0.1.
+# Every value below is a fixed dev default from the .env.example files: no secret, nothing real.
+# Startup order (.claude/rules/infra.md): a service waits only for Postgres and for its own migrate
+# step; the broker consumers connect when RabbitMQ is ready and web reads api per request, so no
+# service waits for another at startup.
+# AI and mail providers stay fake (AGENTS.md section 7).
+# scripts/compose-hardening.test.mjs fails when a service loses the hardening, a memory limit or its
+# migrate dependency: a fitness function, like dependency-cruiser for imports.
+
+# Least privilege in four layers (D4), merged into every service with `<<: *hardened`. The images
+# already run as `node` (uid 1000) and own nothing they run. The merge is shallow: a service that
+# sets its own `tmpfs` must list /tmp again (web does).
+x-hardened: &hardened
+  # Nothing in the image can change; a compromised process cannot persist a backdoor.
+  read_only: true
+  # Ports above 1024 need no capability; no raw sockets, no chown, no setuid tricks.
+  cap_drop: [ALL]
+  # exec never gains privileges, so setuid programs such as `su` cannot reach root.
+  security_opt: ["no-new-privileges:true"]
+  # The only writable place: memory-backed, size-capped, gone at restart.
+  tmpfs: ["/tmp:size=16m"]
+
+# The one-off migrate step (WP-10 D2): no instrumentation, no server, so no healthcheck; it runs
+# once and its exit code gates the services that depend on it.
+x-migrate: &migrate
+  restart: "no"
+  healthcheck:
+    disable: true
+
+services:
+  api-migrate:
+    <<: [*hardened, *migrate]
+    image: jadero-api:dev
+    command: ["node", "dist/migrate.js"]
+    environment:
+      DATABASE_URL: postgres://content:content@postgres:5432/content_dev
+      NODE_OPTIONS: --max-old-space-size=225
+    # Same budget as the service it prepares (ADR-027 has no row for a one-off).
+    mem_limit: 300m
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: *hardened
+    image: jadero-api:dev
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: "3001"
+      LOG_LEVEL: info
+      DATABASE_URL: postgres://content:content@postgres:5432/content_dev
+      DATABASE_READ_URL: postgres://content_reader:content_reader@postgres:5432/content_dev
+      OTEL_SERVICE_NAME: api
+      # One line per span on stdout, as in dev; staging and production use otlp.
+      OTEL_TRACES_EXPORTER: pretty
+      # About 75% of mem_limit (ADR-027): V8 collects before the kernel kills the container.
+      NODE_OPTIONS: --max-old-space-size=225
+    ports:
+      - "127.0.0.1:3001:3001"
+    mem_limit: 300m
+    depends_on:
+      api-migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+
+  api-worker:
+    <<: *hardened
+    image: jadero-api:dev
+    command: ["node", "--import", "@jadero/platform-nest/instrumentation", "dist/worker.js"]
+    restart: unless-stopped
+    environment:
+      PORT: "3011"
+      SERVICE_NAME: api-worker
+      LOG_LEVEL: info
+      DATABASE_URL: postgres://content:content@postgres:5432/content_dev
+      RABBITMQ_URL: amqp://api:api@rabbitmq:5672/dev
+      # The dev default (5 minutes); HEARTBEAT_INTERVAL_MS=10000 pnpm images:up for a faster ping.
+      HEARTBEAT_INTERVAL_MS: ${HEARTBEAT_INTERVAL_MS:-300000}
+      OTEL_SERVICE_NAME: api-worker
+      OTEL_TRACES_EXPORTER: pretty
+      NODE_OPTIONS: --max-old-space-size=225
+    mem_limit: 300m
+    depends_on:
+      api-migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+
+  agent-migrate:
+    <<: [*hardened, *migrate]
+    image: jadero-agent:dev
+    command: ["node", "dist/migrate.js"]
+    environment:
+      DATABASE_URL: postgres://agent:agent@postgres:5432/agent_dev
+      NODE_OPTIONS: --max-old-space-size=384
+    mem_limit: 512m
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  agent:
+    <<: *hardened
+    image: jadero-agent:dev
+    build:
+      context: ../..
+      dockerfile: apps/agent/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: "3002"
+      LOG_LEVEL: info
+      DATABASE_URL: postgres://agent:agent@postgres:5432/agent_dev
+      OTEL_SERVICE_NAME: agent
+      OTEL_TRACES_EXPORTER: pretty
+      AI_CHAT_PROVIDER: fake
+      AI_GUARD_PROVIDER: fake
+      AI_EMBEDDINGS_PROVIDER: fake
+      AI_RERANK_PROVIDER: fake
+      NODE_OPTIONS: --max-old-space-size=384
+    ports:
+      - "127.0.0.1:3002:3002"
+    mem_limit: 512m
+    depends_on:
+      agent-migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+
+  # ADR-027's consumer row (`agent-ingest`, 256 MB): today's consumer process.
+  agent-consumer:
+    <<: *hardened
+    image: jadero-agent:dev
+    command: ["node", "--import", "@jadero/platform-nest/instrumentation", "dist/consumer.js"]
+    restart: unless-stopped
+    environment:
+      PORT: "3012"
+      SERVICE_NAME: agent-consumer
+      LOG_LEVEL: info
+      DATABASE_URL: postgres://agent:agent@postgres:5432/agent_dev
+      RABBITMQ_URL: amqp://agent:agent@rabbitmq:5672/dev
+      OTEL_SERVICE_NAME: agent-consumer
+      OTEL_TRACES_EXPORTER: pretty
+      AI_CHAT_PROVIDER: fake
+      AI_GUARD_PROVIDER: fake
+      AI_EMBEDDINGS_PROVIDER: fake
+      AI_RERANK_PROVIDER: fake
+      NODE_OPTIONS: --max-old-space-size=192
+    mem_limit: 256m
+    depends_on:
+      agent-migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+
+  web:
+    <<: *hardened
+    image: jadero-web:dev
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    # Next's server cache is on disk (fetch cache, optimized images): a second tmpfs, owned by the
+    # image's `node` user. Its pages count against mem_limit, like every tmpfs.
+    tmpfs:
+      - /tmp:size=16m
+      - /app/apps/web/.next/cache:size=64m,uid=1000,gid=1000,mode=0700
+    environment:
+      SITE_URL: http://localhost:3000
+      # The content API over the Compose network, read per request by the server.
+      CONTENT_API_URL: http://api:3001
+      CSP_MODE: enforce
+      NODE_OPTIONS: --max-old-space-size=240
+    ports:
+      - "127.0.0.1:3000:3000"
+    mem_limit: 320m

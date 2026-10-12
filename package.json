@@ -28,6 +28,9 @@
     "dev": "turbo run dev dev:worker --concurrency=20",
     "dev:up": "docker compose -f infra/compose/compose.dev.yml up -d --wait",
     "dev:down": "docker compose -f infra/compose/compose.dev.yml down",
+    "images:build": "docker compose -f infra/compose/compose.dev.yml -f infra/compose/compose.images.yml build",
+    "images:up": "pnpm images:build && docker compose -f infra/compose/compose.dev.yml -f infra/compose/compose.images.yml up -d --wait",
+    "images:down": "docker compose -f infra/compose/compose.dev.yml -f infra/compose/compose.images.yml down",
     "adr:new": "node scripts/adr/new.mjs",
     "adr:index": "node scripts/adr/index.mjs",
     "prepare": "lefthook install"
