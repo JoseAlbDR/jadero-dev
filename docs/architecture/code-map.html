@@ -1563,13 +1563,13 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "b-otel": {
       "label": "--import instrumentation", "sub": "before main.js", "kind": "step", "status": "real", "wp": "WP-3 step 7",
       "what": "The OpenTelemetry entry, `@jadero/platform-nest/instrumentation`, which Node runs before it loads `main.js`.",
-      "how": "It registers the ESM loader hook (`register(\"@opentelemetry/instrumentation/hook.mjs\", import.meta.url)`), validates `telemetryEnv` with `loadConfig` (a bad value exits 1 and names the variable), builds `NodeSDK` with http, express, pg, pino and amqplib instrumentations, starts it and keeps it for shutdown. With `OTEL_TRACES_EXPORTER=none`, the default, it starts nothing; dev sets `console` in `.env`.",
+      "how": "It registers the ESM loader hook (`register(\"@opentelemetry/instrumentation/hook.mjs\", import.meta.url)`), validates `telemetryEnv` with `loadConfig` (a bad value exits 1 and names the variable), builds `NodeSDK` with http, express, pg, pino and amqplib instrumentations, starts it and keeps it for shutdown. With `OTEL_TRACES_EXPORTER=none`, the default, it starts nothing; dev sets `pretty` in `.env`. Express middleware layers get no span, and pg queries only get one inside a parent span.",
       "why": "In ESM every import of `main.js` loads before its first line, so patching from inside `main.ts` would be too late and would silently produce no spans. A separate file loaded with `--import` is the only place early enough (WP-3 decision F1).",
       "files": ["packages/platform-nest/src/telemetry/instrumentation.ts", "packages/platform-nest/src/telemetry/create-sdk.ts", "packages/platform-nest/test/telemetry.test.ts", "packages/platform-nest/test/fixtures/otel-smoke.mjs"]
     },
     "telemetryenv": {
       "label": "telemetryEnv", "sub": "OTEL_* in platform-nest", "kind": "env", "status": "real", "wp": "WP-3 step 7",
-      "what": "The OpenTelemetry variables under their standard names: `OTEL_SERVICE_NAME` (required), `OTEL_TRACES_EXPORTER` (`console`, `otlp` or `none`, default `none`; `apps/api/.env.example` sets `console` for dev) and `OTEL_EXPORTER_OTLP_ENDPOINT`.",
+      "what": "The OpenTelemetry variables under their standard names: `OTEL_SERVICE_NAME` (required), `OTEL_TRACES_EXPORTER` (`pretty`, `console`, `otlp` or `none`, default `none`; the `.env.example` of `api` and `agent` sets `pretty` for dev) and `OTEL_EXPORTER_OTLP_ENDPOINT`.",
       "how": "A `z.object` with a `superRefine`: the endpoint is required when the exporter is `otlp`, and the error names `OTEL_EXPORTER_OTLP_ENDPOINT`.",
       "why": "Validated like every other config (ADR-043), so a typo in a deploy fails at start instead of quietly exporting nothing.",
       "files": ["packages/platform-nest/src/telemetry/telemetry-env.ts", "packages/platform-nest/test/telemetry.test.ts"]
@@ -2123,7 +2123,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "t-export": {
       "label": "span exporter", "sub": "none by default · console in dev", "kind": "step", "status": "real", "wp": "WP-3 step 7",
       "what": "Where finished spans go.",
-      "how": "`OTEL_TRACES_EXPORTER` picks it. `none`, the default, starts no SDK at all; `console` (set in `apps/api/.env.example` for dev) prints each span as it ends; `otlp` batches them to `OTEL_EXPORTER_OTLP_ENDPOINT/v1/traces`.",
+      "how": "`OTEL_TRACES_EXPORTER` picks it. `none`, the default, starts no SDK at all; `pretty` (set in the `.env.example` of `api` and `agent` for dev) prints each span as one line through `CompactSpanExporter` (short trace id, name, duration, `ERROR`, and only allowlisted attributes: method, route, status, db operation, messaging destination and routing key); `console` prints the full span object for deep debugging; `otlp` batches them to `OTEL_EXPORTER_OTLP_ENDPOINT/v1/traces`.",
       "why": "`none` by default so production never prints spans by accident. Console is enough to see traces locally; the OTLP collector and trace viewer come with the observability WPs (ADR-010).",
       "files": ["packages/platform-nest/src/telemetry/create-sdk.ts", "packages/platform-nest/src/telemetry/telemetry-env.ts"]
     },

@@ -10,6 +10,7 @@ const server = createServer((_req, res) => {
 });
 server.listen(0, "127.0.0.1", async () => {
   const { port } = server.address();
-  await fetch(`http://127.0.0.1:${port}/smoke`);
+  // The query string must never reach a printed span (telemetry.test.ts, pretty exporter).
+  await fetch(`http://127.0.0.1:${port}/smoke?token=abc`);
   server.close();
 });

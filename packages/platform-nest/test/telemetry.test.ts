@@ -4,11 +4,13 @@ import { Logger } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { context, trace } from "@opentelemetry/api";
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
+import { ExpressInstrumentation, ExpressLayerType } from "@opentelemetry/instrumentation-express";
+import { PgInstrumentation } from "@opentelemetry/instrumentation-pg";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ConfigError, parseConfig } from "../src/config/load-config.js";
 import { ProblemDetailsFilter } from "../src/errors/problem-details.filter.js";
-import { createTelemetrySdk } from "../src/telemetry/create-sdk.js";
+import { createTelemetrySdk, telemetryInstrumentations } from "../src/telemetry/create-sdk.js";
 import { TelemetryModule } from "../src/telemetry/telemetry.module.js";
 import { telemetryEnv } from "../src/telemetry/telemetry-env.js";
 import { setTelemetrySdk } from "../src/telemetry/telemetry-state.js";
@@ -39,9 +41,21 @@ describe("createTelemetrySdk", () => {
     expect(
       createTelemetrySdk({ OTEL_SERVICE_NAME: "api", OTEL_TRACES_EXPORTER: "none" }),
     ).toBeUndefined();
-    expect(
-      createTelemetrySdk({ OTEL_SERVICE_NAME: "api", OTEL_TRACES_EXPORTER: "console" }),
-    ).toBeInstanceOf(NodeSDK);
+    for (const exporter of ["pretty", "console"] as const) {
+      expect(
+        createTelemetrySdk({ OTEL_SERVICE_NAME: "api", OTEL_TRACES_EXPORTER: exporter }),
+      ).toBeInstanceOf(NodeSDK);
+    }
+  });
+
+  it("traces pg queries only inside a parent span", () => {
+    const pg = telemetryInstrumentations().find((i) => i instanceof PgInstrumentation);
+    expect(pg?.getConfig()).toMatchObject({ requireParentSpan: true });
+  });
+
+  it("skips express middleware spans, keeping routers and handlers", () => {
+    const express = telemetryInstrumentations().find((i) => i instanceof ExpressInstrumentation);
+    expect(express?.getConfig()).toMatchObject({ ignoreLayersType: [ExpressLayerType.MIDDLEWARE] });
   });
 });
 
@@ -103,6 +117,28 @@ describe("instrumentation entry (built dist, real node --import)", () => {
     expect(output).toContain("name: 'GET'");
     expect(output).toContain("'client.address': 'redacted'");
     expect(output).not.toMatch(/'(client|network\.peer)\.address': '\d/);
+  });
+
+  it("prints one compact line per span with pretty, without the query string or addresses", () => {
+    const entry = fileURLToPath(new URL("../dist/telemetry/instrumentation.js", import.meta.url));
+    const fixture = fileURLToPath(new URL("./fixtures/otel-smoke.mjs", import.meta.url));
+    const output = execFileSync(process.execPath, ["--import", entry, fixture], {
+      env: { PATH: process.env.PATH, OTEL_SERVICE_NAME: "smoke", OTEL_TRACES_EXPORTER: "pretty" },
+      encoding: "utf8",
+      timeout: 20_000,
+    });
+    const logLine = JSON.parse(
+      output.split("\n").find((line) => line.includes('"msg":"handled"')) ?? "{}",
+    );
+    const spans = output.split("\n").filter((line) => line.startsWith("[span] "));
+    // Only the server side is traced (fetch runs on undici, which is not instrumented).
+    expect(spans).toHaveLength(1);
+    expect(spans[0]).toMatch(
+      new RegExp(`^\\[span\\] ${logLine.trace_id.slice(0, 8)} GET \\d+ms method=GET status=200$`),
+    );
+    expect(output).not.toContain("token=");
+    expect(output).not.toContain("127.0.0.1");
+    expect(output).not.toContain("resource");
   });
 
   it("refuses to start with an invalid telemetry config, naming the variable", () => {
