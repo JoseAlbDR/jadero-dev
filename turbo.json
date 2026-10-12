@@ -49,6 +49,8 @@
     "//#test:scripts": {
       "inputs": [
         "scripts/**/*.mjs",
+        ".nvmrc",
+        "apps/*/Dockerfile",
         "turbo.json",
         "apps/*/turbo.json",
         "apps/*/package.json",

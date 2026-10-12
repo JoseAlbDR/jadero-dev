@@ -1,0 +1,18 @@
+# The build context of every image (WP-7): sources only. A small context builds faster, and no
+# local secret can reach a layer (ADR-043). Each image builds its own dist inside the build stage.
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+**/test-results
+**/playwright-report
+**/*.tsbuildinfo
+.git
+.claude
+docs
+
+# Secrets: every env file except the committed templates.
+**/.env
+**/.env.*
+!**/.env.example
