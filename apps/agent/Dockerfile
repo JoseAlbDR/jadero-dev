@@ -15,8 +15,15 @@ ARG NODE_IMAGE=node:24.21.0-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d0
 
 # ---- build: the whole workspace and its toolbox; none of it reaches the runtime image (D1) ----
 FROM ${NODE_IMAGE} AS build
+# Copy packages out of the store, never clone or hard-link them. The store is a cache mount, another
+# filesystem than the layers, so they are copied anyway. pnpm's default (`auto`) picks the method in
+# each worker from the first package it imports: when `pnpm deploy` meets a workspace package first
+# (a layer file, which a reflink filesystem such as btrfs can clone into /out) it settles on clone,
+# and the next package from the store fails with EXDEV. Seen on a fresh builder with the layer cache
+# imported and the store mount empty (2 of 5 builds); copy removes the race.
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
-    TURBO_TELEMETRY_DISABLED=1
+    TURBO_TELEMETRY_DISABLED=1 \
+    pnpm_config_package_import_method=copy
 WORKDIR /repo
 
 # Layers ordered by change rate: the lockfile changes about once a week, the sources on every commit.
