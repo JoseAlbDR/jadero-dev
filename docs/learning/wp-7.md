@@ -1,7 +1,7 @@
 ---
 wp: 7
-decision: pending
-adr: [ADR-048, ADR-025, ADR-042, ADR-043, ADR-027]
+decision: recorded
+adr: [ADR-049, ADR-042, ADR-043, ADR-027]
 ---
 
 # WP-7: Images and per-service release
@@ -468,7 +468,13 @@ The explainer is the gate, not a step. Each step ends with a green `pnpm verify`
 
 ## Decision
 
-Pending: your go on D1 to D9 and the implementation choices, and your answers to D11 to Q2.
+Recorded 2026-10-12 in [ADR-049](../adr/0049-images-release-and-image-scanning.md), which supersedes ADR-048 and ADR-025.
+
+- D1 to D9 and the implementation choices: go, no objections.
+- D10 (what Trivy blocks, scan in the `images` job of `ci.yml`): go as proposed.
+- D11 (Release PR token): go as proposed, `GITHUB_TOKEN` with the repository setting, a GitHub App as the fallback, never a classic token.
+- Q1: B, private images. The owner first leaned public after the recommendation, then chose private because going public is a one-way door: private keeps that option open, public closes it. The deploy (WP-9) pulls with its job's `GITHUB_TOKEN` (`packages: read`) through a temporary `DOCKER_CONFIG`, removed after the pull.
+- Q2: B, `apps/<service>/release-inputs.txt`. Asked for the cost of B and the consequence of A before answering; the researcher confirmed (2026-10-12) that release-please has no option to attribute root files to a package (`additional-paths` is only open PR #2534), so no cheaper middle option exists. Whether hosted Renovate may run the regenerate command as a `postUpgradeTasks` entry is verified after its first pull request.
 
 ## Step log
 

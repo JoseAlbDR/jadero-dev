@@ -1,7 +1,7 @@
 ---
 id: ADR-049
 title: "Images, release and image scanning"
-status: proposed
+status: accepted
 date: 2026-10-12
 deciders: [owner]
 decisions: [D-29, D-32, D-36, D-78, D-79]
@@ -12,7 +12,7 @@ source: docs/learning/wp-7.md (Decisions explained, Open questions, Decision)
 
 # ADR-049: Images, release and image scanning
 
-**Status:** proposed (owner's answers in WP-7, 2026-10-12). Supersedes ADR-048 and ADR-025 as a whole. It changes how built images are scanned and what blocks a pull request, which token opens the Release PR, how the server pulls images, which shared packages are release components, how a dependency-only change becomes a release, and it adds a signed build provenance. Everything else in ADR-048 and ADR-025 is restated unchanged by reference (section "Unchanged").
+**Status:** Accepted (owner, WP-7, 2026-10-12). Supersedes ADR-048 and ADR-025 as a whole. It changes how built images are scanned and what blocks a pull request, which token opens the Release PR, how the server pulls images, which shared packages are release components, how a dependency-only change becomes a release, and it adds a signed build provenance. Everything else in ADR-048 and ADR-025 is restated unchanged by reference (section "Unchanged").
 
 ## Context
 
