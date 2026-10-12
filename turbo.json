@@ -55,6 +55,9 @@
       "inputs": [
         "scripts/**/*.mjs",
         ".nvmrc",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "apps/*/release-inputs.txt",
         "apps/*/Dockerfile",
         "infra/compose/*.yml",
         "turbo.json",
