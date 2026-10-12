@@ -41,9 +41,11 @@ describe("createTelemetrySdk", () => {
     expect(
       createTelemetrySdk({ OTEL_SERVICE_NAME: "api", OTEL_TRACES_EXPORTER: "none" }),
     ).toBeUndefined();
-    expect(
-      createTelemetrySdk({ OTEL_SERVICE_NAME: "api", OTEL_TRACES_EXPORTER: "console" }),
-    ).toBeInstanceOf(NodeSDK);
+    for (const exporter of ["pretty", "console"] as const) {
+      expect(
+        createTelemetrySdk({ OTEL_SERVICE_NAME: "api", OTEL_TRACES_EXPORTER: exporter }),
+      ).toBeInstanceOf(NodeSDK);
+    }
   });
 
   it("traces pg queries only inside a parent span", () => {
@@ -115,6 +117,28 @@ describe("instrumentation entry (built dist, real node --import)", () => {
     expect(output).toContain("name: 'GET'");
     expect(output).toContain("'client.address': 'redacted'");
     expect(output).not.toMatch(/'(client|network\.peer)\.address': '\d/);
+  });
+
+  it("prints one compact line per span with pretty, without the query string or addresses", () => {
+    const entry = fileURLToPath(new URL("../dist/telemetry/instrumentation.js", import.meta.url));
+    const fixture = fileURLToPath(new URL("./fixtures/otel-smoke.mjs", import.meta.url));
+    const output = execFileSync(process.execPath, ["--import", entry, fixture], {
+      env: { PATH: process.env.PATH, OTEL_SERVICE_NAME: "smoke", OTEL_TRACES_EXPORTER: "pretty" },
+      encoding: "utf8",
+      timeout: 20_000,
+    });
+    const logLine = JSON.parse(
+      output.split("\n").find((line) => line.includes('"msg":"handled"')) ?? "{}",
+    );
+    const spans = output.split("\n").filter((line) => line.startsWith("[span] "));
+    // Only the server side is traced (fetch runs on undici, which is not instrumented).
+    expect(spans).toHaveLength(1);
+    expect(spans[0]).toMatch(
+      new RegExp(`^\\[span\\] ${logLine.trace_id.slice(0, 8)} GET \\d+ms method=GET status=200$`),
+    );
+    expect(output).not.toContain("token=");
+    expect(output).not.toContain("127.0.0.1");
+    expect(output).not.toContain("resource");
   });
 
   it("refuses to start with an invalid telemetry config, naming the variable", () => {

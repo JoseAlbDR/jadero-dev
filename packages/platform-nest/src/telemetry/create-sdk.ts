@@ -6,6 +6,7 @@ import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { PgInstrumentation } from "@opentelemetry/instrumentation-pg";
 import { PinoInstrumentation } from "@opentelemetry/instrumentation-pino";
 import { NodeSDK, tracing } from "@opentelemetry/sdk-node";
+import { CompactSpanExporter } from "./compact-span-exporter.js";
 import type { TelemetryEnv } from "./telemetry-env.js";
 
 /** Span attributes that would identify a visitor, replaced on every incoming request span. */
@@ -25,20 +26,33 @@ export const REDACTED_CLIENT_ATTRIBUTES = {
  */
 export function createTelemetrySdk(env: TelemetryEnv): NodeSDK | undefined {
   if (env.OTEL_TRACES_EXPORTER === "none") return undefined;
-  const spanProcessor =
-    env.OTEL_TRACES_EXPORTER === "otlp"
-      ? new tracing.BatchSpanProcessor(
-          new OTLPTraceExporter({ url: `${env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/traces` }),
-        )
-      : new tracing.SimpleSpanProcessor(new tracing.ConsoleSpanExporter());
   return new NodeSDK({
     serviceName: env.OTEL_SERVICE_NAME,
-    spanProcessors: [spanProcessor],
+    spanProcessors: [spanProcessorFor(env)],
     // Without these, sdk-node starts OTLP metric and log exporters to :4318 on its own (spike row 6).
     metricReaders: [],
     logRecordProcessors: [],
     instrumentations: telemetryInstrumentations(),
   });
+}
+
+/**
+ * Picks the span processor and exporter for `OTEL_TRACES_EXPORTER` (not `none`).
+ * @param env the validated telemetry variables.
+ * @returns a batch processor to the collector for `otlp`; a simple processor that prints each
+ * span as it ends for `pretty` (one line) and `console` (the full span object).
+ */
+function spanProcessorFor(env: TelemetryEnv): tracing.SpanProcessor {
+  switch (env.OTEL_TRACES_EXPORTER) {
+    case "otlp":
+      return new tracing.BatchSpanProcessor(
+        new OTLPTraceExporter({ url: `${env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/traces` }),
+      );
+    case "pretty":
+      return new tracing.SimpleSpanProcessor(new CompactSpanExporter());
+    default:
+      return new tracing.SimpleSpanProcessor(new tracing.ConsoleSpanExporter());
+  }
 }
 
 /**
