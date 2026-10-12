@@ -46,7 +46,7 @@ catalog:
   amqplib: 0.10.9
   dependency-cruiser: 18.5.0
   drizzle-kit: 0.31.11
-  drizzle-orm: 0.45.3
+  drizzle-orm: 0.45.4
   geist: 1.7.2
   hast-util-to-jsx-runtime: 2.3.6
   helmet: 8.3.0
