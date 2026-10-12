@@ -61,7 +61,7 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-046 | Archive the published artifact sources in the repo | accepted |  | [0046-archive-the-published-artifact-sources-in-the-repo.md](0046-archive-the-published-artifact-sources-in-the-repo.md) |
 | ADR-047 | HTTP hardening at the edge and in the apps | accepted | D-77 | [0047-http-hardening-at-the-edge-and-in-the-apps.md](0047-http-hardening-at-the-edge-and-in-the-apps.md) |
 | ADR-048 | CI pipeline and supply chain | superseded by ADR-049 | D-29, D-32, D-78 | [0048-ci-pipeline-and-supply-chain.md](0048-ci-pipeline-and-supply-chain.md) |
-| ADR-049 | Images, release and image scanning | proposed | D-29, D-32, D-36, D-78, D-79 | [0049-images-release-and-image-scanning.md](0049-images-release-and-image-scanning.md) |
+| ADR-049 | Images, release and image scanning | accepted | D-29, D-32, D-36, D-78, D-79 | [0049-images-release-and-image-scanning.md](0049-images-release-and-image-scanning.md) |
 <!-- adr-index:end -->
 
 Read in this order for a first pass: 029 (service boundaries), 002 (topology and edge), 003 (inside a service), 012 (async work), 031 (content layers), 013 to 016 (AI layer and RAG), 020 and 021 (security), 025 to 027 (delivery and hosting), 041 (work tracking).
