@@ -12,7 +12,7 @@
 .claude
 docs
 
-# Secrets: every env file except the committed templates.
+# Secrets: every env file, the committed templates too. No image needs them, and an exception
+# would also re-include the copies under .claude/worktrees/, whose churn breaks the build cache.
 **/.env
 **/.env.*
-!**/.env.example
