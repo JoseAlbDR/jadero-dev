@@ -87,6 +87,7 @@ Frontend WPs (`apps/web`, `apps/admin`, `packages/ui`) skip the gate: build to t
 - Never add tool attribution footers, model names or session links to commits, PR bodies or code.
 - Zod for every boundary; RFC 9457 problem details for errors; JSDoc on every new public method; no hard-coded UI strings (next-intl).
 - Owner voice for any user-facing copy and docs: plain English, no hype words, no em dashes.
+- Do not reinvent the wheel: when a maintained dependency, light or not, solves a problem we have, use it instead of writing our own; custom code only when the use case is very specific. The dependency still passes the usual gates (license, vulnerabilities, the update cooldown).
 - Tests: fakes and contract suites first; Testcontainers for anything that touches SQL or the broker; coverage gates of ADR-009.
 
 ## 7. Security and content rules (hard)
