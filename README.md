@@ -127,7 +127,8 @@ Every service is one image with several process types, picked by the command (AD
 | Postgres | `content_dev`, `agent_dev`, `contact_dev`, one role each | 5432 | `pnpm dev:up` waits for it |
 | RabbitMQ | AMQP, vhost `dev`; management UI | 5672, 15672 | `pnpm dev:up` waits for it |
 
-Every port binds to `127.0.0.1`. `pnpm dev` starts the second process types through each app's
+Every container port binds to `127.0.0.1`; the Node processes of `pnpm dev` listen on all
+interfaces. `pnpm dev` starts the second process types through each app's
 `dev:worker` script, which sets the port and `SERVICE_NAME` (3011 for `api-worker`, 3012 for the
 agent consumer).
 
@@ -262,7 +263,10 @@ runs, the security model and what to do when one goes red:
 - **A port is already in use** (`pnpm dev:up` fails on 5432 or 5672, or an app on 3000 to 3012).
   Another local Postgres, RabbitMQ or a running `pnpm images:up` holds it. Stop that process or
   container (`pnpm images:down` for the images), or change the published port in
-  `infra/compose/compose.dev.yml` locally and the matching URLs in your `.env` files.
+  `infra/compose/compose.dev.yml` locally (for example `127.0.0.1:55432:5432`; do not commit it)
+  and the matching URLs in your `.env` files: `DATABASE_URL` and `DATABASE_READ_URL` in
+  `apps/api/.env`, `DATABASE_URL` in `apps/agent/.env` (`RABBITMQ_URL` in both for 5672). `pnpm dev:up`
+  passes `-f`, so a `compose.override.yml` is not picked up.
 - **`pnpm lint` does something unexpected.** pnpm 11 runs a built-in command by that name instead
   of a script. Use `pnpm lint:check` and `pnpm lint:fix`.
 - **The editor says a workspace package "has no exported member".** Editors read the compiled
