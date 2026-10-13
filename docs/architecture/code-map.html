@@ -621,7 +621,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
         },
         {
           "type": "cards", "title": "What runs on GitHub (ADR-048, WP-6)",
-          "caption": "Eight required checks guard main: verify, integration, web, workflows-lint, pr-title, osv-scanner / osv-scan, dependency-review and secrets; WP-7's images check joins them once it has reported on main (ADR-049). Only pull_request triggers, permissions empty by default, actions pinned by SHA, caches saved only on a push to main.",
+          "caption": "Nine required checks guard main: verify, integration, web, workflows-lint, pr-title, osv-scanner / osv-scan, dependency-review, secrets and images (WP-7, required since it first reported on main, ADR-049). Only pull_request triggers, permissions empty by default, actions pinned by SHA, caches saved only on a push to main.",
           "cards": ["ci-ci", "ci-security", "ci-prtitle", "ci-supply"]
         }
       ]
