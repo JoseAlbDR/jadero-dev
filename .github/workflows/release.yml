@@ -120,6 +120,7 @@ jobs:
       # same build again on this builder: every layer comes from its local cache, so the pushed
       # image holds the bytes that were tested and scanned. Reads main's build cache, never writes.
       - name: Build the image
+        id: build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -251,14 +252,17 @@ jobs:
           cache-from: type=gha,scope=image-${{ matrix.service }}
 
       # The pushed image must be the one smoke-tested and scanned, before it is signed: same config
-      # digest (the image ID of the loaded build). With the SBOM the push is an index holding one
-      # linux/amd64 image manifest and one attestation manifest; the image manifest names the config.
+      # digest. The scanned one is BuildKit's containerimage.config.digest from the loaded build's
+      # metadata, not the local image ID: under Docker's containerd image store (Docker 29) the ID
+      # is the manifest or index digest. With the SBOM the push is an index holding one linux/amd64
+      # image manifest and one attestation manifest; the image manifest names the config.
       - name: Check the pushed image is the scanned one
         if: github.event_name == 'push'
         env:
           SERVICE: ${{ matrix.service }}
           IMAGE: ${{ steps.meta.outputs.image }}
           DIGEST: ${{ steps.push.outputs.digest }}
+          BUILD_METADATA: ${{ steps.build.outputs.metadata }}
         run: |
           manifest="$(docker buildx imagetools inspect --raw "$IMAGE@$DIGEST" \
             | jq -r --arg digest "$DIGEST" 'if has("manifests") then
@@ -266,7 +270,11 @@ jobs:
                 | if length == 1 then .[0].digest else error("not one linux/amd64 manifest") end
               else $digest end')"
           pushed="$(docker buildx imagetools inspect --raw "$IMAGE@$manifest" | jq -r .config.digest)"
-          scanned="$(docker image inspect "jadero-$SERVICE:release" --format '{{.Id}}')"
+          scanned="$(jq -r '."containerimage.config.digest" // empty' <<<"$BUILD_METADATA")"
+          if [ -z "$scanned" ]; then
+            echo "::error::$SERVICE: the build metadata has no config digest for the scanned image"
+            exit 1
+          fi
           if [ "$pushed" != "$scanned" ]; then
             echo "::error::$SERVICE: the pushed image ($pushed) is not the scanned one ($scanned)"
             exit 1
