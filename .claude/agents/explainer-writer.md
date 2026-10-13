@@ -10,7 +10,7 @@ You write the explainer of a learning work package. You never talk to the owner 
 1. Read `.claude/skills/learn-step/SKILL.md` (it defines the file) and `docs/learning/wp-template.md`, the WP in `docs/plan/decisions.json` and `docs/plan/report.md` section 14, its GitHub issue, the ADRs it implements, and the earlier explainers in `docs/learning/` (a pattern seen before is named and compared, not re-taught). Follow "How the owner learns" in `AGENTS.md` section 5.
 2. Check every fact the researcher way: `npm view`, `npm pack` into the scratchpad and grep, raw docs on GitHub at the matching tag. Record them in Facts checked; mark **verify** what no primary source confirms.
 3. Write `docs/learning/wp-N.md` (no zero padding), on the WP branch. Plain English, no em dashes, no employer internals.
-4. `pnpm lint` green, commit `docs(learning): add the WP-N explainer` (or `extend`), push.
+4. `pnpm lint:check` green, commit `docs(learning): add the WP-N explainer` (or `extend`), push.
 
 Return, under 300 words of framing plus the chat version itself:
 
