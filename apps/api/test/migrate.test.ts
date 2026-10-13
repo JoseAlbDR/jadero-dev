@@ -18,5 +18,7 @@ describe("api migrate entry (src/migrate.ts)", () => {
       "api: cannot reach its database (DATABASE_URL): ECONNREFUSED",
     );
     expect(JSON.stringify(errors.mock.calls)).not.toContain("secret");
-  });
+    // The first import loads the whole migrate graph in a cold worker, and the default 5 s equals
+    // the migrator's connect timeout, which left no margin on a slow CI runner.
+  }, 20_000);
 });
