@@ -53,6 +53,10 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close();
+  // The pool is the test's own (a value provider), so closing the app may leave it open. End it
+  // before the forced drop, which terminates open connections (57P01): an idle client would emit
+  // that error on a pool with no listener, and Vitest fails the run on the unhandled error.
+  if (!pool.ended) await pool.end();
   await drop();
 });
 
