@@ -163,9 +163,10 @@ jobs:
   # same pinned digest as ci.yml and release.yml. Pass 1: every vulnerability, OS and npm, all
   # severities, uploaded as SARIF to the Security tab (one category per service). Pass 2: fixable
   # CRITICAL only; when it finds any, the job opens an issue for the service, or comments on the
-  # one still open (deduplicated by its exact title). Neither pass fails the job: the Security tab
-  # and the issue are the signal. A pull that fails does: the manifest names a version whose image
-  # was never pushed. The issue body holds only advisory ids, packages, versions and the image tag.
+  # one still open (deduplicated by its exact title); when it finds none, it closes that open issue
+  # with a comment naming the clean image. Neither pass fails the job: the Security tab and the
+  # issue are the signal. A pull that fails does: the manifest names a version whose image was
+  # never pushed. The issue body holds only advisory ids, packages, versions and the image tag.
   image-scan:
     name: image-scan (${{ matrix.service }})
     needs: released-images
@@ -176,7 +177,7 @@ jobs:
       contents: read # check out .trivyignore.yaml
       packages: read # pull the private image from GHCR
       security-events: write # upload the SARIF result to the Security tab
-      issues: write # open the scan issue, or comment on the open one
+      issues: write # open, comment on or close the scan issue
     strategy:
       fail-fast: false
       matrix:
@@ -273,4 +274,26 @@ jobs:
             gh issue comment "$number" --body-file "$body"
           else
             gh issue create --title "$TITLE" --body-file "$body"
+          fi
+
+      # Closes only on a positive clean result: a failed pull or Trivy run fails the job first.
+      # Closed by hand while still vulnerable, it comes back as a new issue next week (the search
+      # sees open issues only); an accepted finding is muted in .trivyignore.yaml with a reason.
+      - name: Close the scan issue
+        if: steps.scan.outputs.count == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: "Weekly image scan: fixable CRITICAL in ${{ matrix.service }}"
+          IMAGE: ${{ steps.image.outputs.image }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          number="$(gh issue list --state open --search "\"$TITLE\" in:title" --limit 100 \
+            --json number,title \
+            | jq -r --arg title "$TITLE" 'map(select(.title == $title)) | first | .number // empty')"
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "Clean in \`$IMAGE\`: no fixable CRITICAL findings ($RUN_URL)."
+            gh issue close "$number" --reason completed
+          else
+            echo "No open scan issue to close"
           fi

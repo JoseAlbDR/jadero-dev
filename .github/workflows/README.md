@@ -30,7 +30,7 @@ Triggers: every `pull_request`, `push` to `main`, weekly schedule (Monday 05:41 
 | `osv-scanner-full / osv-scan` | push to `main`, weekly, manual | full scan of every lockfile against today's advisories. Does not fail on a finding (`fail-on-vuln: false`): findings land as alerts in the Security tab |
 | `dependency-review` | pull requests | licenses of added or changed dependencies; AGPL and GPL denied, LGPL and permissive pass. Vulnerability check off (OSV-Scanner owns it) |
 | `secrets` | every event | gitleaks over the PR's commits (base to head) on a PR, over the full history otherwise; locally `pnpm scan:secrets` |
-| `released-images`, `image-scan (<service>)` | weekly, manual | not a gate: pulls each released image (`.release-please-manifest.json`, version above 0.0.0) from GHCR and scans it with Trivy, OS and npm, all severities, into the Security tab (category `trivy-image-<service>`); on a fixable CRITICAL opens the issue "Weekly image scan: fixable CRITICAL in <service>", or comments on the open one. Skipped while nothing is released; a failed pull fails it |
+| `released-images`, `image-scan (<service>)` | weekly, manual | not a gate: pulls each released image (`.release-please-manifest.json`, version above 0.0.0) from GHCR and scans it with Trivy, OS and npm, all severities, into the Security tab (category `trivy-image-<service>`); on a fixable CRITICAL opens the issue "Weekly image scan: fixable CRITICAL in <service>", or comments on the open one; on a clean scan closes the open one. Skipped while nothing is released; a failed pull fails it |
 
 The reusable workflow's check is named `<caller job> / <called job>`, so the PR gate shows as
 `osv-scanner / osv-scan`. The PR also shows a separate check named plain `osv-scanner` from
@@ -114,9 +114,11 @@ a comment to the same issue.
 **Issue "Weekly image scan: fixable CRITICAL in <service>".** A released image carries a CRITICAL
 advisory with a fix available, published after the image was scanned at release. The issue lists
 the advisories, packages, installed and fixed versions and the image tag. Usual fix: the base
-digest or dependency update from Renovate, then a release of the service. Close the issue once the
-fixed version is released; a finding meanwhile adds a comment to the same issue. The full list,
-every severity, is in the Security tab.
+digest or dependency update from Renovate, then a release of the service. Lifecycle: opened by the
+first scan that finds one, commented on weekly while it stands, closed with a "Clean in `<image>`"
+comment by the first clean scan; closed by hand while it stands, a new issue opens the next week,
+so mute an accepted finding in `.trivyignore.yaml` with a reason instead. The full list, every
+severity, is in the Security tab.
 
 **A Trivy secret table in the log.** The image scans of `ci.yml` and `release.yml` print the secret
 table only when it holds a finding (with nothing found it is about 1,300 lines, one per file). A

@@ -250,6 +250,29 @@ jobs:
             org.opencontainers.image.version=${{ steps.meta.outputs.version }}
           cache-from: type=gha,scope=image-${{ matrix.service }}
 
+      # The pushed image must be the one smoke-tested and scanned, before it is signed: same config
+      # digest (the image ID of the loaded build). With the SBOM the push is an index holding one
+      # linux/amd64 image manifest and one attestation manifest; the image manifest names the config.
+      - name: Check the pushed image is the scanned one
+        if: github.event_name == 'push'
+        env:
+          SERVICE: ${{ matrix.service }}
+          IMAGE: ${{ steps.meta.outputs.image }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          manifest="$(docker buildx imagetools inspect --raw "$IMAGE@$DIGEST" \
+            | jq -r --arg digest "$DIGEST" 'if has("manifests") then
+                [.manifests[] | select(.platform.os == "linux" and .platform.architecture == "amd64")]
+                | if length == 1 then .[0].digest else error("not one linux/amd64 manifest") end
+              else $digest end')"
+          pushed="$(docker buildx imagetools inspect --raw "$IMAGE@$manifest" | jq -r .config.digest)"
+          scanned="$(docker image inspect "jadero-$SERVICE:release" --format '{{.Id}}')"
+          if [ "$pushed" != "$scanned" ]; then
+            echo "::error::$SERVICE: the pushed image ($pushed) is not the scanned one ($scanned)"
+            exit 1
+          fi
+          echo "$SERVICE: the pushed image is the scanned one ($pushed)"
+
       # Verify from anywhere: gh attestation verify oci://<image>:<version> --owner JoseAlbDR
       - name: Attest the build provenance
         if: github.event_name == 'push'
