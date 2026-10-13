@@ -2,9 +2,10 @@
 # On every push to main, release-please opens or updates the one combined Release PR from the
 # conventional commits, attributed to components by path (release-please-config.json). Merging
 # that PR tags each released component `<component>-v<version>`; for each released service the
-# images job builds the image once, smoke-tests it hardened, scans it with Trivy, pushes it to GHCR
-# as `:<version>` and `:sha-<short>` with a BuildKit SBOM, and signs a SLSA build provenance for
-# its digest (keyless: the job's OIDC token, a Sigstore certificate valid for minutes).
+# images job builds the image once from the commit the tag points at, smoke-tests it hardened,
+# scans it with Trivy, pushes it to GHCR as `:<version>` and `:sha-<short>` with a BuildKit SBOM,
+# and signs a SLSA build provenance for its digest (keyless: the job's OIDC token, a Sigstore
+# certificate valid for minutes).
 # A manual run is the dry run: it builds, smoke-tests and scans one service, and never logs in,
 # pushes or attests. Images stay private (ADR-049, registry B): the first push creates each
 # package private and nothing here changes that. The staging deploy arrives with WP-9.
@@ -24,11 +25,13 @@ on:
 # Nothing by default; each job lists what it needs.
 permissions: {}
 
-# One run at a time per branch, never cancelled: a release half done (a tag without its image)
-# is worse than a queued run. A newer pending run replaces an older pending one, which is safe:
-# release-please reads every commit and every merged Release PR still marked pending.
+# One run at a time per branch and event, never cancelled: a release half done (a tag without its
+# image) is worse than a queued run. A newer pending push run replaces an older pending one, which
+# is safe: release-please reads every commit and every merged Release PR still marked pending, and
+# the images job builds the commit it tagged. The event is in the group so a manual dry run never
+# replaces a pending push run, which would skip release-please for that push.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
@@ -48,21 +51,30 @@ jobs:
       releases_created: ${{ steps.release.outputs.releases_created }}
       paths_released: ${{ steps.release.outputs.paths_released }}
       services: ${{ steps.services.outputs.services }}
+      shas: ${{ steps.services.outputs.shas }}
     steps:
       - name: Run release-please
         id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
 
-      # Shared packages release too (node-workspace plugin), but only apps ship an image.
+      # Shared packages release too (node-workspace plugin), but only apps ship an image. Each
+      # service also gets the commit its tag points at (release-please's `<path>--sha` output):
+      # the merged Release PR, which is not GITHUB_SHA when this run replaced an older pending one.
       - name: Select the released services
         id: services
         env:
           PATHS_RELEASED: ${{ steps.release.outputs.paths_released }}
+          AGENT_SHA: ${{ steps.release.outputs['apps/agent--sha'] }}
+          API_SHA: ${{ steps.release.outputs['apps/api--sha'] }}
+          WEB_SHA: ${{ steps.release.outputs['apps/web--sha'] }}
         run: |
           services="$(jq -c '[.[] | select(IN("apps/agent", "apps/api", "apps/web"))
             | ltrimstr("apps/")] | sort' <<<"${PATHS_RELEASED:-[]}")"
+          shas="$(jq -nc --arg agent "$AGENT_SHA" --arg api "$API_SHA" --arg web "$WEB_SHA" \
+            '{agent: $agent, api: $api, web: $web} | with_entries(select(.value != ""))')"
           echo "services=$services" >> "$GITHUB_OUTPUT"
-          echo "Released services: $services"
+          echo "shas=$shas" >> "$GITHUB_OUTPUT"
+          echo "Released services: $services, tagged commits: $shas"
 
   images:
     name: images (${{ matrix.service }})
@@ -88,9 +100,30 @@ jobs:
       IMAGE_PREFIX: ghcr.io/josealbdr/jadero-dev
       TRIVY_IMAGE: aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa
     steps:
+      # A release builds the commit release-please tagged for this service, so the image holds
+      # exactly the code of its version even when a newer push reached main before this run. A
+      # manual dry run has no tag and builds the commit it was started on.
+      - name: Pick the commit
+        id: commit
+        env:
+          SERVICE: ${{ matrix.service }}
+          SHAS: ${{ needs.release-please.outputs.shas }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            sha="$(jq -r --arg service "$SERVICE" '.[$service] // empty' <<<"$SHAS")"
+          else
+            sha="$GITHUB_SHA"
+          fi
+          if ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::$SERVICE: no tagged commit to build ('$sha')"; exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "$SERVICE: building $sha"
+
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ steps.commit.outputs.sha }}
           persist-credentials: false
 
       # The version comes from the service's package.json, which the merged Release PR set to the
@@ -99,6 +132,7 @@ jobs:
         id: meta
         env:
           SERVICE: ${{ matrix.service }}
+          SHA: ${{ steps.commit.outputs.sha }}
         run: |
           case "$SERVICE" in agent|api|web) ;; *) echo "::error::unknown service"; exit 1 ;; esac
           version="$(jq -r .version "apps/$SERVICE/package.json")"
@@ -108,10 +142,10 @@ jobs:
             echo "image=$image"
             echo "tags<<EOF"
             echo "$image:$version"
-            echo "$image:sha-${GITHUB_SHA::7}"
+            echo "$image:sha-${SHA::7}"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
-          echo "$image:$version and :sha-${GITHUB_SHA::7}"
+          echo "$image:$version and :sha-${SHA::7}"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -133,7 +167,7 @@ jobs:
           tags: jadero-${{ matrix.service }}:release
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ steps.commit.outputs.sha }}
             org.opencontainers.image.version=${{ steps.meta.outputs.version }}
           cache-from: type=gha,scope=image-${{ matrix.service }}
 
@@ -247,7 +281,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ steps.commit.outputs.sha }}
             org.opencontainers.image.version=${{ steps.meta.outputs.version }}
           cache-from: type=gha,scope=image-${{ matrix.service }}
 

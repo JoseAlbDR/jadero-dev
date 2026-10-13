@@ -46,7 +46,7 @@ time, never cancelled: a tag without its image is worse than a queued run. Not a
 | Job (check name) | Runs on | Does |
 |---|---|---|
 | `release-please` | push to `main` | opens or updates the one Release PR from the conventional commits (components by path, `release-please-config.json`); merging it tags each released component `<component>-v<version>` and outputs the released services. Uses the job's `GITHUB_TOKEN`, so its PRs and tags start no workflow |
-| `images (<service>)` | push to `main` with a released service; manual | per released service: build, hardened smoke run, Trivy (a secret fails; HIGH and CRITICAL OS findings are reported only), then push to GHCR (private) as `:<version>` and `:sha-<short>` with a BuildKit SBOM, check the pushed image is the scanned one and attest its SLSA build provenance (keyless, Sigstore). The manual run builds, smoke-tests and scans one service and never logs in, pushes or attests |
+| `images (<service>)` | push to `main` with a released service; manual | per released service, from the commit its tag points at: build, hardened smoke run, Trivy (a secret fails; HIGH and CRITICAL OS findings are reported only), then push to GHCR (private) as `:<version>` and `:sha-<short>` with a BuildKit SBOM, check the pushed image is the scanned one and attest its SLSA build provenance (keyless, Sigstore). The manual run builds, smoke-tests and scans one service and never logs in, pushes or attests |
 
 Verify an image from anywhere: `gh attestation verify oci://<image>:<version> --owner JoseAlbDR`.
 
