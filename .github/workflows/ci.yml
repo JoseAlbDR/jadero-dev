@@ -477,11 +477,12 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           cache="$RUNNER_TEMP/trivy-cache"
-          mkdir -p "$cache"
+          report="$RUNNER_TEMP/trivy-report"
+          mkdir -p "$cache" "$report"
           # Trivy on the saved image in $tar, as the runner's user so the cache stays writable.
           trivy() {
             docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
-              -v "$tar:/image.tar:ro" -v "$cache:/cache" \
+              -v "$tar:/image.tar:ro" -v "$cache:/cache" -v "$report:/report" \
               -v "$GITHUB_WORKSPACE/.trivyignore.yaml:/trivyignore.yaml:ro" \
               "$TRIVY_IMAGE" image --input /image.tar --cache-dir /cache \
               --ignorefile /trivyignore.yaml --skip-version-check --disable-telemetry --quiet "$@"
@@ -490,7 +491,11 @@ jobs:
           for service in $(jq -r '.[]' <<<"$SERVICES"); do
             tar="$RUNNER_TEMP/$service.tar"
             docker save "jadero-$service:ci" -o "$tar"
-            if ! trivy --scanners secret --exit-code 1; then
+            # The secret table has a row per scanned file (about 1,300 lines with nothing found),
+            # so it goes to a file and is printed only when the scan fails.
+            if ! trivy --scanners secret --exit-code 1 --format table \
+              --output "/report/$service-secrets.txt"; then
+              if [ -s "$report/$service-secrets.txt" ]; then cat "$report/$service-secrets.txt"; fi
               echo "::error::$service: Trivy found a secret in the image"; failed=1
             fi
             gate=0

@@ -194,17 +194,20 @@ jobs:
           SERVICE: ${{ matrix.service }}
         run: |
           cache="$RUNNER_TEMP/trivy-cache"
+          report="$RUNNER_TEMP/trivy-report"
           tar="$RUNNER_TEMP/$SERVICE.tar"
-          mkdir -p "$cache"
+          mkdir -p "$cache" "$report"
           docker save "jadero-$SERVICE:release" -o "$tar"
           trivy() {
             docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
-              -v "$tar:/image.tar:ro" -v "$cache:/cache" \
+              -v "$tar:/image.tar:ro" -v "$cache:/cache" -v "$report:/report" \
               -v "$GITHUB_WORKSPACE/.trivyignore.yaml:/trivyignore.yaml:ro" \
               "$TRIVY_IMAGE" image --input /image.tar --cache-dir /cache \
               --ignorefile /trivyignore.yaml --skip-version-check --disable-telemetry --quiet "$@"
           }
-          if ! trivy --scanners secret --exit-code 1; then
+          # The secret table has a row per scanned file, so it is printed only on a finding.
+          if ! trivy --scanners secret --exit-code 1 --format table --output /report/secrets.txt; then
+            if [ -s "$report/secrets.txt" ]; then cat "$report/secrets.txt"; fi
             echo "::error::$SERVICE: Trivy found a secret in the image"; exit 1
           fi
           report="$(trivy --scanners vuln --pkg-types os --severity HIGH,CRITICAL --ignore-unfixed \
