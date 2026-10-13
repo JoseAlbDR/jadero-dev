@@ -10,6 +10,13 @@ import {
 } from "../../src/index.js";
 import { TEST_RETRY_TIERS_MS } from "./tiers.js";
 
+/**
+ * How long a contract case waits for the broker. Vitest's default of 1 s is too tight on a slow CI
+ * runner: the retry chain alone takes four deliveries plus 120 ms of tier delays, and a dead letter
+ * that lands after the case gives up survives the purge and shows up in the next case.
+ */
+const SETTLE = { timeout: 5_000 } as const;
+
 /** What a contract run needs from an adapter: the bus plus a way to look at its side queues. */
 export interface BusHarness {
   readonly bus: MessageBus;
@@ -76,7 +83,7 @@ export function messageBusContract(
       await harness.bus.start();
       const event = ping();
       await harness.bus.publish({ routingKey: systemPingV1.routingKey, envelope: event });
-      await vi.waitFor(() => expect(seen).toHaveLength(1));
+      await vi.waitFor(() => expect(seen).toHaveLength(1), SETTLE);
       expect(seen[0]).toMatchObject({ attempt: 1, queue: "test.a", envelope: { id: event.id } });
       expect(seen[0]?.envelope.data.trigger).toBe("manual");
     });
@@ -86,7 +93,7 @@ export function messageBusContract(
       const b = record("test.b");
       await harness.bus.start();
       await harness.bus.publish({ routingKey: systemPingV1.routingKey, envelope: ping() });
-      await vi.waitFor(() => expect([a.length, b.length]).toEqual([1, 1]));
+      await vi.waitFor(() => expect([a.length, b.length]).toEqual([1, 1]), SETTLE);
     });
 
     it("keeps messages for a stopped consumer and delivers them when it starts", async () => {
@@ -97,7 +104,7 @@ export function messageBusContract(
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(seen).toHaveLength(0);
       await harness.bus.start();
-      await vi.waitFor(() => expect(seen).toHaveLength(1));
+      await vi.waitFor(() => expect(seen).toHaveLength(1), SETTLE);
     });
 
     it("redelivers a retry to the failing queue only, with the next attempt number", async () => {
@@ -105,7 +112,7 @@ export function messageBusContract(
       const healthy = record("test.b");
       await harness.bus.start();
       await harness.bus.publish({ routingKey: systemPingV1.routingKey, envelope: ping() });
-      await vi.waitFor(() => expect(failing.map((d) => d.attempt)).toEqual([1, 2]));
+      await vi.waitFor(() => expect(failing.map((d) => d.attempt)).toEqual([1, 2]), SETTLE);
       await new Promise((resolve) => setTimeout(resolve, 100));
       expect(healthy).toHaveLength(1);
     });
@@ -114,7 +121,7 @@ export function messageBusContract(
       const seen = record("test.a", ["throw", "done"]);
       await harness.bus.start();
       await harness.bus.publish({ routingKey: systemPingV1.routingKey, envelope: ping() });
-      await vi.waitFor(() => expect(seen.map((d) => d.attempt)).toEqual([1, 2]));
+      await vi.waitFor(() => expect(seen.map((d) => d.attempt)).toEqual([1, 2]), SETTLE);
     });
 
     it("dead-letters after the last retry tier, and delivers it no more", async () => {
@@ -122,7 +129,10 @@ export function messageBusContract(
       await harness.bus.start();
       const event = ping();
       await harness.bus.publish({ routingKey: systemPingV1.routingKey, envelope: event });
-      await vi.waitFor(async () => expect(await harness.deadLetters("test.a")).toHaveLength(1));
+      await vi.waitFor(
+        async () => expect(await harness.deadLetters("test.a")).toHaveLength(1),
+        SETTLE,
+      );
       const [letter] = await harness.deadLetters("test.a");
       expect(letter).toMatchObject({ attempts: 4, envelope: { id: event.id } });
       expect(letter?.reason).toMatch(/retries exhausted/);
@@ -134,7 +144,10 @@ export function messageBusContract(
       const seen = record("test.a", ["dead"]);
       await harness.bus.start();
       await harness.bus.publish({ routingKey: systemPingV1.routingKey, envelope: ping() });
-      await vi.waitFor(async () => expect(await harness.deadLetters("test.a")).toHaveLength(1));
+      await vi.waitFor(
+        async () => expect(await harness.deadLetters("test.a")).toHaveLength(1),
+        SETTLE,
+      );
       expect(seen).toHaveLength(1);
     });
 
@@ -143,7 +156,10 @@ export function messageBusContract(
       await harness.bus.start();
       const bad = { ...ping(), data: { trigger: "cron" } } as unknown as Ping;
       await harness.bus.publish({ routingKey: systemPingV1.routingKey, envelope: bad });
-      await vi.waitFor(async () => expect(await harness.deadLetters("test.a")).toHaveLength(1));
+      await vi.waitFor(
+        async () => expect(await harness.deadLetters("test.a")).toHaveLength(1),
+        SETTLE,
+      );
       const [letter] = await harness.deadLetters("test.a");
       expect(letter?.reason).toBe("invalid dev.jadero.system.ping.v1: data.trigger");
       expect(seen).toHaveLength(0);
@@ -153,8 +169,10 @@ export function messageBusContract(
       record("test.a");
       await harness.bus.start();
       await harness.bus.publish({ routingKey: "system.pong.v1", envelope: ping() });
-      await vi.waitFor(async () =>
-        expect((await harness.unrouted()).map((m) => m.routingKey)).toEqual(["system.pong.v1"]),
+      await vi.waitFor(
+        async () =>
+          expect((await harness.unrouted()).map((m) => m.routingKey)).toEqual(["system.pong.v1"]),
+        SETTLE,
       );
     });
   });
