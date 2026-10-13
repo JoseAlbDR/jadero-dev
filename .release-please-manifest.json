@@ -1,9 +1,9 @@
 {
-  "apps/agent": "0.0.0",
-  "apps/api": "0.0.0",
-  "apps/web": "0.0.0",
+  "apps/agent": "0.1.0",
+  "apps/api": "0.1.0",
+  "apps/web": "0.1.0",
   "packages/contracts": "0.0.0",
-  "packages/messaging": "0.0.0",
-  "packages/platform-nest": "0.0.0",
+  "packages/messaging": "0.1.0",
+  "packages/platform-nest": "0.1.0",
   "packages/ui": "0.0.0"
 }

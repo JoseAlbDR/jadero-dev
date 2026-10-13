@@ -1,6 +1,6 @@
 {
   "name": "@jadero/platform-nest",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Bootstrap shared by the NestJS services: fail-fast config, structured logging, problem details, health checks, OpenTelemetry, the database connection (pg pool and Drizzle), app wiring. Infrastructure only, no domain code. Compiled to dist/.",
   "type": "module",
