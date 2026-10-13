@@ -58,9 +58,11 @@ After merging a Release PR:
    reads all of `main`.
 2. Check that the GitHub releases (`gh release list`) and the packages (the repository's Packages
    tab) are there.
-3. Verify the provenance of each new image with the command above. Reading a private package needs
-   the `read:packages` scope (`gh auth refresh -s read:packages`); GHCR answers "denied" both
-   without it and for an image that does not exist yet, so check step 1 first.
+3. Verify the provenance of each new image with the command above. The packages are private, and
+   `gh attestation verify` reads the registry with Docker's credentials, not with `gh`'s token: log
+   in once with `gh auth token | docker login ghcr.io -u <user> --password-stdin` (the token needs
+   the `read:packages` scope, `gh auth refresh -s read:packages`). GHCR answers "denied" both
+   without that login and for an image that does not exist yet, so check step 1 first.
 4. A service released for the first time creates its GHCR package with the repository's
    visibility, which is public. Set it private once (the package page, Package settings, Change
    visibility); there is no API for user packages. Later versions keep the setting.
