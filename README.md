@@ -2,7 +2,9 @@
 
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/JoseAlbDR/jadero-dev/badge)](https://scorecard.dev/viewer/?uri=github.com/JoseAlbDR/jadero-dev)
 
-Personal site v2: a multilingual portfolio (es, en, de) with an ask-me AI agent. Backend in NestJS (modular monolith plus services over RabbitMQ), frontend in Next.js, agent in LangGraph.js, hosted on the owner's Hetzner server.
+Personal site v2: a multilingual portfolio (es, en, de) with an ask-me AI agent. Backend in NestJS
+(modular monolith plus services over RabbitMQ), frontend in Next.js, agent in LangGraph.js, hosted
+on the owner's Hetzner server.
 
 Work in progress. Where things live:
 

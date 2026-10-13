@@ -107,6 +107,12 @@ digest update, or mute it in `.trivyignore.yaml` with a statement and an `expire
 the GitHub release without an image. Fix the cause and rerun the failed job; the dry run
 (`workflow_dispatch`, one service) reproduces the build, smoke run and scan without pushing.
 
+**A Release PR whose checks never start.** release-please opens it with the job's `GITHUB_TOKEN`,
+and events made with that token start no workflow on their own: the PR's runs wait for approval.
+Approve the pending workflow runs on the PR (its Checks tab, or the run page). If the PR shows no
+approval prompt at all, follow ADR-049's fallback: a GitHub App installed on this repository only
+replaces the token in the `release-please` job. Never a classic token.
+
 **`integration` red.** Run `pnpm test:int` with Docker up; one package with
 `pnpm --filter @jadero/<pkg> test:int`. Ryuk removes the containers even when a run crashes.
 
