@@ -285,7 +285,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 <script type="application/json" id="map-data">
 {
   "meta": {
-    "lastUpdated": "end of WP-6 · the CI pipeline on GitHub Actions, coverage gates per package and layer, declared task inputs, the consumer contract test, 2026-10-11",
+    "lastUpdated": "end of WP-7 · one image per service with its process types, the hardened runtime Compose, the images check, release-please and release.yml with Trivy, GHCR and signed provenance, the weekly image scan, 2026-10-13",
     "kinds": {
       "app": "deployable app", "pkg": "library package", "module": "Nest module", "provider": "provider",
       "token": "DI token", "ext": "external library", "global": "app-level wiring", "env": "environment",
@@ -604,7 +604,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     {
       "id": "build", "eyebrow": "6 · Build and tooling", "title": "From source to a checked commit",
-      "intro": "platform-nest is a real compiled package, not a path alias. Turborepo builds it before anything that depends on it, pnpm dev keeps both dist folders fresh while you edit, and the same checks run in pnpm verify and in the git hooks. Since WP-6 they also run on GitHub Actions for every pull request (ADR-048), with coverage gates, security scans and a release cooldown around them.",
+      "intro": "platform-nest is a real compiled package, not a path alias. Turborepo builds it before anything that depends on it, pnpm dev keeps both dist folders fresh while you edit, and the same checks run in pnpm verify and in the git hooks. Since WP-6 they also run on GitHub Actions for every pull request (ADR-048), with coverage gates, security scans and a release cooldown around them. Since WP-7 the same pull requests also build and scan the service images, and section 11 follows a merge to a released image.",
       "figures": [
         {
           "type": "steps", "title": "How api gets platform-nest",
@@ -621,7 +621,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
         },
         {
           "type": "cards", "title": "What runs on GitHub (ADR-048, WP-6)",
-          "caption": "Eight required checks guard main: verify, integration, web, workflows-lint, pr-title, osv-scanner / osv-scan, dependency-review and secrets. Only pull_request triggers, permissions empty by default, actions pinned by SHA, caches saved only on a push to main.",
+          "caption": "Eight required checks guard main: verify, integration, web, workflows-lint, pr-title, osv-scanner / osv-scan, dependency-review and secrets; WP-7's images check joins them once it has reported on main (ADR-049). Only pull_request triggers, permissions empty by default, actions pinned by SHA, caches saved only on a push to main.",
           "cards": ["ci-ci", "ci-security", "ci-prtitle", "ci-supply"]
         }
       ]
@@ -1200,6 +1200,280 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
           "cards": ["ct-d-d1", "ct-d-d2", "ct-d-q1", "ct-d-d4", "ct-d-d5", "ct-d-d6", "ct-d-q2", "ct-d-reader", "ct-d-version"]
         }
       ]
+    },
+    {
+      "id": "ship",
+      "eyebrow": "11 · Images and releases",
+      "title": "From a merge to a released image",
+      "intro": "Since WP-7 each service ships as one image, and the command picks the process type. The same image runs hardened on a laptop with `pnpm images:up`, is built and scanned on every pull request that affects it, and is released by release-please: one Release PR for every component, then per released service a build, a smoke run, a Trivy scan, a push to GHCR as a private package and a signed build provenance (ADR-049, which supersedes ADR-025 and ADR-048). The staging deploy arrives with WP-9.",
+      "figures": [
+        {
+          "type": "graph",
+          "title": "Three images, seven process types, one hardened Compose",
+          "viewBox": [
+            1000,
+            380
+          ],
+          "caption": "Each box in a lane runs from the same image; only the command differs. In `infra/compose/compose.images.yml`, over `compose.dev.yml`, every process runs read-only, with no capabilities, no new privileges, a size-capped `/tmp` and its ADR-027 memory limit, and waits only for Postgres and for its own migrate step to exit 0. web reads api over HTTP per request, so it waits for nobody at startup.",
+          "lanes": [
+            {
+              "x": 8,
+              "y": 10,
+              "w": 324,
+              "h": 360,
+              "label": "jadero-api · apps/api/Dockerfile"
+            },
+            {
+              "x": 338,
+              "y": 10,
+              "w": 324,
+              "h": 360,
+              "label": "jadero-agent · apps/agent/Dockerfile"
+            },
+            {
+              "x": 668,
+              "y": 10,
+              "w": 324,
+              "h": 360,
+              "label": "jadero-web · apps/web/Dockerfile"
+            }
+          ],
+          "place": {
+            "im-api": [
+              24,
+              46,
+              292,
+              58
+            ],
+            "pt-api-migrate": [
+              100,
+              146,
+              140,
+              50
+            ],
+            "pt-api": [
+              24,
+              252,
+              132,
+              54
+            ],
+            "pt-api-worker": [
+              184,
+              252,
+              132,
+              54
+            ],
+            "im-agent": [
+              354,
+              46,
+              292,
+              58
+            ],
+            "pt-agent-migrate": [
+              430,
+              146,
+              140,
+              50
+            ],
+            "pt-agent": [
+              354,
+              252,
+              132,
+              54
+            ],
+            "pt-agent-consumer": [
+              514,
+              252,
+              132,
+              54
+            ],
+            "im-web": [
+              684,
+              46,
+              292,
+              58
+            ],
+            "pt-web": [
+              764,
+              252,
+              140,
+              54
+            ]
+          },
+          "edges": [
+            {
+              "from": "im-api",
+              "to": "pt-api-migrate",
+              "label": "command",
+              "kind": "flow"
+            },
+            {
+              "from": "im-api",
+              "to": "pt-api",
+              "label": "default CMD",
+              "kind": "flow",
+              "via": [
+                [
+                  60,
+                  120
+                ],
+                [
+                  60,
+                  236
+                ]
+              ],
+              "hideLabel": true
+            },
+            {
+              "from": "im-api",
+              "to": "pt-api-worker",
+              "label": "command",
+              "kind": "flow",
+              "via": [
+                [
+                  280,
+                  120
+                ],
+                [
+                  280,
+                  236
+                ]
+              ],
+              "hideLabel": true
+            },
+            {
+              "from": "pt-api",
+              "to": "pt-api-migrate",
+              "label": "after exit 0",
+              "kind": "dep",
+              "hideLabel": true
+            },
+            {
+              "from": "pt-api-worker",
+              "to": "pt-api-migrate",
+              "label": "after exit 0",
+              "kind": "dep",
+              "labelAt": [
+                170,
+                226
+              ]
+            },
+            {
+              "from": "im-agent",
+              "to": "pt-agent-migrate",
+              "label": "command",
+              "kind": "flow"
+            },
+            {
+              "from": "im-agent",
+              "to": "pt-agent",
+              "label": "default CMD",
+              "kind": "flow",
+              "via": [
+                [
+                  390,
+                  120
+                ],
+                [
+                  390,
+                  236
+                ]
+              ],
+              "hideLabel": true
+            },
+            {
+              "from": "im-agent",
+              "to": "pt-agent-consumer",
+              "label": "command",
+              "kind": "flow",
+              "via": [
+                [
+                  610,
+                  120
+                ],
+                [
+                  610,
+                  236
+                ]
+              ],
+              "hideLabel": true
+            },
+            {
+              "from": "pt-agent",
+              "to": "pt-agent-migrate",
+              "label": "after exit 0",
+              "kind": "dep",
+              "hideLabel": true
+            },
+            {
+              "from": "pt-agent-consumer",
+              "to": "pt-agent-migrate",
+              "label": "after exit 0",
+              "kind": "dep",
+              "labelAt": [
+                500,
+                226
+              ]
+            },
+            {
+              "from": "im-web",
+              "to": "pt-web",
+              "label": "default CMD",
+              "kind": "flow"
+            },
+            {
+              "from": "pt-web",
+              "to": "pt-api",
+              "label": "HTTP per request · CONTENT_API_URL",
+              "kind": "flow",
+              "via": [
+                [
+                  834,
+                  340
+                ],
+                [
+                  90,
+                  340
+                ]
+              ],
+              "labelAt": [
+                500,
+                340
+              ]
+            }
+          ]
+        },
+        {
+          "type": "steps",
+          "title": "What happens after a merge to main (release.yml)",
+          "steps": [
+            "r-commits",
+            "r-releasepr",
+            "r-tags",
+            "r-build",
+            "r-smoke-scan",
+            "r-push",
+            "r-attest"
+          ]
+        },
+        {
+          "type": "cards",
+          "title": "Checks and pieces around the images (ADR-049, WP-7)",
+          "caption": "Three scans of one image, each with its own job: the pull request gate blocks only what the pull request brings in, the release scan reports, and the weekly scan of what is already released is the second channel.",
+          "cards": [
+            "sh-ci-images",
+            "sh-compose",
+            "sh-hardening",
+            "sh-baseimage",
+            "sh-release-config",
+            "sh-release-inputs",
+            "sh-image-scan",
+            "sh-trivyignore",
+            "sh-dockerignore",
+            "ci-supply"
+          ]
+        }
+      ]
     }
   ],
   "nodes": {
@@ -1207,8 +1481,8 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "label": "api", "sub": "@jadero/api", "kind": "app", "status": "real", "wp": "WP-3",
       "what": "The content, auth, media and CV service. It has the boot skeleton (validated config, logging, problem+json errors with request and trace ids, security headers, health endpoints, OpenTelemetry traces, the database connection from platform-nest), the outbox in content_dev, `POST /dev/ping` in development and its second process type `api-worker` (`dist/worker.js`: outbox relay and heartbeat; section 8). Since WP-10 its schema lives in Drizzle files and its migrations in `drizzle/` (section 9). Since WP-12 it has its first feature module, `content` (section 10): the content aggregates, the write use cases and the public read API under `/v1/content`, served from a second, read-only database role.",
       "how": "`start` and `dev` run `node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js`, so tracing starts before any import of `main.js`. `main.ts` then validates the environment, builds `AppModule.forRoot(config)` with `APP_OPTIONS`, applies `configureApp(app, env)` from platform-nest and listens on `PORT`. `db:generate` runs drizzle-kit over `drizzle.config.ts`; `db:migrate` runs `dist/migrate.js`, the one-off step that applies `drizzle/` to content_dev (0000 messaging, 0001 content schema, 0002 the `content_reader` grants, 0003 the posts feed index); `db:seed` runs `dist/seed.js`, which loads placeholder content through the content use cases (idempotent, by hand, never by a deploy). Runtime dependencies on `@jadero/platform-nest`, `@jadero/messaging` and `@jadero/contracts`; dev dependencies on `@jadero/config` (tsconfig, Vitest base) and `@jadero/testing` (integration test helpers). Its own runtime dependencies are Nest, Express, `pg`, `drizzle-orm`, rxjs, reflect-metadata and zod; drizzle-kit, supertest and Testcontainers are dev dependencies.",
-      "why": "ADR-001 splits the backend into services, and ADR-029 says each one owns its database and talks to the others only through events. api comes first because the site's content lives there. WP-12 (Q2 A) ships no write endpoint: WP-13 adds the admin controllers together with their guard.",
-      "files": ["apps/api/package.json", "apps/api/AGENTS.md", "apps/api/src/main.ts", "apps/api/src/app.module.ts", "apps/api/src/config/api-config.ts", "apps/api/src/modules/content/", "apps/api/src/seed.ts", "apps/api/drizzle.config.ts", "apps/api/src/migrate.ts"]
+      "why": "ADR-001 splits the backend into services, and ADR-029 says each one owns its database and talks to the others only through events. api comes first because the site's content lives there. WP-12 (Q2 A) ships no write endpoint: WP-13 adds the admin controllers together with their guard. Since WP-7 it ships as one image, `jadero-api`, whose command picks `api`, `api-worker` or `api-migrate` (section 11).",
+      "files": ["apps/api/package.json", "apps/api/Dockerfile", "apps/api/AGENTS.md", "apps/api/src/main.ts", "apps/api/src/app.module.ts", "apps/api/src/config/api-config.ts", "apps/api/src/modules/content/", "apps/api/src/seed.ts", "apps/api/drizzle.config.ts", "apps/api/src/migrate.ts"]
     },
     "ws-platform": {
       "label": "platform-nest", "sub": "@jadero/platform-nest", "kind": "pkg", "status": "real", "wp": "WP-3",
@@ -1235,8 +1509,8 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "label": "agent", "sub": "@jadero/agent", "kind": "app", "status": "real", "wp": "WP-5",
       "what": "The knowledge, chat, guards and usage service. Today it is the skeleton: an HTTP process with health checks and a consumer process that reads system.ping.v1 into its own broker_heartbeat table through the inbox.",
       "how": "Two process types from one codebase: `dist/main.js` (HTTP, port 3002, ready when its database answers) and `dist/consumer.js` (port 3012 for health only, ready when Postgres and RabbitMQ answer; `agent-ingest` from WP-20). `HeartbeatConsumer` subscribes to `agent.system.ping` and runs `recordInInbox` and the heartbeat upsert inside one `withTransaction`. `pnpm --filter @jadero/agent db:migrate` applies `drizzle/` to agent_dev: `0000_enable_vector` (a no-op where provisioning created `vector`) and `0001_messaging_and_heartbeat` (the inbox and `heartbeat.broker_heartbeat`).",
-      "why": "ADR-029: agent owns agent_dev and learns about other services only from events; the agent never calls api. The consumer is its own process so a slow or failing consumer never takes the chat down (report section 3.2).",
-      "files": ["apps/agent/AGENTS.md", "apps/agent/src/main.ts", "apps/agent/src/consumer.ts", "apps/agent/src/modules/heartbeat/", "apps/agent/drizzle/", "apps/agent/src/migrate.ts"]
+      "why": "ADR-029: agent owns agent_dev and learns about other services only from events; the agent never calls api. The consumer is its own process so a slow or failing consumer never takes the chat down (report section 3.2). Since WP-7 both processes and `agent-migrate` run from one image, `jadero-agent` (section 11).",
+      "files": ["apps/agent/AGENTS.md", "apps/agent/Dockerfile", "apps/agent/src/main.ts", "apps/agent/src/consumer.ts", "apps/agent/src/modules/heartbeat/", "apps/agent/drizzle/", "apps/agent/src/migrate.ts"]
     },
     "ws-contact": {
       "label": "contact", "sub": "planned · WP-11", "kind": "app", "status": "planned", "wp": "WP-11",
@@ -1255,9 +1529,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "ws-web": {
       "label": "web", "sub": "@jadero/web", "kind": "app", "status": "real", "wp": "WP-4, WP-16",
       "what": "The public multilingual site (en, es, de) on Next.js 16. Since WP-16 every public page is real and reads api's public content API: the home (hero, agent terminal, pillar strip, stack tile, featured case study), experience, projects and one project, stack, the blog and one post, the work log and one entry. Around them: the site shell with a phone menu over the ADR-045 glass design, a safe Markdown pipeline for content bodies, one head builder for metadata with Open Graph and Twitter cards, `/sitemap.xml` and `/robots.txt`, an enforced nonce CSP and an open-redirect guard in the proxy. The WP-15 mockups are gone.",
-      "how": "`next build` with `output: \"standalone\"`, then `scripts/copy-standalone-assets.mjs` copies `.next/static` and `public/` next to `server.js`; `pnpm start` runs that server the way the image will. Every page renders per request (a fresh CSP nonce each time); content comes from `CONTENT_API_URL` through Next's fetch cache (section 7). Runtime dependencies on `@jadero/ui` (just-in-time: Next compiles its source through `transpilePackages`) and `@jadero/contracts` (the Zod schemas of the content API, used to parse every answer); dev dependency on `@jadero/config` for the tsconfig base and Vitest. Environment: `SITE_URL`, `CONTENT_API_URL` (server only, read per request, no default), `CSP_MODE` (`enforce` by default, `report-only` to opt out) and `CONTENT_API_DEBUG` (development only). `pnpm test` runs the message key check and the unit tests of the client, the CSP, the redirect guard, the proxy, the Markdown pipeline, the head, sitemap and robots builders and the page helpers; `pnpm test:e2e` runs Playwright, axe and the JavaScript budget against the standalone build and a stub content API.",
+      "how": "`next build` with `output: \"standalone\"`, then `scripts/copy-standalone-assets.mjs` copies `.next/static` and `public/` next to `server.js`; `pnpm start` runs that server the way the image does (`apps/web/Dockerfile`, section 11). Every page renders per request (a fresh CSP nonce each time); content comes from `CONTENT_API_URL` through Next's fetch cache (section 7). Runtime dependencies on `@jadero/ui` (just-in-time: Next compiles its source through `transpilePackages`) and `@jadero/contracts` (the Zod schemas of the content API, used to parse every answer); dev dependency on `@jadero/config` for the tsconfig base and Vitest. Environment: `SITE_URL`, `CONTENT_API_URL` (server only, read per request, no default), `CSP_MODE` (`enforce` by default, `report-only` to opt out) and `CONTENT_API_DEBUG` (development only). `pnpm test` runs the message key check and the unit tests of the client, the CSP, the redirect guard, the proxy, the Markdown pipeline, the head, sitemap and robots builders and the page helpers; `pnpm test:e2e` runs Playwright, axe and the JavaScript budget against the standalone build and a stub content API.",
       "why": "ADR-022 (next-intl, `localePrefix: always`, English default from D-19, cookie, hreflang), ADR-023 and ADR-045 (Tailwind v4 tokens, shadcn/ui in packages/ui, next-themes, Bento glass), ADR-011 (Markdown, never MDX), ADR-047 (CSP, open redirects) and ADR-026 (standalone output for the image). AGENTS.md rule 2: web is the edge, so its server may call api over HTTP. Result-only frontend: no learning gate.",
-      "files": ["apps/web/package.json","apps/web/next.config.ts","apps/web/src/proxy.ts","apps/web/src/security/","apps/web/src/content/","apps/web/src/markdown/","apps/web/src/seo/","apps/web/src/app/sitemap.ts","apps/web/src/app/robots.ts","apps/web/src/config/site.ts","apps/web/src/i18n/","apps/web/src/app/[locale]/","apps/web/src/components/","apps/web/messages/","apps/web/e2e/"]
+      "files": ["apps/web/package.json","apps/web/Dockerfile","apps/web/next.config.ts","apps/web/src/proxy.ts","apps/web/src/security/","apps/web/src/content/","apps/web/src/markdown/","apps/web/src/seo/","apps/web/src/app/sitemap.ts","apps/web/src/app/robots.ts","apps/web/src/config/site.ts","apps/web/src/i18n/","apps/web/src/app/[locale]/","apps/web/src/components/","apps/web/messages/","apps/web/e2e/"]
     },
     "ws-admin": {
       "label": "admin", "sub": "planned · R1", "kind": "app", "status": "planned", "wp": "R1",
@@ -1743,16 +2017,16 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["turbo.json"]
     },
     "c-verify": {
-      "label": "pnpm verify", "sub": "turbo run lint depcruise typecheck test test:scripts --affected && pnpm check:migrations", "kind": "check", "status": "real", "wp": "WP-1, WP-6",
+      "label": "pnpm verify", "sub": "turbo run lint:check depcruise typecheck test test:scripts --affected && pnpm check:migrations", "kind": "check", "status": "real", "wp": "WP-1, WP-6, WP-7",
       "what": "The single \"am I done\" command, run before every commit and again after merging main.",
-      "how": "Turborepo runs Biome, dependency-cruiser, typecheck, unit tests with coverage and the script tests for affected packages only, cached; then `pnpm check:migrations` runs outside Turborepo, because its input is git history, which no cache key sees. `pnpm verify:all` runs everything (on main and in CI on a push to main and weekly). The lefthook `pre-push` hook fetches main and runs `pnpm verify`, so a red verify never reaches the remote; CI's `verify` job runs it again on the pull request.",
+      "how": "Turborepo runs Biome, dependency-cruiser, typecheck, unit tests with coverage and the script tests for affected packages only, cached; then `pnpm check:migrations` runs outside Turborepo, because its input is git history, which no cache key sees. `pnpm verify:all` runs everything (on main and in CI on a push to main and weekly). The lefthook `pre-push` hook fetches main and runs `pnpm verify`, so a red verify never reaches the remote; CI's `verify` job runs it again on the pull request. Since WP-7 `test:scripts` also runs the image checks of section 11: the Compose hardening, the base image pin and the staleness of each `release-inputs.txt`. The Biome task is `lint:check`, not `lint`: pnpm 11 runs a built-in command when you type `pnpm lint`, so the script by that name never ran.",
       "why": "One command, one answer (AGENTS.md section 3).",
       "files": ["package.json", "turbo.json", "scripts/check-migrations.mjs"]
     },
     "c-biome": {
-      "label": "Biome", "sub": "biome ci . · format and lint", "kind": "check", "status": "real", "wp": "WP-1",
+      "label": "Biome", "sub": "pnpm lint:check · biome ci .", "kind": "check", "status": "real", "wp": "WP-1, WP-7",
       "what": "Formatting and single-file lint.",
-      "how": "Recommended rules, 100 columns, double quotes. An override for the Nest paths enables parameter decorators and turns off `useImportType` and `noStaticOnlyClass`.",
+      "how": "`pnpm lint:check` (Turborepo task `//#lint:check`) checks and never writes; `pnpm lint:fix` formats and applies safe fixes. Recommended rules, 100 columns, double quotes. An override for the Nest paths enables parameter decorators and turns off `useImportType` and `noStaticOnlyClass`.",
       "why": "WP-3 amendment S1: Biome's `import type` fix would erase DI tokens and break injection.",
       "files": ["biome.json"]
     },
@@ -2030,16 +2304,16 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["infra/compose/compose.dev.yml"]
     },
     "ci-ci": {
-      "label": "ci.yml", "sub": "verify · integration · web · workflows-lint", "kind": "check", "status": "real", "wp": "WP-6",
+      "label": "ci.yml", "sub": "verify · integration · web · images · workflows-lint", "kind": "check", "status": "real", "wp": "WP-6, WP-7",
       "what": "The build and test workflow: on every pull request, on a push to main, weekly and by hand.",
-      "how": "`verify` runs `pnpm verify` on the tasks affected since the PR base, `pnpm verify:all` on main, and prints the coverage table. `integration` runs `test:int` and `web` runs `test:e2e`, both affected only on a PR. `workflows-lint` runs zizmor offline over the workflows (`pnpm lint:workflows` locally). The weekly run forces every task without the Turborepo cache, and `backstop-issue` opens or comments one issue when it fails. A new push cancels a PR's outdated run.",
+      "how": "`verify` runs `pnpm verify` on the tasks affected since the PR base, `pnpm verify:all` on main, and prints the coverage table. `integration` runs `test:int` and `web` runs `test:e2e`, both affected only on a PR. `images` (WP-7) builds, smoke-tests and scans the affected service images (section 11). `workflows-lint` runs zizmor offline over the workflows (`pnpm lint:workflows` locally). The weekly run forces every task without the Turborepo cache, and `backstop-issue` opens or comments one issue when it fails. A new push cancels a PR's outdated run.",
       "why": "ADR-048: the same commands as on the laptop, so CI never holds logic of its own. Restoring caches everywhere but saving them only on main means a PR cannot poison a cache main reads; the uncached weekly run catches a green replayed from a stale cache.",
       "files": [".github/workflows/ci.yml", ".github/workflows/README.md", "scripts/ci/coverage-summary.mjs"]
     },
     "ci-security": {
-      "label": "security.yml", "sub": "OSV-Scanner · dependency-review · gitleaks", "kind": "check", "status": "real", "wp": "WP-6",
+      "label": "security.yml", "sub": "OSV-Scanner · dependency-review · gitleaks · image-scan", "kind": "check", "status": "real", "wp": "WP-6, WP-7",
       "what": "Vulnerabilities, licenses and secrets, on every pull request, on main and weekly.",
-      "how": "On a PR, OSV-Scanner scans the lockfiles at the base and at the merge commit and fails only on vulnerabilities the PR adds; on main and weekly a full scan reports findings to the Security tab without failing. `dependency-review` denies AGPL and GPL licenses. `secrets` runs gitleaks over the PR's commits, or the full history elsewhere (`pnpm scan:secrets` locally); a reviewed false positive goes in `.gitleaksignore` by fingerprint. No `paths:` filter, so the required checks always report.",
+      "how": "On a PR, OSV-Scanner scans the lockfiles at the base and at the merge commit and fails only on vulnerabilities the PR adds; on main and weekly a full scan reports findings to the Security tab without failing. `dependency-review` denies AGPL and GPL licenses. `secrets` runs gitleaks over the PR's commits, or the full history elsewhere (`pnpm scan:secrets` locally); a reviewed false positive goes in `.gitleaksignore` by fingerprint. Since WP-7, weekly and by hand, `released-images` and `image-scan` scan the released images from GHCR (section 11). No `paths:` filter, so the required checks always report.",
       "why": "ADR-048: a diff gate keeps a PR from being blocked by an advisory published for something already on main, which the weekly scan and Renovate handle instead.",
       "files": [".github/workflows/security.yml", ".gitleaksignore", "SECURITY.md"]
     },
@@ -2051,11 +2325,11 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": [".github/workflows/pr-title.yml", ".github/workflows/scorecard.yml", "commitlint.config.mjs"]
     },
     "ci-supply": {
-      "label": "Renovate · release cooldown", "sub": "renovate.json · minimumReleaseAge 3 days", "kind": "check", "status": "real", "wp": "WP-6",
+      "label": "Renovate · release cooldown", "sub": "renovate.json · minimumReleaseAge 3 days", "kind": "check", "status": "real", "wp": "WP-6, WP-7",
       "what": "Dependency updates grouped and weekly, and no install of a version younger than three days.",
-      "how": "Renovate opens grouped updates weekly, three days after release, never automerged, with a dashboard issue. pnpm's `minimumReleaseAge: 4320` (minutes) in `pnpm-workspace.yaml` makes the install fail in CI for a younger version; an urgent fix goes under `minimumReleaseAgeExclude` with a reason and a date to drop it.",
+      "how": "Renovate opens grouped updates weekly, three days after release, never automerged, with a dashboard issue. pnpm's `minimumReleaseAge: 4320` (minutes) in `pnpm-workspace.yaml` makes the install fail in CI for a younger version; an urgent fix goes under `minimumReleaseAgeExclude` with a reason and a date to drop it. Since WP-7 an update that changes what an image runs (a runtime package in the catalog, the base image in a Dockerfile) is titled `fix(deps)`, so its squash commit releases the services it reaches once `pnpm release-inputs` is run on the branch; dev tools stay `chore(deps)`; Node in `.nvmrc` and the Dockerfiles' base move in one `node` group; the Trivy image from Docker Hub is tracked with gitleaks and zizmor.",
       "why": "ADR-048 supply chain (WP-6 D9): most malicious npm releases are found and pulled within days, so waiting three keeps them out at little cost.",
-      "files": ["renovate.json", "pnpm-workspace.yaml"]
+      "files": ["renovate.json", "pnpm-workspace.yaml", "apps/*/release-inputs.txt"]
     },
     "c-build": {
       "label": "pnpm build", "sub": "turbo run build · every dist/", "kind": "check", "status": "real", "wp": "WP-3",
@@ -2896,6 +3170,188 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "how": "A breaking change adds `version: \"2\"` next to v1, which then carries Deprecation and Sunset until its traffic stops.",
       "why": "Expand/contract for HTTP, like event versions; the version is visible in logs and cache keys.",
       "files": ["docs/learning/wp-12.md"]
+    },
+    "im-api": {
+      "label": "jadero-api", "sub": "multi-stage · non-root · HEALTHCHECK", "kind": "file", "status": "real", "wp": "WP-7",
+      "what": "The api image: Node 24 slim, the compiled service and its production dependencies, nothing else.",
+      "how": "Built from the repository root. The build stage runs `pnpm fetch` from the lockfile alone (a layer that survives every source edit, with the pnpm store as a BuildKit cache mount), then the offline install with `--ignore-scripts`, `turbo run build --filter=@jadero/api...` and `pnpm --filter @jadero/api --prod deploy /out`. The runtime stage deletes npm, npx, corepack and yarn, copies `/out` owned by root so the `node` user can read but not rewrite its code, and runs as `node`. The `HEALTHCHECK` calls `/health/ready` with Node's own fetch (the slim image has no curl). Exec-form `CMD`, so Node is process 1 and gets SIGTERM.",
+      "why": "ADR-049 restating ADR-048's Images section (WP-7 D1 to D5): the build toolbox never reaches the runtime image, the base is pinned by digest, no secret is baked in (ADR-043). The healthcheck is readiness, which is safe because Docker never restarts an unhealthy container.",
+      "files": ["apps/api/Dockerfile",".dockerignore","apps/api/package.json"]
+    },
+    "im-agent": {
+      "label": "jadero-agent", "sub": "multi-stage · non-root · HEALTHCHECK", "kind": "file", "status": "real", "wp": "WP-7",
+      "what": "The agent image, built the same way as api's.",
+      "how": "Same stages as `jadero-api` with `--filter @jadero/agent`, port 3002. The default command is the HTTP server; `agent-consumer` and `agent-migrate` are the same image with another command.",
+      "why": "One image per service with process types as commands (ADR-049 restating ADR-048): what was tested for one process is what runs for the others.",
+      "files": ["apps/agent/Dockerfile"]
+    },
+    "im-web": {
+      "label": "jadero-web", "sub": "Next standalone · non-root", "kind": "file", "status": "real", "wp": "WP-7",
+      "what": "The web image: the Next.js standalone server and the files it traced, nothing else.",
+      "how": "No `pnpm deploy`: `next build` with `output: \"standalone\"` copies only what the server needs. `SITE_URL` is a placeholder on `build.invalid` at build time only; every real value comes from the environment at run time. `HOSTNAME=0.0.0.0`, so the server is reachable on 127.0.0.1 for the healthcheck, which fetches `/robots.txt` (web has no health route and robots needs no content API). `.next/cache` is the one folder `node` may write; Compose mounts a size-capped tmpfs over it.",
+      "why": "ADR-026 (standalone output) and ADR-049. The config is read at run time, so one image runs in every environment (build once, deploy many).",
+      "files": ["apps/web/Dockerfile","apps/web/scripts/copy-standalone-assets.mjs"]
+    },
+    "pt-api-migrate": {
+      "label": "api-migrate", "sub": "node dist/migrate.js", "kind": "step", "status": "real", "wp": "WP-7",
+      "what": "The one-off step that applies api's migrations to content_dev, then exits.",
+      "how": "In Compose: `restart: \"no\"`, healthcheck disabled, the same 300 MB budget as api, and it waits for Postgres to be healthy. api and api-worker start only after it exits 0 (`service_completed_successfully`).",
+      "why": "WP-10 D2: migrations run once, before the new code, never from the server's boot. A failed migration stops the deploy instead of starting code against the wrong schema.",
+      "files": ["infra/compose/compose.images.yml","apps/api/src/migrate.ts"]
+    },
+    "pt-api": {
+      "label": "api", "sub": "dist/main.js · :3001", "kind": "step", "status": "real", "wp": "WP-7",
+      "what": "The HTTP server, the image's default command.",
+      "how": "`node --import @jadero/platform-nest/instrumentation dist/main.js`. In Compose: 300 MB limit, heap 224 MB, port 3001 bound to 127.0.0.1, both database URLs over the Compose network.",
+      "why": "Heap plus every tmpfs stays at most 80% of the limit, so V8 collects before the kernel kills the container (ADR-027).",
+      "files": ["infra/compose/compose.images.yml"]
+    },
+    "pt-api-worker": {
+      "label": "api-worker", "sub": "dist/worker.js", "kind": "step", "status": "real", "wp": "WP-7",
+      "what": "The outbox relay and the heartbeat, from the api image.",
+      "how": "Same image, command `dist/worker.js`, port 3011 for health only, the broker at `rabbitmq:5672/dev`. 300 MB limit.",
+      "why": "A second process type, not a second image (ADR-049): the relay ships with the exact code that writes the outbox.",
+      "files": ["infra/compose/compose.images.yml","apps/api/src/worker.ts"]
+    },
+    "pt-agent-migrate": {
+      "label": "agent-migrate", "sub": "node dist/migrate.js", "kind": "step", "status": "real", "wp": "WP-7",
+      "what": "The one-off step that applies agent's migrations to agent_dev.",
+      "how": "Like `api-migrate`: no restart, no healthcheck, 512 MB, after Postgres is healthy.",
+      "why": "WP-10 D2, as for api.",
+      "files": ["infra/compose/compose.images.yml","apps/agent/src/migrate.ts"]
+    },
+    "pt-agent": {
+      "label": "agent", "sub": "dist/main.js · :3002", "kind": "step", "status": "real", "wp": "WP-7",
+      "what": "The agent HTTP server, the image's default command.",
+      "how": "512 MB limit, heap 384 MB, port 3002 on 127.0.0.1, every AI provider `fake`.",
+      "why": "ADR-027's budget for agent; AGENTS.md section 7 keeps real providers out of dev.",
+      "files": ["infra/compose/compose.images.yml"]
+    },
+    "pt-agent-consumer": {
+      "label": "agent-consumer", "sub": "dist/consumer.js", "kind": "step", "status": "real", "wp": "WP-7",
+      "what": "The broker consumer, from the agent image.",
+      "how": "Command `dist/consumer.js`, port 3012 for health only, 256 MB limit, heap 188 MB.",
+      "why": "ADR-027's consumer row (`agent-ingest` from WP-20); a failing consumer never takes the chat down.",
+      "files": ["infra/compose/compose.images.yml","apps/agent/src/consumer.ts"]
+    },
+    "pt-web": {
+      "label": "web", "sub": "server.js · :3000", "kind": "step", "status": "real", "wp": "WP-7",
+      "what": "The Next.js server.",
+      "how": "`node apps/web/server.js`. 320 MB limit, heap 208 MB plus two tmpfs (`/tmp` 16 MB, `.next/cache` 32 MB), which is 80% of the limit. `CONTENT_API_URL=http://api:3001`, `CSP_MODE=enforce`.",
+      "why": "web is the edge (AGENTS.md rule 2): it may call api over HTTP, and reads it per request, so it needs no startup order.",
+      "files": ["infra/compose/compose.images.yml"]
+    },
+    "r-commits": {
+      "label": "Conventional commits on main", "sub": "squash title = changelog line", "kind": "step", "status": "real", "wp": "WP-7",
+      "what": "Every merge to main is one conventional commit, attributed to components by the paths it touches.",
+      "how": "`release.yml` runs on every push to main. Components (`release-please-config.json`): `apps/api`, `apps/agent`, `apps/web` and the shared runtime packages contracts, messaging, platform-nest and ui. The `node-workspace` plugin gives every dependent component a patch when a shared package releases. `packages/config` and `packages/testing` are not components: the plugin counts dev dependencies, so they would release every service for a change no image contains.",
+      "why": "ADR-049 (changing ADR-025's component list). `feat` is a minor, `fix` a patch, before 1.0 a breaking change is a minor (`bump-minor-pre-major`).",
+      "files": ["release-please-config.json",".release-please-manifest.json"]
+    },
+    "r-releasepr": {
+      "label": "Release PR", "sub": "release-please · one PR for all", "kind": "step", "status": "real", "wp": "WP-7",
+      "what": "release-please opens or updates one combined Release PR with each component's next version and changelog.",
+      "how": "Runs with the job's `GITHUB_TOKEN` (`contents`, `pull-requests` and `issues: write` on that job only), which needs the repository setting that lets Actions create pull requests. A pull request opened by that token starts no workflow, so its checks may need one approval click; a GitHub App replaces the token if that does not work.",
+      "why": "ADR-049 release token A, B as the fallback; never a classic token. The concurrency group never cancels a release run: a tag without its image is worse than a queued run.",
+      "files": [".github/workflows/release.yml"]
+    },
+    "r-tags": {
+      "label": "Merge: tags and versions", "sub": "<component>-v<version>", "kind": "step", "status": "real", "wp": "WP-7",
+      "what": "Merging the Release PR tags each released component and sets its `package.json` version.",
+      "how": "release-please's `paths_released` output is filtered to the apps that ship an image (`apps/agent`, `apps/api`, `apps/web`); the `images` job runs once per released service in a matrix. The manifest starts at 0.0.0 with `initial-version` 0.1.0.",
+      "why": "Tags `<component>-v<version>` and one version per service (ADR-025, restated by ADR-049). Its tags start no workflow either, so the image job lives in the same workflow, after release-please.",
+      "files": [".github/workflows/release.yml",".release-please-manifest.json"]
+    },
+    "r-build": {
+      "label": "Build once", "sub": "loaded into the runner's Docker", "kind": "step", "status": "real", "wp": "WP-7",
+      "what": "The released service's image is built for linux/amd64 and loaded locally, not pushed yet.",
+      "how": "`docker/build-push-action` with `load: true`, labels for source, revision and version, and main's BuildKit cache read only. The push later runs the same build on the same builder, so every layer comes from that cache.",
+      "why": "Build once, deploy many: the bytes pushed are the bytes tested and scanned, checked by digest two steps on.",
+      "files": [".github/workflows/release.yml"]
+    },
+    "r-smoke-scan": {
+      "label": "Smoke run and Trivy", "sub": "hardened run · secret scan blocks", "kind": "step", "status": "real", "wp": "WP-7",
+      "what": "The image runs hardened, not as root, and Trivy scans it before anything is pushed.",
+      "how": "Smoke: api and agent started with no configuration must stop on the config error naming `DATABASE_URL` with no `ERR_MODULE_NOT_FOUND` (every import resolved); web must turn `healthy`. Trivy, run as its container pinned by digest on the saved image: a secret always fails; fixable HIGH and CRITICAL OS findings go to the job summary and do not block.",
+      "why": "WP-7 D10: a release may be the one that carries the fix, so the release scan reports; the pull request gate and the weekly scan are the other two channels.",
+      "files": [".github/workflows/release.yml",".trivyignore.yaml"]
+    },
+    "r-push": {
+      "label": "Push to GHCR", "sub": ":<version> · :sha-<short> · SBOM", "kind": "step", "status": "real", "wp": "WP-7",
+      "what": "The image goes to `ghcr.io/josealbdr/jadero-dev-<service>` with its version tag, its commit tag and a BuildKit SBOM, then is checked against the scanned one.",
+      "how": "Login with the job's `GITHUB_TOKEN` (`packages: write`). After the push, the pushed linux/amd64 manifest's config digest must equal BuildKit's `containerimage.config.digest` of the scanned build, or the job fails before signing. The first push creates the package private.",
+      "why": "ADR-049 registry B: private images, pulled later by the deploy job's short-lived token; private to public stays possible, the reverse is not (a one-way door kept closed). The local image ID is not the config digest under Docker's containerd store, so the check reads BuildKit's metadata.",
+      "files": [".github/workflows/release.yml"]
+    },
+    "r-attest": {
+      "label": "Attest the provenance", "sub": "SLSA · keyless Sigstore", "kind": "step", "status": "real", "wp": "WP-7",
+      "what": "A signed SLSA build provenance for the pushed digest, stored with the image.",
+      "how": "`actions/attest` turns the job's OIDC token (`id-token: write`) into a Sigstore certificate valid for minutes and signs the provenance; anyone with access verifies it with `gh attestation verify oci://<image>:<version> --owner JoseAlbDR`. A manual run is the dry run: build, smoke and scan one service, never log in, push or attest.",
+      "why": "ADR-049 provenance: proof of which workflow and commit built the image, with no long-lived signing key to store. The staging deploy after this step arrives with WP-9.",
+      "files": [".github/workflows/release.yml"]
+    },
+    "sh-ci-images": {
+      "label": "images (ci.yml)", "sub": "build · smoke · Trivy diff gate", "kind": "check", "status": "real", "wp": "WP-7",
+      "what": "On every pull request, builds, smoke-tests and scans the images of the affected services; on main, weekly and by hand, all three.",
+      "how": "The affected services come from `turbo run image --affected --dry=json`: a turbo task that only names what each image is built from (`dependsOn: [\"^build\"]`, inputs plus `.dockerignore` and `.trivyignore.yaml`). Each image is built with BuildKit's GitHub cache (written only on main), run hardened as in Compose, and scanned by Trivy on the saved image, OS packages only. A secret always fails; fixable HIGH and CRITICAL fail the pull request only when it changes what the image is built from (its Dockerfile, `.dockerignore`, `.trivyignore.yaml`), otherwise they are reported in the job summary.",
+      "why": "ADR-049 image scanning A: an image scan is full-state, so a gate on everything would turn unrelated pull requests red for days after every Debian fix. The same diff-gate rule as OSV-Scanner in WP-6; npm findings stay with OSV-Scanner (one tool per job). Becomes a required check once it has reported on main.",
+      "files": [".github/workflows/ci.yml","turbo.json"]
+    },
+    "sh-compose": {
+      "label": "pnpm images:up", "sub": "compose.images.yml over compose.dev.yml", "kind": "check", "status": "real", "wp": "WP-7",
+      "what": "The services from their production images, hardened, on a laptop.",
+      "how": "`pnpm images:build` builds the three images; `pnpm images:up` builds and starts everything, waiting for every healthcheck, migrate steps first; `pnpm images:down` removes the containers. Every service merges `x-hardened`: `read_only`, `cap_drop: [ALL]`, `no-new-privileges`, `/tmp` as a 16 MB tmpfs. Services reach Postgres and RabbitMQ by service name. Stop `pnpm dev` first: the ports are the same.",
+      "why": "ADR-049 restating ADR-048's Images (WP-7 D2, D4, D5) and ADR-027's memory table: least privilege in layers, checked where it runs before any server sees it.",
+      "files": ["infra/compose/compose.images.yml","infra/compose/README.md","package.json"]
+    },
+    "sh-hardening": {
+      "label": "Compose hardening test", "sub": "scripts/compose-hardening.mjs", "kind": "check", "status": "real", "wp": "WP-7",
+      "what": "Fails when a service of `compose.images.yml` loses its hardening or gains a privilege.",
+      "how": "Reads the file with the `yaml` package, merge keys on, as Compose does. Every service: read-only, all capabilities dropped, no new privileges, a size-capped `/tmp`, a memory limit, ports on 127.0.0.1. None: `privileged`, `cap_add`, root, host network, PID or IPC, the Docker socket. A long-running service: heap plus every tmpfs at most 80% of `mem_limit`, and it depends on its own migrate step; a migrate never restarts and has no healthcheck. Runs in `pnpm test:scripts`, so in `pnpm verify`.",
+      "why": "A fitness function, like dependency-cruiser for imports: the rules hold by test, not by review.",
+      "files": ["scripts/compose-hardening.mjs","scripts/compose-hardening.test.mjs"]
+    },
+    "sh-baseimage": {
+      "label": "Base image pin test", "sub": "scripts/docker-base-image.mjs", "kind": "check", "status": "real", "wp": "WP-7",
+      "what": "Fails when a Dockerfile's base image drifts from the others or from `.nvmrc`.",
+      "how": "Each `apps/<service>/Dockerfile` declares `ARG NODE_IMAGE=node:<version>-<variant>@sha256:<digest>` once and every `FROM` uses it; all Dockerfiles carry the same pin and its Node version equals `.nvmrc`. Renovate's `node` group moves `.nvmrc` and the pin in one pull request.",
+      "why": "Environment parity (ADR-042, WP-7 D3): dev, CI and the images run the same Node, like the Postgres tag test in `@jadero/testing`. The digest makes the base immutable; the tag keeps it readable.",
+      "files": ["scripts/docker-base-image.mjs","scripts/docker-base-image.test.mjs",".nvmrc"]
+    },
+    "sh-release-config": {
+      "label": "release-please config", "sub": "7 components · node-workspace", "kind": "check", "status": "real", "wp": "WP-7",
+      "what": "Which folders are release components and how their versions move.",
+      "how": "Release type `node`, `bump-minor-pre-major`, `initial-version` 0.1.0, one combined Release PR (`chore: release`), tags with the component name, the `node-workspace` plugin. The manifest holds each component's last released version.",
+      "why": "ADR-049 (changing ADR-025's manifest list): the shared runtime packages are components so a change in them releases the services that depend on them; config and testing are not.",
+      "files": ["release-please-config.json",".release-please-manifest.json","docs/adr/0049-images-release-and-image-scanning.md"]
+    },
+    "sh-release-inputs": {
+      "label": "release-inputs.txt", "sub": "pnpm release-inputs · staleness test", "kind": "check", "status": "real", "wp": "WP-7",
+      "what": "Each service's production dependency closure, one `name@version` per line, so a dependency-only change releases the services it reaches.",
+      "how": "`scripts/release-inputs.mjs` reads only `pnpm-lock.yaml` (offline, deterministic), follows `dependencies` and `optionalDependencies` from each app and leaves workspace packages out (the plugin covers them). `pnpm release-inputs` rewrites `apps/{api,agent,web}/release-inputs.txt`; a stale file fails `pnpm verify`.",
+      "why": "ADR-049 dependency-only releases B: release-please attributes a commit only by the files it touches, and a catalog or lockfile change touches none of a service's. A generated file with a staleness test. The hosted Renovate runs no repository commands, so a dependency pull request runs the command by hand.",
+      "files": ["scripts/release-inputs.mjs","scripts/release-inputs.test.mjs","apps/api/release-inputs.txt","apps/agent/release-inputs.txt","apps/web/release-inputs.txt"]
+    },
+    "sh-image-scan": {
+      "label": "Weekly image scan", "sub": "security.yml · released images", "kind": "check", "status": "real", "wp": "WP-7",
+      "what": "Weekly and by hand, scans the released image of every service into the Security tab and keeps one issue per service open while a fixable CRITICAL remains.",
+      "how": "`released-images` reads `.release-please-manifest.json` and keeps the apps that have a Dockerfile and a version above 0.0.0 (none yet, so the scan is skipped). `image-scan` pulls each one from GHCR (`packages: read`) and runs Trivy twice: every vulnerability, OS and npm, as SARIF; then fixable CRITICAL only. A finding comments on the open issue with the exact title or opens one; a clean result comments and closes it. A failed pull or scan fails the job first, so only a positive clean result closes; an issue closed by hand while still vulnerable comes back next week.",
+      "why": "WP-7 D10, the second channel: the pull request gate and the release scan see an image only when it is built, so an advisory published later for a released image would reach nobody. Neither pass fails the job: the Security tab and the issue are the signal.",
+      "files": [".github/workflows/security.yml"]
+    },
+    "sh-trivyignore": {
+      "label": ".trivyignore.yaml", "sub": "time-boxed exceptions · empty", "kind": "check", "status": "real", "wp": "WP-7",
+      "what": "The Trivy exceptions every scan reads: ci.yml, release.yml and the weekly scan.",
+      "how": "Each entry names the finding, says why it does not apply or what fixes it, and carries `expired_at`, after which Trivy reports it again. Changing the file reruns the blocking scan on the pull request. Empty today.",
+      "why": "A time-boxed exception: prefer a base image update, and no exception outlives its reason.",
+      "files": [".trivyignore.yaml"]
+    },
+    "sh-dockerignore": {
+      "label": ".dockerignore", "sub": "default deny build context", "kind": "check", "status": "real", "wp": "WP-7",
+      "what": "What may enter a build: the workspace manifests, `turbo.json`, `apps/`, `packages/` and `templates/`, nothing else.",
+      "how": "Starts with `*` and lets back only what the Dockerfiles copy; inside those folders `node_modules`, `dist`, `.next`, `.turbo`, coverage and every `.env` file are excluded again.",
+      "why": "Least privilege for the build context: a new root file, an agent config or a local key never reaches a layer by accident (ADR-043).",
+      "files": [".dockerignore"]
     }
   }
 }
