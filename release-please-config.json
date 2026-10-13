@@ -3,7 +3,7 @@
   "release-type": "node",
   "bump-minor-pre-major": true,
   "initial-version": "0.1.0",
-  "bootstrap-sha": "2e9d8b277a50a14449140e39c2bbf4e92d63f706",
+  "bootstrap-sha": "7415575b1096ee8d14f3dab13317751a823b7740",
   "separate-pull-requests": false,
   "group-pull-request-title-pattern": "chore${scope}: release",
   "include-component-in-tag": true,
