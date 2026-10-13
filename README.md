@@ -238,8 +238,8 @@ Every command, with the rules around it, is also in [`AGENTS.md`](AGENTS.md) sec
 ## CI, releases and images
 
 **CI.** GitHub Actions gates every pull request on the required checks `verify`, `integration`,
-`web`, `workflows-lint`, `pr-title`, `osv-scanner / osv-scan`, `dependency-review` and `secrets`.
-The `images` check also builds, smoke-runs and scans the affected service images with Trivy. A weekly run repeats the
+`web`, `workflows-lint`, `pr-title`, `osv-scanner / osv-scan`, `dependency-review`, `secrets` and
+`images` (builds, smoke-runs and scans the affected service images with Trivy). A weekly run repeats the
 checks without the cache. Renovate opens grouped dependency updates three days after release.
 
 **Releases.** release-please reads the conventional commits on `main` and keeps one Release PR open
@@ -253,6 +253,9 @@ tag, smoke-tests it hardened, scans it with Trivy, pushes it to GHCR as a privat
 ```sh
 gh attestation verify oci://ghcr.io/josealbdr/jadero-dev-<service>:<version> --owner JoseAlbDR
 ```
+
+After merging a Release PR, wait for the `release` run on `main`, then check the releases, the
+packages and the attestation: the steps are in the "After merging a Release PR" list of the workflows README.
 
 A weekly scan of the released images opens an issue on a fixable CRITICAL finding. What each job
 runs, the security model and what to do when one goes red:

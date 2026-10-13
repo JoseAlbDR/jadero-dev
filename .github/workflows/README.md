@@ -50,6 +50,19 @@ time, never cancelled: a tag without its image is worse than a queued run. Not a
 
 Verify an image from anywhere: `gh attestation verify oci://<image>:<version> --owner JoseAlbDR`.
 
+After merging a Release PR:
+1. Wait for the `release` run of that push on `main` to go green: `release-please` tags each
+   component and creates its GitHub release, then one `images (<service>)` job per released service
+   pushes its image. A later push to `main` while it runs queues behind it; GitHub keeps one pending
+   run per group and cancels the older pending one, which is harmless because the newer run
+   reads all of `main`.
+2. Check that the GitHub releases (`gh release list`) and the packages (the repository's Packages
+   tab) are there.
+3. Verify the provenance of each new image with the command above. Reading a private package needs
+   the `read:packages` scope (`gh auth refresh -s read:packages`); GHCR answers "denied" both
+   without it and for an image that does not exist yet, so check step 1 first.
+4. Nothing deploys yet: the deploy that pulls these images arrives in WP-9.
+
 ### `pr-title.yml`
 
 Triggers: `pull_request` of types `opened`, `edited`, `synchronize`, `reopened` (`edited` fires
@@ -69,9 +82,9 @@ writes and merges every change.
 ### Required checks
 
 The `protect-main` ruleset requires exactly these names (the owner sets them, ADR-048):
-`verify`, `integration`, `web`, `workflows-lint`, `pr-title`, `osv-scanner / osv-scan`, `dependency-review`, `secrets`.
-All eight match the `name:` of their job in the files above. The `images` check of `ci.yml` joins
-the list only after it has reported on `main` (expand, see the last section).
+`verify`, `integration`, `web`, `workflows-lint`, `pr-title`, `osv-scanner / osv-scan`, `dependency-review`, `secrets`, `images`.
+All nine match the `name:` of their job in the files above. `images` joined the list after it had
+reported on `main` (expand, see the last section).
 
 ## Security model
 
