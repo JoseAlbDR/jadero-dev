@@ -61,7 +61,10 @@ After merging a Release PR:
 3. Verify the provenance of each new image with the command above. Reading a private package needs
    the `read:packages` scope (`gh auth refresh -s read:packages`); GHCR answers "denied" both
    without it and for an image that does not exist yet, so check step 1 first.
-4. Nothing deploys yet: the deploy that pulls these images arrives in WP-9.
+4. A service released for the first time creates its GHCR package with the repository's
+   visibility, which is public. Set it private once (the package page, Package settings, Change
+   visibility); there is no API for user packages. Later versions keep the setting.
+5. Nothing deploys yet: the deploy that pulls these images arrives in WP-9.
 
 ### `pr-title.yml`
 
