@@ -505,6 +505,12 @@ Recorded 2026-10-12 in [ADR-049](../adr/0049-images-release-and-image-scanning.m
 
 ## Recap
 
+Explain-back on 2026-10-13, two questions asked; the owner deferred the rest (late, tired, next WP waiting).
+
+- Q1. Build once, deploy many. Here: if the deploy rebuilds `api:0.1.0` instead of pulling it, what do the Trivy scan and the attestation guarantee about what runs? Answer: "nothing". Right; the reason was taught after: a second build is not byte-identical (timestamps, layer order, a moved mirror, another BuildKit), so its digest differs and neither the scan nor the signature covers it, and even identical bytes could not be proven without comparing digests. Linked to step 7c (pushed config digest equals the scanned one) and step 9 (build the tagged commit). Transfer (a quote PDF approved on Monday and regenerated with new prices on Wednesday): right and complete: freeze a snapshot at approval, send exactly that snapshot, any change goes back through approval. Extended: store the approved document's hash with the approval and refuse a send whose hash differs, the same check as the config digest.
+- Q2. Migrate as a one-off process. Here: with migrations run at boot by two `api` replicas and one worker at once, what goes wrong? Answer: the migration collides across replicas; a separate `api-migrate` that the others wait on runs it once regardless of the replica count. Right; taught after: the collision is a check-then-act race (all read "not applied", all run the DDL), and the one-off is also a deploy gate (a migrate that exits 1 keeps the new version from starting while the old one serves). Transfer (three booking instances inserting missing holidays at boot): a unique key with `ON CONFLICT DO NOTHING` makes it idempotent. Right; extended: when the step recalculates (updates, deletes) or is expensive, a one-off job or a `pg_try_advisory_lock` wins.
+- Deferred (ask at `/review-release R0`, as the WP-6 ones): Q3, the release trace from memory (order the ten pieces from merging this PR to the attested image in GHCR; transfer: a mobile app store release that cannot be pulled back, where would a human look before the irreversible step); Q4, the self-resolving scan alert (here: what keeps the issue open when the scan cannot run; transfer: an on-call alert that auto-resolves).
+
 ## Named here
 
 | Name | What it is, in one line | When |
