@@ -509,16 +509,16 @@ jobs:
               mode="report only"
             fi
             set +e
-            report="$(trivy --scanners vuln --pkg-types os --severity HIGH,CRITICAL --ignore-unfixed \
+            table="$(trivy --scanners vuln --pkg-types os --severity HIGH,CRITICAL --ignore-unfixed \
               --exit-code "$gate" --format table)"
             code=$?
             set -e
-            echo "$report"
+            echo "$table"
             {
               echo "### $service: fixable HIGH and CRITICAL OS findings ($mode)"
               echo
               echo '```'
-              echo "${report:-none}"
+              echo "${table:-none}"
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
             if [ "$code" -ne 0 ]; then

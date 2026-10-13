@@ -210,14 +210,14 @@ jobs:
             if [ -s "$report/secrets.txt" ]; then cat "$report/secrets.txt"; fi
             echo "::error::$SERVICE: Trivy found a secret in the image"; exit 1
           fi
-          report="$(trivy --scanners vuln --pkg-types os --severity HIGH,CRITICAL --ignore-unfixed \
+          table="$(trivy --scanners vuln --pkg-types os --severity HIGH,CRITICAL --ignore-unfixed \
             --exit-code 0 --format table)"
-          echo "$report"
+          echo "$table"
           {
             echo "### $SERVICE: fixable HIGH and CRITICAL OS findings (report only)"
             echo
             echo '```'
-            echo "${report:-none}"
+            echo "${table:-none}"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           rm -f "$tar"
