@@ -112,7 +112,7 @@ Closing a release runs `/review-release R<n>` in a normal session in the repo, i
 1. **Cold diagnostic** in the session: one question per open weak line, no explanation first; a right answer closes the line.
 2. **`/teach`**, run locally by the owner where the skill is in the owner's profile, in the separate `study/` folder, only on the themes still failing plus the `interesting` lines. The session prints the prompt below with those lines filled in; the owner reviews what it generates.
 3. **Mastery loop** back in the session: the questions again, reformulated from each line's `Question feedback:` note, with a new explanation and example each time, until answered right; `interesting` lines close with one transfer question.
-4. **Spaced re-check**: the closed lines come back as warm-ups in the next release's `/step` runs.
+4. **Spaced re-check**: the closed lines come back as warm-up tickets in the next release's `/step` runs, from another sector and without the options list since they are solid (`AGENTS.md` section 5, "Warm-up as a ticket").
 
 Start it:
 

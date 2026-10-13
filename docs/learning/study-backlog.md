@@ -11,12 +11,12 @@ Topics to study in depth, outside the work packages, with Matt Pocock's `teach` 
 
 ## How it is used
 
-- Between releases, each `/step` opens with one warm-up recall question on an open line (`/step` step 2): a right answer marks it `solid <date> (warm-up)`, a wrong one `weak again <date>` with an updated feedback note, so the weakest lines show before the release review.
+- Between releases, each `/step` opens with one warm-up ticket on an open line (`/step` step 2, `AGENTS.md` section 5 "Warm-up as a ticket"): a right answer marks it `solid <date> (warm-up)`, a wrong one `weak again <date>` with an updated feedback note, so the weakest lines show before the release review.
 - Closing a release runs `/review-release R<n>`, a loop in four phases (test, teach, retest):
   1. **Cold diagnostic**: one self-contained question per open `weak` or `weak again` line of the release, with no explanation first. A right answer closes the line: `solid <date> (review)`.
   2. **`/teach`** only on the themes still failing plus the `interesting` lines, two to four themes per run; the owner reviews what it generates. Covered lines are marked `studied <date>`.
   3. **Mastery loop**: the questions on those themes again, reformulated from each line's feedback note, each time with a new explanation and example, until answered right. An `interesting` line closes with one transfer question (the same pattern in another domain, no project names).
-  4. **Spaced re-check**: the lines closed in the review come back as warm-ups in the next release's `/step` runs.
+  4. **Spaced re-check**: the lines closed in the review come back as warm-up tickets from another sector, without the options list, in the next release's `/step` runs.
 - A release is closed only when no line of it stays open. Why this order: answering before studying (pretesting) and recalling instead of rereading (retrieval practice) make learning stick, spacing keeps it, and the diagnostic keeps `/teach` off what the owner already knows.
 - At the end of the project, one last review on whatever is left, plus a pass over the lines marked weak more than once.
 
