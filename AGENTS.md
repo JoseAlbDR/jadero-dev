@@ -94,6 +94,7 @@ Frontend WPs (`apps/web`, `apps/admin`, `packages/ui`) skip the gate: build to t
 
 - Conventional one-line commits scoped to the service (`feat(agent): add hybrid retrieval`); the PR title is the squash commit and the changelog line. Branch `wp/NN-slug` for a work package (the learning gate reads the number from it), `chore/`, `fix/` or `docs/` for anything else; versions come from the squash commit's type, never from the branch name. PR body `Closes #<issue>`. Once a PR is announced ready to merge, no more commits go to it without telling the owner; later work goes to a new branch.
 - Never add tool attribution footers, model names or session links to commits, PR bodies or code.
+- A change that adds or renames a root script, a service, a port or an environment variable updates `README.md` and the matching `.env.example` in the same PR.
 - Zod for every boundary; RFC 9457 problem details for errors; JSDoc on every new public method; no hard-coded UI strings (next-intl).
 - Owner voice for any user-facing copy and docs: plain English, no hype words, no em dashes.
 - Do not reinvent the wheel: when a maintained dependency, light or not, solves a problem we have, use it instead of writing our own; custom code only when the use case is very specific. The dependency still passes the usual gates (license, vulnerabilities, the update cooldown).

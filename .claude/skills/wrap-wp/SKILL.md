@@ -9,7 +9,7 @@ Close WP-$wp. Go through the list in order, mark each item done or n/a with the 
 
 1. **Steps logged.** Every step in the explainer's Proposed steps is done and has its two step-log lines; `git log origin/main..HEAD` matches them.
 2. **Map.** `/map` (the `cartographer` agent): code map JSON in sync, rendered clean, event catalog and flow updated for new events.
-3. **Docs.** `AGENTS.md` status line and section 3 commands, the touched apps' `AGENTS.md`, `docs/sessions.md` or the process pages when the flow changed. Delegate to the `implementer` agent (as a docs step) when the edits are more than a few lines.
+3. **Docs.** `AGENTS.md` status line and section 3 commands, `README.md` (scripts, services, environment), the touched apps' `AGENTS.md`, `docs/sessions.md` or the process pages when the flow changed. Delegate to the `implementer` agent (as a docs step) when the edits are more than a few lines.
 4. **Artifacts.** Every artifact in `docs/artifacts.md` whose source changed is republished and its row updated (the cartographer does it; check the rows).
 5. **PR.** Title a conventional commit scoped to the service, body per `.github/PULL_REQUEST_TEMPLATE.md` with `Closes #<issue>`. Check first that no merged PR already holds this branch.
 6. **Review.** The `reviewer` agent on the PR. Fix its findings (through the `implementer` agent, one commit per fix), push, re-run `pnpm verify` yourself.
