@@ -38,7 +38,7 @@
       "cache": false,
       "passThroughEnv": ["DATABASE_URL"]
     },
-    "//#lint": {
+    "//#lint:check": {
       "inputs": [
         "**/*.{ts,tsx,js,mjs,cjs,json,jsonc,css}",
         "biome.json",

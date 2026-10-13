@@ -1,7 +1,9 @@
-# Trivy exceptions for the images job in ci.yml (ADR-049, docs/learning/wp-7.md D10). Prefer a fix
-# (a base image update) over an entry here. Every entry names the finding, says why it does not
-# apply or what fixes it and when, and carries an `expired_at` date: after it, Trivy reports the
-# finding again, so no exception outlives its reason. Changing this file reruns the blocking scan.
+# Trivy exceptions (ADR-049, docs/learning/wp-7.md D10), read by every Trivy scan: the images job
+# in ci.yml, the images job in release.yml and the weekly image-scan job in security.yml, so an
+# entry mutes the finding in all three. Prefer a fix (a base image update) over an entry here.
+# Every entry names the finding, says why it does not apply or what fixes it and when, and carries
+# an `expired_at` date: after it, Trivy reports the finding again, so no exception outlives its
+# reason. Changing this file reruns the blocking scan of ci.yml on the pull request.
 #
 # vulnerabilities:
 #   - id: CVE-2026-00000

@@ -114,7 +114,7 @@ Learning happens during the build too: every learning step ends with one one-lin
 | commit rejected: scope | commitlint | `type(scope): subject`; scopes live in `commitlint.config.mjs` |
 | commits land without lefthook or commitlint running | a tool set `core.hooksPath` in the repo's git config, so git skips `.git/hooks` | `git config --unset core.hooksPath && pnpm lefthook install` |
 | `pnpm dev` leaves an app out, or Turborepo waits on a persistent task | the default concurrency is lower than the number of persistent processes once each app has a second process (`api-worker`, the `agent` consumer) | run the persistent tasks with `--concurrency=20` (the `dev` script does) |
-| `pnpm lint` fails on a file a generator just wrote | the generator wrote unformatted output (the AsyncAPI catalog, `definitions.json`, the ADR index) | the generator runs the formatter on its output as its last step; fix the generator, not the file |
+| `pnpm lint:check` fails on a file a generator just wrote | the generator wrote unformatted output (the AsyncAPI catalog, `definitions.json`, the ADR index) | the generator runs the formatter on its output as its last step; fix the generator, not the file |
 | commit rejected by Biome | unsafe fix or syntax error | `pnpm lint:fix`, then fix by hand |
 | `pnpm verify` never hits the cache | an input that changes every run | check `inputs` in `turbo.json`; `turbo run test --summarize` |
 | `pnpm dev:up` fails on 5432 | a local Postgres | stop it, or change the host port in the compose file and `.env.example` |
@@ -151,7 +151,7 @@ A session that can publish artifacts republishes them; one that cannot edits the
 |---|---|
 | `pnpm verify` | lint, architecture rules, typecheck, unit tests, affected only, cached |
 | `pnpm verify:all` | the same on every package; use it on `main` and in CI |
-| `pnpm lint` / `pnpm lint:fix` | Biome check / format and safe fixes |
+| `pnpm lint:check` / `pnpm lint:fix` | Biome check / format and safe fixes (not `pnpm lint`: pnpm 11 runs a built-in by that name) |
 | `pnpm depcruise` | import rules of ADR-003 and AGENTS.md section 4 |
 | `pnpm dev:up` / `pnpm dev:down` | Postgres 18 (pgvector) and RabbitMQ 4 |
 | `pnpm adr:new "Title"` / `pnpm adr:index` / `--check` | next ADR / regenerate the index / fail when stale |
