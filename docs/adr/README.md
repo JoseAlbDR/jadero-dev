@@ -37,7 +37,7 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-022 | Internationalization | accepted | D-19, D-20 | [0022-internationalization.md](0022-internationalization.md) |
 | ADR-023 | Design system and visual direction | superseded by ADR-045 | D-23, D-74 | [0023-design-system-and-visual-direction.md](0023-design-system-and-visual-direction.md) |
 | ADR-024 | Lint, format and architecture fitness functions | accepted | D-35 | [0024-lint-format-and-architecture-fitness-functions.md](0024-lint-format-and-architecture-fitness-functions.md) |
-| ADR-025 | Versioning and releases | accepted | D-36 | [0025-versioning-and-releases.md](0025-versioning-and-releases.md) |
+| ADR-025 | Versioning and releases | superseded by ADR-049 | D-36 | [0025-versioning-and-releases.md](0025-versioning-and-releases.md) |
 | ADR-026 | Pipeline, environments, images and deploy | superseded by ADR-048 | D-29, D-32 | [0026-pipeline-environments-images-and-deploy.md](0026-pipeline-environments-images-and-deploy.md) |
 | ADR-027 | Hosting layout | accepted | D-30, D-31, D-48 | [0027-hosting-layout.md](0027-hosting-layout.md) |
 | ADR-028 | Agent tooling for the repo | accepted | D-34 | [0028-agent-tooling-for-the-repo.md](0028-agent-tooling-for-the-repo.md) |
@@ -60,7 +60,8 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-045 | Bento glass with the agent terminal | accepted | D-23, D-74 | [0045-bento-glass-with-the-agent-terminal.md](0045-bento-glass-with-the-agent-terminal.md) |
 | ADR-046 | Archive the published artifact sources in the repo | accepted |  | [0046-archive-the-published-artifact-sources-in-the-repo.md](0046-archive-the-published-artifact-sources-in-the-repo.md) |
 | ADR-047 | HTTP hardening at the edge and in the apps | accepted | D-77 | [0047-http-hardening-at-the-edge-and-in-the-apps.md](0047-http-hardening-at-the-edge-and-in-the-apps.md) |
-| ADR-048 | CI pipeline and supply chain | accepted | D-29, D-32, D-78 | [0048-ci-pipeline-and-supply-chain.md](0048-ci-pipeline-and-supply-chain.md) |
+| ADR-048 | CI pipeline and supply chain | superseded by ADR-049 | D-29, D-32, D-78 | [0048-ci-pipeline-and-supply-chain.md](0048-ci-pipeline-and-supply-chain.md) |
+| ADR-049 | Images, release and image scanning | accepted | D-29, D-32, D-36, D-78, D-79 | [0049-images-release-and-image-scanning.md](0049-images-release-and-image-scanning.md) |
 <!-- adr-index:end -->
 
 Read in this order for a first pass: 029 (service boundaries), 002 (topology and edge), 003 (inside a service), 012 (async work), 031 (content layers), 013 to 016 (AI layer and RAG), 020 and 021 (security), 025 to 027 (delivery and hosting), 041 (work tracking).

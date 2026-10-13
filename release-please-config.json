@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "node",
+  "bump-minor-pre-major": true,
+  "initial-version": "0.1.0",
+  "bootstrap-sha": "7415575b1096ee8d14f3dab13317751a823b7740",
+  "separate-pull-requests": false,
+  "group-pull-request-title-pattern": "chore${scope}: release",
+  "include-component-in-tag": true,
+  "plugins": ["node-workspace"],
+  "packages": {
+    "apps/agent": {},
+    "apps/api": {},
+    "apps/web": {},
+    "packages/contracts": {},
+    "packages/messaging": {},
+    "packages/platform-nest": {},
+    "packages/ui": {}
+  }
+}

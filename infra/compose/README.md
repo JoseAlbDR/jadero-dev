@@ -9,3 +9,5 @@
 - All passwords here are fixed dev values for local use only; ports bind to `127.0.0.1`, so nothing is reachable from the network.
 
 If RabbitMQ fails with `Error when reading /var/lib/rabbitmq/.erlang.cookie: eacces`, an older start left a root-owned cookie in the anonymous volume: `docker compose -f infra/compose/compose.dev.yml down -v`, then `pnpm dev:up`.
+
+`compose.images.yml` runs the services from their production images on top of `compose.dev.yml` (WP-7): `api`, `api-worker`, `agent`, `agent-consumer` and `web`, each read-only, without capabilities or new privileges, with a size-capped `tmpfs` and its ADR-027 memory limit, after its `*-migrate` one-off exits 0. `pnpm images:up` builds the images and waits for every healthcheck, `pnpm images:down` removes the containers (stop `pnpm dev` first: the ports are the same). `scripts/compose-hardening.test.mjs` fails when a service loses any of this.

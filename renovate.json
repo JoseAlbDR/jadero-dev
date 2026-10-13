@@ -11,6 +11,36 @@
   "semanticCommitScope": "deps",
   "packageRules": [
     {
+      "description": "Updates that change what an image runs are titled fix(deps) (ADR-049, WP-7 Q2): runtime packages in the catalog and the base image in the Dockerfiles. The pull request must also run `pnpm release-inputs`, so its squash commit touches the release-inputs.txt (or Dockerfile) of exactly the services whose image changes and release-please releases a patch of each. Not a postUpgradeTasks entry: the hosted Renovate runs no repository commands, so the command is run by hand on the branch.",
+      "matchFileNames": ["pnpm-workspace.yaml", "apps/*/Dockerfile"],
+      "semanticCommitType": "fix"
+    },
+    {
+      "description": "Development-only packages never reach an image, so they keep the chore(deps) title in every update type, majors included. The same names as the dev tools group below; keep the two lists in step.",
+      "matchPackageNames": [
+        "@asyncapi/parser",
+        "@axe-core/playwright",
+        "@biomejs/biome",
+        "@commitlint/**",
+        "@playwright/test",
+        "@testcontainers/**",
+        "@types/**",
+        "@vitest/**",
+        "dependency-cruiser",
+        "drizzle-kit",
+        "jsdom",
+        "lefthook",
+        "pino-pretty",
+        "supertest",
+        "testcontainers",
+        "turbo",
+        "typescript",
+        "vitest",
+        "yaml"
+      ],
+      "semanticCommitType": "chore"
+    },
+    {
       "description": "Development tools, non-major updates in one pull request. Matched by name: the catalog in pnpm-workspace.yaml has no dependency type.",
       "matchUpdateTypes": ["minor", "patch"],
       "matchPackageNames": [
@@ -31,7 +61,8 @@
         "testcontainers",
         "turbo",
         "typescript",
-        "vitest"
+        "vitest",
+        "yaml"
       ],
       "groupName": "dev tools"
     },
@@ -52,15 +83,22 @@
       "matchManagers": ["github-actions"],
       "matchUpdateTypes": ["minor", "patch", "digest", "pinDigest"],
       "groupName": "github actions"
+    },
+    {
+      "description": "Node in one pull request: the version in .nvmrc (nvm manager) and the base image the Dockerfiles pin in `ARG NODE_IMAGE` (dockerfile manager, tag and digest) move together, as scripts/docker-base-image.test.mjs requires. Titled fix(deps): the new base releases every service whose Dockerfile it touches.",
+      "matchManagers": ["nvm", "dockerfile"],
+      "matchDepNames": ["node"],
+      "groupName": "node",
+      "semanticCommitType": "fix"
     }
   ],
   "customManagers": [
     {
-      "description": "Container images run with `docker run` in the workflows and the root scripts (gitleaks, zizmor), written as name:tag@digest. One pull request updates every file that names the image. GHCR returns no release dates, so the cooldown holds these updates on the dependency dashboard until a box there is ticked.",
+      "description": "Container images run with `docker run` in the workflows and the root scripts (gitleaks and zizmor from GHCR, Trivy from Docker Hub), written as name:tag@digest. One pull request updates every file that names the image. GHCR returns no release dates, so the cooldown holds those updates on the dependency dashboard until a box there is ticked; Docker Hub images carry dates and follow the cooldown.",
       "customType": "regex",
       "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/", "/^package\\.json$/"],
       "matchStrings": [
-        "(?<depName>ghcr\\.io/[a-z0-9._/-]+):(?<currentValue>v?\\d[\\w.-]*)@(?<currentDigest>sha256:[a-f0-9]{64})"
+        "(?<depName>(?:ghcr\\.io/)?[a-z0-9][a-z0-9._-]*/[a-z0-9._/-]+):(?<currentValue>v?\\d[\\w.-]*)@(?<currentDigest>sha256:[a-f0-9]{64})"
       ],
       "datasourceTemplate": "docker"
     }

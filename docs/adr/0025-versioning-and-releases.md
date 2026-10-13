@@ -1,18 +1,18 @@
 ---
 id: ADR-025
 title: "Versioning and releases"
-status: accepted
+status: superseded
 date: 2026-10-03
 deciders: [owner]
 decisions: [D-36]
 supersedes: []
-superseded_by: null
+superseded_by: ADR-049
 source: docs/plan/report.md ("ADR-025: Versioning and releases (amended 2026-10-02)")
 ---
 
 # ADR-025: Versioning and releases
 
-**Status:** Accepted (owner review 2026-10-03, D-36). Amended: one version line per service instead of one product version.
+**Status:** Superseded by ADR-049 (release components limited to the services and the shared runtime packages, the `node-workspace` plugin verified, a release-inputs file per service for dependency-only releases, the Release PR opened with the job's `GITHUB_TOKEN`; every other part is restated there unchanged). Previously: accepted (owner review 2026-10-03, D-36), amended to one version line per service.
 
 Decided by the owner in the plan review of 2026-10-02 and 2026-10-03 (decisions D-36). This record was extracted verbatim from `docs/plan/report.md`; the narrative, traces and sources stay there. From now on this file is the canonical record: a new decision is a new ADR that supersedes this one, never an edit.
 

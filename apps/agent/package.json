@@ -4,6 +4,10 @@
   "private": true,
   "description": "Knowledge, chat, guards and usage service (ADR-001). WP-5: the skeleton, with its consumer process type (agent-ingest from WP-20).",
   "type": "module",
+  "files": [
+    "dist",
+    "drizzle"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "node --watch-path=dist --watch-path=../../packages/platform-nest/dist --watch-path=../../packages/messaging/dist --watch-preserve-output --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/main.js",

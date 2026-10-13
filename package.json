@@ -9,9 +9,9 @@
     "pnpm": ">=11 <12"
   },
   "scripts": {
-    "verify": "turbo run lint depcruise typecheck test test:scripts --affected && pnpm check:migrations",
-    "verify:all": "turbo run lint depcruise typecheck test test:scripts && pnpm check:migrations",
-    "lint": "biome ci .",
+    "verify": "turbo run lint:check depcruise typecheck test test:scripts --affected && pnpm check:migrations",
+    "verify:all": "turbo run lint:check depcruise typecheck test test:scripts && pnpm check:migrations",
+    "lint:check": "biome ci .",
     "lint:fix": "biome check --write .",
     "depcruise": "depcruise --config .dependency-cruiser.cjs apps packages templates",
     "typecheck": "turbo run typecheck",
@@ -20,6 +20,7 @@
     "test:e2e": "turbo run test:e2e",
     "test:scripts": "node --test \"scripts/**/*.test.mjs\"",
     "check:migrations": "node scripts/check-migrations.mjs",
+    "release-inputs": "node scripts/release-inputs.mjs",
     "lint:workflows": "docker run --rm --network none -v \"$PWD:/repo:ro\" -w /repo ghcr.io/zizmorcore/zizmor:1.30.1@sha256:a2eb396d886c053073405c7a980f2139ba2248ec172243cfa3841e57196e8101 --offline --format plain .github/workflows/",
     "scan:secrets": "docker run --rm --network none -v \"$PWD:/repo:ro\" -w /repo ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f git . --redact --verbose --no-banner",
     "build": "turbo run build",
@@ -28,6 +29,9 @@
     "dev": "turbo run dev dev:worker --concurrency=20",
     "dev:up": "docker compose -f infra/compose/compose.dev.yml up -d --wait",
     "dev:down": "docker compose -f infra/compose/compose.dev.yml down",
+    "images:build": "docker compose -f infra/compose/compose.dev.yml -f infra/compose/compose.images.yml build",
+    "images:up": "pnpm images:build && docker compose -f infra/compose/compose.dev.yml -f infra/compose/compose.images.yml up -d --wait",
+    "images:down": "docker compose -f infra/compose/compose.dev.yml -f infra/compose/compose.images.yml down",
     "adr:new": "node scripts/adr/new.mjs",
     "adr:index": "node scripts/adr/index.mjs",
     "prepare": "lefthook install"
@@ -39,6 +43,7 @@
     "dependency-cruiser": "catalog:",
     "lefthook": "catalog:",
     "turbo": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "yaml": "catalog:"
   }
 }

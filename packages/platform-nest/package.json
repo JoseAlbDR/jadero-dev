@@ -39,8 +39,7 @@
     "nestjs-pino": "catalog:",
     "pg": "catalog:",
     "pino": "catalog:",
-    "pino-http": "catalog:",
-    "pino-pretty": "catalog:"
+    "pino-http": "catalog:"
   },
   "peerDependencies": {
     "@nestjs/common": "catalog:",
@@ -61,6 +60,7 @@
     "@types/pg": "catalog:",
     "@types/supertest": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "pino-pretty": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
     "supertest": "catalog:",

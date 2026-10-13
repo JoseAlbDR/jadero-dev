@@ -8,6 +8,6 @@ import { buildDefinitions, DEV_USERS, DEV_VHOST, JADERO_QUEUES } from "../dist/i
 const target = fileURLToPath(new URL("../../../infra/rabbitmq/definitions.json", import.meta.url));
 const definitions = buildDefinitions({ vhost: DEV_VHOST, queues: JADERO_QUEUES, users: DEV_USERS });
 writeFileSync(target, `${JSON.stringify(definitions, null, 2)}\n`);
-// Same layout as the rest of the repo, so `pnpm lint` passes on the generated file.
+// Same layout as the rest of the repo, so `pnpm lint:check` passes on the generated file.
 execFileSync("pnpm", ["exec", "biome", "format", "--write", target], { stdio: "ignore" });
 console.log(`wrote ${target}`);

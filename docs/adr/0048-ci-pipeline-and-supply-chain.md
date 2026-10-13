@@ -1,18 +1,18 @@
 ---
 id: ADR-048
 title: "CI pipeline and supply chain"
-status: accepted
+status: superseded
 date: 2026-10-11
 deciders: [owner]
 decisions: [D-29, D-32, D-78]
 supersedes: [ADR-026]
-superseded_by: null
+superseded_by: ADR-049
 source: docs/learning/wp-6.md (Decision)
 ---
 
 # ADR-048: CI pipeline and supply chain
 
-**Status:** Accepted (owner, WP-6, 2026-10-11). Supersedes ADR-026 as a whole. It changes the CI and security workflows (integration tests on Testcontainers instead of service containers, how affected runs are made safe and backed up, `security.yml` on every pull request with OSV-Scanner, CodeQL default setup) and adds a supply chain section from the 2026-10-09 audit and the owner's answers in WP-6. The per-service pipeline, repository visibility (now resolved: public), `release.yml`, `deploy.yml`, images, deploy mechanics (option B with the forced command), the deploy script steps and downtime are restated from ADR-026 unchanged.
+**Status:** Superseded by ADR-049 (Trivy in the `images` job of `ci.yml` with a diff-style blocking rule and a weekly scan of released images, private images pulled with the deploy job's short-lived token, signed build provenance, the staging deploy step moved to WP-9; every other part is restated there unchanged). Previously: accepted (owner, WP-6, 2026-10-11, D-29, D-32 and D-78).
 
 ## Context
 
