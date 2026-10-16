@@ -22,7 +22,7 @@ export type AgentEnv = z.output<typeof agentEnv>;
 export abstract class AgentConfig {
   abstract readonly nodeEnv: AgentEnv["NODE_ENV"];
   abstract readonly port: number;
-  /** The interface `app.listen` binds (`HOST`, default 127.0.0.1). */
+  /** The interface `app.listen` binds (`LISTEN_HOST`, default 127.0.0.1). */
   abstract readonly host: string;
   abstract readonly logLevel: AgentEnv["LOG_LEVEL"];
   abstract readonly serviceName: string;
@@ -38,7 +38,7 @@ export function toAgentConfig(env: AgentEnv): AgentConfig {
   return {
     nodeEnv: env.NODE_ENV,
     port: env.PORT,
-    host: env.HOST,
+    host: env.LISTEN_HOST,
     logLevel: env.LOG_LEVEL,
     serviceName: env.SERVICE_NAME,
     databaseUrl: env.DATABASE_URL,

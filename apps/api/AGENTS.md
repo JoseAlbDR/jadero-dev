@@ -17,7 +17,7 @@ pnpm dev                                 # from the root: tsc --watch plus node 
 ## Layout
 
 - `src/main.ts`: `loadConfig(apiEnv)` before anything else, then `NestFactory.create(AppModule.forRoot(config), { bufferLogs: true })`, `configureApp`, `listen(port, host)`.
-- `src/config/api-config.ts`: `apiEnv` (the platform variables, among them `HTTP_JSON_BODY_LIMIT` and `HOST` (the interface `listen` binds, default `127.0.0.1`), plus `DATABASE_URL`, `DATABASE_POOL_MAX` and `DATABASE_READ_URL`; `apiWorkerEnv` has no `DATABASE_READ_URL`) and `ApiConfig`, the abstract class providers inject (ADR-043, decision B2).
+- `src/config/api-config.ts`: `apiEnv` (the platform variables, among them `HTTP_JSON_BODY_LIMIT` and `LISTEN_HOST` (the interface `listen` binds, default `127.0.0.1`), plus `DATABASE_URL`, `DATABASE_POOL_MAX` and `DATABASE_READ_URL`; `apiWorkerEnv` has no `DATABASE_READ_URL`) and `ApiConfig`, the abstract class providers inject (ADR-043, decision B2).
 - `src/app.module.ts`: imports `LoggingModule`, `DatabaseModule`, `HealthModule` (checks `database` and `content-reader`), `TelemetryModule` and `PublicContentModule` (one instance shared with `HealthModule`, so one reader pool); provides `ApiConfig` globally.
 - `DatabaseModule.forRoot` (from `@jadero/platform-nest`, imported once in `AppModule` and `WorkerModule`): the global `pg` pool (`PG_POOL`, closed on shutdown) and Drizzle (`DRIZZLE`); `PostgresReadinessCheck` comes from the same package.
 - `src/modules/ping/`: `PingService` writes `system.ping.v1` to the outbox inside `withTransaction` (a layered module, no unit of work port); `DevPingModule` adds `POST /dev/ping` in development only.

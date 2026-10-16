@@ -33,7 +33,7 @@ export type ApiEnv = z.output<typeof apiEnv>;
 export abstract class ApiConfig {
   abstract readonly nodeEnv: ApiEnv["NODE_ENV"];
   abstract readonly port: number;
-  /** The interface `app.listen` binds (`HOST`, default 127.0.0.1). */
+  /** The interface `app.listen` binds (`LISTEN_HOST`, default 127.0.0.1). */
   abstract readonly host: string;
   abstract readonly logLevel: ApiEnv["LOG_LEVEL"];
   abstract readonly serviceName: string;
@@ -52,7 +52,7 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
   return {
     nodeEnv: env.NODE_ENV,
     port: env.PORT,
-    host: env.HOST,
+    host: env.LISTEN_HOST,
     logLevel: env.LOG_LEVEL,
     serviceName: env.SERVICE_NAME,
     databaseUrl: env.DATABASE_URL,
@@ -83,7 +83,7 @@ export type ApiWorkerEnv = z.output<typeof apiWorkerEnv>;
 export abstract class ApiWorkerConfig {
   abstract readonly nodeEnv: ApiWorkerEnv["NODE_ENV"];
   abstract readonly port: number;
-  /** The interface `app.listen` binds (`HOST`, default 127.0.0.1). */
+  /** The interface `app.listen` binds (`LISTEN_HOST`, default 127.0.0.1). */
   abstract readonly host: string;
   abstract readonly logLevel: ApiWorkerEnv["LOG_LEVEL"];
   abstract readonly serviceName: string;
@@ -101,7 +101,7 @@ export function toApiWorkerConfig(env: ApiWorkerEnv): ApiWorkerConfig {
   return {
     nodeEnv: env.NODE_ENV,
     port: env.PORT,
-    host: env.HOST,
+    host: env.LISTEN_HOST,
     logLevel: env.LOG_LEVEL,
     serviceName: env.SERVICE_NAME,
     databaseUrl: env.DATABASE_URL,

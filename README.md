@@ -128,8 +128,9 @@ Every service is one image with several process types, picked by the command (AD
 | RabbitMQ | AMQP, vhost `dev`; management UI | 5672, 15672 (`RABBITMQ_PORT`, `RABBITMQ_MANAGEMENT_PORT`) | `pnpm dev:up` waits for it |
 
 Every container port binds to `127.0.0.1`, and the Node processes of `pnpm dev` listen on loopback
-only: `api` and `agent` bind `HOST` (default `127.0.0.1`; the images set `0.0.0.0` so the Compose
-network reaches them), and `web` runs `next dev -H localhost`. Not `-H 127.0.0.1`: Next builds the
+only: `api` and `agent` bind `LISTEN_HOST` (default `127.0.0.1`; the images set `0.0.0.0` so the Compose
+network reaches them). Not `HOST`: some shells export it (tcsh; zsh sets it) and an exported value
+wins over `.env`, so a dev server could bind a LAN name. `web` runs `next dev -H localhost`. Not `-H 127.0.0.1`: Next builds the
 proxy's request URL on `localhost`, so with another host name it takes next-intl's rewrite of a
 localized pathname for an external one and loops on a 307 (`/es/experiencia`). Node binds
 `localhost` to `::1` on macOS, so open `http://localhost:3000`, not `127.0.0.1:3000`. `pnpm dev` starts the second process types through each app's

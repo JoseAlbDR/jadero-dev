@@ -3,7 +3,7 @@ import { z } from "zod";
 /** Express's own default, made explicit (ADR-047): no JSON route needs more yet. */
 export const DEFAULT_JSON_BODY_LIMIT = "100kb";
 
-/** The default `HOST`: loopback only, so `pnpm dev` never listens on the LAN. */
+/** The default `LISTEN_HOST`: loopback only, so `pnpm dev` never listens on the LAN. */
 export const DEFAULT_HOST = "127.0.0.1";
 
 /**
@@ -16,7 +16,7 @@ export const platformEnv = z.object({
   PORT: z.string().pipe(z.coerce.number<string>().int().min(1).max(65_535)),
   // The interface the HTTP server binds: loopback by default, so a dev server is not reachable from
   // the network; the images set 0.0.0.0 so the Compose network and the healthcheck reach it.
-  HOST: z.union([z.ipv4(), z.ipv6(), z.hostname()]).default(DEFAULT_HOST),
+  LISTEN_HOST: z.union([z.ipv4(), z.ipv6(), z.hostname()]).default(DEFAULT_HOST),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
   SERVICE_NAME: z.string().min(1),
   // The largest JSON request body, in body-parser's units ("100kb", "1mb"); a larger one is a 413.

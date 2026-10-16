@@ -27,20 +27,20 @@ describe("parseConfig", () => {
     expect(parseConfig(platformEnv, valid)).toEqual({
       NODE_ENV: "development",
       PORT: 3001,
-      HOST: "127.0.0.1",
+      LISTEN_HOST: "127.0.0.1",
       LOG_LEVEL: "info",
       SERVICE_NAME: "api",
       HTTP_JSON_BODY_LIMIT: "100kb",
     });
   });
 
-  it("listens on loopback by default and takes HOST as an IP address or a host name", () => {
-    expect(platformEnv.parse(valid).HOST).toBe("127.0.0.1");
-    expect(platformEnv.parse({ ...valid, HOST: "0.0.0.0" }).HOST).toBe("0.0.0.0");
-    expect(platformEnv.parse({ ...valid, HOST: "::" }).HOST).toBe("::");
-    expect(platformEnv.parse({ ...valid, HOST: "localhost" }).HOST).toBe("localhost");
-    expect(platformEnv.safeParse({ ...valid, HOST: "not a host" }).success).toBe(false);
-    expect(platformEnv.safeParse({ ...valid, HOST: "" }).success).toBe(false);
+  it("listens on loopback by default and takes LISTEN_HOST as an IP address or a host name", () => {
+    expect(platformEnv.parse(valid).LISTEN_HOST).toBe("127.0.0.1");
+    expect(platformEnv.parse({ ...valid, LISTEN_HOST: "0.0.0.0" }).LISTEN_HOST).toBe("0.0.0.0");
+    expect(platformEnv.parse({ ...valid, LISTEN_HOST: "::" }).LISTEN_HOST).toBe("::");
+    expect(platformEnv.parse({ ...valid, LISTEN_HOST: "localhost" }).LISTEN_HOST).toBe("localhost");
+    expect(platformEnv.safeParse({ ...valid, LISTEN_HOST: "not a host" }).success).toBe(false);
+    expect(platformEnv.safeParse({ ...valid, LISTEN_HOST: "" }).success).toBe(false);
   });
 
   it("refuses a body limit that is not a size", () => {

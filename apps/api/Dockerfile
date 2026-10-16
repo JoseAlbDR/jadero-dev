@@ -51,11 +51,11 @@ RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack 
 WORKDIR /app
 # Owned by root and only readable by `node`: the process cannot rewrite its own code (D4).
 COPY --from=build --chown=root:root /out /app
-# HOST: the service config defaults to 127.0.0.1 so `pnpm dev` stays off the LAN; in a container
+# LISTEN_HOST: the service config defaults to 127.0.0.1 so `pnpm dev` stays off the LAN; in a container
 # the Compose network and the published port need every interface (the healthcheck's 127.0.0.1 is
 # one of them).
 ENV NODE_ENV=production \
-    HOST=0.0.0.0
+    LISTEN_HOST=0.0.0.0
 USER node
 EXPOSE 3001
 # Readiness, not liveness (D5): safe because Docker never restarts an unhealthy container. Node's
