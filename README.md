@@ -124,8 +124,8 @@ Every service is one image with several process types, picked by the command (AD
 | `agent` | HTTP service of the agent (health only today; chat arrives in later work packages) | 3002 | `/health/live`, `/health/ready` |
 | `agent-consumer` | Consumes the agent's queues through the inbox | 3012 | `/health/live`, `/health/ready` |
 | `api-migrate`, `agent-migrate` | One-off: apply the service's migrations, then exit | none | exit code |
-| Postgres | `content_dev`, `agent_dev`, `contact_dev`, one role each | 5432 | `pnpm dev:up` waits for it |
-| RabbitMQ | AMQP, vhost `dev`; management UI | 5672, 15672 | `pnpm dev:up` waits for it |
+| Postgres | `content_dev`, `agent_dev`, `contact_dev`, one role each | 5432 (`POSTGRES_PORT`) | `pnpm dev:up` waits for it |
+| RabbitMQ | AMQP, vhost `dev`; management UI | 5672, 15672 (`RABBITMQ_PORT`, `RABBITMQ_MANAGEMENT_PORT`) | `pnpm dev:up` waits for it |
 
 Every container port binds to `127.0.0.1`; the Node processes of `pnpm dev` listen on all
 interfaces. `pnpm dev` starts the second process types through each app's
@@ -265,11 +265,13 @@ runs, the security model and what to do when one goes red:
 
 - **A port is already in use** (`pnpm dev:up` fails on 5432 or 5672, or an app on 3000 to 3012).
   Another local Postgres, RabbitMQ or a running `pnpm images:up` holds it. Stop that process or
-  container (`pnpm images:down` for the images), or change the published port in
-  `infra/compose/compose.dev.yml` locally (for example `127.0.0.1:55432:5432`; do not commit it)
-  and the matching URLs in your `.env` files: `DATABASE_URL` and `DATABASE_READ_URL` in
-  `apps/api/.env`, `DATABASE_URL` in `apps/agent/.env` (`RABBITMQ_URL` in both for 5672). `pnpm dev:up`
-  passes `-f`, so a `compose.override.yml` is not picked up.
+  container (`pnpm images:down` for the images), or move the host port of the dev containers with
+  `POSTGRES_PORT`, `RABBITMQ_PORT` or `RABBITMQ_MANAGEMENT_PORT` in the shell (for example
+  `POSTGRES_PORT=55432 pnpm dev:up`, and the same variable for `dev:down`, `images:up` and
+  `images:down`; or put them in a gitignored `infra/compose/.env`, since Compose does not read the
+  root `.env`). Then use the same port in your `.env` files: `DATABASE_URL` and
+  `DATABASE_READ_URL` in `apps/api/.env`, `DATABASE_URL` in `apps/agent/.env` (`RABBITMQ_URL` in
+  both for 5672). More in [`infra/compose/README.md`](infra/compose/README.md).
 - **`pnpm lint` does something unexpected.** pnpm 11 runs a built-in command by that name instead
   of a script. Use `pnpm lint:check` and `pnpm lint:fix`.
 - **The editor says a workspace package "has no exported member".** Editors read the compiled

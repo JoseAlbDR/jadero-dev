@@ -1,6 +1,9 @@
 # Local development dependencies only (ADR-027, ADR-029). The apps run on the host with `pnpm dev`.
 # Start: pnpm dev:up. Stop: pnpm dev:down. Reset the data: docker compose -f infra/compose/compose.dev.yml down -v
 # Every published port binds to 127.0.0.1, and the passwords here are fixed dev values, never used elsewhere.
+# The host side of each port reads POSTGRES_PORT, RABBITMQ_PORT and RABBITMQ_MANAGEMENT_PORT from the
+# shell (default 5432, 5672, 15672), for a machine where another project already holds one of them.
+# Only the host side moves: inside the Compose network the containers keep 5432 and 5672.
 name: jadero-dev
 
 services:
@@ -10,7 +13,7 @@ services:
     environment:
       POSTGRES_PASSWORD: postgres
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       # Postgres 18 images keep PGDATA at /var/lib/postgresql/18/docker and declare the volume one level up.
       - pgdata:/var/lib/postgresql
@@ -38,8 +41,8 @@ services:
       - ../rabbitmq/rabbitmq.conf:/etc/rabbitmq/conf.d/20-jadero.conf:ro
       - ../rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
     ports:
-      - "127.0.0.1:5672:5672"
-      - "127.0.0.1:15672:15672"
+      - "127.0.0.1:${RABBITMQ_PORT:-5672}:5672"
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
