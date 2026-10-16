@@ -166,6 +166,20 @@ Profile `settings.json`:
 - Permission `deny` rules and hooks merge across scopes; a profile cannot weaken the project's `.env` deny. Other keys in the project settings win over the profile.
 - The sandbox is off by default locally (`sandbox.enabled`). Without it, the protection is the `.env` deny, the learning gate and the owner reviewing each step; turn it on if wanted, and make sure it can reach the Docker socket.
 - No other plugins, hooks or MCP servers are needed; anything left over from another framework (guard hooks, a commit skill, its own `CLAUDE.md` rules) should be off in this profile.
+- A command-rewriting hook (for example RTK's `rtk hook claude`, which turns `git status` into `rtk git status`) breaks git in subagents run with `isolation: "worktree"`: Claude Code's worktree guard refuses any git it sees behind a launcher, because it cannot prove the command stays in the worktree, and the guard cannot be turned off. Keep the hook and wrap it so a command that runs git inside `.claude/worktrees/` is left as it is; everything else still goes through the rewriter. A wrapper at `<profile dir>/hooks/rtk-hook.sh`, set as the hook's `"command": "bash <profile dir>/hooks/rtk-hook.sh"`:
+
+  ```bash
+  #!/usr/bin/env bash
+  # PreToolUse(Bash) wrapper around `rtk hook claude`: inside an isolated worktree, a command
+  # that runs git is left unrewritten (the worktree guard refuses `rtk git`); the rest goes to RTK.
+  input=$(cat)
+  cwd=$(printf '%s' "$input" | jq -r '.cwd // ""')
+  cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // ""')
+  if [[ "$cwd" == */.claude/worktrees/* ]] && [[ "$cmd" =~ (^|[^[:alnum:]_./-])git([[:space:]]|$) ]]; then exit 0; fi
+  printf '%s' "$input" | exec rtk hook claude
+  ```
+
+- Docker Desktop resets the Docker context to `desktop-linux` each time it starts, so with OrbStack (or another engine) also installed, `docker context use` does not stick. `export DOCKER_CONTEXT=orbstack` in `~/.zshenv` wins over the stored context and reaches non-interactive shells too, the ones Claude Code runs.
 
 Profile `CLAUDE.md` (personal preferences that do not belong in the public repo). A plain file, not a symlink to another profile's `CLAUDE.md`: it can import a shared "about me" file and add only what this repo needs, so nothing leaks into other setups:
 
