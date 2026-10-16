@@ -285,7 +285,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 <script type="application/json" id="map-data">
 {
   "meta": {
-    "lastUpdated": "end of WP-7 · one image per service with its process types, the hardened runtime Compose, the images check, release-please and release.yml with Trivy, GHCR and signed provenance, the weekly image scan, 2026-10-13",
+    "lastUpdated": "chore/dev-local-ports · LISTEN_HOST (loopback by default, 0.0.0.0 in the images) and configurable dev host ports for Postgres and RabbitMQ, 2026-10-16",
     "kinds": {
       "app": "deployable app", "pkg": "library package", "module": "Nest module", "provider": "provider",
       "token": "DI token", "ext": "external library", "global": "app-level wiring", "env": "environment",
@@ -1661,7 +1661,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     "apiconfig": {
       "label": "ApiConfig", "sub": "abstract class · DI token · useValue", "kind": "token", "status": "real", "wp": "WP-3 step 3",
-      "what": "The typed configuration providers inject: `nodeEnv`, `port`, `logLevel`, `serviceName`, `databaseUrl`, `databasePoolMax` and, since WP-12, `databaseReadUrl` (the read-only `content_reader` connection, never logged). api-worker has its own `ApiWorkerConfig` without the read URL: the worker serves no public reads, so it never holds that credential.",
+      "what": "The typed configuration providers inject: `nodeEnv`, `port`, `host`, `logLevel`, `serviceName`, `databaseUrl`, `databasePoolMax` and, since WP-12, `databaseReadUrl` (the read-only `content_reader` connection, never logged). api-worker has its own `ApiWorkerConfig` without the read URL: the worker serves no public reads, so it never holds that credential.",
       "how": "An abstract class is both the TypeScript type and the runtime DI token. AppModule provides it with `{ provide: ApiConfig, useValue: config }`. A provider writes `constructor(readonly config: ApiConfig)` and Nest resolves it from `design:paramtypes`. It must be imported as a value, never with `import type`, or the metadata becomes `Object` and DI fails.",
       "why": "WP-3 decision B2: matches the \"ports are abstract classes and DI tokens\" convention of ADR-003 and keeps string keys like `config.get(\"PORT\")` out of code. The DI test proves the token resolves under Vitest.",
       "files": ["apps/api/src/config/api-config.ts", "apps/api/test/app.module.test.ts"]
@@ -1879,7 +1879,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "toapiconfig": {
       "label": "toApiConfig(env)", "sub": "to camelCase", "kind": "step", "status": "real", "wp": "WP-3 step 3",
       "what": "Maps the parsed environment to the object provided as `ApiConfig`.",
-      "how": "A pure function: `NODE_ENV` to `nodeEnv`, `PORT` to `port` and so on.",
+      "how": "A pure function: `NODE_ENV` to `nodeEnv`, `PORT` to `port`, `LISTEN_HOST` to `host` and so on.",
       "why": "Providers see names that read like code and never the raw environment (decision B2).",
       "files": ["apps/api/src/config/api-config.ts"]
     },
@@ -1898,16 +1898,16 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["packages/platform-nest/src/bootstrap/configure-app.ts"]
     },
     "b-listen": {
-      "label": "app.listen(config.port)", "sub": "3001 in dev", "kind": "step", "status": "real", "wp": "WP-3 step 3",
-      "what": "Opens the HTTP port.",
-      "how": "Uses the validated `port` from ApiConfig, never `process.env.PORT` directly.",
-      "why": "api runs on 3001 (WP-3 defaults kept).",
-      "files": ["apps/api/src/main.ts"]
+      "label": "app.listen(port, host)", "sub": "127.0.0.1:3001 in dev", "kind": "step", "status": "real", "wp": "WP-3 step 3",
+      "what": "Opens the HTTP port on one interface.",
+      "how": "`app.listen(config.port, config.host)` with the validated `port` and `host` (`LISTEN_HOST`) from ApiConfig, never `process.env` directly. api-worker, agent and the agent consumer listen the same way. The api and agent images set `LISTEN_HOST=0.0.0.0`.",
+      "why": "api runs on 3001 (WP-3 defaults kept). Loopback by default, so `pnpm dev` is never reachable from the network; a container needs every interface for the Compose network, its published port and its own healthcheck. web's `pnpm dev` does the same with `next dev -H localhost`.",
+      "files": ["apps/api/src/main.ts", "apps/api/src/worker.ts", "apps/agent/src/main.ts", "apps/agent/src/consumer.ts", "apps/api/Dockerfile", "apps/agent/Dockerfile"]
     },
     "platformenv": {
       "label": "platformEnv", "sub": "in platform-nest", "kind": "env", "status": "real", "wp": "WP-3 step 3",
-      "what": "The variables every Nest service reads: `NODE_ENV`, `PORT`, `LOG_LEVEL`, `SERVICE_NAME` and, since WP-12, `HTTP_JSON_BODY_LIMIT` (default `100kb`).",
-      "how": "A `z.object`. `PORT` is a string piped into a coerced integer from 1 to 65535, so a missing value reads \"received undefined\". `HTTP_JSON_BODY_LIMIT` must look like `100kb` or `1mb` (body-parser's units); configureApp passes it to the one JSON parser. Booleans, when they arrive, use `z.stringbool()` because `z.coerce.boolean()` turns \"false\" into true.",
+      "what": "The variables every Nest service reads: `NODE_ENV`, `PORT`, `LISTEN_HOST` (default `127.0.0.1`, `DEFAULT_HOST`), `LOG_LEVEL`, `SERVICE_NAME` and, since WP-12, `HTTP_JSON_BODY_LIMIT` (default `100kb`).",
+      "how": "A `z.object`. `PORT` is a string piped into a coerced integer from 1 to 65535, so a missing value reads \"received undefined\". `LISTEN_HOST` must be an IPv4 or IPv6 address or a hostname; each service maps it to `host` in its config for `app.listen`. `HTTP_JSON_BODY_LIMIT` must look like `100kb` or `1mb` (body-parser's units); configureApp passes it to the one JSON parser. Booleans, when they arrive, use `z.stringbool()` because `z.coerce.boolean()` turns \"false\" into true.",
       "why": "Each module contributes a slice and the service merges them (ADR-043, which kept this rule from ADR-007).",
       "files": ["packages/platform-nest/src/config/platform-env.ts"]
     },
@@ -2299,7 +2299,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "c-compose": {
       "label": "pnpm dev:up", "sub": "Postgres 18 + pgvector, RabbitMQ 4", "kind": "check", "status": "real", "wp": "WP-1",
       "what": "Local dependencies in Docker; the apps run on the host.",
-      "how": "`infra/compose/compose.dev.yml`: pgvector on Postgres 18 and RabbitMQ with the management UI, ports bound to 127.0.0.1, healthchecks so `--wait` returns when ready.",
+      "how": "`infra/compose/compose.dev.yml`: pgvector on Postgres 18 and RabbitMQ with the management UI, ports bound to 127.0.0.1, healthchecks so `--wait` returns when ready. The host side of each port reads `POSTGRES_PORT`, `RABBITMQ_PORT` and `RABBITMQ_MANAGEMENT_PORT` from the shell (default 5432, 5672, 15672), for a machine where another project already holds one; the connection strings in each `.env` follow. Inside the Compose network the containers keep 5432 and 5672.",
       "why": "ADR-027 and ADR-029. api's readiness check connects to Postgres (`content_dev`). Since WP-5 RabbitMQ loads vhost `dev`, its users, exchanges, queues and policies from `infra/rabbitmq/definitions.json`. The Postgres image tag is shared with the integration tests.",
       "files": ["infra/compose/compose.dev.yml"]
     },

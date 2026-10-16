@@ -34,6 +34,11 @@ describe("agent config", () => {
     });
   });
 
+  it("listens on 127.0.0.1 by default and reads LISTEN_HOST", () => {
+    expect(toAgentConfig(agentEnv.parse(base)).host).toBe("127.0.0.1");
+    expect(toAgentConfig(agentEnv.parse({ ...base, LISTEN_HOST: "0.0.0.0" })).host).toBe("0.0.0.0");
+  });
+
   it("sizes the pool at 6 by default and reads DATABASE_POOL_MAX", () => {
     expect(toAgentConfig(agentEnv.parse(base)).databasePoolMax).toBe(6);
     expect(toAgentConfig(agentEnv.parse({ ...base, DATABASE_POOL_MAX: "8" })).databasePoolMax).toBe(

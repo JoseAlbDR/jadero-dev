@@ -26,6 +26,7 @@ describe("api config", () => {
     ).toEqual({
       nodeEnv: "development",
       port: 3001,
+      host: "127.0.0.1",
       logLevel: "info",
       serviceName: "api",
       databaseUrl: "postgres://content:content@127.0.0.1:5432/content_dev",

@@ -16,6 +16,7 @@ describe("api-worker config", () => {
   it("defaults SERVICE_NAME to api-worker and the heartbeat to 5 minutes", () => {
     expect(toApiWorkerConfig(apiWorkerEnv.parse(env))).toMatchObject({
       serviceName: "api-worker",
+      host: "127.0.0.1",
       rabbitmqUrl: "amqp://api:api@127.0.0.1:1/dev",
       heartbeatIntervalMs: 300_000,
     });

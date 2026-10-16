@@ -8,6 +8,7 @@ export {
   parseConfig,
 } from "./config/load-config.js";
 export {
+  DEFAULT_HOST,
   DEFAULT_JSON_BODY_LIMIT,
   type PlatformEnv,
   platformEnv,

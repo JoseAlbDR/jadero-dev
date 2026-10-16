@@ -12,4 +12,4 @@ const app = configureApp(
   await NestFactory.create<NestExpressApplication>(WorkerModule.forRoot(config), APP_OPTIONS),
   env,
 );
-await app.listen(config.port);
+await app.listen(config.port, config.host);
