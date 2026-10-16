@@ -1,6 +1,6 @@
 ---
 wp: 8
-decision: pending
+decision: recorded
 adr: [ADR-027, ADR-043, ADR-047, ADR-049, ADR-029, ADR-002, ADR-010]
 ---
 
@@ -427,6 +427,7 @@ The explainer is the gate, not a step. **Owner** marks what only the owner can d
 
 0. *Done:* the SSH rule (9c87775), the read-only inventory, issue #16 updated.
 1. *Explainer* (this file); after your answers, the short ADR for Q1 and any superseding line (a firewall exception, Q2 C).
+2a. *Host upgrade* (owner, amendment of 2026-10-16): snapshot, Ubuntu 26.04.1, re-enable third-party repos, PM2 startup, remove `openclaw`, other projects checked.
 2. *Perimeter* (learning). **Owner:** Hetzner snapshot; `tailscale up` and key expiry off; `sshd` drop-in and `sshd -T`; ufw rule on `tailscale0`; confirm other projects' public ports; attach the Cloud Firewall. Agent: runbook `docs/runbooks/server-access.md`, Trace 1 steps 1 to 4 checks.
 3. *Deploy user and forced command* (learning). Agent: `infra/scripts/deploy-entry`, stub `deploy.sh`, tests. **Owner:** create the user, key line, sudoers drop-in (`visudo -c`), copy the scripts. Trace 1 step 5.
 4. *Ops stack, provisioning, op CLI* (learning). Agent: `compose.ops.yml`, `provision.sql`, `pg_hba.conf`, `provision-users.sh`, the generator change for per-vhost definitions without users, `ops.env.tpl`, the dev switch to the new provisioning, the hardening test extension. **Owner:** 1Password vault and service account (M-38), `op` install and token file, memory check, `docker compose up`, admin accounts over the tunnel. Trace 1 step 6.
@@ -436,6 +437,17 @@ The explainer is the gate, not a step. **Owner** marks what only the owner can d
 7. *Map and wrap*: `/map` (the code map's deploy view gains the server, networks and the edge), `/wrap-wp 8`. The issue's "Deployed to staging" box is WP-9's.
 
 ## Decision
+
+Recorded 2026-10-17 with the owner.
+
+- D1 to D8: accepted as explained. D1: before the Cloud Firewall changes, the agent lists what the other projects on the host need from outside and the owner confirms; the owner says nothing else deploys to the server over SSH (they pull and rebuild on the host).
+- D2: SSH only over Tailscale, option A. The owner first worried about depending on Tailscale; the answer is break-glass: the Cloud Firewall lives in the Hetzner panel, so the public SSH rule can be added back in a minute, and the Hetzner web console (tested by the owner on 2026-10-16, it logs in) works with no network path at all. Tailscale SSH stays off.
+- D5: a new dedicated vault in the owner's personal 1Password account (never the employer's account). The owner first proposed the Personal vault; service accounts cannot read Personal or Private vaults, and a dedicated vault limits a leaked token to this project.
+- Q1: A, plain traffic on the private Docker networks as a written accepted risk, revisited later (triggers in the Recommendations). Written as a short ADR in step 1.
+- Q2: B, only the public paths of Umami and Uptime Kuma are proxied; admin screens over Tailscale. If Kuma's path list proves fragile, fall back to A for Kuma only.
+- Amendment (owner, 2026-10-16): no Hetzner server backups (ADR-027 lists them as a second layer), and no spending beyond the server for now. The restic destination is open until step 6: a free object storage tier (recommended) or a pull from the owner's laptop over Tailscale. Either way it goes in the same short ADR as Q1.
+- Amendment (owner, 2026-10-16): upgrade the host to Ubuntu 26.04.1 LTS before building anything on it, as a new step 2a: a fresh Hetzner snapshot first, `apt full-upgrade` and reboot, `do-release-upgrade` and reboot, re-enable the Docker and Tailscale apt repos on `resolute`, `pm2 unstartup`, `pm2 startup` and `pm2 save` for the other project, then check every other project answers. Consequences for this file: nginx becomes 1.28 (the CI `nginx -t` job runs on `ubuntu:26.04`), `sudo` is sudo-rs, cgroup v1 is gone. The restic version shipped by 26.04 is checked at step 6; the pinned upstream release stays the plan.
+- Amendment (owner, 2026-10-16): delete the unused `openclaw` user in step 2a, after the snapshot and after listing what its home, crontab and processes hold.
 
 ## Step log
 
