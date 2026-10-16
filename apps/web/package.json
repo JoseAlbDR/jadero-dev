@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "next build && node scripts/copy-standalone-assets.mjs",
-    "dev": "next dev",
+    "dev": "next dev -H localhost",
     "start": "node .next/standalone/apps/web/server.js",
     "typecheck": "next typegen && tsc --noEmit -p tsconfig.json",
     "test": "vitest run",

@@ -127,8 +127,12 @@ Every service is one image with several process types, picked by the command (AD
 | Postgres | `content_dev`, `agent_dev`, `contact_dev`, one role each | 5432 (`POSTGRES_PORT`) | `pnpm dev:up` waits for it |
 | RabbitMQ | AMQP, vhost `dev`; management UI | 5672, 15672 (`RABBITMQ_PORT`, `RABBITMQ_MANAGEMENT_PORT`) | `pnpm dev:up` waits for it |
 
-Every container port binds to `127.0.0.1`; the Node processes of `pnpm dev` listen on all
-interfaces. `pnpm dev` starts the second process types through each app's
+Every container port binds to `127.0.0.1`, and the Node processes of `pnpm dev` listen on loopback
+only: `api` and `agent` bind `HOST` (default `127.0.0.1`; the images set `0.0.0.0` so the Compose
+network reaches them), and `web` runs `next dev -H localhost`. Not `-H 127.0.0.1`: Next builds the
+proxy's request URL on `localhost`, so with another host name it takes next-intl's rewrite of a
+localized pathname for an external one and loops on a 307 (`/es/experiencia`). Node binds
+`localhost` to `::1` on macOS, so open `http://localhost:3000`, not `127.0.0.1:3000`. `pnpm dev` starts the second process types through each app's
 `dev:worker` script, which sets the port and `SERVICE_NAME` (3011 for `api-worker`, 3012 for the
 agent consumer).
 
