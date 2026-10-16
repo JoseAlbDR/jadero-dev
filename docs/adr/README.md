@@ -39,7 +39,7 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-024 | Lint, format and architecture fitness functions | accepted | D-35 | [0024-lint-format-and-architecture-fitness-functions.md](0024-lint-format-and-architecture-fitness-functions.md) |
 | ADR-025 | Versioning and releases | superseded by ADR-049 | D-36 | [0025-versioning-and-releases.md](0025-versioning-and-releases.md) |
 | ADR-026 | Pipeline, environments, images and deploy | superseded by ADR-048 | D-29, D-32 | [0026-pipeline-environments-images-and-deploy.md](0026-pipeline-environments-images-and-deploy.md) |
-| ADR-027 | Hosting layout | accepted | D-30, D-31, D-48 | [0027-hosting-layout.md](0027-hosting-layout.md) |
+| ADR-027 | Hosting layout | superseded by ADR-050 | D-30, D-31, D-48 | [0027-hosting-layout.md](0027-hosting-layout.md) |
 | ADR-028 | Agent tooling for the repo | accepted | D-34 | [0028-agent-tooling-for-the-repo.md](0028-agent-tooling-for-the-repo.md) |
 | ADR-029 | Service boundaries and messaging | accepted | D-39, D-40, D-41, D-42, D-43, D-49 | [0029-service-boundaries-and-messaging.md](0029-service-boundaries-and-messaging.md) |
 | ADR-030 | Contact service | accepted | D-28, D-37, D-46 | [0030-contact-service.md](0030-contact-service.md) |
@@ -62,6 +62,7 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-047 | HTTP hardening at the edge and in the apps | accepted | D-77 | [0047-http-hardening-at-the-edge-and-in-the-apps.md](0047-http-hardening-at-the-edge-and-in-the-apps.md) |
 | ADR-048 | CI pipeline and supply chain | superseded by ADR-049 | D-29, D-32, D-78 | [0048-ci-pipeline-and-supply-chain.md](0048-ci-pipeline-and-supply-chain.md) |
 | ADR-049 | Images, release and image scanning | accepted | D-29, D-32, D-36, D-78, D-79 | [0049-images-release-and-image-scanning.md](0049-images-release-and-image-scanning.md) |
+| ADR-050 | Server internal traffic and backup destination | proposed | D-80 | [0050-server-internal-traffic-and-backup-destination.md](0050-server-internal-traffic-and-backup-destination.md) |
 <!-- adr-index:end -->
 
 Read in this order for a first pass: 029 (service boundaries), 002 (topology and edge), 003 (inside a service), 012 (async work), 031 (content layers), 013 to 016 (AI layer and RAG), 020 and 021 (security), 025 to 027 (delivery and hosting), 041 (work tracking).

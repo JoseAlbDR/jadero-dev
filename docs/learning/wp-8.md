@@ -1,7 +1,7 @@
 ---
 wp: 8
 decision: recorded
-adr: [ADR-027, ADR-043, ADR-047, ADR-049, ADR-029, ADR-002, ADR-010]
+adr: [ADR-050, ADR-027, ADR-043, ADR-047, ADR-049, ADR-029, ADR-002, ADR-010]
 ---
 
 # WP-8: Server preparation
