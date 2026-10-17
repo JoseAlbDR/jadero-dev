@@ -19,8 +19,8 @@ describe("api config", () => {
       toApiConfig(
         apiEnv.parse({
           PORT: "3001",
-          DATABASE_URL: "postgres://content:content@127.0.0.1:5432/content_dev",
-          DATABASE_READ_URL: "postgres://content_reader:x@127.0.0.1:5432/content_dev",
+          DATABASE_URL: "postgres://content_dev:content_dev@127.0.0.1:5432/content_dev",
+          DATABASE_READ_URL: "postgres://content_reader_dev:x@127.0.0.1:5432/content_dev",
         }),
       ),
     ).toEqual({
@@ -29,9 +29,9 @@ describe("api config", () => {
       host: "127.0.0.1",
       logLevel: "info",
       serviceName: "api",
-      databaseUrl: "postgres://content:content@127.0.0.1:5432/content_dev",
+      databaseUrl: "postgres://content_dev:content_dev@127.0.0.1:5432/content_dev",
       databasePoolMax: 4,
-      databaseReadUrl: "postgres://content_reader:x@127.0.0.1:5432/content_dev",
+      databaseReadUrl: "postgres://content_reader_dev:x@127.0.0.1:5432/content_dev",
     });
   });
 
@@ -39,7 +39,7 @@ describe("api config", () => {
     expect(
       apiEnv.safeParse({
         PORT: "3001",
-        DATABASE_URL: "postgres://content:content@127.0.0.1:5432/content_dev",
+        DATABASE_URL: "postgres://content_dev:content_dev@127.0.0.1:5432/content_dev",
       }).success,
     ).toBe(false);
   });
@@ -50,8 +50,8 @@ describe("api config", () => {
         PORT: "3001",
         NODE_ENV: "test",
         LOG_LEVEL: "fatal",
-        DATABASE_URL: "postgres://content:content@127.0.0.1:5432/content_dev",
-        DATABASE_READ_URL: "postgres://content_reader:x@127.0.0.1:5432/content_dev",
+        DATABASE_URL: "postgres://content_dev:content_dev@127.0.0.1:5432/content_dev",
+        DATABASE_READ_URL: "postgres://content_reader_dev:x@127.0.0.1:5432/content_dev",
       }),
     );
     const moduleRef = await Test.createTestingModule({

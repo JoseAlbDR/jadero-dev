@@ -17,11 +17,14 @@ services:
     volumes:
       # Postgres 18 images keep PGDATA at /var/lib/postgresql/18/docker and declare the volume one level up.
       - pgdata:/var/lib/postgresql
-      # Runs once, only when the data volume is empty: roles, databases, the vector extension.
+      # init/01-provision.sh runs once, when the data volume is empty: it applies the convergent
+      # infra/postgres/provision.sql with env=dev (roles, databases, the vector extension). After
+      # provision.sql changes, `pnpm dev:provision` runs it again on the existing volume.
       - ./init:/docker-entrypoint-initdb.d:ro
+      - ../postgres/provision.sql:/jadero/provision.sql:ro
     healthcheck:
       # TCP on purpose: during init the entrypoint runs a temporary server on the Unix socket only,
-      # so a socket check could pass before 01-databases.sql has finished.
+      # so a socket check could pass before provisioning has finished.
       test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres"]
       interval: 2s
       timeout: 3s

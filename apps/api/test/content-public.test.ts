@@ -13,7 +13,7 @@ import { bootApi } from "./setup/boot.js";
 // WP-12 step 7a, the HTTP side of the public reads on a fake query port (no database: nothing
 // listens on port 1): URI versioning, parameter schemas, response schemas, cache headers and 304.
 // The same routes on Postgres, through the read-only role, are content-public.int.test.ts.
-const DATABASE_URL = "postgres://content:content@127.0.0.1:1/content_dev";
+const DATABASE_URL = "postgres://content_dev:content_dev@127.0.0.1:1/content_dev";
 
 describe("public content reads over HTTP", () => {
   const queries = new FakeContentQueries();

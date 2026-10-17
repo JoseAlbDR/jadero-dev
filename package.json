@@ -29,6 +29,7 @@
     "dev": "turbo run dev dev:worker --concurrency=20",
     "dev:up": "docker compose -f infra/compose/compose.dev.yml up -d --wait",
     "dev:down": "docker compose -f infra/compose/compose.dev.yml down",
+    "dev:provision": "docker compose -f infra/compose/compose.dev.yml exec -T -u postgres postgres /docker-entrypoint-initdb.d/01-provision.sh",
     "images:build": "docker compose -f infra/compose/compose.dev.yml -f infra/compose/compose.images.yml build",
     "images:up": "pnpm images:build && docker compose -f infra/compose/compose.dev.yml -f infra/compose/compose.images.yml up -d --wait",
     "images:down": "docker compose -f infra/compose/compose.dev.yml -f infra/compose/compose.images.yml down",

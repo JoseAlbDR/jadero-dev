@@ -40,7 +40,7 @@ services:
     image: jadero-api:dev
     command: ["node", "dist/migrate.js"]
     environment:
-      DATABASE_URL: postgres://content:content@postgres:5432/content_dev
+      DATABASE_URL: postgres://content_dev:content_dev@postgres:5432/content_dev
       NODE_OPTIONS: --max-old-space-size=224
     # Same budget as the service it prepares (ADR-027 has no row for a one-off).
     mem_limit: 300m
@@ -58,8 +58,8 @@ services:
     environment:
       PORT: "3001"
       LOG_LEVEL: info
-      DATABASE_URL: postgres://content:content@postgres:5432/content_dev
-      DATABASE_READ_URL: postgres://content_reader:content_reader@postgres:5432/content_dev
+      DATABASE_URL: postgres://content_dev:content_dev@postgres:5432/content_dev
+      DATABASE_READ_URL: postgres://content_reader_dev:content_reader_dev@postgres:5432/content_dev
       OTEL_SERVICE_NAME: api
       # One line per span on stdout, as in dev; staging and production use otlp.
       OTEL_TRACES_EXPORTER: pretty
@@ -84,7 +84,7 @@ services:
       PORT: "3011"
       SERVICE_NAME: api-worker
       LOG_LEVEL: info
-      DATABASE_URL: postgres://content:content@postgres:5432/content_dev
+      DATABASE_URL: postgres://content_dev:content_dev@postgres:5432/content_dev
       RABBITMQ_URL: amqp://api:api@rabbitmq:5672/dev
       # The dev default (5 minutes); HEARTBEAT_INTERVAL_MS=10000 pnpm images:up for a faster ping.
       HEARTBEAT_INTERVAL_MS: ${HEARTBEAT_INTERVAL_MS:-300000}
@@ -103,7 +103,7 @@ services:
     image: jadero-agent:dev
     command: ["node", "dist/migrate.js"]
     environment:
-      DATABASE_URL: postgres://agent:agent@postgres:5432/agent_dev
+      DATABASE_URL: postgres://agent_dev:agent_dev@postgres:5432/agent_dev
       NODE_OPTIONS: --max-old-space-size=384
     mem_limit: 512m
     depends_on:
@@ -120,7 +120,7 @@ services:
     environment:
       PORT: "3002"
       LOG_LEVEL: info
-      DATABASE_URL: postgres://agent:agent@postgres:5432/agent_dev
+      DATABASE_URL: postgres://agent_dev:agent_dev@postgres:5432/agent_dev
       OTEL_SERVICE_NAME: agent
       OTEL_TRACES_EXPORTER: pretty
       AI_CHAT_PROVIDER: fake
@@ -147,7 +147,7 @@ services:
       PORT: "3012"
       SERVICE_NAME: agent-consumer
       LOG_LEVEL: info
-      DATABASE_URL: postgres://agent:agent@postgres:5432/agent_dev
+      DATABASE_URL: postgres://agent_dev:agent_dev@postgres:5432/agent_dev
       RABBITMQ_URL: amqp://agent:agent@rabbitmq:5672/dev
       OTEL_SERVICE_NAME: agent-consumer
       OTEL_TRACES_EXPORTER: pretty

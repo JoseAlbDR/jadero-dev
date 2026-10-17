@@ -124,7 +124,7 @@ Every service is one image with several process types, picked by the command (AD
 | `agent` | HTTP service of the agent (health only today; chat arrives in later work packages) | 3002 | `/health/live`, `/health/ready` |
 | `agent-consumer` | Consumes the agent's queues through the inbox | 3012 | `/health/live`, `/health/ready` |
 | `api-migrate`, `agent-migrate` | One-off: apply the service's migrations, then exit | none | exit code |
-| Postgres | `content_dev`, `agent_dev`, `contact_dev`, one role each | 5432 (`POSTGRES_PORT`) | `pnpm dev:up` waits for it |
+| Postgres | `content_dev`, `agent_dev`, `contact_dev`, each owned by the role of the same name, plus the read-only `content_reader_dev` | 5432 (`POSTGRES_PORT`) | `pnpm dev:up` waits for it |
 | RabbitMQ | AMQP, vhost `dev`; management UI | 5672, 15672 (`RABBITMQ_PORT`, `RABBITMQ_MANAGEMENT_PORT`) | `pnpm dev:up` waits for it |
 
 Every container port binds to `127.0.0.1`, and the Node processes of `pnpm dev` listen on loopback
@@ -212,6 +212,7 @@ Root scripts (`pnpm <script>`):
 | `db:migrate` | Applies the pending migrations per service (build first) |
 | `dev` | Every app and second process type in watch mode |
 | `dev:up` / `dev:down` | Start or stop Postgres and RabbitMQ in Docker |
+| `dev:provision` | Runs `infra/postgres/provision.sql` again on the running dev Postgres (convergent: no data reset) |
 | `images:build` | Builds the service images |
 | `images:up` / `images:down` | Runs or removes every process type from the images, hardened |
 | `adr:new` | `pnpm adr:new "Title"`: the next ADR from the template |
@@ -284,8 +285,10 @@ runs, the security model and what to do when one goes red:
 - **An app refuses to start with "Invalid configuration".** The listed variable is missing or
   malformed in that app's `.env`; compare it with the app's `.env.example`.
 - **`db:migrate` cannot find `dist/migrate.js`.** Run `pnpm build` first.
-- **Database roles or databases are missing after changing `infra/compose/init/`.** The init script
-  runs only on an empty volume: `docker compose -f infra/compose/compose.dev.yml down -v`, then
+- **Database roles or databases are missing after changing `infra/postgres/provision.sql`.** The
+  container runs it by itself only on an empty volume; run it again on the existing one with
+  `pnpm dev:provision` (convergent, keeps the data). A role renamed in the script leaves the old
+  role behind; to start clean: `docker compose -f infra/compose/compose.dev.yml down -v`, then
   `pnpm dev:up` (this deletes local data).
 
 ## How work is done

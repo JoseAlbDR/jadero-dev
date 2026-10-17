@@ -21,7 +21,11 @@
     },
     "test:int": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/infra/compose/**"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/infra/compose/**",
+        "$TURBO_ROOT$/infra/postgres/**"
+      ],
       "cache": false
     },
     "image": {

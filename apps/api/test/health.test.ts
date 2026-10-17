@@ -9,7 +9,9 @@ describe("api health with its database down", () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    app = await bootApi({ DATABASE_URL: "postgres://content:content@127.0.0.1:1/content_dev" });
+    app = await bootApi({
+      DATABASE_URL: "postgres://content_dev:content_dev@127.0.0.1:1/content_dev",
+    });
   });
 
   afterAll(async () => {
