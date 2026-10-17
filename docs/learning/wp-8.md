@@ -433,7 +433,7 @@ The explainer is the gate, not a step. **Owner** marks what only the owner can d
 4. *Ops stack, provisioning, op CLI* (learning). Agent: `compose.ops.yml`, `provision.sql`, `pg_hba.conf`, `provision-users.sh`, the generator change for per-vhost definitions without users, `ops.env.tpl`, the dev switch to the new provisioning, the hardening test extension. **Owner:** 1Password vault and service account (M-38), `op` install and token file, memory check, `docker compose up`, admin accounts over the tunnel. Trace 1 step 6.
    - Mid-WP `reviewer` on the branch.
 5. *Edge* (learning). Agent: `infra/nginx/`, the CI `nginx -t` job, `smoke-edge.sh`. **Owner:** DNS records for `new.`, `admin.`, `stats.`, `status.` (M-11) and CAA, certbot, symlinks, `nginx -t`, reload. Trace 1 steps 7 and 8.
-6. *Backups and the restore drill* (learning). Agent: `backup.sh`, `restore.sh`, the systemd units, `docs/runbooks/restore.md`. **Owner:** Storage Box order and key (M-10), restic install and `init`, password in 1Password, enable the timer, run the drill with the agent narrating. Trace 2.
+6. *Backups and the restore drill* (learning). Agent: `backup.sh`, `restore.sh`, the systemd units, `docs/runbooks/restore.md`. **Owner:** Backblaze B2 bucket and application key in EU Central (ADR-050), restic install and `init`, password in 1Password, enable the timer, run the drill with the agent narrating. Trace 2.
 7. *Map and wrap*: `/map` (the code map's deploy view gains the server, networks and the edge), `/wrap-wp 8`. The issue's "Deployed to staging" box is WP-9's.
 
 ## Decision
@@ -452,6 +452,7 @@ Recorded 2026-10-17 with the owner.
 ## Step log
 
 - Step 0 (server access rule, inventory, issue): `AGENTS.md` section 7, `.claude/rules/infra.md`, `docs/agent-tooling.md` and the delivery flow now allow narrated, read-only-first SSH to the server when the owner allows it, with `sudo` handed to the owner and other projects off limits (9c87775, artifact republished in 72e36c9); a read-only inventory found the listeners, the `sshd` state, Tailscale logged out, no `restic` or `op`, and the login user in `docker`. / Why: WP-8 is server work, and the old "agents never ssh" rule would have made the agent guess the server's state; the inventory turned D1 from theory into a port that answers today despite ufw.
+- Step 2a (host upgrade, owner on the server, agent checking read-only): snapshot, then 24.04.5 with kernel 6.8.0-147 and reboot, then `do-release-upgrade` to 26.04.1 (kernel 7.0, nginx 1.28.3, sudo-rs, the other project's PM2 apps moved from Node 18 to the distro's Node 22.22.1 and came back online, PM2 startup needed no change); the dead NodeSource repo removed, the Docker repo moved off the wrong release, the Docker and Tailscale repos rewritten as `.sources` on `resolute`; the retired NGINX Amplify agent purged; `openclaw` deleted (no crontab, no processes, one authorized key); and a drop-in from 2026-10-02 that gave the login user passwordless `apt`, `systemctl`, `tee` and more removed, verified with `sudo -n -l`. / Why: build WP-8 on the release it will live on, and close what the upgrade surfaced: passwordless `apt` or `systemctl` is root, so any code running as the login user (the PM2 apps) was one bug away from root; sudo-rs rejecting the wildcard lines is how it came to light.
 
 ## Recap
 
