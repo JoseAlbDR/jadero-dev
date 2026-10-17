@@ -69,7 +69,7 @@ services:
   rabbitmq:
     <<: *base
     # The same reference as compose.dev.yml (WP-1 decision H1).
-    image: rabbitmq:4.3.6-management-alpine@sha256:3ef7f7e89fed709a78f79b8b5f4e30e1312a1d4089da752e23595566d9d61a95
+    image: rabbitmq:4.3.6-management-alpine@sha256:3505b6096cdbc083bcc363e74366f575ecd0c1a55be4dadcbc60fa08e34647e1
     # The node's data folder is named after the host name (rabbit@rabbitmq): a fixed one keeps the
     # users and queues when the container is recreated.
     hostname: rabbitmq

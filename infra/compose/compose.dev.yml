@@ -36,7 +36,7 @@ services:
   rabbitmq:
     # Broker with the management UI (WP-1 decision H1). Vhost `dev`, its users, exchanges and queues
     # come from infra/rabbitmq/definitions.json, generated from packages/messaging (WP-5).
-    image: rabbitmq:4.3.6-management-alpine@sha256:3ef7f7e89fed709a78f79b8b5f4e30e1312a1d4089da752e23595566d9d61a95
+    image: rabbitmq:4.3.6-management-alpine@sha256:3505b6096cdbc083bcc363e74366f575ecd0c1a55be4dadcbc60fa08e34647e1
     # Run as the image's rabbitmq user. The image starts as root and drops to rabbitmq only for the server;
     # the healthcheck (docker exec) would run as root with HOME=/var/lib/rabbitmq and, on a slow first boot,
     # create .erlang.cookie as root before the server does, which then fails with eacces. One user for both.
