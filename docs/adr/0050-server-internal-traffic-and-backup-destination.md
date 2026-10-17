@@ -1,7 +1,7 @@
 ---
 id: ADR-050
 title: "Server internal traffic and backup destination"
-status: proposed
+status: accepted
 date: 2026-10-17
 deciders: [owner]
 decisions: [D-80]
@@ -12,7 +12,7 @@ source: docs/learning/wp-8.md (Q1 and the Decision amendments, 2026-10-16 and 20
 
 # ADR-050: Server internal traffic and backup destination
 
-**Status:** proposed
+**Status:** accepted
 
 ## Context
 
