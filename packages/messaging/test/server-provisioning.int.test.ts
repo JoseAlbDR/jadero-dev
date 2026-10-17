@@ -138,7 +138,7 @@ describe("the servers' RabbitMQ provisioning", () => {
         message = await channel.get("agent.system.ping", { noAck: true });
         if (message === false) await new Promise((resolve) => setTimeout(resolve, 100));
       }
-      expect(message && message.content.toString()).toBe("{}");
+      expect(message ? message.content.toString() : undefined).toBe("{}");
       // No configure right: declaring a queue closes the channel with ACCESS_REFUSED.
       await expect(channel.assertQueue("agent.scratch")).rejects.toThrow(/ACCESS_REFUSED/);
     } finally {
