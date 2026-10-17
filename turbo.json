@@ -60,6 +60,7 @@
         "apps/*/release-inputs.txt",
         "apps/*/Dockerfile",
         "infra/compose/*.yml",
+        "infra/scripts/**",
         "turbo.json",
         "apps/*/turbo.json",
         "apps/*/package.json",

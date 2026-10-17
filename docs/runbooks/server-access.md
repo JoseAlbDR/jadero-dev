@@ -148,3 +148,123 @@ The last line proves the Tailscale policy, not ufw: without the policy, any port
 ## 7. Rollback
 
 Before a risky change (a release upgrade, a firewall or SSH change), the owner takes a Hetzner snapshot by hand. Only one snapshot is kept, and it is deleted once the change is verified (ADR-050). If a change cannot be fixed through section 5, restore the snapshot from the Hetzner console; anything written on the host after the snapshot is lost, including other projects' data, so this is the last option.
+
+## 8. The deploy user
+
+WP-9's deploy job reaches the server as `deploy`, a user that can do one thing: run `deploy.sh` with a validated environment, service and version (WP-8 D3, ADR-049 restating ADR-048's deploy mechanics). Its key sits in GitHub's secrets, so a leaked key must not mean a leaked server.
+
+- **No password, not in `docker` or `sudo`.** The `docker` group is root-equivalent: anyone in it can start a container that mounts `/`.
+- **One key, with a forced command.** Whatever the client asks for, `sshd` runs `/srv/jadero/bin/deploy-entry`. The client's words arrive only as the `SSH_ORIGINAL_COMMAND` variable. The wrapper accepts exactly `deploy <env> <service> <version>` (`staging` or `prod`; `api`, `agent` or `web`; a semver version without `v`), refuses anything else with exit 1, logs one line per call under the tag `jadero-deploy` (the values when accepted, a fixed reason when refused, never the raw input) and calls `sudo -n /srv/jadero/bin/deploy.sh <env> <service> <version>`.
+- **One sudo rule.** It names `deploy.sh` and nothing else. A sudoers rule with no arguments allows any arguments, so `deploy.sh` checks them again.
+- **`deploy.sh` is a stub in WP-8**: it validates and prints `would deploy <service> <version> to <env>`. WP-9 fills in the real steps.
+
+Sources: `infra/scripts/deploy-entry` and `infra/scripts/deploy.sh`, tested by `scripts/deploy-entry.test.mjs`.
+
+### The key line
+
+`/home/deploy/.ssh/authorized_keys` holds one line:
+
+```
+restrict,from="100.64.0.0/10",command="/srv/jadero/bin/deploy-entry" <public-key>
+```
+
+- `restrict` turns off port, agent and X11 forwarding and the terminal.
+- `from="100.64.0.0/10"` accepts the key only from tailnet IPv4 addresses. A connection over the tailnet's IPv6 address does not match and is refused with `Permission denied (publickey)`, so clients connect with `ssh -4`.
+- `command=` is the forced command.
+
+### Why the user needs a real login shell
+
+`sshd` runs a forced command through the user's login shell, as `<shell> -c "<command>"`. With `/usr/sbin/nologin` the shell prints "This account is currently not available" and the wrapper never runs. So `deploy` gets `/bin/bash`. This gives no extra power: the only string that shell runs is the fixed `command=` from the key line, never the client's words, and the user has no password and no other key.
+
+### Set it up (owner, on the server)
+
+Copy the scripts from the laptop, then install them root-owned. The folder and the scripts must not be writable by anyone but root: whoever can change `deploy.sh` runs code as root through the sudo rule.
+
+```
+scp infra/scripts/deploy-entry infra/scripts/deploy.sh <profile>:~/
+ssh <profile>
+sudo install -d -o root -g root -m 755 /srv/jadero /srv/jadero/bin
+sudo install -o root -g root -m 755 ~/deploy-entry ~/deploy.sh /srv/jadero/bin/
+rm ~/deploy-entry ~/deploy.sh
+```
+
+Create the user. `useradd` leaves the password locked; the `.ssh` folder and the key file are owned by root, so even a bug in the wrapper could not let the key holder add a key.
+
+```
+sudo useradd --create-home --shell /bin/bash deploy
+sudo passwd --status deploy                 # expect "deploy L ...": locked
+id deploy                                   # expect only the deploy group
+sudo install -d -o root -g root -m 755 /home/deploy/.ssh
+sudoedit /home/deploy/.ssh/authorized_keys  # the key line above
+sudo chown root:root /home/deploy/.ssh/authorized_keys
+sudo chmod 644 /home/deploy/.ssh/authorized_keys
+```
+
+Add the sudo rule with `visudo`, which refuses to save a file that does not parse:
+
+```
+sudo visudo -f /etc/sudoers.d/jadero-deploy
+```
+
+with the single line
+
+```
+deploy ALL=(root) NOPASSWD: /srv/jadero/bin/deploy.sh
+```
+
+then:
+
+```
+sudo chmod 440 /etc/sudoers.d/jadero-deploy
+sudo visudo -c                              # every sudoers file parses
+sudo -l -U deploy                           # lists only /srv/jadero/bin/deploy.sh
+```
+
+`deploy` is already in `AllowUsers` (section 3).
+
+### Test it (WP-8 Trace 1, step 5)
+
+On the laptop, a throwaway key until WP-9 replaces it with the CI key:
+
+```
+ssh-keygen -t ed25519 -f ~/.ssh/jadero-deploy-test -N '' -C jadero-deploy-test
+```
+
+Put its public half in the key line above. Then, from the laptop on the tailnet:
+
+```
+ssh -4 -i ~/.ssh/jadero-deploy-test -o IdentitiesOnly=yes -p <ssh-port> deploy@<tailnet-host> deploy staging api 0.4.1
+# would deploy api 0.4.1 to staging
+
+ssh -4 -i ~/.ssh/jadero-deploy-test -o IdentitiesOnly=yes -p <ssh-port> deploy@<tailnet-host> bash
+# refused: expected "deploy <env> <service> <version>"    (exit 1)
+
+ssh -4 -i ~/.ssh/jadero-deploy-test -o IdentitiesOnly=yes -p <ssh-port> deploy@<tailnet-host> 'deploy staging api 0.4.1; id'
+# refused: expected "deploy <env> <service> <version>"    (exit 1)
+```
+
+Port forwarding is off. In one terminal:
+
+```
+ssh -4 -N -i ~/.ssh/jadero-deploy-test -o IdentitiesOnly=yes -p <ssh-port> -L 15432:127.0.0.1:5432 deploy@<tailnet-host>
+```
+
+and in a second, `nc -vz 127.0.0.1 15432`: the first terminal prints `open failed: administratively prohibited`.
+
+On the server, the log:
+
+```
+journalctl -t jadero-deploy -n 5
+# ... accepted env=staging service=api version=0.4.1
+# ... refused reason=word-count
+# ... refused reason=bad-characters
+```
+
+If a key that should work gets `Permission denied (publickey)`: check `ssh -4` (the `from=` pattern), the ownership and modes of `/home/deploy`, `.ssh` and `authorized_keys` (`sshd` refuses files writable by others), and `sudo journalctl -u ssh -n 20`.
+
+### Revoke the key
+
+1. Remove its line from `/home/deploy/.ssh/authorized_keys` (`sudoedit`). `sshd` reads the file on every connection, so the key stops working at once.
+2. End any session still open: `sudo pkill -u deploy`.
+3. To take the deploy path away completely, also remove the sudo rule: `sudo rm /etc/sudoers.d/jadero-deploy`.
+4. Delete the throwaway key on the laptop once WP-9's CI key is in place: `rm ~/.ssh/jadero-deploy-test ~/.ssh/jadero-deploy-test.pub`.

@@ -1,0 +1,83 @@
+#!/bin/bash
+#
+# deploy-entry: the forced command of the deploy user's only SSH key (WP-8 D3, ADR-049 restating
+# ADR-048's deploy mechanics). Installed root-owned, mode 755, as /srv/jadero/bin/deploy-entry.
+#
+# sshd runs this file whatever the client asks for. The client's words arrive only as the
+# SSH_ORIGINAL_COMMAND variable, and this script accepts exactly one shape:
+#
+#   deploy <env> <service> <version>
+#
+# Each word is checked against an allowlist, then the three values are passed as separate
+# arguments to the one script the sudoers rule allows. The client's input is never evaluated,
+# never handed to a shell and never written to the log.
+#
+# Environment: the key line in authorized_keys carries `restrict`, and sshd's PermitUserEnvironment
+# is off by default and AcceptEnv passes only the variables it lists, so the client cannot set
+# variables for this script. Even so, nothing here reads a path from the environment: the paths
+# below are fixed constants, and the tests run a copy with those lines rewritten.
+
+set -euo pipefail
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+
+readonly DEPLOY_SH=/srv/jadero/bin/deploy.sh
+readonly SUDO=/usr/bin/sudo
+readonly LOGGER=/usr/bin/logger
+
+# The services release-please publishes today. `contact` joins when it ships.
+readonly SERVICES="api agent web"
+readonly USAGE='refused: expected "deploy <env> <service> <version>"'
+readonly MAX_LENGTH=128
+
+# Characters allowed anywhere in the command, checked before splitting: letters, digits, space,
+# dot and hyphen. Everything a shell could act on (; $ ` ' " | & newline) fails here.
+readonly ALLOWED_CHARS='^[A-Za-z0-9 .-]+$'
+# Semantic version MAJOR.MINOR.PATCH, no leading zeros, an optional pre-release of dot-separated
+# identifiers. No leading `v`, no build metadata.
+readonly VERSION_RE='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+
+# Writes one line to the system log under the tag jadero-deploy. Best effort: a missing logger
+# does not block a deploy, and sudo logs the accepted command on its own.
+# Arguments: the message, built only from fixed text and values that passed the allowlists.
+log_line() {
+  "$LOGGER" -t jadero-deploy -- "$1" 2>/dev/null || true
+}
+
+# Logs a fixed reason (never the raw input, so the client cannot inject log lines), prints the
+# usage to stderr and exits 1.
+# Arguments: the reason, one of the fixed words used below.
+refuse() {
+  log_line "refused reason=$1"
+  echo "$USAGE" >&2
+  exit 1
+}
+
+command_line="${SSH_ORIGINAL_COMMAND-}"
+
+[[ -n "$command_line" ]] || refuse empty
+[[ ${#command_line} -le $MAX_LENGTH ]] || refuse too-long
+[[ "$command_line" =~ $ALLOWED_CHARS ]] || refuse bad-characters
+
+IFS=' ' read -r -a words <<<"$command_line"
+[[ ${#words[@]} -eq 4 ]] || refuse word-count
+[[ "${words[0]}" == "deploy" ]] || refuse not-deploy
+
+env_name="${words[1]}"
+service="${words[2]}"
+version="${words[3]}"
+
+case "$env_name" in
+  staging | prod) ;;
+  *) refuse bad-env ;;
+esac
+
+case " $SERVICES " in
+  *" $service "*) ;;
+  *) refuse bad-service ;;
+esac
+
+[[ "$version" =~ $VERSION_RE ]] || refuse bad-version
+
+log_line "accepted env=$env_name service=$service version=$version"
+exec "$SUDO" -n "$DEPLOY_SH" "$env_name" "$service" "$version"
