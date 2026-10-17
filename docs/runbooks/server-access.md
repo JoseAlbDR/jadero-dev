@@ -2,15 +2,46 @@
 
 How the owner reaches the server, how SSH is configured, how an access change is made safely and what to do when the normal path is broken. Background: ADR-027 "Firewall", ADR-049 (deploy mechanics B, manual action M-9), ADR-050 (the firewall restated, the snapshot rule) and the WP-8 explainer, D1 and D2.
 
-Placeholders stand for values that stay out of this repo: `<server-ip>`, `<ssh-port>`, `<other-port>` (any port that is not 80, 443 or SSH), `<login-user>`, `<tailnet-host>` (the server's name on the tailnet), `<profile>` (the owner's SSH client profile for this host).
+Placeholders stand for values that stay out of this repo: `<server-ip>`, `<ssh-port>`, `<other-port>` (any port that is not 80, 443 or SSH), `<login-user>`, `<tailnet-host>` (the server's name on the tailnet), `<profile>` (the owner's SSH client profile for this host), `<owner-login>` (the owner's Tailscale login).
 
 ## 1. How access works
 
 - **Hetzner Cloud Firewall**, attached to the server in the Hetzner console: inbound TCP 80 and 443 from anywhere, nothing else. It filters before a packet reaches the VM, so nothing on the host can open a hole in it. This matters because Docker publishes container ports with a NAT rule that sends the packet down the `FORWARD` chain, and ufw only filters `INPUT`: a published port is open whatever ufw says. The Cloud Firewall applies to every project on the host.
 - **SSH only over Tailscale.** The server, the owner's machines and (from WP-9) an ephemeral CI runner join one tailnet. SSH reaches `sshd` through the `tailscale0` interface only. Tailscale needs no inbound port: it connects outwards.
-- **ufw stays on** with its default incoming policy deny, and allows `<ssh-port>` only on `tailscale0`. It still protects host processes; it is not the control we rely on for containers.
+- **The Tailscale policy is the control for tailnet traffic** (section 1a). Tailscale enforces it on the server before a packet reaches the kernel's chains, so it covers host processes and Docker-published ports alike.
+- **ufw stays on** with its default incoming policy deny. It protects host processes from the public interface only. `tailscaled` adds its own `ts-input` chain at the top of `INPUT`, before ufw's chains, and that chain accepts everything arriving on `tailscale0`; a ufw rule on `tailscale0` is therefore never evaluated. The rule allowing `<ssh-port>` on `tailscale0` stays as harmless, but it is not the control.
 - **Tailscale SSH stays off.** The deploy path of WP-8 step 3 relies on `authorized_keys` and its forced command, and Tailscale SSH does not read `authorized_keys`. All SSH is plain OpenSSH over the tailnet.
-- **Key expiry is disabled for the server node** in the Tailscale admin console. Node keys expire after 180 days by default, and an expired server drops off the tailnet.
+- **Key expiry is disabled for the server node** in the Tailscale admin console. Node keys expire after 180 days by default, and an expired server drops off the tailnet. Tagged nodes have key expiry disabled by default.
+
+### 1a. Tailscale policy
+
+The policy file lives in the Tailscale admin console (Access controls). Its shape, with placeholders:
+
+```jsonc
+{
+  "tagOwners": {
+    "tag:server": ["autogroup:admin"]
+  },
+  "grants": [
+    // Tailnet members reach the server's SSH port, nothing else on it.
+    { "src": ["autogroup:member"], "dst": ["tag:server"], "ip": ["tcp:<ssh-port>"] },
+    // Each member's own devices reach each other.
+    { "src": ["autogroup:member"], "dst": ["autogroup:self"], "ip": ["*"] }
+  ],
+  "tests": [
+    {
+      "src": "<owner-login>",
+      "accept": ["tag:server:<ssh-port>"],
+      "deny": ["tag:server:<other-port>", "tag:server:443"]
+    }
+  ]
+}
+```
+
+- **Tags.** The server node carries `tag:server`. A tagged node is owned by the tag, not by a user, and only an admin may apply the tag.
+- **Tests.** Tailscale refuses to save a policy that breaks a test, so a change that would open another port to the server, or cut the owner's SSH, is rejected at save time (policy as code with tests).
+- **Make before break.** Save the policy first: the untagged server is still reachable through `autogroup:self`. Then tag the server node and check SSH from a second terminal.
+- **WP-9** adds a grant from `tag:ci` to `tag:server` on `tcp:<ssh-port>`, with a test for it.
 
 ## 2. Normal login
 
@@ -74,7 +105,7 @@ The order for any access change (SSH, Tailscale, ufw, the Cloud Firewall):
 3. Check the break-glass path (section 5) still works.
 4. Only then close the old path.
 
-Example, the WP-8 perimeter: log Tailscale in and disable key expiry; add the ufw rule for `tailscale0` (`sudo ufw allow in on tailscale0 to any port <ssh-port> proto tcp`); prove `ssh <profile>` over the tailnet; check the Hetzner console; then attach the Cloud Firewall and remove the public SSH rule from ufw (`sudo ufw status numbered`, then `sudo ufw delete <n>`).
+Example, the WP-8 perimeter: log Tailscale in and disable key expiry; save the Tailscale policy (section 1a), then tag the server node; add the ufw rule for `tailscale0` (`sudo ufw allow in on tailscale0 to any port <ssh-port> proto tcp`); prove `ssh <profile>` over the tailnet; check the Hetzner console; then attach the Cloud Firewall and remove the public SSH rule from ufw (`sudo ufw status numbered`, then `sudo ufw delete <n>`).
 
 ## 5. Break-glass
 
@@ -85,6 +116,8 @@ When the normal path is broken, in order:
 **b. sshd or ufw broken.** From the console: fix the drop-in and run `sudo sshd -t` and `sudo systemctl reload ssh`, or fix the ufw rule. If SSH must come back at once, `sudo ufw allow <ssh-port>/tcp` temporarily (the Cloud Firewall still keeps it off the internet), and delete that rule once the tailnet path works again.
 
 **c. Tailscale down or the node expired.** From the console: `sudo tailscale status`, then `sudo tailscale up` (or `sudo systemctl restart tailscaled`) and log the node in again; check key expiry is still disabled. If the tailnet cannot be fixed quickly, add a temporary inbound rule in the Cloud Firewall for TCP `<ssh-port>` limited to the owner's current public address (`<owner-ip>/32`), plus a temporary `sudo ufw allow <ssh-port>/tcp`. Remove both as soon as the tailnet path works.
+
+**c2. A Tailscale policy cut SSH.** The policy lives in Tailscale's admin console, not on the server, so the fix needs neither the server nor the console login: in the Tailscale admin console, open Access controls, restore the last working version from the policy history (or fix the grant) and save. Then check `ssh <profile>` from a second terminal.
 
 **d. Hetzner rescue system, last resort.** When the system does not boot or the console login fails: in the Hetzner console, enable the rescue system with the owner's SSH key and reboot the server. Rescue listens for root SSH on port 22, so add a temporary Cloud Firewall rule for TCP 22 limited to `<owner-ip>/32`. Then `ssh root@<server-ip>`, find the root partition with `lsblk`, `mount <root-partition> /mnt`, fix the files under `/mnt` (for example `/mnt/etc/ssh/sshd_config.d/00-jadero.conf`), `umount /mnt` and reboot. Rescue is active for one boot only. Remove the temporary firewall rule afterwards.
 
@@ -105,8 +138,12 @@ curl -sI https://<a site on the host>   # answers, 80 and 443 stay open
 From a machine on the tailnet:
 
 ```
-ssh <profile> hostname                  # prints the server's host name
+ssh <profile> hostname                       # prints the server's host name
+nc -vz -w 5 <tailnet-host> <ssh-port>        # succeeds
+nc -vz -w 5 <tailnet-host> <other-port>      # times out
 ```
+
+The last line proves the Tailscale policy, not ufw: without the policy, any port listening on all interfaces, or published by Docker, answers over the tailnet (section 1). A Docker-published port answers on the `100.x` address too, because Docker's NAT rule matches any host address.
 
 ## 7. Rollback
 

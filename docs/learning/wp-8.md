@@ -71,7 +71,9 @@ ufw sits on the `INPUT` branch; Docker's published ports take the `FORWARD` bran
 
 Two different "binds" meet here, and PR #139 is the reason they no longer look contradictory. Inside a container, the service listens on `0.0.0.0` (`LISTEN_HOST=0.0.0.0` in the image): that is all interfaces of the container's own network namespace, which only the Docker network and the published port can reach. On the host, the published port binds `127.0.0.1`: that decides who outside the container can reach it. Outside a container (`pnpm dev`), the default `127.0.0.1` keeps a laptop's service off the café Wi-Fi. Secure by default at each level.
 
-ufw stays on (it still protects host processes, such as the other project's PM2 listeners from inside the tailnet), but it is not the control we rely on.
+ufw stays on (it protects host processes, such as the other project's PM2 listeners, from the public interface), but it is not the control we rely on.
+
+*Correction (2026-10-17, step 2 finding).* This line first said ufw also protects those listeners from inside the tailnet. It does not. `tailscaled` installs its own `ts-input` chain at the top of `INPUT`, before ufw's chains, and that chain accepts every packet arriving on `tailscale0`, so a ufw rule on `tailscale0` is never evaluated. Over the tailnet the owner's laptop reached host processes on all-interface ports and a Docker-published port (Docker's DNAT matches any host address, the `100.x` one included, and goes through `FORWARD`). The control for tailnet traffic is the Tailscale policy (ACL grants), which Tailscale enforces on the destination node before the packet reaches the kernel's chains, so it covers host processes and Docker ports alike (Implementation choices, step 2).
 
 **The shared-host catch.** The Cloud Firewall is per server, so it applies to every project on the host. Attaching "80 and 443 only" also closes `<other-port>` and the PM2 ports to the internet, and the current public SSH port. Before step 2 the owner confirms which of those another project needs from outside; a needed port becomes an explicit, commented rule, and that departs from ADR-027's "nothing else" (a superseding ADR line, see Departures in the report). Everything else being reachable today is an accident the firewall fixes.
 
@@ -314,9 +316,10 @@ What WP-8 builds, assuming the recommendations. Object to any line.
 **Perimeter (step 2)**
 - Hetzner snapshot before any change, the only one kept (server rules): the rollback point for steps 2 to 6.
 - Cloud Firewall: inbound TCP 80 and 443 from `0.0.0.0/0` and `::/0`; no outbound rules (all allowed); exceptions only for ports another project confirms it needs (D1).
-- Tailscale: `tailscale up` by the owner, key expiry disabled for the server node, tags or ACLs so only the owner's devices and (WP-9) the CI tag reach the server's SSH port; Tailscale SSH stays off.
+- Tailscale: `tailscale up` by the owner, key expiry disabled for the server node; Tailscale SSH stays off.
+- Tailscale policy (admin console, the tailnet control, D1 correction): `tagOwners` gives `tag:server` to `autogroup:admin`; grants `autogroup:member` to `tag:server` on `tcp:<ssh-port>` only, and `autogroup:member` to `autogroup:self` on everything; a `tests` block asserts the owner reaches `tag:server:<ssh-port>` and is denied other ports, and Tailscale refuses to save a policy that breaks a test. The server node is then tagged `tag:server` (tagged nodes are owned by the tag and have key expiry disabled by default). Make before break: save the policy first (the untagged server is still covered by `autogroup:self`), then tag. WP-9 adds a grant from `tag:ci` to `tag:server:<ssh-port>`.
 - `sshd` drop-in `/etc/ssh/sshd_config.d/00-jadero.conf` (sorts before cloud-init's): `PasswordAuthentication no`, `KbdInteractiveAuthentication no`, `PermitRootLogin no`, `AllowUsers <login-user> deploy`; proof with `sudo sshd -T | grep -E 'passwordauth|permitroot|allowusers|kbdinteractive'`.
-- ufw stays on; add `ufw allow in on tailscale0 to any port <ssh-port> proto tcp` before the public SSH rule is removed.
+- ufw stays on for the public interface; the rule `ufw allow in on tailscale0 to any port <ssh-port> proto tcp` is kept as harmless, but it is not the control: Tailscale's `ts-input` chain accepts tailnet traffic before ufw sees it (D1 correction).
 - Break-glass written in `docs/runbooks/server-access.md` and checked once: Hetzner web console, and the rescue system with a temporary firewall rule.
 
 **Deploy user (step 3)**
@@ -402,6 +405,7 @@ Placeholders stand for values that stay out of a public repo: `<server-ip>`, `<s
 | Blast radius of a shared control | D1 (the firewall covers other projects), D5 |
 | Make before break, break-glass access | D2, Trace 1 steps 2 to 4 |
 | Zero trust network access | D2, Q2 B |
+| Policy as code with tests | the Tailscale policy (Implementation choices, step 2): saved only when its `tests` pass |
 | Verify the effective configuration | D2 (`sshd -T`), D6 (`openssl s_client`) |
 | Least privilege, capability-style access | D3, D4, D5; from WP-7 D4, WP-10 D4, WP-12 step 7 |
 | Input validation at a trust boundary, confused deputy | D3 (the wrapper) |
