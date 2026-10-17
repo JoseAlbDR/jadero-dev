@@ -1,7 +1,14 @@
 // Runs with the Node test runner (`node --test`), like the other scripts.
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { checkComposeHardening, checkRepository, parseComposeYaml } from "./compose-hardening.mjs";
+import {
+  checkComposeHardening,
+  checkOpsHardening,
+  checkOpsRepository,
+  checkRepository,
+  imageParityProblems,
+  parseComposeYaml,
+} from "./compose-hardening.mjs";
 
 const HARDENED = `
 x-hardened: &hardened
@@ -177,4 +184,131 @@ services:
       assert.deepEqual(check(compose(extra)), [`compose.yml: app ${problem}`]);
     });
   }
+});
+
+const DIGEST = `sha256:${"a".repeat(64)}`;
+
+/** A small ops Compose file: one pinned, limited, healthchecked service publishing on 127.0.0.1. */
+const ops = (extra = "", ports = '["127.0.0.1:15673:15672"]') => `
+services:
+  broker:
+    image: broker:1.0@${DIGEST}
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    ports: ${ports}
+    healthcheck:
+      test: ["CMD", "true"]
+    mem_limit: 256m${extra}
+`;
+
+const checkOps = (source) => checkOpsHardening(parseComposeYaml(source), "ops.yml");
+
+describe("the repository's compose.ops.yml", () => {
+  it("pins, limits and binds every service, and matches the dev images", () => {
+    const { services, problems } = checkOpsRepository();
+    assert.deepEqual(services, ["postgres", "rabbitmq", "umami", "uptime-kuma"]);
+    assert.deepEqual(problems, []);
+  });
+});
+
+describe("checkOpsHardening", () => {
+  it("accepts a pinned, limited, healthchecked service on 127.0.0.1", () => {
+    assert.deepEqual(checkOps(ops()), []);
+  });
+
+  it("fails on an image pinned by tag only, a missing limit, healthcheck or no-new-privileges", () => {
+    const source = ops()
+      .replace(`@${DIGEST}`, "")
+      .replace("    mem_limit: 256m", "")
+      .replace('    security_opt: ["no-new-privileges:true"]\n', "")
+      .replace('    healthcheck:\n      test: ["CMD", "true"]\n', "");
+    assert.deepEqual(checkOps(source), [
+      "ops.yml: broker must pin its image by digest (image: name:tag@sha256:...)",
+      "ops.yml: broker must set mem_limit (ADR-027)",
+      "ops.yml: broker must set security_opt no-new-privileges:true",
+      "ops.yml: broker must define a healthcheck",
+    ]);
+  });
+
+  for (const [rule, ports, problems] of [
+    [
+      "every interface",
+      '["15673:15672"]',
+      ["publishes 15673:15672: bind it to 127.0.0.1 (ADR-027)"],
+    ],
+    [
+      "0.0.0.0",
+      '["0.0.0.0:15673:15672"]',
+      ["publishes 0.0.0.0:15673:15672: bind it to 127.0.0.1 (ADR-027)"],
+    ],
+    ["container port only", '["15672"]', ["publishes 15672: bind it to 127.0.0.1 (ADR-027)"]],
+    [
+      "Postgres on 127.0.0.1",
+      '["127.0.0.1:5432:5432"]',
+      ["publishes 127.0.0.1:5432:5432: port 5432 is never published (ADR-050)"],
+    ],
+    [
+      "AMQP under another host port",
+      '["127.0.0.1:15000:5672/tcp"]',
+      ["publishes 127.0.0.1:15000:5672/tcp: port 5672 is never published (ADR-050)"],
+    ],
+    [
+      "a range that covers the Erlang distribution port",
+      '["127.0.0.1:25670-25680:25670-25680"]',
+      ["publishes 127.0.0.1:25670-25680:25670-25680: port 25672 is never published (ADR-050)"],
+    ],
+    [
+      "long syntax without host_ip",
+      "\n      - target: 5672\n        published: 5672",
+      [
+        'publishes {"target":5672,"published":5672}: bind it to 127.0.0.1 (ADR-027)',
+        'publishes {"target":5672,"published":5672}: port 5672 is never published (ADR-050)',
+      ],
+    ],
+  ]) {
+    it(`fails on a published port: ${rule}`, () => {
+      assert.deepEqual(
+        checkOps(ops("", ports)),
+        problems.map((problem) => `ops.yml: broker ${problem}`),
+      );
+    });
+  }
+
+  it("accepts long syntax bound to 127.0.0.1", () => {
+    const ports = "\n      - target: 3000\n        published: 3100\n        host_ip: 127.0.0.1";
+    assert.deepEqual(checkOps(ops("", ports)), []);
+  });
+
+  for (const [rule, extra, problem] of [
+    ["privileged", "\n    privileged: true", "must not set privileged: true"],
+    ["user root", "\n    user: root", "must not run as root (user: root)"],
+    ["network_mode host", "\n    network_mode: host", "must not set network_mode: host"],
+    [
+      "docker.sock",
+      '\n    volumes: ["/var/run/docker.sock:/var/run/docker.sock"]',
+      "must not mount the Docker socket",
+    ],
+  ]) {
+    it(`fails when a service takes a privilege: ${rule}`, () => {
+      assert.deepEqual(checkOps(ops(extra)), [`ops.yml: broker ${problem}`]);
+    });
+  }
+});
+
+describe("imageParityProblems", () => {
+  const file = (postgres, rabbitmq) =>
+    parseComposeYaml(`
+services:
+  postgres:
+    image: ${postgres}
+  rabbitmq:
+    image: ${rabbitmq}
+`);
+
+  it("accepts the same references and fails on a different digest", () => {
+    assert.deepEqual(imageParityProblems(file("pg@a", "mq@b"), file("pg@a", "mq@b")), []);
+    assert.deepEqual(imageParityProblems(file("pg@a", "mq@b"), file("pg@a", "mq@c")), [
+      "infra/compose/compose.ops.yml: rabbitmq runs mq@c, but infra/compose/compose.dev.yml runs mq@b: keep them equal",
+    ]);
+  });
 });

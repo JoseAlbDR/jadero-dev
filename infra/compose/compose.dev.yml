@@ -8,8 +8,9 @@ name: jadero-dev
 
 services:
   postgres:
-    # pgvector on the official Postgres 18 image (WP-1 decision F); production uses the same major.
-    image: pgvector/pgvector:0.8.7-pg18@sha256:2358fcba361ed2233a5ed81b5fe4ca779ccb304120ce531a3bf51c0ed7e2bc11
+    # pgvector on the official Postgres 18 image, Debian 13 (WP-1 decision F); the servers run the
+    # same reference (compose.ops.yml; scripts/compose-hardening.test.mjs keeps them equal).
+    image: pgvector/pgvector:0.8.7-pg18-trixie@sha256:9d9c930220cb9bf2f956d10a8f909cf9973d9672ca0278aef2c1e6facccad2e0
     environment:
       POSTGRES_PASSWORD: postgres
     ports:

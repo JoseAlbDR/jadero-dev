@@ -60,7 +60,7 @@ The reasons behind each choice are the ADRs in [`docs/adr/`](docs/adr/README.md)
 | `packages/ui` | Design tokens and shadcn base components |
 | `packages/config` | Shared TypeScript and Vitest config |
 | `templates/nest-module` | The layered and hexagonal module shapes to copy from |
-| `infra/` | Docker Compose files, Postgres init, RabbitMQ config and definitions |
+| `infra/` | Docker Compose files (dev, images, the server's ops stack), Postgres provisioning, RabbitMQ config and definitions, secrets templates |
 | `scripts/` | Repo scripts (ADR tooling, migration checks, release inputs) and their tests |
 | `docs/` | ADRs, plan, learning explainers, journal, process pages, architecture map |
 
@@ -290,6 +290,11 @@ runs, the security model and what to do when one goes red:
   `pnpm dev:provision` (convergent, keeps the data). A role renamed in the script leaves the old
   role behind; to start clean: `docker compose -f infra/compose/compose.dev.yml down -v`, then
   `pnpm dev:up` (this deletes local data).
+- **Postgres warns `database ... has a collation version mismatch`.** The dev volume was created
+  by the Debian 12 image; since WP-8 dev runs the Debian 13 one (another glibc, so another
+  collation version). Reset the volume once: `docker compose -f infra/compose/compose.dev.yml
+  down -v`, then `pnpm dev:up`, `pnpm db:migrate` and `pnpm --filter @jadero/api db:seed` (this deletes
+  local data).
 
 ## How work is done
 

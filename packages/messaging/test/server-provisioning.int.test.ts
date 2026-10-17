@@ -151,6 +151,45 @@ describe("the servers' RabbitMQ provisioning", () => {
     expect(await names("list_user_permissions", "agent_prod")).toEqual(["/prod"]);
   });
 
+  it("warns about a queue the definitions do not declare, with its counts, and keeps it", async () => {
+    // A retired consumer's queue, declared by hand as the admin, with one message still in it;
+    // plus a client's exclusive server-named queue (amq.gen-...), which is never an orphan.
+    const admin = await connect(amqpUrl("ops_admin", "/prod"));
+    try {
+      const channel = await admin.createConfirmChannel();
+      await channel.assertQueue("agent.retired", { durable: true });
+      channel.sendToQueue("agent.retired", Buffer.from("{}"));
+      await channel.waitForConfirms();
+      const temporary = await channel.assertQueue("", { exclusive: true });
+      expect(temporary.queue).toMatch(/^amq\.gen-/);
+      for (let i = 0; i < 20; i++) {
+        if (
+          /^agent\.retired\t1$/m.test(await ctl("list_queues", "-p", "/prod", "name", "messages"))
+        )
+          break;
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+
+      const run = provision();
+      expect(run.status, run.output).toBe(0);
+      expect(run.output).toContain(
+        "WARN queue agent.retired on /prod is not in the definitions (1 messages, 0 consumers); left in place",
+      );
+      expect(run.output).not.toContain(temporary.queue);
+      expect(run.output.match(/WARN queue /g)).toHaveLength(1);
+      // The environment filter holds: a staging run looks at /staging only.
+      const staging = provision(passwordEnv, ["staging"]);
+      expect(staging.status, staging.output).toBe(0);
+      expect(staging.output).not.toContain("WARN queue");
+    } finally {
+      await admin.close();
+    }
+    // Reported, never deleted: the queue and its message are still there.
+    expect(await ctl("list_queues", "-p", "/prod", "name", "messages")).toMatch(
+      /^agent\.retired\t1$/m,
+    );
+  });
+
   it("keeps the users and permissions across a broker restart", async () => {
     const before = await ctl("list_permissions", "-p", "/staging");
     await container.restart();

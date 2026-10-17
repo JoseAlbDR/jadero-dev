@@ -12,7 +12,11 @@
 #   - each of its permission rows is set (set_permissions overwrites), and its permissions on any
 #     vhost the file does not list for it are cleared;
 #   - `guest` is deleted if it exists;
-#   - a user that is not in the file is reported by name and left in place.
+#   - a user that is not in the file is reported by name and left in place;
+#   - a queue on a provisioned vhost that its definitions file does not declare is reported with
+#     its message and consumer counts and left in place (an orphan: a retired consumer's queue
+#     still bound and still filling). Removing one is a deliberate step, never a deploy's side
+#     effect: infra/compose/README.md, "Retiring a consumer".
 #
 #   RABBITMQ_CONTAINER=<container> provision-users.sh [prod|staging]
 #
@@ -27,7 +31,8 @@
 # out), never in an argument list, which `ps` shows to every user of the host.
 #
 # Optional: RABBITMQ_PERMISSIONS, the path of permissions.tsv (default: server/permissions.tsv
-# next to this script).
+# next to this script); RABBITMQ_DEFINITIONS, the folder of the per-vhost definitions files
+# (default: server/definitions next to this script), read with python3 for the orphan queue check.
 
 set -euo pipefail
 
@@ -49,6 +54,7 @@ if [[ -z "$container" ]]; then
   exit 2
 fi
 table="${RABBITMQ_PERMISSIONS:-$(dirname "$0")/server/permissions.tsv}"
+definitions="${RABBITMQ_DEFINITIONS:-$(dirname "$0")/server/definitions}"
 if [[ ! -r "$table" ]]; then
   echo "provision-users: cannot read $table" >&2
   exit 2
@@ -174,4 +180,47 @@ for user in ${existing[@]+"${existing[@]}"}; do
   if [[ "$user" != guest ]] && ! contains "$user" "${all_users[@]}"; then
     echo "provision-users: WARN $user is not in $(basename "$table"); left in place" >&2
   fi
+done
+
+# The queues a definitions file declares on its vhost, one name per line. JSON is parsed by
+# python3 (on every Ubuntu server: cloud-init needs it), never by pattern matching.
+declared_queues() {
+  python3 -I -c '
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as file:
+    document = json.load(file)
+for queue in document.get("queues", []):
+    if queue.get("vhost") == sys.argv[2]:
+        print(queue["name"])
+' "$1" "$2"
+}
+
+# Queues nobody declared are reported, never deleted: they may still hold messages (orphans).
+if [[ -n "$only_env" ]]; then envs=("$only_env"); else envs=(prod staging); fi
+if ! command -v python3 >/dev/null; then
+  echo "provision-users: WARN python3 not found; orphan queue check skipped" >&2
+  envs=()
+fi
+for env in ${envs[@]+"${envs[@]}"}; do
+  vhost="/$env" file="$definitions/$env.json"
+  if ! declared="$(declared_queues "$file" "$vhost")"; then
+    echo "provision-users: WARN cannot read the queues of $file; orphan queue check skipped" >&2
+    continue
+  fi
+  if ! listing="$(ctl list_queues -p "$vhost" --no-table-headers name messages consumers)"; then
+    echo "provision-users: WARN cannot list the queues on $vhost; orphan queue check skipped" >&2
+    continue
+  fi
+  known=()
+  while IFS= read -r queue; do
+    if [[ -n "$queue" ]]; then known+=("$queue"); fi
+  done <<<"$declared"
+  while IFS=$'\t' read -r queue messages consumers; do
+    # Server-named queues (amq.gen-...) are a client's exclusive, temporary ones.
+    if [[ -z "$queue" || "$queue" == amq.* ]]; then continue; fi
+    if ! contains "$queue" ${known[@]+"${known[@]}"}; then
+      echo "provision-users: WARN queue $queue on $vhost is not in the definitions" \
+        "($messages messages, $consumers consumers); left in place" >&2
+    fi
+  done <<<"$listing"
 done

@@ -9,8 +9,15 @@
  * completed; a one-off migrate never restarts and has no healthcheck. A fitness function:
  * the rules hold by test, not by review, like dependency-cruiser for imports.
  *
+ * The server's ops stack, `infra/compose/compose.ops.yml` (WP-8 step 4; ADR-050 restating ADR-027,
+ * Q1's compensating controls), runs third-party images that cannot all be read-only or capability
+ * free, so it has its own rules (`checkOpsHardening`): every image pinned by digest, a memory limit,
+ * no new privileges, a healthcheck, ports on 127.0.0.1 only and never a database, broker or Erlang
+ * port, and the same privilege bans. Its Postgres and RabbitMQ use exactly the images of
+ * `compose.dev.yml` (`imageParityProblems`), so dev runs what the server runs.
+ *
  * Run by `scripts/compose-hardening.test.mjs` through `pnpm test:scripts`, so `pnpm verify`. The
- * file is read with the `yaml` package, merge keys on (`<<: *hardened`), as Compose reads it.
+ * files are read with the `yaml` package, merge keys on (`<<: *hardened`), as Compose reads them.
  */
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -22,6 +29,25 @@ export const REPO_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
 /** The Compose file that runs the production images, relative to the root. */
 export const COMPOSE_IMAGES = "infra/compose/compose.images.yml";
+
+/** The server's ops stack, relative to the root. */
+export const COMPOSE_OPS = "infra/compose/compose.ops.yml";
+
+/** The dev dependencies, relative to the root. */
+export const COMPOSE_DEV = "infra/compose/compose.dev.yml";
+
+/** The services of the ops stack that must run the same image as in dev. */
+const DEV_PARITY_SERVICES = ["postgres", "rabbitmq"];
+
+/**
+ * Container ports the ops stack never publishes, even on 127.0.0.1 (ADR-050: no published database
+ * or broker port): Postgres, AMQP and AMQPS, and Erlang's port mapper and distribution port, which
+ * with the cookie give a shell on the broker.
+ */
+const UNPUBLISHED_PORTS = [5432, 5672, 5671, 4369, 25672];
+
+/** An image reference pinned by its digest (`name:tag@sha256:<64 hex>`). */
+const PINNED_IMAGE = /@sha256:[0-9a-f]{64}$/;
 
 /** The smallest share of `mem_limit` that `--max-old-space-size` may take (ADR-027: about 75%). */
 const HEAP_MIN_SHARE = 0.6;
@@ -110,6 +136,81 @@ export function checkComposeHardening(document, path = COMPOSE_IMAGES) {
 }
 
 /**
+ * Checks the server's ops stack against its rules (WP-8 step 4, ADR-050).
+ * @param document the parsed file (`parseComposeYaml`).
+ * @param path the file's path, for the messages.
+ * @returns the problems found; empty when every service follows the rules.
+ */
+export function checkOpsHardening(document, path = COMPOSE_OPS) {
+  const services = document?.services;
+  if (!services || typeof services !== "object" || Object.keys(services).length === 0) {
+    return [`${path}: no services`];
+  }
+  const problems = [];
+  for (const [name, service] of Object.entries(services)) {
+    const at = `${path}: ${name}`;
+    if (!PINNED_IMAGE.test(String(service.image ?? ""))) {
+      problems.push(`${at} must pin its image by digest (image: name:tag@sha256:...)`);
+    }
+    if (megabytes(service.mem_limit) === null) problems.push(`${at} must set mem_limit (ADR-027)`);
+    if (
+      !asList(service.security_opt).some((opt) => /^no-new-privileges(:true|=true)?$/.test(opt))
+    ) {
+      problems.push(`${at} must set security_opt no-new-privileges:true`);
+    }
+    if (!service.healthcheck?.test || service.healthcheck.disable === true) {
+      problems.push(`${at} must define a healthcheck`);
+    }
+    problems.push(...privilegeProblems(service, at));
+    for (const port of Array.isArray(service.ports) ? service.ports : []) {
+      const { hostIp, target, published, text } = parsePort(port);
+      if (hostIp !== "127.0.0.1") {
+        problems.push(`${at} publishes ${text}: bind it to 127.0.0.1 (ADR-027)`);
+      }
+      const forbidden = UNPUBLISHED_PORTS.find((p) => inRange(target, p) || inRange(published, p));
+      if (forbidden !== undefined) {
+        problems.push(`${at} publishes ${text}: port ${forbidden} is never published (ADR-050)`);
+      }
+    }
+  }
+  return problems;
+}
+
+/**
+ * Checks that the ops stack's Postgres and RabbitMQ run exactly the dev images (tag and digest).
+ * @param dev the parsed `compose.dev.yml`.
+ * @param ops the parsed `compose.ops.yml`.
+ * @returns the problems found; empty when both match.
+ */
+export function imageParityProblems(dev, ops) {
+  const problems = [];
+  for (const name of DEV_PARITY_SERVICES) {
+    const devImage = dev?.services?.[name]?.image;
+    const opsImage = ops?.services?.[name]?.image;
+    if (!devImage || devImage !== opsImage) {
+      problems.push(
+        `${COMPOSE_OPS}: ${name} runs ${opsImage ?? "nothing"}, but ${COMPOSE_DEV} runs ${devImage ?? "nothing"}: keep them equal`,
+      );
+    }
+  }
+  return problems;
+}
+
+/**
+ * Reads the repository's ops and dev Compose files and checks the ops stack.
+ * @param root the repository root.
+ * @returns the services checked and the problems found.
+ */
+export function checkOpsRepository(root = REPO_ROOT) {
+  const ops = parseComposeYaml(readFileSync(join(root, COMPOSE_OPS), "utf8"));
+  const dev = parseComposeYaml(readFileSync(join(root, COMPOSE_DEV), "utf8"));
+  return {
+    services: Object.keys(ops.services ?? {}).sort(),
+    problems: [...checkOpsHardening(ops), ...imageParityProblems(dev, ops)],
+  };
+}
+
+/**
  * Reads the repository's runtime Compose file and checks it.
  * @param root the repository root.
  * @returns the services checked and the problems found.
@@ -147,6 +248,50 @@ function privilegeProblems(service, at) {
     }
   }
   return problems;
+}
+
+/**
+ * Reads one entry of a service's `ports`, short syntax (`[ip:][host:]container[/proto]`, each port
+ * maybe a range `a-b`) or long (`{ target, published, host_ip }`). No host IP means every interface.
+ * @param port the entry as parsed.
+ * @returns the host IP (or null), the container and host port ranges as `[first, last]` (null
+ *   when absent), and the entry as text for the messages.
+ */
+function parsePort(port) {
+  if (port && typeof port === "object") {
+    return {
+      hostIp: port.host_ip ?? null,
+      target: portRange(port.target),
+      published: portRange(port.published),
+      text: JSON.stringify(port),
+    };
+  }
+  const text = String(port);
+  const parts = text.replace(/\/(tcp|udp)$/, "").split(":");
+  return {
+    hostIp:
+      parts.length >= 3
+        ? parts
+            .slice(0, -2)
+            .join(":")
+            .replace(/^\[|\]$/g, "")
+        : null,
+    target: portRange(parts.at(-1)),
+    published: parts.length >= 2 ? portRange(parts.at(-2)) : null,
+    text,
+  };
+}
+
+/** A port or port range (`5672`, `"5670-5680"`) as `[first, last]`, or null. */
+function portRange(value) {
+  const match = /^(\d+)(?:-(\d+))?$/.exec(String(value ?? "").trim());
+  if (!match) return null;
+  return [Number(match[1]), Number(match[2] ?? match[1])];
+}
+
+/** Whether a port lies in a range from `portRange`. */
+function inRange(range, port) {
+  return range !== null && range[0] <= port && port <= range[1];
 }
 
 /**
