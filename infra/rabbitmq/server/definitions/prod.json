@@ -1,0 +1,235 @@
+{
+  "rabbit_version": "4.3.6",
+  "users": [],
+  "vhosts": [
+    {
+      "name": "/prod"
+    }
+  ],
+  "permissions": [],
+  "exchanges": [
+    {
+      "name": "jadero.events",
+      "vhost": "/prod",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {
+        "alternate-exchange": "jadero.unrouted"
+      }
+    },
+    {
+      "name": "jadero.unrouted",
+      "vhost": "/prod",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "agent.retry",
+      "vhost": "/prod",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {
+        "alternate-exchange": "jadero.unrouted"
+      }
+    },
+    {
+      "name": "jadero.dlx",
+      "vhost": "/prod",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "jadero.unrouted",
+      "vhost": "/prod",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    },
+    {
+      "name": "agent.system.ping",
+      "vhost": "/prod",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    },
+    {
+      "name": "agent.system.ping.retry.10s",
+      "vhost": "/prod",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    },
+    {
+      "name": "agent.system.ping.retry.1m",
+      "vhost": "/prod",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    },
+    {
+      "name": "agent.system.ping.retry.10m",
+      "vhost": "/prod",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    },
+    {
+      "name": "agent.system.ping.dlq",
+      "vhost": "/prod",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    }
+  ],
+  "bindings": [
+    {
+      "source": "jadero.unrouted",
+      "vhost": "/prod",
+      "destination": "jadero.unrouted",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "jadero.events",
+      "vhost": "/prod",
+      "destination": "agent.system.ping",
+      "destination_type": "queue",
+      "routing_key": "system.ping.v1",
+      "arguments": {}
+    },
+    {
+      "source": "agent.retry",
+      "vhost": "/prod",
+      "destination": "agent.system.ping",
+      "destination_type": "queue",
+      "routing_key": "agent.system.ping",
+      "arguments": {}
+    },
+    {
+      "source": "agent.retry",
+      "vhost": "/prod",
+      "destination": "agent.system.ping.retry.10s",
+      "destination_type": "queue",
+      "routing_key": "agent.system.ping.retry.10s",
+      "arguments": {}
+    },
+    {
+      "source": "agent.retry",
+      "vhost": "/prod",
+      "destination": "agent.system.ping.retry.1m",
+      "destination_type": "queue",
+      "routing_key": "agent.system.ping.retry.1m",
+      "arguments": {}
+    },
+    {
+      "source": "agent.retry",
+      "vhost": "/prod",
+      "destination": "agent.system.ping.retry.10m",
+      "destination_type": "queue",
+      "routing_key": "agent.system.ping.retry.10m",
+      "arguments": {}
+    },
+    {
+      "source": "jadero.dlx",
+      "vhost": "/prod",
+      "destination": "agent.system.ping.dlq",
+      "destination_type": "queue",
+      "routing_key": "agent.system.ping",
+      "arguments": {}
+    },
+    {
+      "source": "agent.retry",
+      "vhost": "/prod",
+      "destination": "agent.system.ping.dlq",
+      "destination_type": "queue",
+      "routing_key": "agent.system.ping.dlq",
+      "arguments": {}
+    }
+  ],
+  "policies": [
+    {
+      "vhost": "/prod",
+      "name": "agent.system.ping",
+      "pattern": "^agent\\.system\\.ping$",
+      "apply-to": "queues",
+      "priority": 10,
+      "definition": {
+        "dead-letter-strategy": "at-least-once",
+        "overflow": "reject-publish",
+        "dead-letter-exchange": "jadero.dlx",
+        "dead-letter-routing-key": "agent.system.ping",
+        "delivery-limit": 20
+      }
+    },
+    {
+      "vhost": "/prod",
+      "name": "agent.system.ping.retry.10s",
+      "pattern": "^agent\\.system\\.ping\\.retry\\.10s$",
+      "apply-to": "queues",
+      "priority": 10,
+      "definition": {
+        "dead-letter-strategy": "at-least-once",
+        "overflow": "reject-publish",
+        "message-ttl": 10000,
+        "dead-letter-exchange": "agent.retry",
+        "dead-letter-routing-key": "agent.system.ping"
+      }
+    },
+    {
+      "vhost": "/prod",
+      "name": "agent.system.ping.retry.1m",
+      "pattern": "^agent\\.system\\.ping\\.retry\\.1m$",
+      "apply-to": "queues",
+      "priority": 10,
+      "definition": {
+        "dead-letter-strategy": "at-least-once",
+        "overflow": "reject-publish",
+        "message-ttl": 60000,
+        "dead-letter-exchange": "agent.retry",
+        "dead-letter-routing-key": "agent.system.ping"
+      }
+    },
+    {
+      "vhost": "/prod",
+      "name": "agent.system.ping.retry.10m",
+      "pattern": "^agent\\.system\\.ping\\.retry\\.10m$",
+      "apply-to": "queues",
+      "priority": 10,
+      "definition": {
+        "dead-letter-strategy": "at-least-once",
+        "overflow": "reject-publish",
+        "message-ttl": 600000,
+        "dead-letter-exchange": "agent.retry",
+        "dead-letter-routing-key": "agent.system.ping"
+      }
+    }
+  ],
+  "parameters": [],
+  "global_parameters": [],
+  "topic_permissions": []
+}

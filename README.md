@@ -224,7 +224,7 @@ Per package:
 | Command | What it does |
 |---|---|
 | `pnpm --filter @jadero/api db:seed` | Loads placeholder content through the content use cases; idempotent |
-| `pnpm --filter @jadero/messaging topology` | Regenerates `infra/rabbitmq/definitions.json` from the topology code |
+| `pnpm --filter @jadero/messaging topology` | Regenerates `infra/rabbitmq/definitions.json` and the servers' `infra/rabbitmq/server/` files from the topology code |
 | `pnpm --filter @jadero/contracts asyncapi` | Regenerates the event catalog |
 | `pnpm --filter @jadero/contracts compat:accept` | Freezes a new event version's schema |
 
