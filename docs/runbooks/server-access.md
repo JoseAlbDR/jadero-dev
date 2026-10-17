@@ -165,11 +165,11 @@ Sources: `infra/scripts/deploy-entry` and `infra/scripts/deploy.sh`, tested by `
 `/home/deploy/.ssh/authorized_keys` holds one line:
 
 ```
-restrict,from="100.64.0.0/10",command="/srv/jadero/bin/deploy-entry" <public-key>
+restrict,from="100.64.0.0/10,fd7a:115c:a1e0::/48",command="/srv/jadero/bin/deploy-entry" <public-key>
 ```
 
 - `restrict` turns off port, agent and X11 forwarding and the terminal.
-- `from="100.64.0.0/10"` accepts the key only from tailnet IPv4 addresses. A connection over the tailnet's IPv6 address does not match and is refused with `Permission denied (publickey)`, so clients connect with `ssh -4`.
+- `from="100.64.0.0/10,fd7a:115c:a1e0::/48"` accepts the key only from tailnet addresses, IPv4 and IPv6 (Tailscale gives every node one of each, and a client may pick either).
 - `command=` is the forced command.
 
 ### Why the user needs a real login shell
@@ -233,20 +233,20 @@ ssh-keygen -t ed25519 -f ~/.ssh/jadero-deploy-test -N '' -C jadero-deploy-test
 Put its public half in the key line above. Then, from the laptop on the tailnet:
 
 ```
-ssh -4 -i ~/.ssh/jadero-deploy-test -o IdentitiesOnly=yes -p <ssh-port> deploy@<tailnet-host> deploy staging api 0.4.1
+ssh -i ~/.ssh/jadero-deploy-test -o IdentitiesOnly=yes -p <ssh-port> deploy@<tailnet-host> deploy staging api 0.4.1
 # would deploy api 0.4.1 to staging
 
-ssh -4 -i ~/.ssh/jadero-deploy-test -o IdentitiesOnly=yes -p <ssh-port> deploy@<tailnet-host> bash
+ssh -i ~/.ssh/jadero-deploy-test -o IdentitiesOnly=yes -p <ssh-port> deploy@<tailnet-host> bash
 # refused: expected "deploy <env> <service> <version>"    (exit 1)
 
-ssh -4 -i ~/.ssh/jadero-deploy-test -o IdentitiesOnly=yes -p <ssh-port> deploy@<tailnet-host> 'deploy staging api 0.4.1; id'
+ssh -i ~/.ssh/jadero-deploy-test -o IdentitiesOnly=yes -p <ssh-port> deploy@<tailnet-host> 'deploy staging api 0.4.1; id'
 # refused: expected "deploy <env> <service> <version>"    (exit 1)
 ```
 
 Port forwarding is off. In one terminal:
 
 ```
-ssh -4 -N -i ~/.ssh/jadero-deploy-test -o IdentitiesOnly=yes -p <ssh-port> -L 15432:127.0.0.1:5432 deploy@<tailnet-host>
+ssh -N -i ~/.ssh/jadero-deploy-test -o IdentitiesOnly=yes -p <ssh-port> -L 15432:127.0.0.1:5432 deploy@<tailnet-host>
 ```
 
 and in a second, `nc -vz 127.0.0.1 15432`: the first terminal prints `open failed: administratively prohibited`.
@@ -260,7 +260,7 @@ journalctl -t jadero-deploy -n 5
 # ... refused reason=bad-characters
 ```
 
-If a key that should work gets `Permission denied (publickey)`: check `ssh -4` (the `from=` pattern), the ownership and modes of `/home/deploy`, `.ssh` and `authorized_keys` (`sshd` refuses files writable by others), and `sudo journalctl -u ssh -n 20`.
+If a key that should work gets `Permission denied (publickey)`: check the client address is a tailnet one (the `from=` pattern), the ownership and modes of `/home/deploy`, `.ssh` and `authorized_keys` (`sshd` refuses files writable by others), and `sudo journalctl -u ssh -n 20`.
 
 ### Revoke the key
 
