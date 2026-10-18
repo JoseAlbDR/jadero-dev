@@ -65,6 +65,7 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-050 | Server internal traffic and backup destination | superseded by ADR-051 | D-80 | [0050-server-internal-traffic-and-backup-destination.md](0050-server-internal-traffic-and-backup-destination.md) |
 | ADR-051 | First-party analytics path | accepted | D-81 | [0051-first-party-analytics-path.md](0051-first-party-analytics-path.md) |
 | ADR-052 | Client addresses in the edge logs | accepted | D-82 | [0052-client-addresses-in-the-edge-logs.md](0052-client-addresses-in-the-edge-logs.md) |
+| ADR-053 | Deploy files from the release tag | proposed | D-83, D-84 | [0053-deploy-files-from-the-release-tag.md](0053-deploy-files-from-the-release-tag.md) |
 <!-- adr-index:end -->
 
 Read in this order for a first pass: 029 (service boundaries), 002 (topology and edge), 003 (inside a service), 012 (async work), 031 (content layers), 013 to 016 (AI layer and RAG), 020 and 021 (security), 025 to 027 (delivery and hosting), 041 (work tracking).

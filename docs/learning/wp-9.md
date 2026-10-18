@@ -1,7 +1,7 @@
 ---
 wp: 9
-decision: pending
-adr: [ADR-049, ADR-043, ADR-051, ADR-029, ADR-005, ADR-047]
+decision: recorded
+adr: [ADR-053, ADR-049, ADR-043, ADR-051, ADR-029, ADR-005, ADR-047]
 ---
 
 # WP-9: Deploy pipeline to new.jadero.dev
@@ -414,6 +414,13 @@ The explainer is the gate, not a step. **Owner** marks what only the owner can d
 **Refinement of the approved list (say if you disagree).** Step 6 needs `deploy.yml` and the deploy files on `main`: `release.yml` can only call a workflow that exists there, production's environment allows `main` only, and the first deployable versions are the ones the Release PR cuts after that merge. So steps 2 to 5 merge as the WP-9 PR after the mid-WP review; steps 6 and 7 continue on a second branch `wp/9-deploy-live` (the learning gate reads the number). The HSTS raise (#141) stays its own `chore/` PR from 2026-10-25.
 
 ## Decision
+
+Recorded 2026-10-18 in [ADR-053](../adr/0053-deploy-files-from-the-release-tag.md) (D-83, D-84). The owner said go on D1 to D9 and the implementation choices.
+
+- **Q1: B, fetched at the release tag.** Owner's reason: no drift between the Compose files and the image, plus a tag ruleset so release tags cannot move or be deleted. The trust anchor is `main`'s protection plus that ruleset; `deploy.sh` and `deploy-entry` stay hand-installed as the root of trust.
+- **Q2: B, each `api` and `agent` deploy imports its own release's definitions before migrate.** Owner's reason: it removes the manual topology step (the owner's work runs a manual infrastructure-as-code apply for each new event) and applies the queue in order before the service starts. Added by the main session after reading the generator: the import overwrites policies, so the deploy records the imported `messaging` version and imports only an equal or newer one (the D3 anti-rollback rule applied to the topology). The rule on the generator is narrower than the explainer said: only a queue's type is a declared argument and cannot change in place; TTLs, dead-lettering and the delivery limit are policies and change at once.
+- **Correction taught in the dialogue.** The owner summed it up as "everything atomic, a release or a rollback carries everything of its own version". Half right: what travels with the release (image, Compose, env templates, smoke) is swapped whole and a rollback returns to the previous release's copy. Shared state (database schema, topology, rendered env) only moves forward and stays at the newest version in a rollback; it is safe because every change to it is additive and the previous release works on it (N-1 compatibility, expand/contract). Per-service deploys are not atomic across services either; compatibility, not atomicity, is what makes them safe.
+- **Taught in the dialogue (owner asked):** RabbitMQ exchange types (direct, topic with `*` and `#`, fanout, headers), quorum versus classic queues, and the mapping to AWS (exchange like an EventBridge bus, binding like a rule, quorum queue like SQS with `maxReceiveCount` and a DLQ, fanout like SNS).
 
 ## Step log
 
