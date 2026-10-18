@@ -22,8 +22,9 @@
 #
 # Fail loudly: restic runs each dump command itself and saves no snapshot when the command exits
 # non-zero (a plain `pg_dump | restic backup --stdin` would save a truncated dump). A failed
-# item does not stop the others, but the run then exits 1, skips forget and prune and sends no
-# heartbeat: the Uptime Kuma push monitor (a dead man's switch) alerts when no heartbeat came.
+# item does not stop the others, but the run then forgets the snapshots it did save, exits 1,
+# skips the retention forget and prune and sends no heartbeat: the Uptime Kuma push monitor (a
+# dead man's switch) alerts when no heartbeat came.
 #
 # Configuration: the root-only env file (default /etc/jadero/backup.env, rendered from
 # infra/env/backup.env.tpl, BACKUP_ENV_FILE to change it). The container names default to the
@@ -94,6 +95,9 @@ readonly KUMA_DATA=/app/data
 readonly SNAPSHOT_HOST="${BACKUP_HOST:-jadero-ops}"
 # Another run or the weekly check may hold the repository lock; wait for it instead of failing.
 readonly RETRY_LOCK=1h
+# Retention per item (host and path): 7 daily and 4 weekly. infra/scripts/backup-check.sh reads
+# this line to apply the same policy in its test.
+readonly RETENTION=(--group-by 'host,paths' --keep-daily 7 --keep-weekly 4)
 
 # Sends a GET to a push URL. The URL carries the monitor's token, so it goes to curl through its
 # config on stdin (never in argv, which other users can read in the process list) and is never
@@ -144,6 +148,25 @@ backup_item() {
     log "FAILED $name: no snapshot saved"
     failed+=("$name")
   fi
+}
+
+# Forgets the snapshots a failed run did save. Kept, they would count for keep-daily: a complete
+# run and a later failed run on the same day, and the retention forget keeps the failed run's
+# items and drops the complete run's, while the complete run's marker stays, so `restore.sh all`
+# would pick a night whose dumps are gone. Best effort: the run has failed already, so a failure
+# here is logged and the exit stays 1; the data goes at the next complete run's prune.
+forget_failed_run() {
+  local listed ids=()
+  [[ "${#saved[@]}" -gt 0 ]] || return 0
+  # `restic forget --tag` alone removes nothing (it needs a policy or ids): list the ids first.
+  if listed=$(restic snapshots --retry-lock "$RETRY_LOCK" --json --tag "$RUN_TAG"); then
+    mapfile -t ids < <(grep -o '"id":"[0-9a-f]\{64\}"' <<<"$listed" | cut -d'"' -f4)
+    if [[ "${#ids[@]}" -eq 0 ]] || restic forget --retry-lock "$RETRY_LOCK" --quiet "${ids[@]}" >/dev/null; then
+      log "forgot this run's ${#ids[@]} saved snapshots"
+      return 0
+    fi
+  fi
+  log "FAILED to forget this run's saved snapshots: the next complete run's retention may keep them"
 }
 
 log "run $RUN_TAG to the restic repository"
@@ -203,20 +226,22 @@ backup_item rabbitmq-definitions.json rabbitmq \
   docker exec "$RABBITMQ_CONTAINER" rabbitmqctl --quiet export_definitions - --format json
 
 if [[ "${#failed[@]}" -gt 0 ]]; then
-  log "FAILED after $((SECONDS - start))s: ${failed[*]}; saved: ${saved[*]:-nothing}; no forget, no heartbeat"
+  log "FAILED after $((SECONDS - start))s: ${failed[*]}; saved: ${saved[*]:-nothing}; no retention, no heartbeat"
+  forget_failed_run
   exit 1
 fi
 
 # The marker that makes this run a complete night for restore.sh.
 backup_item backup-run.complete run printf '%s\n' "$RUN_TAG" "${saved[@]}"
 if [[ "${#failed[@]}" -gt 0 ]]; then
-  log "FAILED to write the run marker; no forget, no heartbeat"
+  log "FAILED to write the run marker; no retention, no heartbeat"
+  forget_failed_run
   exit 1
 fi
 
-# Retention per item (host and path): 7 daily and 4 weekly, then the unreferenced data goes.
+# Retention (RETENTION above), then the unreferenced data goes.
 if restic forget --retry-lock "$RETRY_LOCK" --quiet --host "$SNAPSHOT_HOST" --tag jadero \
-  --group-by host,paths --keep-daily 7 --keep-weekly 4 --prune >/dev/null; then
+  "${RETENTION[@]}" --prune >/dev/null; then
   log "forget and prune done (7 daily, 4 weekly per item)"
 else
   log "FAILED forget and prune; no heartbeat"

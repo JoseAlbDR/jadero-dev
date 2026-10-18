@@ -2,7 +2,8 @@
 #
 # backup-check.sh: runs infra/scripts/backup.sh and restore.sh against throwaway containers and
 # checks what they promise (WP-8 step 6; D7 and Trace 3a): every database is found and saved,
-# a dump that fails saves no snapshot and sends no heartbeat, Uptime Kuma is always started
+# a dump that fails saves no snapshot and sends no heartbeat, a failed run's other items are
+# forgotten so retention keeps the complete run of the same day, Uptime Kuma is always started
 # again, a whole night restores into a container with no network and its row counts match the
 # live ones (the checkpoint tables' data excepted, ADR-017), and no secret reaches the output.
 # Run by the `backup` job of ci.yml and by `pnpm backup:check`, on a machine with Docker; never
@@ -191,11 +192,29 @@ show <<<"$out"
 second_run=$(sed -n 's/^backup: run \(run-[0-9TZ]*\) .*/\1/p' <<<"$out")
 check "the run exits 1" 1 "$rc"
 check "no snapshot of the failed dump" 0 "$(restic_json --path /broken_check.dump | count '"id"')"
-check "the other items of that run are saved" 4 "$(restic_json --tag "$second_run" | grep -o '"paths"' | count paths)"
-check "no run marker for that run" 0 "$(restic_json --tag "$second_run" --path /backup-run.complete | count '"id"')"
+check "the other items of that run are saved, then forgotten with the run" "4 4" \
+  "$(count '^backup: saved ' <<<"$out") $(sed -n "s/^backup: forgot this run's \([0-9]*\) saved snapshots$/\1/p" <<<"$out")"
+check "no snapshot of that run is left, marker included" 0 "$(restic_json --tag "$second_run" | grep -o '"id":"' | count id)"
 check "no heartbeat for that run" 1 "$(heartbeats)"
 check "Uptime Kuma was started again" running "$(docker inspect -f '{{.State.Status}}' "$KUMA")"
 pg <<<"DROP DATABASE broken_check;"
+# Eight older nights of each data item, as the server holds after a week: with less history,
+# restic keeps the oldest snapshots to fill the policy and a dropped item would not show.
+# shellcheck disable=SC2016 # expanded by the runner's bash, not here
+in_runner bash -c 'set -a; . /etc/jadero/backup.env; set +a
+  for day in 01 02 03 04 05 06 07 08; do
+    for item in uptime-kuma-data.tar agent_check.dump content_check.dump rabbitmq-definitions.json; do
+      restic backup --quiet --host jadero-ops --tag jadero,seed --time "2026-01-$day 02:30:00" \
+        --stdin-from-command --stdin-filename "$item" -- echo seed >/dev/null
+    done
+  done'
+# The retention policy of backup.sh, read from it. The failed run came after the complete one on
+# the same day: had its items stayed, keep-daily would keep them and drop the complete run's.
+read -r -a retention <<<"$(sed -n "s/^readonly RETENTION=(\(.*\))$/\1/p" infra/scripts/backup.sh | tr -d "'")"
+[[ "${#retention[@]}" -gt 0 ]] || { echo "backup-check: no RETENTION line in backup.sh" >&2; exit 1; }
+run bash -c 'set -a; . /etc/jadero/backup.env; set +a; restic forget --quiet --host jadero-ops --tag jadero "$@" --prune' _ "${retention[@]}"
+check "retention after the failed run keeps every item of the complete run" "0 5" \
+  "$rc $(restic_json --tag "$first_run" | grep -o '"id":"' | count id)"
 
 echo
 echo "== the restore drill: the last complete night into a container with no network"

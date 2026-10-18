@@ -13,7 +13,7 @@ Placeholders stand for values that stay out of this repo: `<region>` (the bucket
   - `rabbitmq-definitions.json`: the broker's definitions export (vhosts, users with their password hashes, queues, bindings, policies). Queued messages are not backed up: every producer resends from its outbox and every consumer is idempotent (ADR-027).
   - `backup-run.complete`: written last, only when every item above was saved. It lists the run's items, so a restore can pick a whole night.
   - The media volume joins the set when WP-17 adds it.
-- **Fail loudly.** restic runs each dump command itself (`--stdin-from-command`) and saves no snapshot when the command fails. A failed item does not stop the others, but the run exits 1, skips the retention step and sends no heartbeat.
+- **Fail loudly.** restic runs each dump command itself (`--stdin-from-command`) and saves no snapshot when the command fails. A failed item does not stop the others, but the run then forgets the snapshots it did save (kept, they would count for keep-daily and push a complete run of the same day out), exits 1, skips the retention step and sends no heartbeat.
 - **Retention**, per item: `restic forget --keep-daily 7 --keep-weekly 4 --prune`, after a run where everything was saved.
 - **Heartbeat** (a dead man's switch, D8): the last step pings the Uptime Kuma push monitor `jadero backup`. No ping by morning means the monitor goes down and alerts. The URL carries a token: the script never prints it.
 - **Weekly check**, Sundays 05:00 (`jadero-backup-check.timer`): `restic check --read-data-subset=5%` reads back a random 5% of the stored data, so a corrupt pack is found before a restore needs it.
@@ -204,7 +204,7 @@ The backups live in B2 and the keys in 1Password: nothing needs the old server.
 
 ## 6. When something is wrong
 
-- **The `jadero backup` monitor is down.** `journalctl -u jadero-backup --since yesterday`: a `FAILED` line names the item. A failed run saved what it could, kept every older snapshot and skipped retention; fix the cause and run it again by hand.
+- **The `jadero backup` monitor is down.** `journalctl -u jadero-backup --since yesterday`: a `FAILED` line names the item. A failed run forgot what it had saved (a line says how many), kept every older snapshot and skipped retention; fix the cause and run it again by hand.
 - **"repository is already locked".** Another run or the weekly check holds the lock; the scripts wait up to an hour for it. A lock left by a killed run: `restic list locks`, then `restic unlock` (it removes stale locks only), both with the env file loaded as above.
 - **Uptime Kuma is down after a reboot during the backup.** The script stops Kuma for its copy and starts it again; a reboot in those seconds leaves it stopped (`unless-stopped` respects a stop). `docker start jadero-ops-uptime-kuma-1`.
 - **A new database.** Nothing to do: the next run finds it in `pg_database`.
