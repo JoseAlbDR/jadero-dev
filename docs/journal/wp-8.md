@@ -1,7 +1,7 @@
 ---
 wp: 8
 title: "Server preparation: close the doors, then prove the backups come back"
-status: draft
+status: approved
 date: 2026-10-18
 locale: en
 ---
@@ -42,9 +42,9 @@ A forced command checks the form of the words, not whether a version is wise. A 
 
 ## What I would change
 
-I would draw the network paths before writing a single firewall rule. The tailnet gap only showed up because a check question made me test it live. <!-- owner: check -->
+I would draw the network paths before writing a single firewall rule. The tailnet gap only showed up because a check question made me test it live.
 
-I spent too long on the shared nginx before deciding the host was mine to change. Once I said that, the design got simpler. <!-- owner: check -->
+I spent too long on the shared nginx before deciding the host was mine to change. Once I said that, the design got simpler.
 
 I would also keep screenshots out of the chat when a page shows a token. The backup's push token showed up in two of them; nginx does not open the push path to the internet, so I left it as it is.
 
