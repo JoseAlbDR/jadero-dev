@@ -62,6 +62,44 @@ ssh <profile>
 
 If it hangs, check that the machine is on the tailnet (`tailscale status`) before anything else.
 
+### 2a. Admin screens over a tunnel
+
+Postgres and RabbitMQ's AMQP port publish nothing: no tool on the owner's machine can reach them, by design (ADR-050, compensating controls). For a database console, run it inside the container on the server:
+
+```
+docker exec -it jadero-ops-postgres-1 psql -U postgres
+```
+
+The three admin screens of the ops stack bind to `127.0.0.1` on the server only (`infra/compose/compose.ops.yml`, Q2 B). Only Uptime Kuma's public status page is reachable from outside, through nginx. Reach the rest with SSH local forwards, which carry each local port to the same port on the server's loopback:
+
+| Screen | Local and server port |
+|---|---|
+| RabbitMQ management | 15673 |
+| Umami | 3100 |
+| Uptime Kuma | 3101 |
+
+One command opens all three and stays in the foreground until Ctrl+C:
+
+```
+ssh -N -L 15673:127.0.0.1:15673 -L 3100:127.0.0.1:3100 -L 3101:127.0.0.1:3101 <profile>
+```
+
+Then open `http://localhost:15673`, `http://localhost:3100` or `http://localhost:3101`. The logins are in 1Password.
+
+To avoid typing the forwards, add a second profile next to `<profile>` with the same host settings:
+
+```
+Host <profile>-admin
+  HostName <tailnet-host>
+  User <login-user>
+  Port <ssh-port>
+  LocalForward 15673 127.0.0.1:15673
+  LocalForward 3100 127.0.0.1:3100
+  LocalForward 3101 127.0.0.1:3101
+```
+
+and run `ssh -N <profile>-admin`. When a local port is already taken, change only the first number of that forward. The tunnel rides the same Tailscale connection as SSH, so it works next to another VPN as long as that VPN does not route the tailnet range (`100.64.0.0/10`).
+
 ## 3. sshd settings
 
 The settings that matter live in a drop-in, `/etc/ssh/sshd_config.d/00-jadero.conf`:
