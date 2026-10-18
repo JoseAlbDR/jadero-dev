@@ -65,6 +65,7 @@
         "apps/*/Dockerfile",
         "infra/compose/*.yml",
         "infra/postgres/pg_hba.conf",
+        "infra/nginx/**",
         "infra/scripts/**",
         "turbo.json",
         "apps/*/turbo.json",

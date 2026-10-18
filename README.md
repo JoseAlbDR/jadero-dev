@@ -60,7 +60,7 @@ The reasons behind each choice are the ADRs in [`docs/adr/`](docs/adr/README.md)
 | `packages/ui` | Design tokens and shadcn base components |
 | `packages/config` | Shared TypeScript and Vitest config |
 | `templates/nest-module` | The layered and hexagonal module shapes to copy from |
-| `infra/` | Docker Compose files (dev, images, the server's ops stack), Postgres provisioning, RabbitMQ config and definitions, secrets templates |
+| `infra/` | Docker Compose files (dev, images, the server's ops stack), Postgres provisioning, RabbitMQ config and definitions, secrets templates, the nginx edge (`infra/nginx/`) and server scripts |
 | `scripts/` | Repo scripts (ADR tooling, migration checks, release inputs) and their tests |
 | `docs/` | ADRs, plan, learning explainers, journal, process pages, architecture map |
 
@@ -207,6 +207,7 @@ Root scripts (`pnpm <script>`):
 | `release-inputs` | Regenerates each service's `release-inputs.txt` (its production dependency closure) |
 | `lint:workflows` | zizmor over `.github/workflows/`, in Docker |
 | `scan:secrets` | gitleaks over the git history, in Docker |
+| `nginx:check` | Installs `infra/nginx/` into Ubuntu 26.04 with the distro nginx, runs `nginx -t` and the edge smoke checks, in Docker |
 | `build` | Compiles every package (`dist/`, and the web standalone build) |
 | `db:generate` | Writes a new SQL migration per service from its schema files (review it; never edit an applied one) |
 | `db:migrate` | Applies the pending migrations per service (build first) |

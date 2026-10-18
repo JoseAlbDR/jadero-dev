@@ -4,9 +4,10 @@
 # run that saves the caches. The weekly scheduled run (and a manual run) repeats the full run
 # without the Turborepo cache (`TURBO_FORCE`), unit, integration and web, so a test that reads a
 # file no task declares fails within a week; when it fails, the last job opens an issue.
-# The integration, web and workflows-lint jobs run next to verify on every event; gitleaks and
-# dependency review live in `security.yml`. The zizmor image is pinned by digest, the same digest
-# as the root `lint:workflows` script: change both (Renovate updates both in one pull request).
+# The integration, web, workflows-lint and nginx jobs run next to verify on every event; gitleaks
+# and dependency review live in `security.yml`. The zizmor image is pinned by digest, the same
+# digest as the root `lint:workflows` script: change both (Renovate updates both in one pull
+# request).
 name: ci
 
 on:
@@ -560,6 +561,51 @@ jobs:
           ghcr.io/zizmorcore/zizmor:1.30.1@sha256:a2eb396d886c053073405c7a980f2139ba2248ec172243cfa3841e57196e8101
           --offline --format plain .github/workflows/
 
+  # The nginx edge (WP-8 step 5; ADR-047's edge part, ADR-050): the repo's nginx.conf, snippets and
+  # sites installed into Ubuntu 26.04 with the distro nginx (the server's release, nginx 1.28.3),
+  # throwaway self-signed certificates at certbot's paths, `nginx -t`, then nginx started and
+  # infra/scripts/smoke-edge.sh run against it (headers, no version, no CORS, internal paths 404,
+  # TLS 1.1 refused; the upstreams are absent and answer 502). On a pull request the check runs
+  # only when the PR changes infra/nginx/, the two scripts or this file; otherwise the job passes
+  # with nothing run (a step-level skip, never a `paths:` filter, so it can become a required
+  # check). Same command locally: `pnpm nginx:check`. The image is pinned by digest, the same
+  # digest as that root script: change both (Renovate updates both in one pull request).
+  nginx:
+    name: nginx
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      NGINX_TEST_IMAGE: docker.io/library/ubuntu:26.04@sha256:c098726dd9b9733f3e885f8de0ef375206a311b0a317eadc40d347b1115fb944
+    steps:
+      # Full history: the change check diffs against the PR base.
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Select the run
+        id: changed
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          run=true
+          if [ "$EVENT_NAME" = pull_request ] && git diff --quiet "$BASE_SHA" HEAD -- \
+            infra/nginx infra/scripts/nginx-check.sh infra/scripts/smoke-edge.sh .github/workflows/ci.yml; then
+            run=false
+            echo "Nothing the nginx edge reads changed: no nginx check." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
+      - name: Check and smoke-test the nginx edge
+        if: steps.changed.outputs.run == 'true'
+        run: >-
+          docker run --rm -v "$GITHUB_WORKSPACE/infra:/infra:ro" "$NGINX_TEST_IMAGE"
+          bash /infra/scripts/nginx-check.sh --smoke
+
   # The backstop's alarm (WP-6 Q3): when the weekly uncached run fails, open an issue, or comment
   # on the one still open, so a red scheduled run is not missed. The only job with a write token,
   # and it runs no repository code. Deduplicated by the fixed title; the run URL reaches the shell
@@ -567,7 +613,7 @@ jobs:
   backstop-issue:
     name: backstop-issue
     if: failure() && github.event_name == 'schedule'
-    needs: [verify, integration, web]
+    needs: [verify, integration, web, nginx]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
