@@ -347,6 +347,7 @@ What WP-8 builds, assuming the recommendations. Object to any line.
 - `scripts/compose-hardening.test.mjs` extended to `compose.ops.yml` (127.0.0.1 binds, `mem_limit`, no privileged, no `docker.sock`).
 - `@agent-reviewer` on the branch after step 4.
 - *Added 2026-10-18 (mid-WP review), for WP-9:* `ops.env` holds both environments' passwords (it feeds provisioning for prod and staging), so the service projects never read it: WP-9 renders one env file per environment for the services, each with only that environment's secrets.
+- *Added 2026-10-18 (step 5 install), for WP-9:* HSTS is still on its trial value (`max-age=300`); from 2026-10-25, with no HTTPS problem on any `*.jadero.dev` host, raise it to `max-age=31536000; includeSubDomains` and reinstall the snippet on the server (issue #141, exact steps there). Optional: reach the ops dashboards from any tailnet device with Tailscale Serve (issue #142).
 
 **Edge (step 5)**
 - `infra/nginx/` with one file per host (`new.`, `admin.`, `stats.`, `status.`) and snippets (`security-headers.conf`, `tls.conf`, `proxy.conf`), symlinked by the owner into `sites-enabled`; nothing in the shared `nginx.conf` changes. *Amended 2026-10-18 (ADR-051):* no `stats.` file; `new.jadero.dev.conf` proxies Umami's tracker as `/s/script.js` and its collect endpoint as `/s/api/send` (exact matches, POST only, the API limits), and every other `/s/` path answers 404.
