@@ -4,4 +4,4 @@ This branch, `learning/notes`, holds the owner's personal learning notes and the
 
 | Title | Artifact | Source | Last checked |
 | --- | --- | --- | --- |
-| Events Field Guide | artifact id `BTyLoRQBE5Npmiv87Eavdu` | `docs/learning/notes/events-guide.html` | 2026-10-19 (version 2, id 1792361617-5e45) |
+| Events Field Guide | artifact id `BTyLoRQBE5Npmiv87Eavdu` | `docs/learning/notes/events-guide.html` | 2026-10-19 (version 3, id 1792361736-1b33) |

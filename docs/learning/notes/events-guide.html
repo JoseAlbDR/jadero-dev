@@ -667,3 +667,14 @@ flowchart LR
 </footer>
 </main>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+(function () {
+  if (!window.mermaid) return;
+  var root = document.documentElement;
+  var t = root.getAttribute("data-theme");
+  var dark = t ? t === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+  window.mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "neutral", securityLevel: "strict", fontFamily: "Schibsted Grotesk, Helvetica Neue, Arial, sans-serif" });
+  window.mermaid.run({ querySelector: "pre.mermaid" }).catch(function () {});
+})();
+</script>
