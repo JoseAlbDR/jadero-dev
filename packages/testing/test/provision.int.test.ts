@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -229,5 +230,52 @@ describe("provision.sql with env=ops", () => {
     );
     expect(umami).toEqual({ owner: "umami", public_connect: false });
     expect(await connectFailure(urlFor("umami", { name: "umami", password }))).toBeUndefined();
+  });
+});
+
+// infra/postgres/pg_hba.conf as the server loads it (compose.ops.yml: mounted read-only and named
+// with `-c hba_file`): Postgres parses every line at boot and lists any it cannot read in
+// pg_hba_file_rules, so a typo shows here instead of as a refused login on the server.
+describe("pg_hba.conf loaded as the server's hba_file", () => {
+  const HBA_FILE = fileURLToPath(new URL("../../../infra/postgres/pg_hba.conf", import.meta.url));
+  const HBA_IN_CONTAINER = "/etc/postgresql/pg_hba.conf";
+  let server: StartedPostgreSqlContainer;
+
+  /** Runs one query as the superuser over the socket (peer), as provisioning and backups do. */
+  async function socketQuery(sql: string): Promise<string> {
+    const result = await server.exec(
+      ["psql", "--no-psqlrc", "-X", "-At", "-d", "postgres", "-c", sql],
+      { user: "postgres" },
+    );
+    expect(result.exitCode, result.output).toBe(0);
+    return result.output.trim();
+  }
+
+  beforeAll(async () => {
+    useDockerContextHost();
+    server = await new PostgreSqlContainer(POSTGRES_IMAGE)
+      .withUsername("postgres")
+      .withDatabase("postgres")
+      .withCopyFilesToContainer([{ source: HBA_FILE, target: HBA_IN_CONTAINER, mode: 0o644 }])
+      .withCommand(["postgres", "-c", `hba_file=${HBA_IN_CONTAINER}`])
+      .start();
+  });
+
+  afterAll(async () => {
+    await server?.stop();
+  });
+
+  it("reads the mounted file, with no line in error", async () => {
+    expect(await socketQuery("SHOW hba_file")).toBe(HBA_IN_CONTAINER);
+    expect(await socketQuery("SELECT count(*) FROM pg_hba_file_rules")).not.toBe("0");
+    expect(
+      await socketQuery("SELECT count(*) FROM pg_hba_file_rules WHERE error IS NOT NULL"),
+    ).toBe("0");
+  });
+
+  it("rejects the superuser over TCP, from an address no line accepts", async () => {
+    const url = new URL(server.getConnectionUri());
+    // 28000: invalid authorization specification, "pg_hba.conf rejects connection".
+    expect(await connectFailure(url.toString())).toBe("28000");
   });
 });

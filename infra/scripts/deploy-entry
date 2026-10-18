@@ -12,14 +12,18 @@
 # arguments to the one script the sudoers rule allows. The client's input is never evaluated,
 # never handed to a shell and never written to the log.
 #
-# Environment: the key line in authorized_keys carries `restrict`, and sshd's PermitUserEnvironment
-# is off by default and AcceptEnv passes only the variables it lists, so the client cannot set
-# variables for this script. Even so, nothing here reads a path from the environment: the paths
-# below are fixed constants, and the tests run a copy with those lines rewritten.
+# Environment: sshd's PermitUserEnvironment is off by default, but the client can still send the
+# variables AcceptEnv lists, and Ubuntu's sshd_config accepts LANG and every LC_* (`restrict` on
+# the key does not change that). The locale decides what a bracket range such as [A-Za-z] means:
+# under a UTF-8 locale glibc matches letters like a-umlaut or fullwidth A in it, so the
+# allowlists below would let non-ASCII through. LC_ALL=C, set before the first match, pins every
+# check to ASCII bytes whatever the client sends. Nothing here reads a path from the environment:
+# the paths below are fixed constants, and the tests run a copy with those lines rewritten.
 
 set -euo pipefail
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
+export LC_ALL=C
 
 readonly DEPLOY_SH=/srv/jadero/bin/deploy.sh
 readonly SUDO=/usr/bin/sudo

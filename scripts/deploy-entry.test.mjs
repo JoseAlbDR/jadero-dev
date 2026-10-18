@@ -54,11 +54,12 @@ function writeScript(name, body) {
 /**
  * Runs the rewritten deploy-entry as sshd would, with the client's words in SSH_ORIGINAL_COMMAND.
  * @param {string | undefined} command the client's command, or undefined to leave it unset
+ * @param {Record<string, string>} clientEnv variables the client sends (sshd's AcceptEnv)
  * @returns {{ status: number | null, stdout: string, stderr: string }} the result
  */
-function runEntry(command) {
+function runEntry(command, clientEnv = {}) {
   for (const file of [sudoCalls, logFile]) rmSync(file, { force: true });
-  const env = { PATH: process.env.PATH };
+  const env = { PATH: process.env.PATH, ...clientEnv };
   if (command !== undefined) env.SSH_ORIGINAL_COMMAND = command;
   const result = spawnSync(entry, [], { env, encoding: "utf8" });
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
@@ -67,10 +68,12 @@ function runEntry(command) {
 /**
  * Runs the deploy.sh stub directly with the given arguments.
  * @param {string[]} args the arguments
+ * @param {Record<string, string>} callerEnv variables the caller passes through sudo
  * @returns {{ status: number | null, stdout: string, stderr: string }} the result
  */
-function runDeploySh(args) {
-  const result = spawnSync(DEPLOY_SH, args, { env: { PATH: process.env.PATH }, encoding: "utf8" });
+function runDeploySh(args, callerEnv = {}) {
+  const env = { PATH: process.env.PATH, ...callerEnv };
+  const result = spawnSync(DEPLOY_SH, args, { env, encoding: "utf8" });
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
@@ -191,6 +194,48 @@ describe("deploy.sh stub", () => {
       assert.equal(result.status, 1);
       assert.equal(result.stdout, "");
       assert.equal(result.stderr, 'refused: expected "deploy.sh <env> <service> <version>"\n');
+    });
+  }
+});
+
+// sshd passes the client's LANG and LC_* (Ubuntu's AcceptEnv) and sudo keeps them; under a UTF-8
+// locale glibc's [A-Za-z] matches non-ASCII letters, so both scripts pin LC_ALL=C first.
+describe("a client's UTF-8 locale", () => {
+  const LOCALES = [
+    ["LANG and LC_CTYPE", { LANG: "en_US.UTF-8", LC_CTYPE: "en_US.UTF-8" }],
+    ["LC_ALL", { LC_ALL: "en_US.UTF-8" }],
+  ];
+  // A pre-release with a-umlaut, and one with a fullwidth r: both letters to a UTF-8 glibc.
+  const NON_ASCII = ["1.0.0-rc\u00e4", "1.0.0-\uff52c"];
+
+  for (const [name, clientEnv] of LOCALES) {
+    for (const version of NON_ASCII) {
+      it(`deploy-entry refuses ${JSON.stringify(version)} with ${name} set`, () => {
+        const result = runEntry(`deploy staging api ${version}`, clientEnv);
+        assert.equal(result.status, 1);
+        assert.equal(result.stderr, `${USAGE}\n`);
+        assert.equal(readIfExists(sudoCalls), "", "sudo was not called");
+        assert.equal(readIfExists(logFile), "-t jadero-deploy -- refused reason=bad-characters\n");
+      });
+
+      it(`deploy.sh refuses ${JSON.stringify(version)} with ${name} set`, () => {
+        const result = runDeploySh(["staging", "api", version], clientEnv);
+        assert.equal(result.status, 1);
+        assert.equal(result.stdout, "");
+      });
+    }
+  }
+
+  for (const [name, path] of [
+    ["deploy-entry", ENTRY],
+    ["deploy.sh", DEPLOY_SH],
+  ]) {
+    it(`${name} exports LC_ALL=C before its first regex match`, () => {
+      const lines = readFileSync(path, "utf8").split("\n");
+      const pin = lines.indexOf("export LC_ALL=C");
+      const firstMatch = lines.findIndex((line) => !line.startsWith("#") && line.includes("=~"));
+      assert.ok(pin >= 0, `${name} sets LC_ALL=C`);
+      assert.ok(firstMatch > pin, `${name} pins the locale before line ${firstMatch + 1}`);
     });
   }
 });

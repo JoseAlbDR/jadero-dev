@@ -123,6 +123,18 @@ describe("the servers' RabbitMQ provisioning", () => {
     expect(await ctl("list_users")).toMatch(/^ops_admin\t\[administrator\]$/m);
   });
 
+  it("clears rights a user holds on a vhost the file does not list for it, and says so", async () => {
+    // Granted by hand, as an operator's mistake or a row removed from permissions.tsv would leave.
+    await ctl("set_permissions", "-p", "/staging", "agent_prod", ".*", ".*", ".*");
+    expect(await names("list_user_permissions", "agent_prod")).toEqual(["/prod", "/staging"]);
+    // A prod run still clears it: the user is converged on every vhost, not only the run's own.
+    const run = provision(passwordEnv, ["prod"]);
+    expect(run.status, run.output).toBe(0);
+    expect(run.output).toContain("provision-users: agent_prod: permissions on /staging cleared");
+    expect(run.output.match(/permissions on \S+ cleared/g)).toHaveLength(1);
+    expect(await names("list_user_permissions", "agent_prod")).toEqual(["/prod"]);
+  });
+
   it("lets api_prod publish and agent_prod consume on /prod, and nothing else", async () => {
     const publisher = await connect(amqpUrl("api_prod", "/prod"));
     const consumer = await connect(amqpUrl("agent_prod", "/prod"));

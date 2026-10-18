@@ -11,19 +11,28 @@
 # it is the explicit, convergent run in infra/compose/README.md, "Ops stack".
 #
 # Isolation (Q1 accepted risk, ADR-050 compensating controls): one Docker network per environment
-# with a fixed subnet that infra/postgres/pg_hba.conf names; Postgres and RabbitMQ join all
-# three, a service project (jadero-prod, jadero-staging) joins only its own as an external
-# network. No database or broker port is published; the three admin and app ports bind to
-# 127.0.0.1 only, for nginx and for the owner over a tunnel (Q2 B).
-# scripts/compose-hardening.test.mjs fails when a service loses that, its memory limit or its
-# digest pin, or when Postgres or RabbitMQ stop matching compose.dev.yml.
+# with a fixed subnet that infra/postgres/pg_hba.conf names; Postgres joins all three, RabbitMQ
+# only the two service networks (nothing on jadero_ops speaks AMQP), and a service project
+# (jadero-prod, jadero-staging) joins only its own as an external network. No database or broker
+# port is published; the three admin and app ports bind to 127.0.0.1 only, for nginx and for the
+# owner over a tunnel (Q2 B).
+# scripts/compose-hardening.test.mjs fails when a service loses that, its memory limit, its
+# digest pin or its log rotation, when a pg_hba.conf line names a subnet that is not its
+# environment's network, or when Postgres or RabbitMQ stop matching compose.dev.yml.
 name: jadero-ops
 
 # Least privilege where each image allows it: exec never gains privileges (setuid programs such
-# as `su` cannot reach root), and a process restarts unless stopped by hand.
+# as `su` cannot reach root), and a process restarts unless stopped by hand. Logs rotate: the
+# `local` driver keeps at most 3 files of 10 MB per container (Docker's default json-file driver
+# never rotates, so a noisy container could fill the shared host's disk).
 x-base: &base
   security_opt: ["no-new-privileges:true"]
   restart: unless-stopped
+  logging:
+    driver: local
+    options:
+      max-size: "10m"
+      max-file: "3"
 
 services:
   postgres:
@@ -57,6 +66,9 @@ services:
       - pgdata:/var/lib/postgresql
       - ../postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
     networks: [jadero_prod, jadero_staging, jadero_ops]
+    # Time to finish a fast shutdown and its checkpoint before Docker kills it (the default is
+    # 10 seconds): a kill means crash recovery on the next start.
+    stop_grace_period: 60s
     healthcheck:
       # Over the socket, as the container's postgres user (peer): no rejected TCP attempt is logged.
       test: ["CMD", "pg_isready", "-U", "postgres", "-d", "postgres"]
@@ -85,7 +97,12 @@ services:
       - ../rabbitmq/server/rabbitmq.conf:/etc/rabbitmq/conf.d/20-jadero.conf:ro
       # Only the folder of vhost files: RabbitMQ imports every file in it, whatever the extension.
       - ../rabbitmq/server/definitions:/etc/rabbitmq/definitions:ro
-    networks: [jadero_prod, jadero_staging, jadero_ops]
+    # The two service networks only: Umami on jadero_ops never speaks AMQP, so the broker stays
+    # out of reach from there.
+    networks: [jadero_prod, jadero_staging]
+    # Time to close connections and flush queues and the message store before Docker kills it
+    # (the default is 10 seconds).
+    stop_grace_period: 60s
     ports:
       # The management UI and API, for the owner over a tunnel (ADR-027). AMQP is never published.
       - "127.0.0.1:15673:15672"

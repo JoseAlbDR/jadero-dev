@@ -12,10 +12,14 @@
 # sudoers rule names this path with no arguments, which lets the deploy user pass any: this script
 # is the last gate before root acts on them (defense in depth). The checks are a copy of
 # deploy-entry's on purpose, so the server holds no shared file that both scripts trust.
+#
+# sudo keeps LANG and LC_* from the caller, and under a UTF-8 locale the bracket ranges below
+# match non-ASCII letters: LC_ALL=C, set before the first match, pins the checks to ASCII bytes.
 
 set -euo pipefail
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
+export LC_ALL=C
 
 # The services release-please publishes today. `contact` joins when it ships.
 readonly SERVICES="api agent web"
