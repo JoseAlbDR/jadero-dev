@@ -1,7 +1,7 @@
 ---
 id: ADR-052
 title: "Client addresses in the edge logs"
-status: proposed
+status: accepted
 date: 2026-10-18
 deciders: [owner]
 decisions: [D-82]
@@ -12,7 +12,7 @@ source: docs/learning/wp-8.md (Step log, the PR review of the wrap, 2026-10-18)
 
 # ADR-052: Client addresses in the edge logs
 
-**Status:** proposed
+**Status:** accepted
 
 ## Context
 
