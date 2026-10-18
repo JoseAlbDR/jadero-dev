@@ -1,8 +1,8 @@
 # nginx edge
 
 The host nginx in front of everything on the server (ADR-002; ADR-050 restating ADR-027's host
-nginx and certbot; ADR-047's edge part; WP-8 D6 and the 2026-10-18 amendment in
-`docs/learning/wp-8.md`). The repo owns the generic `nginx.conf`, the shared snippets and one file
+nginx and certbot; ADR-047's edge part; ADR-051's first-party analytics path; WP-8 D6 and the
+2026-10-18 amendments in `docs/learning/wp-8.md`). The repo owns the generic `nginx.conf`, the shared snippets and one file
 per jadero.dev host. The owner's older sites on the same host keep their own files on the host,
 outside this public repo, and use the same `nginx.conf` and snippets.
 
@@ -29,9 +29,8 @@ its public paths, and everything else answers 404 at the edge.
 
 | Host | Proxied | Everything else |
 |---|---|---|
-| `new.jadero.dev` (staging) | `/` to `web` on 127.0.0.1:3120; `/api/v1/content/` to `api` on 127.0.0.1:3121 as `/v1/content/` | every other `/api/` path 404 (health, revalidation, internal routes) |
+| `new.jadero.dev` (staging) | `/` to `web` on 127.0.0.1:3120; `/api/v1/content/` to `api` on 127.0.0.1:3121 as `/v1/content/`; Umami's tracker on 127.0.0.1:3100: `/s/script.js` as `/script.js` and `/s/api/send` as `/api/send` (POST only, 403 for any other method, with the API limits) | every other `/api/` path 404 (health, revalidation, internal routes); every other `/s/` path 404 (Umami's login, dashboards, API and session recorder) |
 | `admin.jadero.dev` | nothing yet: the static placeholder, under a static CSP with `frame-ancestors 'none'` | `/api/` 404 until WP-17 |
-| `stats.jadero.dev` | Umami on 127.0.0.1:3100: `/script.js` and `/api/send` | 404, the login page and dashboards included |
 | `status.jadero.dev` | Uptime Kuma on 127.0.0.1:3101: `/status/jadero` (and `/rss`), its `/api/status-page/...` calls, `/assets/`, `/upload/`, the icons, `serviceWorker.js`, `robots.txt`; `/` redirects to `/status/jadero` | 404, the dashboard, socket.io, setup, `/metrics`, push and badge URLs included |
 
 Production ports for the cutover (WP-29, when the `jadero.dev` host file arrives): `web` on
@@ -64,13 +63,16 @@ certbot's nginx authenticator adds for a renewal still wins.
 3. Never `add_header`, `proxy_set_header` or `proxy_hide_header` inside a location: it drops every
    inherited one. A host-specific header goes at the server level, next to the snippet.
 4. `pnpm verify` (the static rules) and `pnpm nginx:check` (`nginx -t` and the smoke run; add the
-   host to `infra/scripts/nginx-check.sh` and its paths to `smoke-edge.sh`).
+   host to `infra/scripts/nginx-check.sh` and its paths to `smoke-edge.sh`). The smoke run starts a
+   stub Umami on 127.0.0.1:3100 that echoes the method and path it receives and sends
+   `Access-Control-Allow-Origin: *`, so it proves where each `/s/` path lands and that the edge
+   hides the header; every other upstream is absent and answers 502.
 
 ## Install on the server (owner)
 
 In this order; every step after the backup can be undone by restoring it.
 
-1. **DNS** at the registrar: `A` and `AAAA` records for `new`, `admin`, `stats` and `status` pointing
+1. **DNS** at the registrar: `A` and `AAAA` records for `new`, `admin` and `status` pointing
    at the server; on the apex, `CAA 0 issue "letsencrypt.org"` and `CAA 0 issuewild ";"` (an
    `accounturi` parameter is added later, from certbot's account file). Check with
    `dig +short CAA jadero.dev` and `dig +short A new.jadero.dev`.
@@ -84,23 +86,32 @@ In this order; every step after the backup can be undone by restoring it.
    `access_log ... jadero` and include the snippets where they fit.
 4. `sudo nginx -t`, then `sudo systemctl reload nginx`; check that every older site still answers.
 5. **Certificates**, one per host: `sudo certbot certonly --nginx -d new.jadero.dev`, and the same
-   for `admin`, `stats` and `status`. `certonly` never edits a site file. Add a deploy hook so a
+   for `admin` and `status`. `certonly` never edits a site file. Add a deploy hook so a
    renewal reloads nginx with the new certificate (the authenticator's own reload happens before
    the new files are saved): `/etc/letsencrypt/renewal-hooks/deploy/reload-nginx` holding
    `#!/bin/sh` and `systemctl reload nginx`, mode 755. Check the renewal timer
    (`systemctl list-timers | grep certbot`) and `sudo certbot renew --dry-run`.
-6. **Sites:** copy the four host files to `sites-available/` and link them into `sites-enabled/`;
+6. **Sites:** copy the three host files to `sites-available/` and link them into `sites-enabled/`;
    `sudo install -D -m 644 www/admin/index.html /srv/jadero/www/admin/index.html`.
 7. `sudo nginx -t`, then `sudo systemctl reload nginx`.
-8. **Smoke** from the laptop: `infra/scripts/smoke-edge.sh`. Every check should pass except the
-   `new.jadero.dev` routes, which answer 502 until WP-9 deploys staging (502 counts as routed).
+8. **Smoke** from the laptop: `infra/scripts/smoke-edge.sh`. Every check should pass; the
+   `new.jadero.dev` routes to `web` and `api` answer 502 until WP-9 deploys staging (502 counts as
+   routed), while `/s/script.js` and `/s/api/send` already reach Umami in the ops stack.
 9. After a week with no problem: HSTS to `max-age=31536000; includeSubDomains` in the headers
    snippet (ADR-047), never `preload` until every subdomain is confirmed HTTPS only.
 
-## Open points
+## Notes for the WP that adds the tracker to web
 
-- Umami's tracker posts from the site's origin to `stats.jadero.dev/api/send`, a cross-origin call
-  that needs a CORS answer. Umami sends `Access-Control-Allow-Origin: *` there, and the proxy
-  snippet hides it (ADR-047: no CORS on any host), so the tracker cannot report until a decision
-  opens CORS for that one route and origin, or serves the collect path first-party. No page loads
-  the tracker yet.
+- Load it as `<script defer src="/s/script.js" data-website-id="<id>">` with the page's CSP nonce.
+  The pinned Umami 3.4.0 tracker builds its collect URL from `data-host-url` when set, else from
+  its own `src` minus the file name, plus `/api/send`: loaded from `/s/script.js` it posts to
+  `/s/api/send` on the same origin, which is the route above. So set no `data-host-url`.
+- Leave Umami's `TRACKER_SCRIPT_NAME` and `COLLECT_API_ENDPOINT` unset (`compose.ops.yml` sets
+  neither): the edge does the renaming. With `COLLECT_API_ENDPOINT` set, the container's start
+  script rewrites `/api/send` inside `public/script.js` (`scripts/update-tracker.js`), so the
+  script would post to a path the edge does not route; and on the read-only root `compose.ops.yml`
+  gives Umami that write fails and the start script stops before the server runs.
+- Same origin, so no CORS and no CSP change: `'self'` covers both the script and the collect call
+  (ADR-051). There is no `stats.jadero.dev`.
+- At the cutover (WP-29) the two `/s/` locations move to the `jadero.dev` host file with the rest
+  of the site.

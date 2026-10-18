@@ -9,15 +9,15 @@
 #   docker run --rm -v "$PWD/infra:/infra:ro" <ubuntu:26.04 by digest> bash /infra/scripts/nginx-check.sh [--smoke]
 #
 # The certificates are throwaway self-signed ones at the paths certbot uses on the server
-# (/etc/letsencrypt/live/<host>/), valid 30 days. No upstream runs, so the proxied paths answer
-# 502 in the smoke run, which smoke-edge.sh counts as routed.
+# (/etc/letsencrypt/live/<host>/), valid 30 days. Only a stub Umami runs (below), so the other
+# proxied paths answer 502 in the smoke run, which smoke-edge.sh counts as routed.
 
 set -euo pipefail
 export LC_ALL=C
 export DEBIAN_FRONTEND=noninteractive
 
 readonly SRC=/infra
-readonly HOSTS=(new.jadero.dev admin.jadero.dev stats.jadero.dev status.jadero.dev)
+readonly HOSTS=(new.jadero.dev admin.jadero.dev status.jadero.dev)
 
 smoke=0
 case "${1:-}" in
@@ -59,6 +59,44 @@ done
 nginx -t
 
 if [[ "$smoke" -eq 1 ]]; then
+  # A stub Umami on its port (ADR-051): it answers with the method and path it received, and sends
+  # `Access-Control-Allow-Origin: *` as Umami does, so the run proves which Umami path each /s/
+  # path reaches and that the edge hides the header. Outside infra/nginx, never on the server.
+  cat >/etc/nginx/sites-enabled/zz-umami-stub.conf <<'STUB'
+server {
+	listen 127.0.0.1:3100;
+	access_log off;
+	default_type text/plain;
+	add_header Access-Control-Allow-Origin "*" always;
+	location / {
+		return 200 "umami $request_method $uri\n";
+	}
+}
+STUB
   nginx
-  bash "$SRC/scripts/smoke-edge.sh" --resolve 127.0.0.1 --insecure "${HOSTS[@]}"
+  status=0
+  bash "$SRC/scripts/smoke-edge.sh" --resolve 127.0.0.1 --insecure "${HOSTS[@]}" || status=1
+
+  # Each first-party path reaches Umami's own path, with the method it allows.
+  umami() {
+    curl -sS -k --max-time 10 --resolve new.jadero.dev:443:127.0.0.1 "$@" 2>/dev/null || true
+  }
+  expect() {
+    if [[ "$2" == "$3" ]]; then
+      printf 'ok    %-20s %s\n' new.jadero.dev "$1"
+    else
+      printf 'FAIL  %-20s %s (got %s)\n' new.jadero.dev "$1" "${3:-nothing}"
+      status=1
+    fi
+  }
+  expect "/s/script.js reaches Umami /script.js" "umami GET /script.js" \
+    "$(umami https://new.jadero.dev/s/script.js)"
+  expect "POST /s/api/send reaches Umami /api/send" "umami POST /api/send" \
+    "$(umami -X POST -H 'Content-Type: application/json' -d '{}' https://new.jadero.dev/s/api/send)"
+  expect "GET /s/api/send refused" 403 \
+    "$(umami -o /dev/null -w '%{http_code}' https://new.jadero.dev/s/api/send)"
+  expect "POST over 64k to /s/api/send refused" 413 \
+    "$(head -c 70000 /dev/zero | tr '\0' a | umami -o /dev/null -w '%{http_code}' -X POST \
+      --data-binary @- https://new.jadero.dev/s/api/send)"
+  exit "$status"
 fi

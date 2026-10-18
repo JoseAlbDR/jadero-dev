@@ -7,7 +7,7 @@
 # Usage: smoke-edge.sh [--resolve ADDR] [--https-port N] [--http-port N] [--insecure]
 #                      [--min-days N] [host ...]
 #
-#   host           the hosts to check; default: new., admin., stats. and status.jadero.dev
+#   host           the hosts to check; default: new., admin. and status.jadero.dev
 #   --resolve ADDR connect to ADDR for every host instead of asking DNS (a local run, or one
 #                  host before its DNS record exists); the names still go in SNI and Host
 #   --https-port   default 443; --http-port: default 80
@@ -16,7 +16,8 @@
 #
 # Per host: the edge headers on a response (HSTS, nosniff, Referrer-Policy, Permissions-Policy),
 # a Server header without a version, HTTP/2, no Access-Control-* header (also on a preflight
-# OPTIONS with an Origin), 404 on internal paths, the allowlisted paths routed (anything but 404),
+# OPTIONS with an Origin), 404 on internal paths, the allowlisted paths routed (anything but 404)
+# with no Access-Control-* header, the POST-only paths routed for POST and refused (403) for GET,
 # a 301 to https on port 80, TLS 1.1 refused, TLS 1.2 and 1.3 accepted, and the days left on the
 # certificate. Once: a name no server claims gets no TLS handshake on 443 and no response on 80.
 # Local run against a container with no upstreams: the proxied paths answer 502, which counts as
@@ -28,7 +29,7 @@
 set -uo pipefail
 export LC_ALL=C
 
-readonly DEFAULT_HOSTS="new.jadero.dev admin.jadero.dev stats.jadero.dev status.jadero.dev"
+readonly DEFAULT_HOSTS="new.jadero.dev admin.jadero.dev status.jadero.dev"
 # A name nobody serves (RFC 2606), for the catch-all default server.
 readonly UNKNOWN_HOST="unknown.invalid"
 
@@ -122,11 +123,10 @@ internal_paths() {
   case "$1" in
     new.jadero.dev)
       echo /api/health/ready /api/health/live /api/revalidate /api/internal/ping \
-        /api/v1/content/%2e%2e/%2e%2e/health/ready /api/v1/content/../../health/ready ;;
+        /api/v1/content/%2e%2e/%2e%2e/health/ready /api/v1/content/../../health/ready \
+        /api/send /s/ /s/login /s/dashboard /s/api/auth/login /s/api/websites /s/api/heartbeat \
+        /s/api/record /s/recorder.js /s/api/send/../auth/login /s/script.js/x ;;
     admin.jadero.dev) echo /api/health/ready /api/v1/content/ ;;
-    stats.jadero.dev)
-      echo /login /dashboard /api/auth/login /api/websites /api/heartbeat /api/record \
-        /recorder.js /api/send/../auth/login ;;
     status.jadero.dev)
       echo /dashboard /setup /metrics /socket.io/ /api/push/x /api/badge/1/status \
         /api/entry-page /status/other /api/status-page/other /manifest.json ;;
@@ -137,9 +137,8 @@ internal_paths() {
 # The allowlisted paths that must be routed (anything but 404) on <host>.
 routed_paths() {
   case "$1" in
-    new.jadero.dev) echo / /api/v1/content/pages ;;
+    new.jadero.dev) echo / /api/v1/content/pages /s/script.js ;;
     admin.jadero.dev) echo / ;;
-    stats.jadero.dev) echo /script.js ;;
     status.jadero.dev)
       echo /status/jadero /api/status-page/jadero /api/status-page/heartbeat/jadero \
         /assets/x.js /icon.svg ;;
@@ -147,14 +146,30 @@ routed_paths() {
   esac
 }
 
-# The path a browser would send a cross-origin preflight to on <host>.
-preflight_path() {
+# The paths that must be routed for POST and refused (403) for GET on <host>.
+post_paths() {
   case "$1" in
-    new.jadero.dev) echo /api/v1/content/pages ;;
-    stats.jadero.dev) echo /api/send ;;
+    new.jadero.dev) echo /s/api/send ;;
+    *) ;;
+  esac
+}
+
+# The paths a browser would send a cross-origin preflight to on <host>.
+preflight_paths() {
+  case "$1" in
+    new.jadero.dev) echo /api/v1/content/pages /s/api/send ;;
     status.jadero.dev) echo /api/status-page/jadero ;;
     *) echo / ;;
   esac
+}
+
+# Checks one response's headers on <host>: no Access-Control-* header. Args: host, check, headers.
+no_cors() {
+  if grep -qi '^access-control-' <<<"$3"; then
+    fail "$1" "$2" "$(grep -i '^access-control-' <<<"$3" | head -n 1)"
+  else
+    pass "$1" "$2"
+  fi
 }
 
 # Prints the days until <host>'s certificate expires, or nothing when it cannot be read.
@@ -216,14 +231,11 @@ check_host() {
   fi
 
   # A browser's CORS preflight from another origin gets no Access-Control-* header either.
-  path="$(preflight_path "$host")"
-  out="$(fetch "$host" -X OPTIONS -o /dev/null -D - -H 'Origin: https://example.com' \
-    -H 'Access-Control-Request-Method: POST' "$base$path" 2>&1 | tr -d '\r')"
-  if grep -qi '^access-control-' <<<"$out"; then
-    fail "$host" "no CORS on preflight $path" "$(grep -i '^access-control-' <<<"$out" | head -n 1)"
-  else
-    pass "$host" "no CORS on preflight $path"
-  fi
+  for path in $(preflight_paths "$host"); do
+    out="$(fetch "$host" -X OPTIONS -o /dev/null -D - -H 'Origin: https://example.com' \
+      -H 'Access-Control-Request-Method: POST' "$base$path" 2>&1 | tr -d '\r')"
+    no_cors "$host" "no CORS on preflight $path" "$out"
+  done
 
   for path in $(internal_paths "$host"); do
     code="$(status_of "$host" GET "$base$path")"
@@ -235,11 +247,33 @@ check_host() {
   done
 
   for path in $(routed_paths "$host"); do
-    code="$(status_of "$host" GET "$base$path")"
-    if [[ "$code" != 404 && "$code" != 000 ]]; then
+    out="$(fetch "$host" -o /dev/null -D - -H 'Origin: https://example.com' "$base$path" 2>&1 \
+      | tr -d '\r')"
+    code="$(head -n 1 <<<"$out" | awk '{print $2}')"
+    if [[ "$out" == HTTP/* && "$code" != 404 ]]; then
       pass "$host" "routed $path ($code)"
     else
-      fail "$host" "routed $path" "got $code"
+      fail "$host" "routed $path" "got ${code:-no response}"
+    fi
+    no_cors "$host" "no Access-Control-* on $path" "$out"
+  done
+
+  # POST-only paths (Umami's collect endpoint): routed for POST, refused for GET.
+  for path in $(post_paths "$host"); do
+    out="$(fetch "$host" -X POST -o /dev/null -D - -H 'Origin: https://example.com' \
+      -H 'Content-Type: application/json' -d '{}' "$base$path" 2>&1 | tr -d '\r')"
+    code="$(head -n 1 <<<"$out" | awk '{print $2}')"
+    if [[ "$out" == HTTP/* && "$code" != 404 && "$code" != 403 ]]; then
+      pass "$host" "routed POST $path ($code)"
+    else
+      fail "$host" "routed POST $path" "got ${code:-no response}"
+    fi
+    no_cors "$host" "no Access-Control-* on POST $path" "$out"
+    code="$(status_of "$host" GET "$base$path")"
+    if [[ "$code" == 403 ]]; then
+      pass "$host" "GET $path refused (403)"
+    else
+      fail "$host" "GET $path refused (403)" "got $code"
     fi
   done
 

@@ -20,6 +20,9 @@
  *   challenge location still wins).
  * - No IPv4 address other than 127.0.0.1 in any file of `infra/nginx/` (a public repo).
  *
+ * `selectLocation` picks the location nginx would use for a path, so the tests can check where a
+ * public path goes (Umami's two first-party paths on the site host, ADR-051).
+ *
  * Run by `scripts/nginx-hardening.test.mjs` through `pnpm test:scripts`, so `pnpm verify`.
  */
 import { readdirSync, readFileSync } from "node:fs";
@@ -242,6 +245,61 @@ export function ipProblems(files) {
     });
   }
   return problems;
+}
+
+/**
+ * Picks the location nginx uses for a URI inside one server, in nginx's order: an exact `=` match;
+ * else the longest prefix, final when it carries `^~`; else the first regex (`~`, `~*`) that
+ * matches, in file order; else that longest prefix. Nested locations are not followed.
+ * @param server a parsed `server` directive.
+ * @param uri a normalized path without its query string, as nginx matches it.
+ * @returns the location directive, or undefined when none matches.
+ */
+export function selectLocation(server, uri) {
+  const locations = (server.block ?? []).filter((d) => d.name === "location");
+  const exact = locations.find((l) => l.args[0] === "=" && l.args[1] === uri);
+  if (exact) return exact;
+  let longest;
+  for (const location of locations) {
+    const [modifier, path] = location.args.length === 2 ? location.args : [null, location.args[0]];
+    if (modifier !== null && modifier !== "^~") continue;
+    if (uri.startsWith(path) && (!longest || path.length > longest.path.length)) {
+      longest = { location, path, modifier };
+    }
+  }
+  if (longest?.modifier === "^~") return longest.location;
+  const regex = locations.find(
+    (l) =>
+      (l.args[0] === "~" || l.args[0] === "~*") &&
+      new RegExp(l.args[1], l.args[0] === "~*" ? "i" : "").test(uri),
+  );
+  return regex ?? longest?.location;
+}
+
+/**
+ * Reads one site file of `infra/nginx/` and returns its HTTPS server, the repo snippets expanded.
+ * @param site the site's path under infra/nginx (`sites/new.jadero.dev.conf`).
+ * @param root the repository root.
+ * @returns the parsed `server` directive that listens on 443 with ssl, or undefined.
+ */
+export function readHttpsServer(site, root = REPO_ROOT) {
+  const dir = join(root, NGINX_DIR);
+  const snippets = Object.fromEntries(
+    readdirSync(join(dir, "snippets"))
+      .filter((name) => name.endsWith(".conf"))
+      .map((name) => [`snippets/${name}`, readFileSync(join(dir, "snippets", name), "utf8")]),
+  );
+  const directives = expandIncludes(
+    parseNginx(readFileSync(join(dir, site), "utf8"), site),
+    snippets,
+  );
+  return directives.find(
+    (d) =>
+      d.name === "server" &&
+      (d.block ?? []).some(
+        (l) => l.name === "listen" && /(^|:)443$/.test(l.args[0]) && l.args.includes("ssl"),
+      ),
+  );
 }
 
 /**

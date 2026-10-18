@@ -7,6 +7,8 @@ import {
   expandIncludes,
   ipProblems,
   parseNginx,
+  readHttpsServer,
+  selectLocation,
 } from "./nginx-hardening.mjs";
 
 const MAIN = `
@@ -104,10 +106,80 @@ describe("the repository's infra/nginx", () => {
       "sites/00-default.conf",
       "sites/admin.jadero.dev.conf",
       "sites/new.jadero.dev.conf",
-      "sites/stats.jadero.dev.conf",
       "sites/status.jadero.dev.conf",
     ]);
     assert.deepEqual(problems, []);
+  });
+});
+
+describe("the first-party analytics paths on new.jadero.dev (ADR-051)", () => {
+  const server = readHttpsServer("sites/new.jadero.dev.conf");
+  const UMAMI = /^http:\/\/127\.0\.0\.1:3100(\/|$)/;
+  /** The directives of the location nginx picks for a URI. */
+  const route = (uri) => selectLocation(server, uri)?.block ?? [];
+  const arg = (block, name) => block.find((d) => d.name === name)?.args.join(" ");
+
+  it("sends the tracker script to Umami's /script.js", () => {
+    assert.equal(arg(route("/s/script.js"), "proxy_pass"), "http://127.0.0.1:3100/script.js");
+  });
+
+  it("sends the collect endpoint to Umami's /api/send, POST only, with the API limits", () => {
+    const block = route("/s/api/send");
+    assert.equal(arg(block, "proxy_pass"), "http://127.0.0.1:3100/api/send");
+    const only = block.find((d) => d.name === "limit_except");
+    assert.deepEqual(only?.args, ["POST"]);
+    assert.equal(arg(only.block, "deny"), "all");
+    assert.equal(arg(block, "limit_req"), "zone=jadero_api burst=20 nodelay");
+    assert.equal(arg(block, "client_max_body_size"), "64k");
+  });
+
+  it("answers 404 on every other /s/ path and on Umami's paths at the root", () => {
+    for (const uri of [
+      "/s/",
+      "/s/login",
+      "/s/api/websites",
+      "/s/api/record",
+      "/s/recorder.js",
+      "/s/script.js/x",
+      "/api/send",
+    ]) {
+      assert.equal(arg(route(uri), "return"), "404", uri);
+    }
+  });
+
+  it("reaches Umami from the two exact locations only", () => {
+    const toUmami = server.block
+      .filter((d) => d.name === "location" && UMAMI.test(arg(d.block ?? [], "proxy_pass") ?? ""))
+      .map((d) => d.args.join(" "));
+    assert.deepEqual(toUmami, ["= /s/script.js", "= /s/api/send"]);
+  });
+
+  it("hides Umami's Access-Control-Allow-Origin and adds no Access-Control-* header", () => {
+    const at = (name) => server.block.filter((d) => d.name === name).map((d) => d.args[0]);
+    assert.ok(at("proxy_hide_header").includes("Access-Control-Allow-Origin"));
+    assert.ok(!at("add_header").some((name) => /^access-control-/i.test(name)));
+  });
+});
+
+describe("selectLocation", () => {
+  const [server] = parseNginx(`server {
+    location / { a; }
+    location /s/ { b; }
+    location = /s/x { c; }
+    location ^~ /static/ { d; }
+    location ~ \\.js$ { e; }
+  }`);
+  const pick = (uri) => selectLocation(server, uri)?.block[0].name;
+
+  it("prefers an exact match, then a regex over a plain prefix, then the longest prefix", () => {
+    assert.equal(pick("/s/x"), "c");
+    assert.equal(pick("/s/y.js"), "e");
+    assert.equal(pick("/s/y"), "b");
+    assert.equal(pick("/y"), "a");
+  });
+
+  it("stops at a ^~ prefix before the regexes", () => {
+    assert.equal(pick("/static/app.js"), "d");
   });
 });
 
