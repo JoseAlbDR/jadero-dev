@@ -133,7 +133,7 @@ services:
       NODE_OPTIONS: --max-old-space-size=224
     networks: [jadero_ops]
     ports:
-      # For nginx (stats.) and the admin screens over a tunnel (Q2 B).
+      # For nginx (the tracker under /s/ on the site host, ADR-051) and the admin screens over a tunnel (Q2 B).
       - "127.0.0.1:3100:3000"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/heartbeat"]
