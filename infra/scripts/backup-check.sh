@@ -37,8 +37,11 @@ done
 readonly P=jadero-backup-check
 readonly PG="$P-postgres" MQ="$P-rabbitmq" KUMA="$P-uptime-kuma" RUNNER="$P-runner"
 readonly KUMA_VOLUME="$P-uptime-kuma-data" RUNNER_IMAGE="$P-runner:local"
-# Fake secrets: if either shows up in any output, the check fails.
-readonly SECRET_PASSWORD=check-restic-password-5d1f
+# Fake secrets: if either shows up in any output, the check fails. The password carries a space,
+# `$`, `;`, a backtick and `&`: unless the template quotes it, sourcing the env file breaks or runs
+# `id`, and restic opens the repository with another password than the one it was created with.
+# shellcheck disable=SC2016 # the `$HOME` and the backtick must stay literal
+readonly SECRET_PASSWORD='check restic $HOME;`id`&5d1f'
 readonly SECRET_TOKEN=check-push-token-8b2e
 
 cleanup() {
@@ -140,10 +143,13 @@ SQL
 docker exec "$MQ" rabbitmqctl -q add_vhost /check >/dev/null
 
 # The env file is the real template with each 1Password reference replaced by a test value, so a
-# value the template cannot carry through `set -a; . file` (the push URL's `&`) fails here first.
+# value the template cannot carry through `set -a; . file` (the push URL's `&`, the password's
+# symbols) fails here first. sed_text escapes a value for a sed replacement (`\`, `|` and `&`).
+# shellcheck disable=SC2001 # `${v//&/...}` treats `&` differently across bash versions
+sed_text() { sed 's/[\\|&]/\\&/g' <<<"$1"; }
 in_runner sh -c 'install -d -m 700 /etc/jadero && umask 077 && cat >/etc/jadero/backup.env' <<ENV
 $(sed -e "s|^RESTIC_REPOSITORY=.*|RESTIC_REPOSITORY='/repo'|" \
-  -e "s|{{ op://jadero-ops/backup-restic/password }}|$SECRET_PASSWORD|" \
+  -e "s|{{ op://jadero-ops/backup-restic/password }}|$(sed_text "$SECRET_PASSWORD")|" \
   -e "s|{{ op://jadero-ops/uptime-kuma-backup-push-url/password }}|http://127.0.0.1:8080/api/push/$SECRET_TOKEN?status=up\&msg=OK\&ping=|" \
   -e 's|{{ op://jadero-ops/\([a-z0-9-]*\)/\([a-z]*\) }}|check-\1-\2|' infra/env/backup.env.tpl)
 BACKUP_POSTGRES_CONTAINER=$PG
@@ -218,7 +224,7 @@ check "the Uptime Kuma data restores with its SQLite database" 1 "$(tail -n 1 <<
 
 echo
 echo "== privacy"
-check "no secret value in any output" 0 "$(grep -c -e "$SECRET_PASSWORD" -e "$SECRET_TOKEN" "$outputs" || true)"
+check "no secret value in any output" 0 "$(grep -cF -e "$SECRET_PASSWORD" -e "$SECRET_TOKEN" "$outputs" || true)"
 rm -f "$outputs"
 
 echo

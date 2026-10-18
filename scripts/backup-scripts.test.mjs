@@ -121,6 +121,13 @@ describe("infra/env/backup.env.tpl", () => {
     }
   });
 
+  it("single-quotes every value, since backup.sh sources the file and restore.sh evaluates it", () => {
+    // Unquoted, a `$`, a backtick, `;`, `&` or a space in a rotated secret would run as root.
+    for (const [name, value] of assignments) {
+      assert.match(value, /^'[^']*'$/, `${name} is not in single quotes`);
+    }
+  });
+
   it("sets every variable backup.sh requires", () => {
     const names = assignments.map(([name]) => name);
     for (const name of [
