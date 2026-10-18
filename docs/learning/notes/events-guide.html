@@ -1,0 +1,669 @@
+<title>Events Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a reading column with a sticky route-map sidebar on wide screens; the page reads like a
+   field guide where every section is a stop on the path a message travels. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --ink: #17202b;
+  --muted: #566170;
+  --line: #d9dee6;
+  --accent: #1f5fa8;
+  --accent-soft: #e5eef9;
+  --ok: #1d7a4c;
+  --warn: #9a5b00;
+  --warn-soft: #fbf0dc;
+  --bad: #b3261e;
+  --bad-soft: #fbe7e5;
+  --code-bg: #eef1f5;
+  --font-display: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1.0625rem;
+  --step-1: 1.25rem;
+  --step-2: 1.6rem;
+  --step-3: 2.2rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161d;
+    --surface: #171e27;
+    --ink: #e6ebf2;
+    --muted: #9aa6b5;
+    --line: #2b3542;
+    --accent: #7db3f0;
+    --accent-soft: #1c2b3d;
+    --ok: #5cc48e;
+    --warn: #e6b05c;
+    --warn-soft: #2e2516;
+    --bad: #f08a82;
+    --bad-soft: #321b1a;
+    --code-bg: #1d2530;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161d;
+  --surface: #171e27;
+  --ink: #e6ebf2;
+  --muted: #9aa6b5;
+  --line: #2b3542;
+  --accent: #7db3f0;
+  --accent-soft: #1c2b3d;
+  --ok: #5cc48e;
+  --warn: #e6b05c;
+  --warn-soft: #2e2516;
+  --bad: #f08a82;
+  --bad-soft: #321b1a;
+  --code-bg: #1d2530;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.6;
+}
+.shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 32px 64px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+}
+@media (min-width: 980px) {
+  .shell { grid-template-columns: 230px minmax(0, 1fr); gap: 48px; padding-inline: 24px; }
+  nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+main { min-width: 0; max-width: 760px; }
+h1, h2, h3, h4 { font-family: var(--font-display); line-height: 1.2; text-wrap: balance; color: var(--ink); }
+h1 { font-size: var(--step-3); font-weight: 800; margin: 0 0 12px; letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); font-weight: 700; margin: 0 0 16px; padding-top: 8px; }
+h3 { font-size: var(--step-1); font-weight: 700; margin: 32px 0 8px; }
+h4 { font-size: var(--step-0); font-weight: 700; margin: 24px 0 6px; }
+p, li { max-width: 68ch; }
+p { margin: 0 0 14px; }
+ul, ol { padding-left: 1.3em; margin: 0 0 14px; }
+li { margin-bottom: 6px; }
+a { color: var(--accent); }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+strong { font-weight: 600; }
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+pre { font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.55; background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; }
+pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+pre.mermaid { background: var(--surface); text-align: center; font-family: var(--font-display); }
+.eyebrow { font-family: var(--font-display); font-size: var(--step--1); text-transform: uppercase; letter-spacing: 0.09em; color: var(--accent); font-weight: 700; margin: 0 0 6px; }
+.lede { font-size: var(--step-1); color: var(--muted); max-width: 60ch; }
+header.hero { border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 32px; }
+.route { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 4px; align-items: center; margin-top: 16px; }
+.route span { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 2px 7px; color: var(--ink); }
+.route i { font-style: normal; color: var(--muted); }
+section { padding-block: 24px; border-bottom: 1px solid var(--line); }
+section:last-of-type { border-bottom: 0; }
+nav.toc { font-family: var(--font-display); font-size: 0.92rem; }
+nav.toc p { font-size: var(--step--1); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin: 0 0 8px; font-weight: 700; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 2px; counter-reset: toc; }
+nav.toc li { counter-increment: toc; margin: 0; }
+nav.toc a { display: block; padding: 5px 8px; border-radius: 4px; color: var(--ink); text-decoration: none; }
+nav.toc a::before { content: counter(toc) "  "; color: var(--muted); font-variant-numeric: tabular-nums; }
+nav.toc a:hover { background: var(--accent-soft); }
+@media (max-width: 979px) {
+  nav.toc { border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: var(--surface); }
+  nav.toc ol { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+}
+.note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 0 0 18px; }
+.note.warn { border-color: var(--warn); background: var(--warn-soft); }
+.note.bad { border-color: var(--bad); background: var(--bad-soft); }
+.note p:last-child { margin-bottom: 0; }
+.pattern { font-family: var(--font-display); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.03em; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 1px 9px; white-space: nowrap; }
+ol.steps { list-style: none; padding: 0; counter-reset: s; display: grid; gap: 18px; }
+ol.steps > li { counter-increment: s; position: relative; padding-left: 44px; max-width: none; }
+ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--surface); font-family: var(--font-display); font-weight: 800; display: grid; place-items: center; font-size: 0.9rem; }
+ol.steps > li > * { min-width: 0; }
+.table-wrap { overflow-x: auto; margin: 0 0 18px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--font-display); font-weight: 700; background: var(--code-bg); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td code { white-space: nowrap; }
+.compare td:first-child { font-family: var(--font-display); font-weight: 700; white-space: nowrap; }
+.grid2 { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 18px; }
+@media (min-width: 700px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+.grid2 > div { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; }
+.grid2 h4 { margin-top: 0; }
+.grid2 p, .grid2 li { font-size: 0.95rem; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; margin-bottom: 10px; }
+summary { cursor: pointer; font-family: var(--font-display); font-weight: 700; }
+details[open] summary { margin-bottom: 8px; }
+details p:last-child { margin-bottom: 0; }
+.tag { font-family: var(--font-mono); font-size: 0.75rem; padding: 1px 6px; border-radius: 4px; border: 1px solid currentColor; }
+.tag.ok { color: var(--ok); } .tag.warn { color: var(--warn); } .tag.bad { color: var(--bad); }
+footer { color: var(--muted); font-size: var(--step--1); margin-top: 32px; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<div class="shell">
+<nav class="toc" aria-label="Sections">
+  <p>Route map</p>
+  <ol>
+    <li><a href="#model">Mental model</a></li>
+    <li><a href="#trace">The ping, end to end</a></li>
+    <li><a href="#failures">Failure paths</a></li>
+    <li><a href="#broker">Exchanges, queues, policies</a></li>
+    <li><a href="#delivery">Delivery semantics</a></li>
+    <li><a href="#scaling">Scaling and distribution</a></li>
+    <li><a href="#brokers">Broker comparison</a></li>
+    <li><a href="#es">Event sourcing and CQRS</a></li>
+    <li><a href="#sagas">Choreography and sagas</a></li>
+    <li><a href="#glossary">Pattern glossary</a></li>
+    <li><a href="#check">Self-check</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="hero">
+  <p class="eyebrow">jadero.dev learning guide</p>
+  <h1>Events Field Guide</h1>
+  <p class="lede">Event-driven design as this repo builds it, traced through one real event, <code>system.ping.v1</code>, from a Postgres row in <code>api</code> to a Postgres row in <code>agent</code>. Every name below is a real name from the code.</p>
+  <div class="route" aria-label="The path of one event">
+    <span>messaging.outbox</span><i>→</i><span>OutboxRelay</span><i>→</i><span>jadero.events</span><i>→</i><span>agent.system.ping</span><i>→</i><span>HeartbeatConsumer</span><i>→</i><span>messaging.inbox</span>
+  </div>
+</header>
+
+<!-- 1 -->
+<section id="model">
+  <p class="eyebrow">Section 1</p>
+  <h2>Mental model</h2>
+  <h3>Message, event, command</h3>
+  <p>A <strong>message</strong> is any bytes a producer hands to a broker for someone else to read. Two kinds matter, and they differ in who decides what happens next.</p>
+  <div class="grid2">
+    <div>
+      <h4>Event: a fact, past tense</h4>
+      <p>"This happened." The producer does not know or care who listens. Zero, one or five consumers may react. In this repo: <code>system.ping.v1</code>, and planned ones like <code>content.published.v1</code> and <code>contact.received.v1</code> (ADR-029 rule 2).</p>
+    </div>
+    <div>
+      <h4>Command: a request, imperative</h4>
+      <p>"Please do this." It has one intended handler, and the sender expects it to be done. ADR-029 plans commands only for admin actions, such as <code>knowledge.reindex.requested.v1</code>. Note how even that is named like a fact ("was requested"), which keeps it routable like any event.</p>
+    </div>
+  </div>
+  <p>The test at work: if the producer would be surprised that nobody reacted, it is a command. If it would not care, it is an event.</p>
+
+  <h3>Producer, broker, consumer</h3>
+  <p>The <strong>producer</strong> writes the message. The <strong>broker</strong> (RabbitMQ here) receives it on an <strong>exchange</strong>, which is a router with no storage, and copies it into every <strong>queue</strong> whose <strong>binding</strong> matches. The queue stores the message until a <strong>consumer</strong> takes it and <strong>acks</strong> it. If you know EventBridge: the exchange plays the event bus, a binding plays a rule with its pattern, and the queue plays the SQS target.</p>
+
+  <h3>Why asynchronous between services here</h3>
+  <p>Two rules in <code>AGENTS.md</code> section 4 force it:</p>
+  <ul>
+    <li><strong>Rule 2.</strong> Between <code>api</code>, <code>agent</code> and <code>contact</code>, only asynchronous messages through the outbox and RabbitMQ. Synchronous HTTP only at the edge.</li>
+    <li><strong>Rule 3.</strong> A service that needs another's data keeps its own read model fed by events; the agent never calls <code>api</code>.</li>
+  </ul>
+  <p>The reason is failure isolation. If <code>agent</code> called <code>api</code> over HTTP on every chat message, an <code>api</code> outage would take chat down too, and two services that cannot run without each other are a <span class="pattern">distributed monolith</span>. With events, <code>api</code> can be down for an hour: <code>agent</code> keeps answering from its own copy, which is a little stale. That trade, availability for a few seconds of staleness, is called <span class="pattern">eventual consistency</span>, and the pattern of copying the data a service needs into its own store is <span class="pattern">event-carried state transfer</span>.</p>
+</section>
+
+<!-- 2 -->
+<section id="trace">
+  <p class="eyebrow">Section 2</p>
+  <h2>The ping, end to end</h2>
+  <p><code>system.ping.v1</code> exists only to prove the path works. <code>api-worker</code> sends one every 5 minutes (<code>HEARTBEAT_INTERVAL_MS</code>, default 300000), and in development <code>POST /dev/ping</code> sends one on demand and answers <code>202</code> with the event id. Its contract, in <code>packages/contracts/src/events/system-ping.v1.ts</code>:</p>
+<pre><code>export const systemPingV1 = defineEvent(
+  "system.ping.v1",
+  z.object({ trigger: z.enum(["manual", "heartbeat"]) }),
+);</code></pre>
+  <p><code>defineEvent</code> gives it a routing key <code>system.ping.v1</code> (the pattern <code>&lt;context&gt;.&lt;event&gt;.v&lt;N&gt;</code>), a CloudEvents <code>type</code> <code>dev.jadero.system.ping.v1</code>, and a Zod schema for the whole envelope.</p>
+
+<pre class="mermaid">
+sequenceDiagram
+  participant C as PingService in api
+  participant DB as api database
+  participant R as OutboxRelay in api-worker
+  participant X as jadero.events topic
+  participant Q as agent.system.ping quorum queue
+  participant H as HeartbeatConsumer in agent
+  participant ADB as agent database
+  C->>DB: BEGIN, INSERT messaging.outbox, COMMIT
+  R->>DB: every 1 s SELECT due rows FOR UPDATE SKIP LOCKED
+  R->>X: publish, routing key system.ping.v1
+  X->>Q: binding system.ping.v1 matches
+  X-->>R: publisher confirm
+  R->>DB: UPDATE published_at = now(), COMMIT
+  Q->>H: deliver, prefetch 4
+  H->>ADB: BEGIN, INSERT inbox, upsert heartbeat, COMMIT
+  H->>Q: ack
+</pre>
+
+  <ol class="steps">
+    <li>
+      <h4>The outbox row, in the same transaction <span class="pattern">transactional outbox</span></h4>
+      <p><code>PingService.send</code> opens a transaction with <code>withTransaction</code> and calls <code>addToOutbox</code> (<code>packages/messaging/src/outbox/outbox.ts</code>). Nothing talks to the broker here. For the ping the transaction holds only this row; in a real use case it holds the state change too, so the business row and the event commit together or not at all. That is the fix for the <span class="pattern">dual-write problem</span>: "write the database, then publish" loses the event when the process dies between the two.</p>
+<pre><code>INSERT INTO messaging.outbox (id, type, routing_key, envelope) VALUES ($1, $2, $3, $4)</code></pre>
+      <p>The table, from <code>packages/messaging/src/schema.ts</code>:</p>
+      <div class="table-wrap"><table>
+        <tr><th>Column</th><th>Holds</th></tr>
+        <tr><td><code>id</code> uuid PK</td><td>the CloudEvents id, a UUIDv7 made in code (time-ordered, indexes well)</td></tr>
+        <tr><td><code>type</code></td><td><code>dev.jadero.system.ping.v1</code></td></tr>
+        <tr><td><code>routing_key</code></td><td><code>system.ping.v1</code></td></tr>
+        <tr><td><code>envelope</code> jsonb</td><td>the whole envelope, exactly what goes on the wire</td></tr>
+        <tr><td><code>created_at</code></td><td>insert time, the relay's order</td></tr>
+        <tr><td><code>attempts</code></td><td>failed publish attempts, default 0</td></tr>
+        <tr><td><code>next_attempt_at</code></td><td>when the relay may try again, default now</td></tr>
+        <tr><td><code>last_error</code></td><td>error class and code only, never a message</td></tr>
+        <tr><td><code>published_at</code></td><td>null until the broker confirmed</td></tr>
+      </table></div>
+      <p>A partial index <code>outbox_unsent</code> on <code>next_attempt_at WHERE published_at IS NULL</code> keeps the poll cheap. The envelope stored in that row looks like this (the id and traceparent are examples):</p>
+<pre><code>{
+  "specversion": "1.0",
+  "id": "019a0b7c-3f10-7a2e-9c41-5d2e8b6f0a13",
+  "source": "jadero/api",
+  "type": "dev.jadero.system.ping.v1",
+  "time": "2026-10-19T09:00:00.000Z",
+  "datacontenttype": "application/json",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "data": { "trigger": "heartbeat" }
+}</code></pre>
+      <p><code>createEnvelope</code> validates it against the contract before the insert, so a producer cannot write a row its consumers would reject. The <code>traceparent</code> is the trace of the request that wrote the row, so the trace continues across the broker.</p>
+    </li>
+    <li>
+      <h4>The relay claims and publishes <span class="pattern">message relay</span> <span class="pattern">atomic claim</span></h4>
+      <p><code>OutboxRelay</code> (<code>packages/messaging/src/outbox/outbox-relay.ts</code>) runs in <code>api-worker</code>, a second process type of <code>api</code>. It polls every 1 s, in one transaction:</p>
+<pre><code>SELECT id, routing_key, envelope, attempts FROM messaging.outbox
+ WHERE published_at IS NULL AND next_attempt_at &lt;= now()
+ ORDER BY created_at LIMIT 50 FOR UPDATE SKIP LOCKED</code></pre>
+      <p><code>FOR UPDATE</code> locks the claimed rows; <code>SKIP LOCKED</code> makes a second relay skip them instead of waiting. For each row it restores the trace context from <code>envelope.traceparent</code> and calls <code>MessageBus.publish</code>, which resolves only when the broker sends a <span class="pattern">publisher confirm</span> (timeout 5 s). Every confirmed id is then marked in the same transaction:</p>
+<pre><code>UPDATE messaging.outbox SET published_at = now() WHERE id = ANY($1::uuid[])</code></pre>
+      <p>That <code>published_at</code> is what "sent" means. A crash after the confirm and before the commit leaves the row unmarked, so the next poll publishes it again. That is deliberate: <span class="pattern">at-least-once</span>, and the consumer's inbox absorbs the duplicate. Published rows are deleted after 7 days by a daily cleanup.</p>
+    </li>
+    <li>
+      <h4>On the wire</h4>
+      <p>The RabbitMQ adapter publishes to exchange <code>jadero.events</code> with routing key <code>system.ping.v1</code>. The body is the envelope as JSON (CloudEvents structured mode). AMQP properties: <code>contentType: application/cloudevents+json</code>, <code>persistent: true</code>, <code>messageId</code> set to the envelope id.</p>
+    </li>
+    <li>
+      <h4>Exchange, binding, queue <span class="pattern">publish-subscribe</span></h4>
+      <p><code>jadero.events</code> is a durable <strong>topic</strong> exchange. The queue <code>agent.system.ping</code> (named <code>&lt;service&gt;.&lt;purpose&gt;</code>) has one binding on it with key <code>system.ping.v1</code>, declared in <code>packages/messaging/src/topology/jadero.ts</code>:</p>
+<pre><code>{ name: "agent.system.ping", service: "agent", bindings: [systemPingV1.routingKey] }</code></pre>
+      <p>The key matches, so the broker stores a copy in that quorum queue, then confirms to the relay. A second service wanting pings would add its own queue and binding; the producer would not change.</p>
+    </li>
+    <li>
+      <h4>The consumer takes it</h4>
+      <p><code>HeartbeatConsumer</code> (<code>apps/agent/src/modules/heartbeat/heartbeat.consumer.ts</code>) subscribes to <code>agent.system.ping</code> with the <code>systemPingV1</code> contract. The adapter consumes with <strong>prefetch 4</strong>: at most four unacked deliveries at a time, because each holds one pooled database connection (pool max 6). Before the handler runs, the shared <code>dispatch</code> parses the body as a CloudEvents envelope, picks the subscription by <code>type</code>, and validates <code>data</code> with the contract.</p>
+    </li>
+    <li>
+      <h4>Inbox row and dedupe <span class="pattern">idempotent consumer</span></h4>
+      <p>One transaction holds the inbox insert and the effect:</p>
+<pre><code>INSERT INTO messaging.inbox (consumer, event_id, type) VALUES ($1, $2, $3)
+ON CONFLICT DO NOTHING RETURNING event_id
+-- ('agent.system.ping', '019a0b7c-...', 'dev.jadero.system.ping.v1')</code></pre>
+      <p>The primary key is <code>(consumer, event_id)</code>. If a row comes back, this is the first delivery and the heartbeat upsert runs. If nothing comes back, it is a duplicate: no effect, a debug log line, and the handler still returns <code>done</code>. If the effect throws, both roll back together, so a retry starts from scratch. Inbox rows are deleted after 30 days.</p>
+      <p>The effect itself, in <code>heartbeat.repository.ts</code>, also defends against <strong>order</strong>:</p>
+<pre><code>INSERT INTO heartbeat.broker_heartbeat (source, last_event_id, last_trigger, last_seen_at) ...
+ON CONFLICT (source) DO UPDATE SET ...
+WHERE broker_heartbeat.last_seen_at &lt; excluded.last_seen_at</code></pre>
+      <p>A retried old ping that arrives after a newer one changes nothing. Dedupe handles "twice"; this guard handles "late".</p>
+    </li>
+    <li>
+      <h4>Ack</h4>
+      <p>The handler never acks itself; it returns an outcome (<code>done</code>, <code>retry</code> or <code>dead</code>), and the adapter turns it into a disposition with the pure function <code>dispose</code> in <code>packages/messaging/src/outcome.ts</code>. <code>done</code> means ack: the broker deletes the message from the queue.</p>
+    </li>
+  </ol>
+</section>
+
+<!-- 2b -->
+<section id="failures">
+  <p class="eyebrow">Section 2, continued</p>
+  <h2>Failure paths</h2>
+
+  <h3>The handler throws: retry through wait queues <span class="pattern">retry with backoff</span></h3>
+  <p>A thrown error in the handler becomes <code>retry</code>. A bad payload (invalid envelope, unknown type, data that fails the contract) becomes <code>dead</code> at once, because retrying cannot fix it. For <code>retry</code>, the delay depends on the attempt number, carried in the header <code>x-jadero-attempt</code>:</p>
+  <div class="table-wrap"><table>
+    <tr><th>Delivery</th><th>Outcome retry gives</th></tr>
+    <tr><td>attempt 1</td><td>copy to <code>agent.system.ping.retry.10s</code>, header attempt 2</td></tr>
+    <tr><td>attempt 2</td><td>copy to <code>agent.system.ping.retry.1m</code>, attempt 3</td></tr>
+    <tr><td>attempt 3</td><td>copy to <code>agent.system.ping.retry.10m</code>, attempt 4</td></tr>
+    <tr><td>attempt 4</td><td>dead-letter: "retries exhausted after 4 attempts"</td></tr>
+  </table></div>
+  <p>The mechanism, step by step. The consumer does not nack. It <strong>publishes a copy</strong>, waits for its confirm, and only then acks the original:</p>
+  <ol>
+    <li>Copy to exchange <code>agent.retry</code> (direct, one per service) with routing key <code>agent.system.ping.retry.10s</code>. A direct exchange routes on exact key equality, so it lands in that wait queue only.</li>
+    <li>The wait queue has no consumer. Its policy sets <code>message-ttl: 10000</code>, <code>dead-letter-exchange: agent.retry</code> and <code>dead-letter-routing-key: agent.system.ping</code>. The TTL is the timer.</li>
+    <li>After 10 s the broker dead-letters the message to <code>agent.retry</code> with key <code>agent.system.ping</code>, and the binding <code>agent.retry → agent.system.ping</code> puts it back in the consumer queue.</li>
+  </ol>
+<pre class="mermaid">
+flowchart LR
+  Q["agent.system.ping"] -->|"deliver, attempt 1"| H["HeartbeatConsumer"]
+  H -->|"throws, copy with attempt 2"| RX["agent.retry direct"]
+  RX -->|"key agent.system.ping.retry.10s"| W["agent.system.ping.retry.10s, TTL 10 s"]
+  W -->|"TTL expires, dead-letter"| RX
+  RX -->|"key agent.system.ping"| Q
+  H -.->|"ack original after copy confirmed"| Q
+</pre>
+  <p>Why route the retry back through a per-service exchange instead of republishing to <code>jadero.events</code>? Because another service bound to the same event would get the retry too and run its handler twice for nothing. The retry goes <strong>to this queue only</strong>.</p>
+  <div class="note warn"><p>If the copy is not confirmed (broker trouble), the adapter holds the delivery 1 s and then nacks it with requeue. It never acks without its copy, so the message cannot vanish; and the pause stops a tight loop, because on RabbitMQ 4.3 a nack does not count toward the delivery limit.</p></div>
+
+  <h3>Dead outcome or exhausted retries: the DLQ <span class="pattern">dead-letter queue</span></h3>
+  <p>For <code>dead</code>, the adapter publishes a copy to <code>agent.retry</code> with key <code>agent.system.ping.dlq</code>, headers <code>x-jadero-attempt</code> and <code>x-jadero-dead-reason</code> (field names only, never values), then acks. The message rests in <code>agent.system.ping.dlq</code>. ADR-012 plans WP-50 to read DLQs into a <code>dead_letters</code> table with an admin replay action.</p>
+
+  <h3>The consumer crashes mid-message: delivery limit 20 <span class="pattern">poison message</span></h3>
+  <p>A message that kills the process (out of memory, a segfault in a native library) never reaches <code>dispose</code>. The channel closes with the delivery unacked, and the quorum queue redelivers it and counts the delivery. The consumer queue's policy sets <code>delivery-limit: 20</code> with <code>dead-letter-exchange: jadero.dlx</code> and <code>dead-letter-routing-key: agent.system.ping</code>. On the 21st try the broker itself moves it through <code>jadero.dlx</code> (direct) to <code>agent.system.ping.dlq</code>. Without the limit, one poison message would crash-loop the consumer forever.</p>
+<pre class="mermaid">
+flowchart LR
+  Q["agent.system.ping, delivery-limit 20"] -->|"deliver"| H["consumer crashes"]
+  H -->|"unacked, redelivered, counted"| Q
+  Q -->|"limit passed, broker dead-letters"| DLX["jadero.dlx direct"]
+  DLX -->|"key agent.system.ping"| DLQ["agent.system.ping.dlq"]
+  C["consumer returns dead"] -->|"copy, key agent.system.ping.dlq"| RX["agent.retry"]
+  RX --> DLQ
+</pre>
+  <p>Both dead-lettering paths are safe: the policies set <code>dead-letter-strategy: at-least-once</code> with <code>overflow: reject-publish</code>, because the quorum default is at-most-once, which could drop a message on its way to the DLQ.</p>
+
+  <h3>An unroutable message: the alternate exchange <span class="pattern">alternate exchange</span></h3>
+  <p>A producer publishes <code>content.published.v1</code> before any queue binds it. Without protection, a topic exchange silently drops a message that matches no binding, and the publisher still gets its confirm. Here <code>jadero.events</code> is declared with <code>alternate-exchange: jadero.unrouted</code>, a fanout exchange bound to a quorum queue also named <code>jadero.unrouted</code>. The message is kept there to inspect. The retry exchanges have the same alternate exchange, so a copy whose wait queue is missing (tiers out of step with the topology) is kept too.</p>
+<pre class="mermaid">
+flowchart LR
+  P["relay publishes content.published.v1"] --> X["jadero.events topic"]
+  X -->|"no binding matches"| AE["jadero.unrouted fanout"]
+  AE --> UQ["jadero.unrouted queue"]
+</pre>
+
+  <h3>The broker is down: the outbox holds <span class="pattern">store and forward</span></h3>
+  <p>The request path never touches the broker, so <code>POST /dev/ping</code> still answers 202. The relay's publish times out after 5 s; the row gets <code>attempts + 1</code>, <code>last_error</code> set to the error kind, and <code>next_attempt_at = now() + backoff</code>, where backoff is 1 s doubling up to 60 s. The relay then ends the batch instead of waiting 5 s per row while holding row locks. Rows pile up in Postgres, which is durable, and drain in <code>created_at</code> order once the broker returns. On the consumer side, <code>start()</code> never blocks on the broker: consumers attach when it comes back.</p>
+<pre class="mermaid">
+sequenceDiagram
+  participant R as OutboxRelay
+  participant DB as messaging.outbox
+  participant B as RabbitMQ down
+  R->>DB: claim due rows
+  R->>B: publish row 1
+  B--xR: no confirm within 5 s
+  R->>DB: attempts 1, next_attempt_at now plus 1 s, end batch
+  Note over R,DB: later polls back off 1, 2, 4 ... 60 s per row
+  R->>B: broker back, publish
+  B-->>R: confirm
+  R->>DB: published_at = now()
+</pre>
+</section>
+
+<!-- 3 -->
+<section id="broker">
+  <p class="eyebrow">Section 3</p>
+  <h2>Exchanges, queues, policies</h2>
+  <h3>Four exchange types</h3>
+  <div class="table-wrap"><table>
+    <tr><th>Type</th><th>Routes by</th><th>Example</th><th>In this repo</th></tr>
+    <tr><td>direct</td><td>exact routing key equality</td><td>key <code>agent.system.ping.dlq</code> reaches only the queue bound with that key</td><td><code>agent.retry</code>, <code>jadero.dlx</code></td></tr>
+    <tr><td>topic</td><td>dot-separated words with wildcards: <code>*</code> one word, <code>#</code> zero or more</td><td><code>system.ping.*</code> matches <code>system.ping.v1</code>; <code>content.#</code> matches <code>content.published.v1</code>; <code>*.published.*</code> matches any context's publish</td><td><code>jadero.events</code></td></tr>
+    <tr><td>fanout</td><td>nothing: every bound queue gets a copy</td><td>a broadcast to every listener</td><td><code>jadero.unrouted</code></td></tr>
+    <tr><td>headers</td><td>message header values instead of the key (<code>x-match: all</code> or <code>any</code>)</td><td>route where <code>region=eu</code> and <code>tier=gold</code></td><td>not used</td></tr>
+  </table></div>
+  <p>The same matching rules are coded in <code>packages/messaging/src/topic.ts</code> (<code>topicMatches</code>) so the in-memory bus used in unit tests routes exactly like the broker. This repo binds one exact key per contract version rather than wildcards, so a <code>v2</code> never reaches a consumer that only understands <code>v1</code>.</p>
+
+  <h3>Three queue types</h3>
+  <div class="table-wrap"><table>
+    <tr><th>Type</th><th>What it is</th><th>Wins when</th></tr>
+    <tr><td>quorum</td><td>replicated with the Raft consensus algorithm, durable, tracks a delivery count per message</td><td>the message must not be lost; the default for anything that matters</td></tr>
+    <tr><td>classic</td><td>the original single-node queue</td><td>temporary, non-critical queues (reply queues, caches)</td></tr>
+    <tr><td>stream</td><td>an append-only log; consumers read from an offset and nothing is deleted on ack</td><td>replay, many readers of the same history, Kafka-like use</td></tr>
+  </table></div>
+  <p>Every queue here is quorum. On a single node there is no replication to gain, but quorum queues bring the <strong>delivery limit</strong> that stops poison messages, and the topology stays the same if the broker ever gets more nodes.</p>
+
+  <h3>Declared arguments versus policies</h3>
+  <p>A queue's arguments are fixed when it is declared: RabbitMQ refuses to change them later, so changing a TTL would mean deleting the queue and its messages. A <strong>policy</strong> is a rule matched by name pattern that the broker applies, and re-applies at once when it changes. So <code>buildDefinitions</code> (<code>packages/messaging/src/topology/definitions.ts</code>) declares only <code>x-queue-type: quorum</code>, and everything tunable is a policy:</p>
+<pre><code>// policy "agent.system.ping", pattern ^agent\.system\.ping$
+{ "dead-letter-strategy": "at-least-once", "overflow": "reject-publish",
+  "dead-letter-exchange": "jadero.dlx", "dead-letter-routing-key": "agent.system.ping",
+  "delivery-limit": 20 }
+// policy "agent.system.ping.retry.1m"
+{ ..., "message-ttl": 60000, "dead-letter-exchange": "agent.retry",
+  "dead-letter-routing-key": "agent.system.ping" }</code></pre>
+
+  <h3>Topology as code, and no configure right <span class="pattern">least privilege</span></h3>
+  <p>The topology lives in one place, <code>packages/messaging/src/topology/</code>. <code>pnpm --filter @jadero/messaging topology</code> runs <code>scripts/write-definitions.mjs</code>, which writes <code>infra/rabbitmq/definitions.json</code> (dev, with fixed dev passwords), <code>infra/rabbitmq/server/definitions/prod.json</code> and <code>staging.json</code> (no users), and <code>infra/rabbitmq/server/permissions.tsv</code>, which <code>provision-users.sh</code> applies with passwords from the environment. A test fails while the generated files are stale.</p>
+  <p>The adapter declares nothing. Service users get <code>configure: ^$</code>, so they cannot create, change or delete an exchange or queue. A buggy deploy cannot quietly redefine the topology; only the reviewed definitions can. The rights, from <code>buildPermissions</code>:</p>
+  <div class="table-wrap"><table>
+    <tr><th>User</th><th>configure</th><th>write</th><th>read</th></tr>
+    <tr><td><code>api_prod</code></td><td><code>^$</code></td><td><code>^(jadero\.events)$</code></td><td><code>^$</code></td></tr>
+    <tr><td><code>agent_prod</code></td><td><code>^$</code></td><td><code>^(agent\.retry)$</code></td><td><code>^(agent\.system\.ping)$</code></td></tr>
+    <tr><td><code>ops_admin</code></td><td><code>.*</code></td><td><code>.*</code></td><td><code>.*</code></td></tr>
+  </table></div>
+
+  <h3>One virtual host per environment</h3>
+  <p>A <strong>vhost</strong> is a namespace inside one broker: its own exchanges, queues and permissions. Dev uses <code>dev</code>; the server's one RabbitMQ serves <code>/prod</code> and <code>/staging</code>. User names are global, so they carry the environment (<code>agent_staging</code>), and a staging user has no rights on <code>/prod</code>. It is the same idea as one AWS account per environment, at a fraction of the cost.</p>
+</section>
+
+<!-- 4 -->
+<section id="delivery">
+  <p class="eyebrow">Section 4</p>
+  <h2>Delivery semantics</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Guarantee</th><th>How you get it</th><th>What breaks</th></tr>
+    <tr><td><span class="tag bad">at-most-once</span></td><td>ack before processing, or fire and forget</td><td>a crash loses the message</td></tr>
+    <tr><td><span class="tag ok">at-least-once</span></td><td>ack after processing; publish again until confirmed</td><td>duplicates: a crash between work and ack redelivers</td></tr>
+    <tr><td><span class="tag warn">effectively-once</span></td><td>at-least-once plus an idempotent consumer</td><td>only effects outside the transaction (an email, an external API call)</td></tr>
+  </table></div>
+  <p>True exactly-once delivery across a network is not available: the sender can never tell "lost" from "slow". What you can build is exactly-once <strong>effect</strong>. This repo has duplicates at two points by design: the relay's crash window between confirm and commit, and the consumer's crash window between commit and ack. The inbox covers both, because the dedupe row commits in the same transaction as the effect.</p>
+  <div class="note"><p>The inbox only protects effects inside the consumer's own database transaction. If a handler sends an email, a duplicate sends a second email. The fix there is an idempotency key sent to the provider, or recording "sent" before sending and accepting a rare miss: you choose which failure you prefer.</p></div>
+
+  <h3>Ordering</h3>
+  <p>A single queue with a single consumer and prefetch 1 delivers in order. Every one of these breaks it: prefetch above 1 with async handlers, two or more consumers, a retry (the message comes back 10 s later behind newer ones), and the relay itself if several relays ran. So design consumers to not need order: carry a timestamp or version and ignore older ones, which is exactly the heartbeat's <code>WHERE last_seen_at &lt; excluded.last_seen_at</code> guard. When order truly matters per entity, partition by key (Kafka partitions, SQS FIFO message groups, RabbitMQ single active consumer or a consistent hash exchange).</p>
+
+  <h3>Poison messages</h3>
+  <p>A message that can never succeed. Three guards here: validation in <code>dispatch</code> sends bad payloads to the DLQ at once, the retry tiers cap a throwing handler at four attempts, and the delivery limit catches messages that crash the process.</p>
+
+  <h3>Prefetch and backpressure <span class="pattern">backpressure</span></h3>
+  <p>Prefetch is how many unacked messages the broker pushes to one consumer before waiting. Too high: one slow pod hoards messages others could take, and memory grows. Too low: the consumer idles between round trips. Here it is sized from a downstream limit: prefetch 4 against a pool of 6 connections, so a burst of pings waits in the queue, which is durable and cheap, instead of failing on an exhausted pool. That is backpressure: the slow part sets the pace and the queue absorbs the rest. ADR-029 sets 10 as the default in the adapter.</p>
+</section>
+
+<!-- 5 -->
+<section id="scaling">
+  <p class="eyebrow">Section 5</p>
+  <h2>Scaling and distribution</h2>
+  <p>Two shapes look alike on a diagram and do opposite things.</p>
+<pre class="mermaid">
+flowchart LR
+  subgraph Competing["Competing consumers: one queue, many pods"]
+    E1["supplier.updated.v1"] --> Q1["search.index queue"]
+    Q1 --> P1["pod 1"]
+    Q1 --> P2["pod 2"]
+    Q1 --> P3["pod 3"]
+  end
+  subgraph Fanout["Fan-out: one event, one queue per service"]
+    E2["supplier.updated.v1"] --> X2["topic exchange"]
+    X2 --> S["search.index queue"]
+    X2 --> N["notify.supplier queue"]
+    X2 --> I["integration.sync queue"]
+  end
+</pre>
+  <div class="grid2">
+    <div>
+      <h4>Competing consumers <span class="pattern">competing consumers</span></h4>
+      <p>Three replicas of a Kubernetes Deployment consume the same queue. Each message goes to exactly one pod. This scales throughput, and a dead pod's unacked messages go back to the others. The cost: order across messages is gone, since pod 2 may finish message 7 before pod 1 finishes message 6. Each pod's prefetch caps its share. HPA on queue depth (with KEDA, for example) adds pods when the queue grows.</p>
+    </div>
+    <div>
+      <h4>Fan-out <span class="pattern">publish-subscribe</span></h4>
+      <p>A <code>supplier.updated.v1</code> event feeds search indexing, notifications and an external integration sync. Each consuming service binds <strong>its own queue</strong>, so each gets every event, at its own pace, with its own retries and DLQ. The notification service being down does not delay search. Adding a fourth consumer is a binding, not a producer change. This is the shape <code>jadero.events</code> is built for.</p>
+    </div>
+  </div>
+  <p>Both combine: each fan-out queue can have competing pods. The rule: one queue per consumer <strong>purpose</strong> (ADR-029), as many pods per queue as throughput needs.</p>
+
+  <h3>Worked case: a risk alert sync every minute</h3>
+  <p>A procurement product integrates an external supplier risk alert provider. Every minute, for every organization with the integration on, it pulls new alerts and stores them. There are 400 organizations; the provider allows batches of 20 organizations per call, so 20 calls a minute. A call takes 1 to 5 s, sometimes 30 s when the provider is slow.</p>
+
+  <div class="grid2">
+    <div>
+      <h4>(a) A CronJob with a database lock</h4>
+      <p>A Kubernetes CronJob, schedule <code>* * * * *</code>, <code>concurrencyPolicy: Forbid</code> so a new run is skipped while the previous Job still runs. The Job loops over batches of 20.</p>
+      <p>Forbid is per CronJob and Kubernetes documents schedules as roughly once, so two runs are rare but possible. Guard it in the database: <code>pg_try_advisory_lock(key)</code> at start (a second run gets false and exits), or per-organization claims, <code>SELECT ... FROM org_sync WHERE next_sync_at &lt;= now() LIMIT 20 FOR UPDATE SKIP LOCKED</code>, then set <code>next_sync_at = now() + 1 minute</code>. In a long-running Deployment instead of a Job, the same advisory lock is <span class="pattern">leader election</span>; this repo's ADR-012 plans exactly that if a cron process is ever scaled out.</p>
+      <p><strong>Guarantees:</strong> one runner at a time; simple to reason about. <strong>Fails by:</strong> one slow call delays every batch behind it; with Forbid, a run longer than a minute skips the next minute; throughput is one process.</p>
+    </div>
+    <div>
+      <h4>(b) A scheduler and a work queue</h4>
+      <p>A tiny scheduler (one CronJob or a leader-elected loop) publishes one work message per batch, <code>risk.sync.batch.requested.v1</code> with the 20 organization ids and the minute it covers, into a work queue. N pods consume it as competing consumers.</p>
+      <p><strong>Guarantees:</strong> batches run in parallel; a slow batch blocks only its pod; each batch gets retries and a DLQ for free. <strong>Fails by:</strong> if processing falls behind, minutes pile up, so the scheduler must not enqueue a batch whose previous one is still pending (keep the per-org <code>next_sync_at</code> claim, or dedupe on batch id plus minute in an inbox); N pods together can break the provider's rate limit, so you need a shared limiter; duplicates must be harmless (upsert alerts by the provider's alert id).</p>
+    </div>
+  </div>
+  <p><strong>When each wins.</strong> At 20 calls a minute that usually finish in seconds, (a) wins: one moving part, nothing to deduplicate, and the claim table already gives you per-org scheduling. Move to (b) when one run no longer fits in the interval, when you need per-batch retry and dead-lettering visible to operations, or when each batch is expensive enough that losing one pod should not stall the rest. A common middle step: keep the claim table and run the claim loop in several pods, since <code>SKIP LOCKED</code> already makes them competing consumers on Postgres, with no broker.</p>
+</section>
+
+<!-- 6 -->
+<section id="brokers">
+  <p class="eyebrow">Section 6</p>
+  <h2>Broker comparison</h2>
+  <div class="table-wrap"><table class="compare">
+    <tr><th>Concept</th><th>RabbitMQ</th><th>EventBridge + SNS + SQS</th><th>Kafka</th><th>NATS JetStream</th></tr>
+    <tr><td>Router</td><td>exchange (direct, topic, fanout, headers)</td><td>event bus; SNS topic for fan-out</td><td>none: producers pick a topic and partition key</td><td>subjects with wildcards <code>*</code> and <code>&gt;</code></td></tr>
+    <tr><td>Routing rule</td><td>binding with key or pattern</td><td>rule with an event pattern on JSON fields; SNS subscription filter policy</td><td>topic name only</td><td>stream subject filter, consumer filter</td></tr>
+    <tr><td>Storage</td><td>queue, deleted on ack</td><td>SQS queue, deleted on delete call</td><td>partitioned log, kept by retention time or size</td><td>stream, kept by limits; work-queue retention deletes on ack</td></tr>
+    <tr><td>Retry</td><td>redelivery, or TTL wait queues as here</td><td>visibility timeout, then redelivery; EventBridge target retry policy</td><td>do it yourself: retry topics, or pause and seek</td><td>ack wait and redelivery, backoff list</td></tr>
+    <tr><td>DLQ</td><td>dead-letter exchange plus queue; delivery limit on quorum</td><td>redrive policy with <code>maxReceiveCount</code>; DLQ per target</td><td>no native one: a dead-letter topic by convention</td><td><code>MaxDeliver</code>, then an advisory event you can capture</td></tr>
+    <tr><td>Scaling consumers</td><td>competing consumers on a queue</td><td>many pollers on one SQS queue</td><td>consumer group: one consumer per partition at most</td><td>durable pull consumer shared by many clients</td></tr>
+    <tr><td>Ordering</td><td>per queue with one consumer</td><td>none on standard SQS; FIFO per message group</td><td>strict per partition</td><td>per stream with one consumer</td></tr>
+    <tr><td>Replay</td><td>not after ack (streams can)</td><td>EventBridge archive and replay</td><td>native: reset the group's offset</td><td>native: new consumer from a sequence or time</td></tr>
+  </table></div>
+  <h4>Peculiarities to remember</h4>
+  <ul>
+    <li><strong>RabbitMQ</strong> pushes to consumers and forgets on ack. Rich routing in the broker; history is gone unless you use streams. An unroutable message is dropped unless you add an alternate exchange or mandatory publishing.</li>
+    <li><strong>EventBridge + SNS + SQS</strong> is managed and pay-per-use, all at-least-once. Routing on payload fields is its strength. Every hop has its own retry and DLQ settings, so a failure can hide at the rule target, the SNS subscription or the SQS queue: check all three. The routing table you know at work (an event store forwarding to SNS topics) is the same exchange-binding-queue idea built from three services.</li>
+    <li><strong>Kafka</strong> is a log, not a queue: consumers track an offset, many groups read the same history independently, and replay is free. Parallelism is capped by partition count, and one slow message blocks its partition, which is why retry topics exist.</li>
+    <li><strong>NATS JetStream</strong> is small and fast, with subjects as a light routing model and both queue-like and log-like retention. Fewer built-in failure topologies than RabbitMQ; ADR-029 rejected it here because Nest's built-in NATS transport is fire and forget and the learning transfers less.</li>
+  </ul>
+</section>
+
+<!-- 7 -->
+<section id="es">
+  <p class="eyebrow">Section 7</p>
+  <h2>Event sourcing and CQRS</h2>
+  <p><strong>Event sourcing</strong> stores every change as an immutable event and treats them as the source of truth. Current state is not stored; it is <em>derived</em> by folding the events in order. <strong>CQRS</strong> (command query responsibility segregation) splits the write model from read models: writes append events, and <strong>projections</strong> turn them into tables shaped for each query.</p>
+
+  <h3>Worked example: a supplier rating</h3>
+  <p>A supplier's rating comes from assessments. Instead of a <code>supplier_rating</code> row with a score that gets overwritten, store the stream for supplier S-17:</p>
+<pre><code>seq  type                              at          data
+1    rating.assessment.recorded.v1     2026-03-02  { criterion: "delivery", score: 4 }
+2    rating.assessment.recorded.v1     2026-03-02  { criterion: "quality",  score: 3 }
+3    rating.weights.changed.v1         2026-05-10  { delivery: 0.6, quality: 0.4 }
+4    rating.assessment.recorded.v1     2026-07-21  { criterion: "quality",  score: 5 }</code></pre>
+  <p>The fold is a pure function, <code>state = events.reduce(apply, empty)</code>, with equal weights by default:</p>
+  <div class="table-wrap"><table>
+    <tr><th>After event</th><th>delivery</th><th>quality</th><th>weights</th><th>rating</th></tr>
+    <tr><td>2</td><td>4</td><td>3</td><td>0.5 / 0.5</td><td>3.5</td></tr>
+    <tr><td>3</td><td>4</td><td>3</td><td>0.6 / 0.4</td><td>3.6</td></tr>
+    <tr><td>4</td><td>4</td><td>5</td><td>0.6 / 0.4</td><td>4.4</td></tr>
+  </table></div>
+  <p><strong>"What was S-17's rating on 2026-06-30?"</strong> Fold only the events with <code>at &lt;= 2026-06-30</code>: 3.6. A table that stores only the final 4.4 cannot answer that, and an auditor asking why a supplier was blocked in June needs exactly that answer. That is the real reason to choose event sourcing: the history is the product.</p>
+  <ul>
+    <li><strong>Projections.</strong> A consumer folds events into <code>supplier_rating_current</code> for the list page, another into <code>supplier_rating_monthly</code> for a chart. Both can be dropped and rebuilt from the stream.</li>
+    <li><strong>Snapshots.</strong> A supplier with 30,000 events is slow to fold, so store the state every N events (say at seq 1000) and fold only what came after.</li>
+    <li><strong>Upcasting.</strong> Events are never edited. When v2 changes scores from 1 to 5 into 0 to 100, an upcaster converts v1 to v2 in memory while reading (<code>score * 20</code>), so the fold only knows the newest shape.</li>
+    <li><strong>The cost.</strong> Every read model is eventually consistent; schema changes need upcasters forever; a wrong event cannot be deleted, only compensated by a new one; deleting personal data needs crypto-shredding or stream rewriting; and the team must think in events. For most CRUD it is a large tax for history nobody asks for.</li>
+  </ul>
+
+  <h3>The outbox is not event sourcing</h3>
+  <div class="grid2">
+    <div>
+      <h4>Transactional outbox (this repo)</h4>
+      <p>State lives in normal tables and is the source of truth. The outbox row is a delivery buffer: it exists to get a message to the broker, and published rows are deleted after 7 days. Losing the outbox history loses nothing important.</p>
+    </div>
+    <div>
+      <h4>Event sourcing</h4>
+      <p>The event store <em>is</em> the state. Nothing is ever deleted; tables are disposable projections. Losing the events loses the business.</p>
+    </div>
+  </div>
+  <p>They combine well: an event-sourced service still needs a reliable way to publish, and its event store often doubles as the outbox.</p>
+
+  <h3>How it could apply here, and what the repo does instead</h3>
+  <ul>
+    <li><strong>The agent's usage and budget ledger</strong> (ADR-021, planned): every model response priced and summed into <code>usage.llm_usage</code>, with a daily cap. Append-only usage rows already look like events; full event sourcing would add projections of spend per day for a cap that resets daily. Overkill: the plan sums rows.</li>
+    <li><strong>Content revisions</strong> (WP-12): each localized type has a <code>*_revisions</code> table of immutable jsonb documents, and a <code>*_translations</code> row with pointers to the latest and the published revision. That keeps full history and can show any past version, but each revision is a full snapshot, not a delta event, and the pointers are mutable state. It is <span class="pattern">versioned snapshots</span>, the cheaper cousin of event sourcing.</li>
+    <li><strong>The agent's search index</strong> (D-42): a CQRS read model in the sense that matters, derived from <code>api</code>'s content and rebuildable from events. CQRS without event sourcing is common and cheap; this is that.</li>
+  </ul>
+</section>
+
+<!-- 8 -->
+<section id="sagas">
+  <p class="eyebrow">Section 8</p>
+  <h2>Choreography and orchestration</h2>
+  <p>A business process that spans services cannot use one database transaction. A <strong>saga</strong> is the sequence of local transactions, each with a <strong>compensating action</strong> that undoes it if a later step fails.</p>
+  <div class="grid2">
+    <div>
+      <h4>Choreography <span class="pattern">choreography</span></h4>
+      <p>No coordinator. Each service reacts to events and emits its own. <code>content.published.v1</code> makes <code>agent</code> reindex and <code>api-worker</code> rebuild the PDF; neither knows about the other. Wins with few steps and independent reactions, which is this repo. Loses when the flow grows: nobody can see the whole process, and cycles creep in.</p>
+    </div>
+    <div>
+      <h4>Orchestration <span class="pattern">orchestrated saga</span></h4>
+      <p>One orchestrator holds the state of the process and sends commands: "verify certificate", then "update supplier status", then "notify", compensating on failure. Wins with many ordered steps, timeouts, human approvals and the need to answer "where is request 812 stuck?". Tools: a state table with a process manager, or a workflow engine (Step Functions, Temporal).</p>
+    </div>
+  </div>
+  <p>A configurable approval flow, where a change passes steps with conditions and assigned reviewers, is orchestration by nature: the order and the waiting are the business.</p>
+</section>
+
+<!-- 9 -->
+<section id="glossary">
+  <p class="eyebrow">Section 9</p>
+  <h2>Pattern glossary</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Pattern</th><th>Mechanism</th><th>In this repo</th><th>Work-domain example</th></tr>
+    <tr><td>Dual-write problem</td><td>writing a database and a broker separately loses one on a crash</td><td>the reason for ADR-012</td><td>supplier saved, "supplier updated" never sent</td></tr>
+    <tr><td>Transactional outbox</td><td>event row commits with the state change; published later</td><td><code>packages/messaging/src/outbox/outbox.ts</code></td><td>contract approved and its event in one commit</td></tr>
+    <tr><td>Message relay</td><td>a poller publishes outbox rows and marks them sent</td><td><code>packages/messaging/src/outbox/outbox-relay.ts</code></td><td>a worker draining pending events</td></tr>
+    <tr><td>Atomic claim</td><td><code>FOR UPDATE SKIP LOCKED</code>: many workers, no row twice</td><td>the relay's claim query</td><td>workers claiming documents for AI analysis</td></tr>
+    <tr><td>Publisher confirms</td><td>broker acks the publish; only then mark sent</td><td><code>rabbitmq-message-bus.ts</code>, <code>send</code></td><td>EventBridge <code>FailedEntryCount</code> check</td></tr>
+    <tr><td>Exponential backoff</td><td>delay doubles per failure, with a cap</td><td><code>backoffSeconds</code>, 1 s to 60 s</td><td>retrying a slow external provider</td></tr>
+    <tr><td>Idempotent consumer</td><td>dedupe row in the effect's transaction</td><td><code>inbox/idempotent.ts</code>, <code>heartbeat.consumer.ts</code></td><td>an assessment-completed event applied once</td></tr>
+    <tr><td>Stale-update guard</td><td>apply only if newer than what is stored</td><td><code>heartbeat.repository.ts</code></td><td>an older rating event arriving late</td></tr>
+    <tr><td>Retry with delay tiers</td><td>TTL wait queue dead-letters back to the source</td><td><code>topology/definitions.ts</code>, <code>outcome.ts</code></td><td>SQS visibility timeout per attempt</td></tr>
+    <tr><td>Dead-letter queue</td><td>park what cannot succeed, with the reason</td><td><code>&lt;queue&gt;.dlq</code>, <code>jadero.dlx</code></td><td>information request with a malformed payload</td></tr>
+    <tr><td>Poison message limit</td><td>count deliveries, dead-letter past a limit</td><td><code>delivery-limit: 20</code> policy</td><td>SQS <code>maxReceiveCount</code></td></tr>
+    <tr><td>Alternate exchange</td><td>keep messages no binding matched</td><td><code>jadero.unrouted</code></td><td>an event type nobody subscribed yet</td></tr>
+    <tr><td>Publish-subscribe</td><td>one event, one queue per consumer</td><td><code>jadero.events</code>, <code>topology/jadero.ts</code></td><td>supplier updated feeds search and notifications</td></tr>
+    <tr><td>Competing consumers</td><td>many pods on one queue</td><td>planned when a consumer scales out</td><td>three pods on the document analysis queue</td></tr>
+    <tr><td>Backpressure</td><td>prefetch sized to the downstream limit</td><td><code>heartbeat.module.ts</code>, prefetch 4</td><td>limit concurrent AI calls per pod</td></tr>
+    <tr><td>Envelope</td><td>standard metadata around data: id, type, source, time</td><td><code>packages/contracts/src/envelope.ts</code></td><td>EventBridge <code>detail-type</code> and <code>detail</code></td></tr>
+    <tr><td>Expand/contract</td><td>add optional fields; breaking change is a new version alongside</td><td><code>define-event.ts</code>, <code>compat.ts</code></td><td>publish <code>v1</code> and <code>v2</code> until consumers move</td></tr>
+    <tr><td>Trace propagation</td><td><code>traceparent</code> carried in the message</td><td><code>outbox/envelope.ts</code>, relay restore</td><td>one trace from API call to consumer</td></tr>
+    <tr><td>Topology as code</td><td>broker objects generated and reviewed, no runtime declares</td><td><code>topology/</code>, <code>write-definitions.mjs</code></td><td>queues and rules in Pulumi</td></tr>
+    <tr><td>Event-carried state transfer</td><td>consumers keep their own copy from events</td><td><code>heartbeat.broker_heartbeat</code></td><td>notification service keeps supplier contacts</td></tr>
+    <tr><td>Leader election</td><td>one runner via an advisory lock</td><td>planned, ADR-012 scheduled jobs</td><td>one pod runs the nightly rating recalculation</td></tr>
+  </table></div>
+</section>
+
+<section id="check">
+  <p class="eyebrow">Self-check</p>
+  <h2>Eight questions</h2>
+  <p>Each carries what you need. Answer before opening.</p>
+
+  <details><summary>1. The relay publishes row R, the broker confirms, and the worker is killed before COMMIT. What happens to R, and who absorbs the effect?</summary>
+  <p>The claim's transaction rolls back, so <code>published_at</code> stays null and the row lock is released. The next poll claims R and publishes it again: the consumer receives the same envelope id twice. The inbox's <code>(consumer, event_id)</code> primary key turns the second delivery into a no-op. At-least-once publishing plus an idempotent consumer.</p></details>
+
+  <details><summary>2. A handler throws on every attempt. How many times does it run, and over roughly how long, before the message stops?</summary>
+  <p>Four runs: the first, then after 10 s, 1 min and 10 min. After the fourth throw, <code>dispose</code> finds no tier left and dead-letters it to <code>agent.system.ping.dlq</code> with "retries exhausted after 4 attempts". About 11 minutes plus processing time.</p></details>
+
+  <details><summary>3. Why does a retry go through agent.retry with an exact key, instead of being republished to jadero.events?</summary>
+  <p>Publishing to the topic exchange would route the copy to every queue bound to that event, so other services would run their handlers again. The per-service direct exchange and the wait queue's dead-letter routing key send it back to the one queue whose handler failed.</p></details>
+
+  <details><summary>4. You need the retry delay changed from 1 min to 2 min in production. What do you change, and why does nobody need to delete a queue?</summary>
+  <p>The tier in <code>DEFAULT_RETRY_TIERS_MS</code>, then regenerate the definitions. The delay is a policy (<code>message-ttl</code>), not a declared argument, and the broker applies a changed policy at once. Note the wait queue's name contains the delay label (<code>.retry.2m</code>), so a new tier means a new wait queue; the alternate exchange on <code>agent.retry</code> keeps any copy sent while the adapter and topology are out of step.</p></details>
+
+  <details><summary>5. A consumer process dies with an out-of-memory error on one specific message, every time. What stops the crash loop?</summary>
+  <p>The handler never returns, so the retry tiers never apply. The quorum queue counts each redelivery; the policy's <code>delivery-limit: 20</code> makes the broker dead-letter the message through <code>jadero.dlx</code> to <code>agent.system.ping.dlq</code>, and the pod recovers.</p></details>
+
+  <details><summary>6. An online shop: an order-paid event must update stock, send a receipt email, and notify the warehouse. One service, one queue, or one queue per reaction?</summary>
+  <p>One queue per reaction (fan-out). Each has its own failure: the email provider down must not block stock or the warehouse, and each needs its own retries and DLQ. Stock can be idempotent with an inbox; the email needs an idempotency key with the provider, because it is an effect outside the database.</p></details>
+
+  <details><summary>7. You scale the agent consumer to three pods. The heartbeat table still ends up right. Why, even though order is lost?</summary>
+  <p>The upsert only writes when the stored <code>last_seen_at</code> is older than the incoming one. Whatever order the three pods finish in, the newest ping wins. Commutative, last-writer-wins updates make ordering irrelevant for this effect.</p></details>
+
+  <details><summary>8. A booking platform wants to show what a hotel's cancellation policy was on the day a guest booked. Is the outbox enough, and what is the cheapest design that works?</summary>
+  <p>No: outbox rows are deleted after delivery and are not the source of truth. Full event sourcing would work but is costly. The cheapest fit is versioned snapshots, like this repo's content revisions: keep every policy version with its validity time, and store the version id on the booking.</p></details>
+</section>
+
+<footer>
+  <p>Built from the code on branch <code>learning/notes</code>, 2026-10-19: <code>packages/messaging</code>, <code>packages/contracts</code>, <code>apps/api</code> (ping and relay), <code>apps/agent</code> (heartbeat consumer), ADR-012 and ADR-029. When the topology or the messaging code changes, this page changes with it.</p>
+</footer>
+</main>
+</div>
