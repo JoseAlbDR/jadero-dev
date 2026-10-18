@@ -11,6 +11,10 @@
  * - Privacy of the access logs: no `log_format` writes the client address, the request line or
  *   the query string (`$remote_addr`, `$request`, `$request_uri`, `$args` and friends), and every
  *   `access_log` names one of the repo's formats instead of falling back to `combined`.
+ * - Error logs (ADR-052): every server of a site sets its own `error_log`, and every `error_log` of
+ *   a site writes a `.log` file in `/var/log/nginx/jadero/`, the folder `infra/logrotate/jadero-nginx`
+ *   rotates; that rule names the folder's glob and no other path, rotates `daily` and keeps at
+ *   most 3 files.
  * - Every HTTPS server includes the security headers snippet and runs HTTP/2; no location sets
  *   add_header, proxy_set_header or proxy_hide_header (one that did would drop every inherited
  *   value); no Access-Control-* header anywhere, and the proxy snippet hides the upstream copies.
@@ -40,6 +44,21 @@ export const HEADERS_SNIPPET = "snippets/jadero-security-headers.conf";
 
 /** The proxy snippet. */
 export const PROXY_SNIPPET = "snippets/jadero-proxy.conf";
+
+/** The jadero sites' error log folder (ADR-052). */
+export const ERROR_LOG_DIR = "/var/log/nginx/jadero/";
+
+/** The logrotate rule for that folder, relative to the root. */
+export const LOGROTATE_FILE = "infra/logrotate/jadero-nginx";
+
+/** The glob the rule must rotate. */
+const ERROR_LOG_GLOB = `${ERROR_LOG_DIR}*.log`;
+
+/** The most rotated files the rule may keep: three days of client addresses (ADR-052). */
+const MAX_ROTATE = 3;
+
+/** A site's error log path: a `.log` file directly in the folder, so the glob matches it. */
+const ERROR_LOG_PATH = /^\/var\/log\/nginx\/jadero\/[^/]+\.log$/;
 
 /** Directives nginx allows more than once at one level. */
 const REPEATABLE = new Set([
@@ -222,7 +241,16 @@ export function checkNginx({ main, sites, snippets }) {
       }
     }
   }
-  for (const [file, directives] of parsedSites) problems.push(...siteProblems(directives, file));
+  for (const [file, directives] of parsedSites) {
+    problems.push(...siteProblems(directives, file));
+    for (const d of walk(directives)) {
+      if (d.name === "error_log" && !ERROR_LOG_PATH.test(d.args[0] ?? "")) {
+        problems.push(
+          `${where(file, d)}: error_log ${d.args[0]} must be a .log file in ${ERROR_LOG_DIR}, which keeps three days (ADR-052)`,
+        );
+      }
+    }
+  }
   problems.push(...snippetProblems(snippets, parse));
   return problems;
 }
@@ -303,6 +331,50 @@ export function readHttpsServer(site, root = REPO_ROOT) {
 }
 
 /**
+ * Checks the logrotate rule of the sites' error logs (ADR-052): it rotates the folder's glob and no
+ * path outside the folder (Ubuntu's rule owns those), daily, keeping at most three files.
+ * @param text the rule's text.
+ * @param file the rule's path, for error messages.
+ * @returns the problems found; empty when every rule holds.
+ */
+export function logrotateProblems(text, file = LOGROTATE_FILE) {
+  const problems = [];
+  const lines = text.split("\n").map((line) => line.replace(/#.*/, "").trim());
+  const open = lines.findIndex((line) => line.endsWith("{"));
+  if (open === -1) return [`${file}: no rule block`];
+  const paths = lines
+    .slice(0, open + 1)
+    .join(" ")
+    .replace("{", " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!paths.includes(ERROR_LOG_GLOB)) problems.push(`${file}: must rotate ${ERROR_LOG_GLOB}`);
+  for (const path of paths.filter((p) => !p.startsWith(ERROR_LOG_DIR))) {
+    problems.push(`${file}: ${path} is outside ${ERROR_LOG_DIR} (Ubuntu's rule rotates it)`);
+  }
+  const directives = [];
+  let script = false;
+  for (const line of lines.slice(open + 1)) {
+    if (line === "}" && !script) break;
+    if (/^(pre|post|first|last)rotate$|^preremove$/.test(line)) script = true;
+    else if (line === "endscript") script = false;
+    else if (!script && line) directives.push(line.split(/\s+/));
+  }
+  const frequencies = directives.filter(([name]) =>
+    ["hourly", "daily", "weekly", "monthly", "yearly"].includes(name),
+  );
+  if (frequencies.length !== 1 || frequencies[0][0] !== "daily") {
+    problems.push(`${file}: must rotate daily, and set no other frequency`);
+  }
+  const rotate = directives.filter(([name]) => name === "rotate");
+  const count = Number(rotate.at(-1)?.[1]);
+  if (rotate.length !== 1 || !Number.isInteger(count) || count < 0 || count > MAX_ROTATE) {
+    problems.push(`${file}: must set rotate once, at most ${MAX_ROTATE} (ADR-052)`);
+  }
+  return problems;
+}
+
+/**
  * Reads `infra/nginx/` and checks it.
  * @param root the repository root.
  * @returns the site files checked and the problems found.
@@ -321,6 +393,7 @@ export function checkNginxRepository(root = REPO_ROOT) {
   const snippets = read("snippets");
   const problems = checkNginx({ main, sites, snippets });
   problems.push(...ipProblems(allFiles(dir, NGINX_DIR)));
+  problems.push(...logrotateProblems(readFileSync(join(root, LOGROTATE_FILE), "utf8")));
   return { sites: Object.keys(sites), problems };
 }
 
@@ -360,6 +433,9 @@ function siteProblems(directives, file) {
     const listens = body.filter((d) => d.name === "listen");
     const https = listens.some((d) => /(^|:)443$/.test(d.args[0]) && d.args.includes("ssl"));
     const isDefault = listens.some((d) => d.args.includes("default_server"));
+    if (!body.some((d) => d.name === "error_log")) {
+      problems.push(`${at}: a server must set its own error_log in ${ERROR_LOG_DIR} (ADR-052)`);
+    }
     for (const d of body) {
       if (["ssl_protocols", "ssl_ciphers", "server_tokens"].includes(d.name)) {
         problems.push(`${file}:${d.line}: ${d.name} belongs to nginx.conf's http block only`);

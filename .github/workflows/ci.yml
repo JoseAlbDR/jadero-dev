@@ -563,12 +563,12 @@ jobs:
 
   # The nginx edge (WP-8 step 5; ADR-047's edge part, ADR-050): the repo's nginx.conf, snippets and
   # sites installed into Ubuntu 26.04 with the distro nginx (the server's release, nginx 1.28.3),
-  # throwaway self-signed certificates at certbot's paths, `nginx -t`, then nginx started and
-  # infra/scripts/smoke-edge.sh run against it (headers, no version, no CORS, internal paths 404,
-  # TLS 1.1 refused; the upstreams are absent and answer 502). On a pull request the check runs
-  # only when the PR changes infra/nginx/, the two scripts or this file; otherwise the job passes
-  # with nothing run (a step-level skip, never a `paths:` filter, so it can become a required
-  # check). Same command locally: `pnpm nginx:check`. The image is pinned by digest, the same
+  # throwaway self-signed certificates at certbot's paths, `nginx -t`, `logrotate -d` on the error
+  # log rule (ADR-052), then nginx started and infra/scripts/smoke-edge.sh run against it (headers,
+  # no version, no CORS, internal paths 404, TLS 1.1 refused; the upstreams are absent and answer
+  # 502). On a pull request the check runs only when the PR changes infra/nginx/, infra/logrotate/,
+  # the two scripts or this file; otherwise the job passes with nothing run (a step-level skip,
+  # never a `paths:` filter, so it can become a required check). Same command locally: `pnpm nginx:check`. The image is pinned by digest, the same
   # digest as that root script: change both (Renovate updates both in one pull request).
   nginx:
     name: nginx
@@ -594,7 +594,7 @@ jobs:
         run: |
           run=true
           if [ "$EVENT_NAME" = pull_request ] && git diff --quiet "$BASE_SHA" HEAD -- \
-            infra/nginx infra/scripts/nginx-check.sh infra/scripts/smoke-edge.sh .github/workflows/ci.yml; then
+            infra/nginx infra/logrotate infra/scripts/nginx-check.sh infra/scripts/smoke-edge.sh .github/workflows/ci.yml; then
             run=false
             echo "Nothing the nginx edge reads changed: no nginx check." >> "$GITHUB_STEP_SUMMARY"
           fi

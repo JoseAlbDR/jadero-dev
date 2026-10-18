@@ -2,7 +2,8 @@
 #
 # nginx-check.sh: installs the repo's nginx edge into a throwaway Ubuntu 26.04 container with the
 # distro nginx (the server's release, ADR-050) and runs `nginx -t` on it; with --smoke it also
-# starts nginx and runs smoke-edge.sh against it (WP-8 step 5). Run by the `nginx` job of ci.yml
+# starts nginx and runs smoke-edge.sh against it (WP-8 step 5). It also installs the error log
+# rotation of ADR-052 and runs `logrotate -d` on it. Run by the `nginx` job of ci.yml
 # and by `pnpm nginx:check`, never on the server: it overwrites /etc/nginx.
 #
 # Usage (from the repo root, the infra folder mounted read-only at /infra):
@@ -34,7 +35,7 @@ if [[ "${VERSION_ID:-}" != "26.04" ]]; then
 fi
 
 apt-get update -qq >/dev/null
-apt-get install -y -qq --no-install-recommends nginx openssl curl ca-certificates >/dev/null
+apt-get install -y -qq --no-install-recommends nginx logrotate openssl curl ca-certificates >/dev/null
 nginx -v
 
 # The repo's files, laid out as the README's install steps lay them out on the server.
@@ -47,6 +48,9 @@ for site in "$SRC"/nginx/sites/*.conf; do
 done
 install -d -m 755 /srv/jadero/www/admin
 install -m 644 "$SRC"/nginx/www/admin/* /srv/jadero/www/admin/
+# The sites' error logs and their rotation (ADR-052); the folder owned like its parent.
+install -d -o root -g adm -m 755 /var/log/nginx/jadero
+install -m 644 "$SRC/logrotate/jadero-nginx" /etc/logrotate.d/jadero-nginx
 
 for host in "${HOSTS[@]}"; do
   dir="/etc/letsencrypt/live/$host"
@@ -57,6 +61,43 @@ for host in "${HOSTS[@]}"; do
 done
 
 nginx -t
+
+# ADR-052: every site's error log is a file in /var/log/nginx/jadero/ (nginx -t opened them), our
+# rule rotates them, and no file is claimed by both our rule and Ubuntu's: logrotate stops on a
+# second rule for one file with "duplicate log entry", so the whole configuration must parse
+# without an error. Debug mode (-d) rotates nothing and runs no script.
+for name in default "${HOSTS[@]}"; do
+  if [[ ! -f "/var/log/nginx/jadero/$name.error.log" ]]; then
+    echo "nginx-check: no /var/log/nginx/jadero/$name.error.log after nginx -t" >&2
+    exit 1
+  fi
+done
+# Runs `logrotate -d` on a configuration; prints its errors and fails on any.
+logrotate_debug() {
+  local out
+  out="$(logrotate -d "$1" 2>&1)" || { printf '%s\n' "$out" >&2; return 1; }
+  if grep -q '^error:' <<<"$out"; then
+    grep '^error:' <<<"$out" >&2
+    return 1
+  fi
+  printf '%s\n' "$out"
+}
+lr="$(logrotate_debug /etc/logrotate.d/jadero-nginx)"
+for name in default "${HOSTS[@]}"; do
+  grep -qx "considering log /var/log/nginx/jadero/$name.error.log" <<<"$lr" || {
+    echo "nginx-check: /etc/logrotate.d/jadero-nginx does not rotate $name.error.log" >&2
+    exit 1
+  }
+done
+grep -E '^(rotating pattern|considering log)' <<<"$lr"
+logrotate_debug /etc/logrotate.conf >/dev/null
+echo "logrotate: Ubuntu's rule and jadero-nginx claim no file twice"
+# The check has teeth: the same rule twice is refused.
+cat /etc/logrotate.d/jadero-nginx /etc/logrotate.d/jadero-nginx >/tmp/logrotate-twice.conf
+if logrotate_debug /tmp/logrotate-twice.conf >/dev/null 2>&1; then
+  echo "nginx-check: logrotate accepted a file claimed by two rules" >&2
+  exit 1
+fi
 
 if [[ "$smoke" -eq 1 ]]; then
   # A stub Umami on its port (ADR-051): it answers with the method and path it received, and sends

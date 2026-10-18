@@ -1,12 +1,17 @@
 // Runs with the Node test runner (`node --test`), like the other scripts.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 import {
   checkNginx,
   checkNginxRepository,
   expandIncludes,
   ipProblems,
+  LOGROTATE_FILE,
+  logrotateProblems,
   parseNginx,
+  REPO_ROOT,
   readHttpsServer,
   selectLocation,
 } from "./nginx-hardening.mjs";
@@ -67,13 +72,13 @@ client_max_body_size 64k;
 const site = (extra = "", api = "include snippets/jadero-api-limits.conf;") => `
 server {
   listen 80;
-  server_name a.example;
+  server_name a.example; error_log /var/log/nginx/jadero/a.error.log;
   location / { return 301 https://a.example$request_uri; }
 }
 server {
   listen 443 ssl;
   http2 on;
-  server_name a.example;
+  server_name a.example; error_log /var/log/nginx/jadero/a.error.log;
   access_log /var/log/nginx/a.access.log jadero;
   include snippets/jadero-security-headers.conf;
   include snippets/jadero-proxy.conf;
@@ -345,10 +350,85 @@ describe("checkNginx", () => {
 
   it("requires the default HTTPS server to refuse the handshake", () => {
     const sites = {
-      "sites/00-default.conf": "server { listen 443 ssl default_server; server_name _; }",
+      "sites/00-default.conf":
+        "server { listen 443 ssl default_server; server_name _; error_log /var/log/nginx/jadero/default.error.log; }",
     };
     assert.deepEqual(check({ sites }), [
       "sites/00-default.conf:1: the default HTTPS server must set ssl_reject_handshake on",
+    ]);
+  });
+});
+
+describe("the error logs (ADR-052)", () => {
+  /** The site with both servers' error logs sent to a target. */
+  const logTo = (target) => ({
+    "sites/a.conf": site().replaceAll("/var/log/nginx/jadero/a.error.log", target),
+  });
+  /** The problem each of the two servers reports for a target. */
+  const outside = (target) =>
+    [4, 10].map(
+      (line) =>
+        `sites/a.conf:${line}: error_log ${target} must be a .log file in /var/log/nginx/jadero/, which keeps three days (ADR-052)`,
+    );
+
+  it("fails when a site writes its error log outside /var/log/nginx/jadero/", () => {
+    const target = "/var/log/nginx/a.error.log";
+    assert.deepEqual(check({ sites: logTo(target) }), outside(target));
+  });
+
+  it("fails on an error log the folder's glob would not rotate, or sent elsewhere", () => {
+    for (const target of [
+      "/var/log/nginx/jadero/a.err",
+      "/var/log/nginx/jadero/x/a.log",
+      "stderr",
+    ]) {
+      assert.deepEqual(check({ sites: logTo(target) }), outside(target), target);
+    }
+  });
+
+  it("fails when a server has no error_log of its own (it would write to the global one)", () => {
+    const sites = {
+      "sites/a.conf": site().replace(" error_log /var/log/nginx/jadero/a.error.log;", ""),
+    };
+    assert.deepEqual(check({ sites }), [
+      "sites/a.conf:2: a server must set its own error_log in /var/log/nginx/jadero/ (ADR-052)",
+    ]);
+  });
+});
+
+describe("logrotateProblems", () => {
+  const RULE = `# a comment
+/var/log/nginx/jadero/*.log {
+\tdaily
+\trotate 3
+\tcompress
+\tpostrotate
+\t\tinvoke-rc.d nginx rotate >/dev/null 2>&1
+\tendscript
+}
+`;
+
+  it("accepts the repository's rule and a valid one", () => {
+    assert.deepEqual(logrotateProblems(readFileSync(join(REPO_ROOT, LOGROTATE_FILE), "utf8")), []);
+    assert.deepEqual(logrotateProblems(RULE), []);
+  });
+
+  it("fails when the rule keeps more than three files", () => {
+    assert.deepEqual(logrotateProblems(RULE.replace("rotate 3", "rotate 14")), [
+      "infra/logrotate/jadero-nginx: must set rotate once, at most 3 (ADR-052)",
+    ]);
+  });
+
+  it("fails when the rule lacks the folder's glob or claims Ubuntu's files", () => {
+    assert.deepEqual(logrotateProblems(RULE.replace("jadero/*.log", "*.log")), [
+      "infra/logrotate/jadero-nginx: must rotate /var/log/nginx/jadero/*.log",
+      "infra/logrotate/jadero-nginx: /var/log/nginx/*.log is outside /var/log/nginx/jadero/ (Ubuntu's rule rotates it)",
+    ]);
+  });
+
+  it("fails when the rule does not rotate daily", () => {
+    assert.deepEqual(logrotateProblems(RULE.replace("daily", "weekly")), [
+      "infra/logrotate/jadero-nginx: must rotate daily, and set no other frequency",
     ]);
   });
 });
