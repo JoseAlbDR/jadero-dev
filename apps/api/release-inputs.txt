@@ -1,4 +1,4 @@
-# Generated from pnpm-lock.yaml by scripts/release-inputs.mjs (production dependencies of @jadero/api). Do not edit: run `pnpm release-inputs`.
+# Generated from pnpm-lock.yaml and the deploy files by scripts/release-inputs.mjs (production dependencies of @jadero/api, then its deploy files). Do not edit: run `pnpm release-inputs`.
 @borewit/text-codec@0.2.2
 @golevelup/nestjs-discovery@7.1.0
 @golevelup/nestjs-rabbitmq@9.1.0
@@ -218,3 +218,13 @@ yaml@2.9.1
 yargs-parser@21.1.1
 yargs@17.7.3
 zod@4.6.5
+# Deploy files, fetched at the release tag (ADR-053): a change to one releases the service.
+infra/compose/compose.services.yml#api sha256:816dd24b2758be899c24d23dab49c12c9442cad120e5fd0562fbf3a39d7f542b
+infra/compose/compose.staging.yml#api sha256:7fbe2c2f8b43f2832a4d7a9c1ab1db90c3453b011d652159aef26942c5aa3e0d
+infra/compose/compose.prod.yml#api sha256:77e2cca8725eb947ee0feb34a8c7128864401133d834a6c85ef2f4798e348b25
+infra/env/api.env.tpl sha256:6b49420f09eed0999db203837e4310477321641aea9a85b9bc46562670ebb037
+infra/postgres/provision.sql sha256:f1476b380f22f3ec493a0054737daba0547b0bae8620e6b972f9ca5dca0f1399
+infra/rabbitmq/provision-users.sh sha256:f9f2dba5c4391fd4125ed0783d98a557e8ae11d54110d4b7543d45b6dc55d694
+infra/rabbitmq/server/permissions.tsv sha256:79f63c1c089920e66b4ca47c7b0f75306222cda93526c8aca553a8f2c0dd343f
+infra/rabbitmq/server/definitions/prod.json sha256:5152d6143aa9368036b01c871b2183c9a2e46d8e76b9b9b4b9d9161e87c2b621
+infra/rabbitmq/server/definitions/staging.json sha256:30c7ec274817e2b2e0e452ffe1f90d642cb07879d2542824e054be6264ca27ed

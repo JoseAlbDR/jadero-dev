@@ -1,0 +1,171 @@
+# The services on the server, one Compose project per environment (WP-9 step 2; ADR-053 restating
+# ADR-049 and ADR-048 "Deploy"; ADR-051 restating ADR-027 "Layout" and the memory budget;
+# docs/learning/wp-9.md, Implementation choices). Never used alone: an environment file on top
+# gives the project name, the published ports and the network, so staging and production run this
+# same file and cannot drift apart.
+#
+#   docker compose --env-file /srv/jadero/<env>/versions.env \
+#     -f infra/compose/compose.services.yml -f infra/compose/compose.<env>.yml ...
+#
+# Run by deploy.sh as root, from the files of the release being deployed (ADR-053), with
+# JADERO_ENV set to the same environment as the overlay it picks. Inputs, each required, so a
+# missing one stops Compose before any container starts:
+# - JADERO_ENV (staging or prod): the folder of the rendered env files, and the role, user and
+#   vhost names inside them (the templates write `${JADERO_ENV}`; Compose interpolates env_file
+#   values). Every secret in them is letters and digits only, so interpolation changes nothing else.
+# - API_IMAGE, AGENT_IMAGE, WEB_IMAGE from versions.env: digest references
+#   (ghcr.io/josealbdr/jadero-dev-api@sha256:...), never a tag, so a deploy runs exactly the bytes
+#   staging tested.
+# - /srv/jadero/<env>/<service>.env: rendered by `op inject` from infra/env/<service>.env.tpl right
+#   before `up` (root, mode 600). Every process type of a service reads the same file and blanks
+#   the credentials it does not use (`environment` wins over `env_file`), so api-worker never holds
+#   the read-only role and api never holds the broker user.
+#
+# Startup order: the deploy runs a service's migrate one-off first (`docker compose run --rm
+# <service>-migrate`), then `up --wait --no-deps` on its process types. Postgres and RabbitMQ are in
+# the jadero-ops project, so no service here depends on them; the `depends_on` on the migrate step
+# keeps a plain `up` safe too. AI and mail providers stay fake (AGENTS.md section 7).
+# scripts/compose-hardening.test.mjs holds this file and both overlays to the WP-7 hardening, the
+# ADR-027 limits, the image variables, the env files and blanked credentials, 127.0.0.1 binds,
+# the external networks and no published worker port.
+
+# Least privilege in four layers (WP-7 D4), as in compose.images.yml. The merge is shallow: a
+# service that sets its own `tmpfs` must list /tmp again (web does). Logs rotate like the ops
+# stack's: the `local` driver keeps at most 3 files of 10 MB per container on the shared host.
+x-hardened: &hardened
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: ["/tmp:size=16m"]
+  logging:
+    driver: local
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+# The one-off migrate step (WP-10 D2): no server, so no healthcheck; it runs once and its exit
+# code gates the deploy.
+x-migrate: &migrate
+  restart: "no"
+  healthcheck:
+    disable: true
+
+services:
+  api-migrate:
+    <<: [*hardened, *migrate]
+    image: ${API_IMAGE:?set in versions.env, a digest reference}
+    command: ["node", "dist/migrate.js"]
+    env_file:
+      - path: /srv/jadero/${JADERO_ENV:?set by deploy.sh, staging or prod}/api.env
+        required: true
+    environment:
+      DATABASE_READ_URL: ""
+      RABBITMQ_URL: ""
+      NODE_OPTIONS: --max-old-space-size=224
+    # Same budget as the service it prepares (ADR-027 has no row for a one-off).
+    mem_limit: 300m
+
+  api:
+    <<: *hardened
+    image: ${API_IMAGE:?set in versions.env, a digest reference}
+    restart: unless-stopped
+    env_file:
+      - path: /srv/jadero/${JADERO_ENV:?set by deploy.sh, staging or prod}/api.env
+        required: true
+    environment:
+      PORT: "3001"
+      SERVICE_NAME: api
+      OTEL_SERVICE_NAME: api
+      RABBITMQ_URL: ""
+      # Heap plus every tmpfs at most 80% of mem_limit (ADR-027 limit).
+      NODE_OPTIONS: --max-old-space-size=224
+    mem_limit: 300m
+    depends_on:
+      api-migrate:
+        condition: service_completed_successfully
+
+  api-worker:
+    <<: *hardened
+    image: ${API_IMAGE:?set in versions.env, a digest reference}
+    command: ["node", "--import", "@jadero/platform-nest/instrumentation", "dist/worker.js"]
+    restart: unless-stopped
+    env_file:
+      - path: /srv/jadero/${JADERO_ENV:?set by deploy.sh, staging or prod}/api.env
+        required: true
+    environment:
+      # Health checks only; published nowhere (Uptime Kuma reads it on the environment network).
+      PORT: "3011"
+      SERVICE_NAME: api-worker
+      OTEL_SERVICE_NAME: api-worker
+      DATABASE_READ_URL: ""
+      NODE_OPTIONS: --max-old-space-size=224
+    mem_limit: 300m
+    depends_on:
+      api-migrate:
+        condition: service_completed_successfully
+
+  agent-migrate:
+    <<: [*hardened, *migrate]
+    image: ${AGENT_IMAGE:?set in versions.env, a digest reference}
+    command: ["node", "dist/migrate.js"]
+    env_file:
+      - path: /srv/jadero/${JADERO_ENV:?set by deploy.sh, staging or prod}/agent.env
+        required: true
+    environment:
+      RABBITMQ_URL: ""
+      NODE_OPTIONS: --max-old-space-size=384
+    mem_limit: 512m
+
+  agent:
+    <<: *hardened
+    image: ${AGENT_IMAGE:?set in versions.env, a digest reference}
+    restart: unless-stopped
+    env_file:
+      - path: /srv/jadero/${JADERO_ENV:?set by deploy.sh, staging or prod}/agent.env
+        required: true
+    environment:
+      # Published nowhere: nginx routes nothing to agent yet.
+      PORT: "3002"
+      SERVICE_NAME: agent
+      OTEL_SERVICE_NAME: agent
+      RABBITMQ_URL: ""
+      NODE_OPTIONS: --max-old-space-size=384
+    mem_limit: 512m
+    depends_on:
+      agent-migrate:
+        condition: service_completed_successfully
+
+  # ADR-027's consumer row (`agent-ingest`, 256 MB): today's consumer process.
+  agent-consumer:
+    <<: *hardened
+    image: ${AGENT_IMAGE:?set in versions.env, a digest reference}
+    command: ["node", "--import", "@jadero/platform-nest/instrumentation", "dist/consumer.js"]
+    restart: unless-stopped
+    env_file:
+      - path: /srv/jadero/${JADERO_ENV:?set by deploy.sh, staging or prod}/agent.env
+        required: true
+    environment:
+      PORT: "3012"
+      SERVICE_NAME: agent-consumer
+      OTEL_SERVICE_NAME: agent-consumer
+      NODE_OPTIONS: --max-old-space-size=188
+    mem_limit: 256m
+    depends_on:
+      agent-migrate:
+        condition: service_completed_successfully
+
+  web:
+    <<: *hardened
+    image: ${WEB_IMAGE:?set in versions.env, a digest reference}
+    restart: unless-stopped
+    # Next's server cache on disk: a second tmpfs, owned by the image's `node` user (208 heap + 16
+    # + 32 is 256 MB, 80% of 320).
+    tmpfs:
+      - /tmp:size=16m
+      - /app/apps/web/.next/cache:size=32m,uid=1000,gid=1000,mode=0700
+    env_file:
+      - path: /srv/jadero/${JADERO_ENV:?set by deploy.sh, staging or prod}/web.env
+        required: true
+    environment:
+      NODE_OPTIONS: --max-old-space-size=208
+    mem_limit: 320m

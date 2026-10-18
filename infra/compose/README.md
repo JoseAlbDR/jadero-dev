@@ -14,6 +14,34 @@ If RabbitMQ fails with `Error when reading /var/lib/rabbitmq/.erlang.cookie: eac
 
 `compose.images.yml` runs the services from their production images on top of `compose.dev.yml` (WP-7): `api`, `api-worker`, `agent`, `agent-consumer` and `web`, each read-only, without capabilities or new privileges, with a size-capped `tmpfs` and its ADR-027 memory limit, after its `*-migrate` one-off exits 0. `pnpm images:up` builds the images and waits for every healthcheck, `pnpm images:down` removes the containers (stop `pnpm dev` first: the ports are the same). `scripts/compose-hardening.test.mjs` fails when a service loses any of this.
 
+## Service projects (the server)
+
+`compose.services.yml` holds every process type of `api`, `agent` and `web` for the servers, with the hardening of `compose.images.yml` (read-only, no capabilities, no new privileges, a size-capped `tmpfs`, the ADR-027 `mem_limit`) plus rotated logs. It never runs alone: `compose.staging.yml` and `compose.prod.yml` add only what differs, so the two environments cannot drift apart (WP-9 step 2, ADR-053):
+
+| | `compose.staging.yml` | `compose.prod.yml` |
+|---|---|---|
+| Project | `jadero-staging` | `jadero-prod` |
+| `web` | `127.0.0.1:3120` (nginx, `new.jadero.dev`) | `127.0.0.1:3110` (no public host until the cutover) |
+| `api` | `127.0.0.1:3121` | `127.0.0.1:3111` |
+| `SITE_URL` | `https://new.jadero.dev` | `https://jadero.dev` |
+| Network | `jadero_staging`, external | `jadero_prod`, external |
+
+`api-worker`, `agent` and `agent-consumer` publish nothing; Uptime Kuma reads their health on the environment's network. Each project joins only its own ops network (the default network of the project, `external: true`), where Postgres and RabbitMQ answer by name and `pg_hba.conf` accepts only that environment's roles.
+
+The deploy (`deploy.sh`, as root, from the files of the release being deployed) runs:
+
+```sh
+JADERO_ENV=staging docker compose --env-file /srv/jadero/staging/versions.env \
+  -f infra/compose/compose.services.yml -f infra/compose/compose.staging.yml ...
+```
+
+- `API_IMAGE`, `AGENT_IMAGE`, `WEB_IMAGE` come from `versions.env` as digest references (`ghcr.io/josealbdr/jadero-dev-api@sha256:...`), never tags; a missing one stops Compose before any container starts.
+- `JADERO_ENV` (`staging` or `prod`) names the folder of the rendered env files and fills the role, user and vhost names inside them; it must match the overlay.
+- Each service reads `/srv/jadero/<env>/<service>.env`, rendered by `op inject` from `infra/env/<service>.env.tpl` right before `up` (root, mode 600). The templates hold only 1Password references for secrets (`<item>-$JADERO_ENV`, the items of "Ops stack" below, so a rotation changes one item) and plain values otherwise: `NODE_ENV=production`, `LOG_LEVEL=info`, `OTEL_TRACES_EXPORTER=none` until a collector runs on the server, `HEARTBEAT_INTERVAL_MS=60000`, fake AI providers. `op inject` resolves `$JADERO_ENV` only inside a reference and leaves `${JADERO_ENV}` elsewhere to Compose, which interpolates env file values.
+- Every process type of a service reads the same file and blanks the credentials it does not use (`environment: { RABBITMQ_URL: "" }`, which wins over `env_file`): `api` never holds the broker user, `api-worker` never holds the read-only role, only `agent-consumer` holds agent's broker user.
+
+`scripts/compose-hardening.test.mjs` fails when a process type loses the hardening, its limit, its image variable or its env file, keeps a credential it does not read, publishes from the shared file, when an overlay publishes a worker or moves a port off `127.0.0.1`, joins another network or sets anything but ports and `SITE_URL`, when a template holds a secret value, a reference in a comment or an item `ops.env.tpl` does not provision, or when a process type misses a variable its config requires. Each service's `release-inputs.txt` lists a hash of its entries in these files, its template and (for `api` and `agent`) the provisioning and topology files, so a change to them releases the service (`pnpm release-inputs`).
+
 ## Ops stack (the server)
 
 `compose.ops.yml` is the server's Compose project `jadero-ops` (WP-8 D4, ADR-050 restating ADR-027): one Postgres and one RabbitMQ shared by production and staging, Umami and Uptime Kuma. It is operated by the owner on the server, never by an agent and never on a laptop except for a throwaway test under another project name (`-p`).

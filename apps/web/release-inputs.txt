@@ -1,4 +1,4 @@
-# Generated from pnpm-lock.yaml by scripts/release-inputs.mjs (production dependencies of @jadero/web). Do not edit: run `pnpm release-inputs`.
+# Generated from pnpm-lock.yaml and the deploy files by scripts/release-inputs.mjs (production dependencies of @jadero/web, then its deploy files). Do not edit: run `pnpm release-inputs`.
 @eloqnt/config@0.1.1
 @eloqnt/format-json@0.1.0
 @eloqnt/format-po@0.1.1
@@ -299,3 +299,8 @@ vfile-message@4.0.3
 vfile@6.0.3
 zod@4.6.5
 zwitch@2.0.4
+# Deploy files, fetched at the release tag (ADR-053): a change to one releases the service.
+infra/compose/compose.services.yml#web sha256:4b37fe2bc56d6b19a2b4c547fd1ed0c968a00415a2ab8d171a3af4c325cf49f7
+infra/compose/compose.staging.yml#web sha256:37f9664c6f6503c44933b6193f46589b7097a2f327c03906bbeffc530774efa6
+infra/compose/compose.prod.yml#web sha256:bf7325187f83bbccb4898eda1571c31444cfaa26a86503f184a86bed8b92635f
+infra/env/web.env.tpl sha256:7eddcbb2ee09e2f501037b6583798ca2eb26e2280bb3cc18a49557189001e860

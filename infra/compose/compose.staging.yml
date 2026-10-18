@@ -1,0 +1,30 @@
+# Staging: the Compose project jadero-staging on top of compose.services.yml (WP-9 step 2; ADR-051
+# restating ADR-027 "Layout"). Only what differs between the environments lives here: the project
+# name, the published ports, the network and the site's public origin. Everything else is the
+# shared file, so staging and production cannot drift apart.
+#
+#   JADERO_ENV=staging docker compose --env-file /srv/jadero/staging/versions.env \
+#     -f infra/compose/compose.services.yml -f infra/compose/compose.staging.yml ...
+#
+# scripts/compose-hardening.test.mjs fails when a port leaves 127.0.0.1 or moves, when a worker or
+# agent publishes one, or when the project joins anything but its own network.
+name: jadero-staging
+
+services:
+  api:
+    # nginx proxies new.jadero.dev's /api/v1/content/ here (infra/nginx/sites/new.jadero.dev.conf).
+    ports: ["127.0.0.1:3121:3001"]
+  web:
+    # nginx proxies new.jadero.dev's / here.
+    ports: ["127.0.0.1:3120:3000"]
+    environment:
+      # Canonical and hreflang links: the host staging is served on during the build.
+      SITE_URL: https://new.jadero.dev
+
+networks:
+  # The environment's network from the ops stack (compose.ops.yml), joined as external: Postgres
+  # and RabbitMQ answer on it by name, and pg_hba.conf accepts the staging roles only from its
+  # subnet. The project creates no network of its own.
+  default:
+    name: jadero_staging
+    external: true
