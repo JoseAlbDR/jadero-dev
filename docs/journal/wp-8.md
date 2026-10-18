@@ -46,6 +46,6 @@ I would draw the network paths before writing a single firewall rule. The tailne
 
 I spent too long on the shared nginx before deciding the host was mine to change. Once I said that, the design got simpler. <!-- owner: check -->
 
-I would also keep screenshots out of the chat when a page shows a token. The push token leaked that way and had to be reset.
+I would also keep screenshots out of the chat when a page shows a token. The backup's push token showed up in two of them; nginx does not open the push path to the internet, so I left it as it is.
 
 **Next:** WP-9 builds the deploy pipeline: the real `deploy.sh`, the downgrade guard, rotation in the right order, and the first real tables in the restore drill.
