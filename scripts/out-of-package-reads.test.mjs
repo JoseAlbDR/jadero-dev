@@ -28,10 +28,8 @@ describe("outOfPackageReads", () => {
   });
 
   it("treats join from a top-level folder as a path from the repo root", () => {
-    const source = `const INIT = join("infra", "compose", "init", "01-databases.sql");`;
-    assert.deepEqual(reads(source, "packages/testing/src/x.ts"), [
-      "infra/compose/init/01-databases.sql",
-    ]);
+    const source = `const SCRIPT = join("infra", "postgres", "provision.sql");`;
+    assert.deepEqual(reads(source, "packages/testing/src/x.ts"), ["infra/postgres/provision.sql"]);
   });
 
   it("ignores reads inside the package and paths built from variables", () => {
@@ -62,7 +60,7 @@ describe("declares", () => {
 
   it("matches $TURBO_ROOT$ globs from the repo root", () => {
     const inputs = ["$TURBO_DEFAULT$", "$TURBO_ROOT$/infra/compose/**"];
-    assert.equal(declares(inputs, dir, "infra/compose/init/01-databases.sql"), true);
+    assert.equal(declares(inputs, dir, "infra/compose/compose.dev.yml"), true);
     assert.equal(declares(inputs, dir, "infra/rabbitmq/definitions.json"), false);
   });
 
@@ -88,10 +86,11 @@ describe("this repository", () => {
     const found = rows.map((row) => `${row.packageName}#${row.task} ${row.read}`);
     for (const known of [
       "@jadero/testing#test infra/compose/compose.dev.yml",
-      "@jadero/testing#test infra/compose/init/01-databases.sql",
+      "@jadero/testing#test infra/postgres/provision.sql",
       "@jadero/messaging#test infra/compose/compose.dev.yml",
       "@jadero/messaging#test infra/rabbitmq/definitions.json",
-      "@jadero/agent#test:int infra/compose/init/01-databases.sql",
+      "@jadero/agent#test:int infra/postgres/provision.sql",
+      "@jadero/api#test:int infra/postgres/provision.sql",
     ]) {
       assert.ok(found.includes(known), `expected the scan to find ${known}`);
     }

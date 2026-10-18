@@ -8,7 +8,7 @@ const env = {
   PORT: "3011",
   NODE_ENV: "test",
   LOG_LEVEL: "fatal",
-  DATABASE_URL: "postgres://content:content@127.0.0.1:5432/content_dev",
+  DATABASE_URL: "postgres://content_dev:content_dev@127.0.0.1:5432/content_dev",
   RABBITMQ_URL: "amqp://api:api@127.0.0.1:1/dev",
 };
 

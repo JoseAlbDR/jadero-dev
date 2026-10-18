@@ -1,0 +1,25 @@
+# The jadero sites' nginx error logs, installed as /etc/logrotate.d/jadero-nginx (ADR-052).
+# nginx's error_log writes the client address and the request line of the request behind an entry,
+# so these files keep three days instead of Ubuntu's 14. Ubuntu's rule (/etc/logrotate.d/nginx,
+# /var/log/nginx/*.log) does not enter this subfolder, and logrotate refuses two rules for one
+# file; `infra/scripts/nginx-check.sh` proves both with `logrotate -d`. Otherwise a copy of
+# Ubuntu 26.04's packaged rule (nginx-common 1.28.3), so nginx reopens its logs the same way.
+# `scripts/nginx-hardening.test.mjs` checks the glob, `daily` and `rotate` at most 2 (the live file plus two: three days).
+/var/log/nginx/jadero/*.log {
+	daily
+	missingok
+	rotate 2
+	compress
+	delaycompress
+	notifempty
+	create 0640 www-data adm
+	sharedscripts
+	prerotate
+		if [ -d /etc/logrotate.d/httpd-prerotate ]; then \
+			run-parts /etc/logrotate.d/httpd-prerotate; \
+		fi \
+	endscript
+	postrotate
+		invoke-rc.d nginx rotate >/dev/null 2>&1
+	endscript
+}

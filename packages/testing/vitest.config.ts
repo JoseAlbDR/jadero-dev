@@ -15,6 +15,10 @@ export default mergeConfig(
           "src/postgres.global-setup.ts",
           // Called by that global setup to find Docker; same proof.
           "src/docker-host.ts",
+          // Runs infra/postgres/provision.sql in a container and reads what it created: the global
+          // setup calls it on every run, and test/provision.int.test.ts runs the script twice
+          // against a fresh container (convergence, roles, grants, passwords, failures).
+          "src/provision.ts",
           // Every integration suite's database: apps/api/test/content-repositories.int.test.ts,
           // apps/agent/test/heartbeat.int.test.ts, packages/messaging/test/outbox-inbox.int.test.ts.
           // Its input checks are unit-tested here (test/test-database.test.ts).

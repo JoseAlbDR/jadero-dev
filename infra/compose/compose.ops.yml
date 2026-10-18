@@ -1,0 +1,198 @@
+# The ops stack of the server (WP-8 D4, D5 and Q1; ADR-050 restating ADR-027 "Layout" and the
+# memory budget; ADR-043 for the secrets): one Postgres and one RabbitMQ shared by production and
+# staging, split by database, role, vhost and user, plus Umami and Uptime Kuma.
+#
+#   docker compose --env-file /srv/jadero/ops/ops.env -f infra/compose/compose.ops.yml up -d --wait
+#
+# Every secret is a variable interpolated from that env file, rendered on the server from
+# infra/env/ops.env.tpl by `op inject` (root, mode 600): the repo holds no value, and a missing
+# one stops `docker compose` before any container starts (`${NAME:?...}`). Each container gets
+# only the variables it needs. Provisioning (roles, databases, broker users) is not done at boot:
+# it is the explicit, convergent run in infra/compose/README.md, "Ops stack".
+#
+# Isolation (Q1 accepted risk, ADR-050 compensating controls): one Docker network per environment
+# with a fixed subnet that infra/postgres/pg_hba.conf names; Postgres joins all three, RabbitMQ
+# only the two service networks (nothing on jadero_ops speaks AMQP), and a service project
+# (jadero-prod, jadero-staging) joins only its own as an external network. No database or broker
+# port is published; the three admin and app ports bind to 127.0.0.1 only, for nginx and for the
+# owner over a tunnel (Q2 B).
+# scripts/compose-hardening.test.mjs fails when a service loses that, its memory limit, its
+# digest pin or its log rotation, when a pg_hba.conf line names a subnet that is not its
+# environment's network, or when Postgres or RabbitMQ stop matching compose.dev.yml.
+name: jadero-ops
+
+# Least privilege where each image allows it: exec never gains privileges (setuid programs such
+# as `su` cannot reach root), and a process restarts unless stopped by hand. Logs rotate: the
+# `local` driver keeps at most 3 files of 10 MB per container (Docker's default json-file driver
+# never rotates, so a noisy container could fill the shared host's disk).
+x-base: &base
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+  logging:
+    driver: local
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  postgres:
+    <<: *base
+    # Postgres 18 with pgvector on Debian 13 (WP-1 decision F; WP-8 implementation choices). The
+    # same reference as compose.dev.yml: the hardening test keeps them equal.
+    image: pgvector/pgvector:0.8.7-pg18-trixie@sha256:9d9c930220cb9bf2f956d10a8f909cf9973d9672ca0278aef2c1e6facccad2e0
+    # The image's postgres user (uid 999) from the first process: the entrypoint needs no chown
+    # (the named volume takes the image's ownership), so every capability can go.
+    user: postgres
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+      - /var/run/postgresql:size=1m,uid=999,gid=999,mode=2775
+    # pg_hba.conf from the repo, read-only: each role only from its environment's subnet, with
+    # scram-sha-256; the superuser only over the socket (peer). Shared buffers about 256 MB of the
+    # 1,024 MB limit (ADR-027).
+    command:
+      - postgres
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+      - -c
+      - shared_buffers=256MB
+    environment:
+      # Needed by initdb on an empty volume; never used to log in (pg_hba.conf has no password
+      # line for postgres).
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in the rendered ops.env}
+    volumes:
+      # Postgres 18 images keep PGDATA at /var/lib/postgresql/18/docker and declare the volume one level up.
+      - pgdata:/var/lib/postgresql
+      - ../postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    networks: [jadero_prod, jadero_staging, jadero_ops]
+    # Time to finish a fast shutdown and its checkpoint before Docker kills it (the default is
+    # 10 seconds): a kill means crash recovery on the next start.
+    stop_grace_period: 60s
+    healthcheck:
+      # Over the socket, as the container's postgres user (peer): no rejected TCP attempt is logged.
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    mem_limit: 1024m
+
+  rabbitmq:
+    <<: *base
+    # The same reference as compose.dev.yml (WP-1 decision H1).
+    image: rabbitmq:4.3.6-management-alpine@sha256:3505b6096cdbc083bcc363e74366f575ecd0c1a55be4dadcbc60fa08e34647e1
+    # The node's data folder is named after the host name (rabbit@rabbitmq): a fixed one keeps the
+    # users and queues when the container is recreated.
+    hostname: rabbitmq
+    # One user for the server and the healthcheck (see compose.dev.yml: a root healthcheck could
+    # create the Erlang cookie before the server does). The cookie is generated on first boot into
+    # the data volume and used only inside this container: no secret to render.
+    user: rabbitmq
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ../rabbitmq/server/rabbitmq.conf:/etc/rabbitmq/conf.d/20-jadero.conf:ro
+      # Only the folder of vhost files: RabbitMQ imports every file in it, whatever the extension.
+      - ../rabbitmq/server/definitions:/etc/rabbitmq/definitions:ro
+    # The two service networks only: Umami on jadero_ops never speaks AMQP, so the broker stays
+    # out of reach from there.
+    networks: [jadero_prod, jadero_staging]
+    # Time to close connections and flush queues and the message store before Docker kills it
+    # (the default is 10 seconds).
+    stop_grace_period: 60s
+    ports:
+      # The management UI and API, for the owner over a tunnel (ADR-027). AMQP is never published.
+      - "127.0.0.1:15673:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    mem_limit: 256m
+
+  umami:
+    <<: *base
+    image: ghcr.io/umami-software/umami:3.4.0@sha256:85909afc45bdcda1917394594a087421fdbb05610fded0fa9f6fb861abb2f367
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+      # Next's server cache, owned by the image's nextjs user.
+      - /app/.next/cache:size=16m,uid=1001,gid=65533,mode=0700
+    environment:
+      # postgresql://umami:<password>@postgres:5432/umami, rendered whole from 1Password.
+      DATABASE_URL: ${UMAMI_DATABASE_URL:?set in the rendered ops.env}
+      APP_SECRET: ${UMAMI_APP_SECRET:?set in the rendered ops.env}
+      # No calls home: no usage telemetry, no update check.
+      DISABLE_TELEMETRY: "1"
+      DISABLE_UPDATES: "1"
+      NODE_OPTIONS: --max-old-space-size=224
+    networks: [jadero_ops]
+    ports:
+      # For nginx (the tracker under /s/ on the site host, ADR-051) and the admin screens over a tunnel (Q2 B).
+      - "127.0.0.1:3100:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/heartbeat"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 300m
+
+  uptime-kuma:
+    <<: *base
+    # The rootless build: runs as the image's node user (uid 1000); data in SQLite in its volume.
+    image: louislam/uptime-kuma:2.5.6-slim-rootless@sha256:6eb4e96a7cbdb8a5d6779aa26dce2cb97dcea65b486856b9b2280f73a1d0adf4
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]
+    environment:
+      # SQLite in the volume, set here so the first-run setup page never asks (or lets anyone
+      # pick another database).
+      UPTIME_KUMA_DB_TYPE: sqlite
+    volumes:
+      - uptime-kuma-data:/app/data
+    # On both service networks: it reads each service's /health/ready over them (ADR-010).
+    networks: [jadero_prod, jadero_staging]
+    ports:
+      # For nginx (status.) and the admin screens over a tunnel (Q2 B).
+      - "127.0.0.1:3101:3001"
+    healthcheck:
+      # The image's own check, run more often than its default.
+      test: ["CMD-SHELL", "extra/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    mem_limit: 200m
+
+networks:
+  # Fixed names, so the jadero-prod and jadero-staging projects join them as external networks,
+  # and fixed subnets, so infra/postgres/pg_hba.conf can name them.
+  jadero_prod:
+    name: jadero_prod
+    ipam:
+      config:
+        - subnet: 172.30.1.0/24
+  jadero_staging:
+    name: jadero_staging
+    ipam:
+      config:
+        - subnet: 172.30.2.0/24
+  jadero_ops:
+    name: jadero_ops
+    ipam:
+      config:
+        - subnet: 172.30.3.0/24
+
+volumes:
+  pgdata: {}
+  rabbitmq-data: {}
+  uptime-kuma-data: {}

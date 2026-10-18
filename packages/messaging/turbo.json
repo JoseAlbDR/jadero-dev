@@ -6,7 +6,15 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/infra/compose/**",
-        "$TURBO_ROOT$/infra/rabbitmq/definitions.json"
+        "$TURBO_ROOT$/infra/rabbitmq/**"
+      ]
+    },
+    "test:int": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/infra/compose/**",
+        "$TURBO_ROOT$/infra/postgres/**",
+        "$TURBO_ROOT$/infra/rabbitmq/**"
       ]
     }
   }

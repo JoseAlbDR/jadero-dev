@@ -11,5 +11,5 @@ paths:
 - Compose: every published port binds to `127.0.0.1`; `mem_limit` on every service (ADR-027 table, update it when you add a process); `depends_on` only on Postgres with `condition: service_healthy`, plus each service's own one-off `*-migrate` with `condition: service_completed_successfully` (a deploy gate, not a peer); long-running services never depend on each other at startup, readiness covers that.
 - Migrations are expand-only in the release that ships them; contract migrations ship later. A rollback never needs a down migration.
 - Message-schema rollout: consumers that accept the new schema first, producers second.
-- Workflows: pin actions by commit SHA; `turbo --affected`; release-please owns versions (one component per service). Agents never run the deploy script, never ssh, never operate the production or staging compose files.
+- Workflows: pin actions by commit SHA; `turbo --affected`; release-please owns versions (one component per service). Agents never run the deploy script, ssh only when the owner allows it (`AGENTS.md` section 7), never operate the production or staging compose files.
 - nginx config is reviewed like code and checked with `nginx -t` in CI.

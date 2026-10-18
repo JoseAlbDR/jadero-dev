@@ -4508,6 +4508,171 @@
       "decidedBy": "owner",
       "decidedAt": "2026-10-12",
       "change": "Option b (public images) was recommended; the owner chose private images with the deploy job's short-lived token."
+    },
+    {
+      "id": "D-80",
+      "area": "hosting",
+      "title": "Server internal traffic and backup destination",
+      "question": "Does traffic between services, Postgres and RabbitMQ on the single host use TLS, where do the nightly backups go, and do Hetzner server backups stay as a second layer?",
+      "context": "WP-8 prepares the server. The 2026-10-09 audit asks for a written decision on TLS inside the private Docker networks. ADR-027 sent backups to a Storage Box or object storage with paid Hetzner backups as a second layer; the owner does not want to spend beyond the server and plans a home NAS later.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Plain internal traffic as an accepted risk, Backblaze B2 free tier, no Hetzner backups",
+          "description": "Compensating controls (per-environment networks, pg_hba per subnet, scram, roles per service and environment, no published database or broker ports); restic to B2 EU Central over the S3 backend; a manual snapshot before risky host changes; a home NAS becomes a restic destination later.",
+          "pros": [
+            "No certificates or CA on one host",
+            "Zero spend",
+            "Repository can move to a NAS with restic copy"
+          ],
+          "cons": [
+            "Must close the TLS gap before anything leaves the box",
+            "Usage above 10 GB is billed"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "sslmode=require and a Hetzner Storage Box",
+          "description": "Self-signed certificates inside the networks; backups to a paid Storage Box.",
+          "pros": [
+            "Encrypted on the wire",
+            "Same provider"
+          ],
+          "cons": [
+            "require does not authenticate the peer",
+            "Monthly cost"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "verify-full with a private CA and backups pulled to the owner's laptop",
+          "description": "Authenticated TLS; a launchd job pulls dumps over Tailscale.",
+          "pros": [
+            "Peer authentication",
+            "Free storage"
+          ],
+          "cons": [
+            "A CA to run on one host",
+            "No backup when the laptop is closed"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "On one host the only parties that could read internal traffic already hold the secrets; the free tier covers a few MB of encrypted dumps with no minimum storage duration.",
+      "adr": "ADR-050",
+      "learn": "Accepted risk with compensating controls, trust boundaries, 3-2-1 backup, restore drills, RPO and RTO.",
+      "status": "decided",
+      "ownerNote": "Answered in WP-8 (2026-10-16 and 2026-10-17): Q1 A for now, to be revisited later; Backblaze B2 free tier; no Hetzner server backups; a home NAS (mostly a media server) is planned and will become a backup destination.",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-17"
+    },
+    {
+      "id": "D-81",
+      "area": "hosting",
+      "title": "First-party analytics path",
+      "question": "Is the Umami tracker served from its own host (stats.jadero.dev) with CORS opened for its collect endpoint, or first-party from the site host?",
+      "context": "WP-8 step 5 found that a separate stats host makes the collect call cross-origin, which ADR-047 keeps closed, and adds a host, a certificate and CSP sources.",
+      "options": [
+        {
+          "id": "a",
+          "label": "stats host with CORS for /api/send",
+          "description": "Keep stats.jadero.dev and allow the site origins on the collect route only.",
+          "pros": [
+            "Matches ADR-027"
+          ],
+          "cons": [
+            "Opens CORS",
+            "One more host and certificate",
+            "Two more CSP sources"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "First-party paths on the site host",
+          "description": "nginx proxies the tracker script and the collect endpoint under /s/ on the site host to Umami.",
+          "pros": [
+            "Same origin, no CORS",
+            "No CSP change",
+            "One host fewer"
+          ],
+          "cons": [
+            "Two analytics routes in the site vhost"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "No self-hosted analytics",
+          "description": "Drop Umami.",
+          "pros": [
+            "Nothing to run"
+          ],
+          "cons": [
+            "No traffic numbers"
+          ]
+        }
+      ],
+      "recommendation": "b",
+      "why": "The collect call can be same-origin, so nothing needs a CORS door or another host.",
+      "adr": "ADR-051",
+      "learn": "Same-origin policy, CORS as a door opener, first-party proxy, attack surface reduction.",
+      "status": "decided",
+      "ownerNote": "Answered in WP-8 step 5 (2026-10-18): B, after asking whether CORS would be overkill here.",
+      "decidedOption": "b",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-18"
+    },
+    {
+      "id": "D-82",
+      "area": "hosting",
+      "title": "Client addresses in the edge logs",
+      "question": "How long may nginx's error log keep the client address in clear, given that nginx has no format for it?",
+      "context": "The WP-8 PR review found that error_log writes the client address and the request line with its query string, kept 14 days by Ubuntu's shared logrotate rule, while ADR-010 says to hash IPs.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Log level crit on the jadero sites",
+          "description": "Only critical entries, which carry no request.",
+          "pros": [
+            "No client address at all"
+          ],
+          "cons": [
+            "Loses the upstream errors (refused, timed out) used to debug an outage"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Keep error level, three days, written down",
+          "description": "The jadero sites write their error logs to their own folder with their own logrotate rule: daily, three files.",
+          "pros": [
+            "Keeps the outage diagnostics",
+            "The exception is recorded and bounded"
+          ],
+          "cons": [
+            "Addresses in clear for up to three days in a root-only file"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Send the error log to syslog and filter it",
+          "description": "A syslog rule rewrites the address before writing.",
+          "pros": [
+            "Addresses masked"
+          ],
+          "cons": [
+            "More moving parts for a small site"
+          ]
+        }
+      ],
+      "recommendation": "b",
+      "why": "Upstream errors are the main tool when a service fails; three days in a root-only file is a small, bounded risk.",
+      "adr": "ADR-052",
+      "learn": "Data minimization, storage limitation, accepted risk with compensating controls.",
+      "status": "decided",
+      "ownerNote": "Answered in the WP-8 wrap review (2026-10-18): B, the recommendation.",
+      "decidedOption": "b",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-18"
     }
   ],
   "workPackages": [

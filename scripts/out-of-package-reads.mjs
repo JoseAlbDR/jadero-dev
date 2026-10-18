@@ -14,8 +14,8 @@
  *
  * Which task must declare it: a read in `*.int.*` test code belongs to that package's `test:int`;
  * any other test file to its `test`. A read in `src/` runs in the package's own unit tests and in
- * the integration suites of every package that depends on it (`@jadero/testing` reads the dev
- * Postgres init script for `agent`'s suites), so it belongs to the package's `test` and to the
+ * the integration suites of every package that depends on it (`@jadero/testing` runs the Postgres
+ * provisioning script for every service's suites), so it belongs to the package's `test` and to the
  * `test:int` of each direct dependent that has one.
  *
  * Run by `scripts/out-of-package-reads.test.mjs` through `pnpm test:scripts`, so `pnpm verify`.

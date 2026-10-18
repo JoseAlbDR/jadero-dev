@@ -118,7 +118,8 @@ Learning happens during the build too: every learning step ends with one one-lin
 | commit rejected by Biome | unsafe fix or syntax error | `pnpm lint:fix`, then fix by hand |
 | `pnpm verify` never hits the cache | an input that changes every run | check `inputs` in `turbo.json`; `turbo run test --summarize` |
 | `pnpm dev:up` fails on 5432 | a local Postgres | stop it, or change the host port in the compose file and `.env.example` |
-| changed `01-databases.sql`, nothing happened | init runs only on an empty volume | `docker compose -f infra/compose/compose.dev.yml down -v` |
+| changed `infra/postgres/provision.sql`, nothing happened | the container runs it by itself only on an empty volume | `pnpm dev:provision` (convergent, keeps the data); a renamed role or database needs `docker compose -f infra/compose/compose.dev.yml down -v` |
+| api or agent: `password authentication failed for user "content"` (or `agent`) | a `.env` from before WP-8, when the roles had no environment suffix | copy the URLs from the app's `.env.example` (`content_dev`, `content_reader_dev`, `agent_dev`), then reset the dev volume once |
 | the board card did not move | PR body lacks `Closes #N`, or a workflow is off | edit the body; check `scripts/github/README.md` |
 | a reviewer wants a design change | larger than a nit | decide; `/adr` first if an ADR changes |
 | `git switch` aborts: untracked `package.json` or `pnpm-lock.yaml` would be overwritten | a `pnpm` or `npx` run on `main` before WP-1 merged left them behind | look at them (`git status`, `cat package.json`), then `rm package.json pnpm-lock.yaml && rm -rf node_modules` and switch again |

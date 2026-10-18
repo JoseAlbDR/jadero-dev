@@ -19,7 +19,9 @@ Triggers: every `pull_request`, `push` to `main`, weekly schedule (Monday 05:17 
 | `web` | `turbo run test:e2e --affected` (runs nothing when `web` is not affected) | `pnpm test:e2e` | `pnpm test:e2e`, forced | standalone build of `apps/web`, Playwright smoke, SEO, enforced CSP and axe per locale; uploads `playwright-results` on failure |
 | `images` | Docker build of the affected services (`image` task of `turbo.json`, `--affected`) | all three | all three | per service: amd64 build loaded into the runner, never pushed; smoke run (not root, `api` and `agent` stop on the config error naming `DATABASE_URL`, `web` reaches `healthy`); Trivy: a secret always fails, a fixable HIGH or CRITICAL OS finding fails only a PR that changes the image inputs (Dockerfile, `.dockerignore`, `.trivyignore.yaml`), otherwise it is reported in the job summary |
 | `workflows-lint` | zizmor, offline | same | same | the workflows themselves (injection, permissions, credentials, triggers); locally `pnpm lint:workflows` |
-| `backstop-issue` | skipped | skipped | schedule only, when `verify`, `integration` or `web` failed | not a gate: opens or comments the issue "Weekly uncached CI run failed" |
+| `nginx` | runs only when the PR changes `infra/nginx/`, `infra/scripts/nginx-check.sh`, `infra/scripts/smoke-edge.sh` or `ci.yml`; otherwise passes with nothing run | runs | runs | the nginx edge in `ubuntu:26.04` (pinned by digest) with the distro nginx: the repo's `nginx.conf`, snippets and sites installed, throwaway self-signed certificates, `nginx -t`, then `smoke-edge.sh` against it (headers, no version, no CORS, internal paths 404, TLS 1.1 refused, 1.2 and 1.3 accepted); locally `pnpm nginx:check`. Not a required check yet |
+| `backup` | runs only when the PR changes `infra/scripts/backup.sh`, `restore.sh` or `backup-check.sh`, `infra/env/backup.env.tpl`, `infra/compose/compose.ops.yml`, `infra/postgres/pg_hba.conf` or `ci.yml`; otherwise passes with nothing run | runs | runs | `infra/scripts/backup-check.sh` on the runner's Docker: the server's `backup.sh` and `restore.sh` against throwaway Postgres, RabbitMQ and Uptime Kuma containers (the images of `compose.ops.yml`) and a local restic 0.19.1 repository; every database found and saved, a failing dump saves no snapshot and sends no heartbeat, Kuma started again, the last complete night restored into a container with no network with matching row counts, no secret in the output; locally `pnpm backup:check`. Not a required check yet |
+| `backstop-issue` | skipped | skipped | schedule only, when `verify`, `integration`, `web`, `nginx` or `backup` failed | not a gate: opens or comments the issue "Weekly uncached CI run failed" |
 
 ### `security.yml`
 
@@ -130,6 +132,19 @@ and events made with that token start no workflow on their own: the PR's runs wa
 Approve the pending workflow runs on the PR (its Checks tab, or the run page). If the PR shows no
 approval prompt at all, follow ADR-049's fallback: a GitHub App installed on this repository only
 replaces the token in the `release-please` job. Never a classic token.
+
+**`nginx` red.** Run `pnpm nginx:check` (Docker): the log shows `nginx -t`'s error with the file
+and line, or the `FAIL` lines of `smoke-edge.sh`. A failure on the weekly run with no change in the
+repo means the distro's nginx or OpenSSL package changed; the server gets the same package with its
+next upgrade, so fix the config before that. `scripts/nginx-hardening.test.mjs` (in `verify`) holds
+the static rules (headers, log privacy, deny by default, rate and body limits).
+
+**`backup` red.** Run `pnpm backup:check` (Docker): each `FAIL` line names the promise that broke,
+and the lines marked `|` above it are the scripts' own output. A failure on the weekly run with no
+change in the repo means an image or a tool changed under the check (the Alpine packages of the
+runner); the server's scripts may break the same way on the next install, so fix them before
+installing. `scripts/backup-scripts.test.mjs` (in `verify`) holds the static rules (the restore
+image equals the ops Postgres, the container names, the checkpoint tables, the env template).
 
 **`integration` red.** Run `pnpm test:int` with Docker up; one package with
 `pnpm --filter @jadero/<pkg> test:int`. Ryuk removes the containers even when a run crashes.

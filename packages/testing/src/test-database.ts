@@ -1,7 +1,7 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import pg from "pg";
 import { inject } from "vitest";
-import { assertPlainRole, type ProvisionedRole } from "./provisioned-roles.js";
+import { assertPlainRole, type ProvisionedRole } from "./provisioned.js";
 
 /** Options of {@link createTestDatabase}. */
 export interface TestDatabaseOptions {
@@ -13,10 +13,10 @@ export interface TestDatabaseOptions {
    */
   readonly superuserExtensions?: readonly string[];
   /**
-   * Extra login roles provisioning gives the database, such as `api`'s read-only `content_reader`:
-   * `api` passes `provisionedRoles("content_dev")`, read from the provisioning script. Roles are
-   * cluster-wide, so each is created once per container with its settings (idempotent, safe when
-   * test files run in parallel), and only `CONNECT` on the new database is granted per file, after
+   * Extra login roles provisioning lets into the database, such as `api`'s read-only
+   * `content_reader_dev`: `api` passes `provisionedRoles("content_dev")`. The roles already exist,
+   * created by the global setup's run of the provisioning script with their memberships and
+   * settings; each file only grants them `CONNECT` on its new database, after
    * `REVOKE CONNECT ... FROM PUBLIC`, as provisioning does.
    */
   readonly roles?: readonly ProvisionedRole[];
@@ -30,43 +30,6 @@ export interface TestDatabase {
   readonly roleUrls: Readonly<Record<string, string>>;
   /** Drops the database, then its owner role; provisioned roles stay for the other files. */
   readonly drop: () => Promise<void>;
-}
-
-/** Postgres error codes of a role that exists already, or that a parallel file is creating. */
-const ROLE_EXISTS = new Set(["42710", "23505"]);
-
-/**
- * The password of a provisioned role in this container: derived from the container's superuser URL,
- * so every test file of the run computes the same one without sharing state. Never printed.
- */
-function rolePassword(adminUrl: string, role: string): string {
-  return createHash("sha256").update(`${adminUrl}\n${role}`).digest("hex");
-}
-
-/**
- * Creates a provisioned role with its settings in one transaction, unless it exists: a parallel
- * file's `CREATE ROLE` waits for the first one's commit and then fails as a duplicate, which is
- * ignored, so nobody sees the role without its settings.
- */
-async function ensureRole(adminUrl: string, role: ProvisionedRole): Promise<void> {
-  const client = new pg.Client({ connectionString: adminUrl });
-  await client.connect();
-  try {
-    await client.query("BEGIN");
-    await client.query(
-      `CREATE ROLE ${role.name} LOGIN PASSWORD '${rolePassword(adminUrl, role.name)}' NOSUPERUSER NOCREATEDB NOCREATEROLE`,
-    );
-    for (const [key, value] of Object.entries(role.settings)) {
-      await client.query(`ALTER ROLE ${role.name} SET ${key} = ${value}`);
-    }
-    await client.query("COMMIT");
-  } catch (error) {
-    await client.query("ROLLBACK");
-    const code = (error as { code?: unknown }).code;
-    if (typeof code !== "string" || !ROLE_EXISTS.has(code)) throw error;
-  } finally {
-    await client.end();
-  }
 }
 
 /** Runs one statement as the container's superuser, on a short-lived client. */
@@ -88,7 +51,8 @@ async function asSuperuser(url: string, statement: string): Promise<void> {
  * (Trace 2c). The role's password is random and never printed. Each of
  * `options.superuserExtensions` is created by the superuser inside the new database first, the way
  * provisioning creates `vector` for every `agent_*` database; the service's migration only asserts it.
- * Each of `options.roles` is created once per container and may connect to the new database only.
+ * Each of `options.roles`, created by the global setup's provisioning, may connect to the new
+ * database too.
  * Needs the Postgres global setup (`@jadero/testing/postgres-global-setup`) in the Vitest config.
  * @param options extensions the superuser creates before the owner role takes over, and the
  * provisioned roles.
@@ -128,11 +92,10 @@ export async function createTestDatabase(options: TestDatabaseOptions = {}): Pro
   if (roles.length > 0) {
     await asSuperuser(adminUrl, `REVOKE CONNECT ON DATABASE ${name} FROM PUBLIC`);
     for (const provisioned of roles) {
-      await ensureRole(adminUrl, provisioned);
       await asSuperuser(adminUrl, `GRANT CONNECT ON DATABASE ${name} TO ${provisioned.name}`);
       const roleUrl = new URL(adminUrl);
       roleUrl.username = provisioned.name;
-      roleUrl.password = rolePassword(adminUrl, provisioned.name);
+      roleUrl.password = provisioned.password;
       roleUrl.pathname = `/${name}`;
       roleUrls[provisioned.name] = roleUrl.toString();
     }

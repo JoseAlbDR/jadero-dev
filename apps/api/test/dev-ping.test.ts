@@ -3,7 +3,7 @@ import request from "supertest";
 import { afterEach, describe, expect, it } from "vitest";
 import { bootApi } from "./setup/boot.js";
 
-const DATABASE_URL = "postgres://content:content@127.0.0.1:1/content_dev";
+const DATABASE_URL = "postgres://content_dev:content_dev@127.0.0.1:1/content_dev";
 
 describe("POST /dev/ping", () => {
   let app: INestApplication | undefined;

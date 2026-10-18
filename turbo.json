@@ -21,7 +21,11 @@
     },
     "test:int": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/infra/compose/**"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/infra/compose/**",
+        "$TURBO_ROOT$/infra/postgres/**"
+      ],
       "cache": false
     },
     "image": {
@@ -60,6 +64,11 @@
         "apps/*/release-inputs.txt",
         "apps/*/Dockerfile",
         "infra/compose/*.yml",
+        "infra/postgres/pg_hba.conf",
+        "infra/nginx/**",
+        "infra/scripts/**",
+        "infra/env/*.tpl",
+        "docs/runbooks/restore.md",
         "turbo.json",
         "apps/*/turbo.json",
         "apps/*/package.json",

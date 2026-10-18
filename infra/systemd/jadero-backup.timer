@@ -1,0 +1,13 @@
+# Starts jadero-backup.service every night at 02:30 server time (WP-8 Trace 2). Persistent: a
+# night missed while the server was off runs at the next boot. Installed as
+# /etc/systemd/system/jadero-backup.timer and enabled with `systemctl enable --now`.
+[Unit]
+Description=jadero.dev nightly backup at 02:30
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

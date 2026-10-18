@@ -1,13 +1,16 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   buildDefinitions,
+  buildPermissions,
   DEV_USERS,
   DEV_VHOST,
   delayLabel,
   JADERO_QUEUES,
+  renderPermissionsTable,
   retryQueueName,
+  SERVER_ENVIRONMENTS,
 } from "../src/index.js";
 
 type Queue = { name: string; arguments: Record<string, unknown> };
@@ -128,6 +131,108 @@ describe("infra/rabbitmq/definitions.json", () => {
         .digest();
       expect(stored.subarray(4)).toEqual(expected);
     }
+  });
+});
+
+const serverFile = (name: string) =>
+  readFileSync(new URL(`../../../infra/rabbitmq/server/${name}`, import.meta.url), "utf8");
+const serverPermissionInputs = SERVER_ENVIRONMENTS.map((env) => ({
+  vhost: env.vhost,
+  queues: JADERO_QUEUES,
+  users: env.users,
+}));
+
+describe("infra/rabbitmq/server (staging and production, WP-8 D4)", () => {
+  it("holds one definitions file per vhost, generated without users or permissions", () => {
+    // RabbitMQ imports every file of a load_definitions directory, whatever its extension.
+    expect(
+      readdirSync(new URL("../../../infra/rabbitmq/server/definitions", import.meta.url)).sort(),
+    ).toEqual(["prod.json", "staging.json"]);
+    expect(serverFile("rabbitmq.conf")).toMatch(
+      /^load_definitions = \/etc\/rabbitmq\/definitions$/m,
+    );
+    for (const env of SERVER_ENVIRONMENTS) {
+      const text = serverFile(`definitions/${env.name}.json`);
+      expect(JSON.parse(text)).toEqual(
+        buildDefinitions({ vhost: env.vhost, queues: JADERO_QUEUES }),
+      );
+      expect(JSON.parse(text)).toMatchObject({
+        users: [],
+        permissions: [],
+        vhosts: [{ name: env.vhost }],
+      });
+      expect(text).not.toContain("password");
+    }
+  });
+
+  it("names a user per service and vhost, plus ops_admin on both, and holds no password", () => {
+    expect(SERVER_ENVIRONMENTS.map((env) => [env.vhost, env.users.map((u) => u.name)])).toEqual([
+      ["/prod", ["api_prod", "agent_prod", "ops_admin"]],
+      ["/staging", ["api_staging", "agent_staging", "ops_admin"]],
+    ]);
+    for (const user of SERVER_ENVIRONMENTS.flatMap((env) => env.users)) {
+      expect(user).not.toHaveProperty("password");
+    }
+  });
+
+  it("writes permissions.tsv from buildPermissions (run `pnpm --filter @jadero/messaging topology`)", () => {
+    const text = serverFile("permissions.tsv");
+    expect(text).toBe(renderPermissionsTable(serverPermissionInputs));
+    const rows = text
+      .split("\n")
+      .filter((line) => line !== "" && !line.startsWith("#"))
+      .map((line) => line.split("\t"));
+    expect(rows.every((row) => row.length === 6 && row.every((field) => field !== ""))).toBe(true);
+    expect(
+      rows.map(([user, vhost, , configure, write, read]) => ({
+        user,
+        vhost,
+        configure,
+        write,
+        read,
+      })),
+    ).toEqual(serverPermissionInputs.flatMap((input) => buildPermissions(input)));
+    expect(rows.map(([user, , tags]) => `${user}:${tags}`)).toEqual([
+      "api_prod:-",
+      "agent_prod:-",
+      "ops_admin:administrator",
+      "api_staging:-",
+      "agent_staging:-",
+      "ops_admin:administrator",
+    ]);
+  });
+
+  it("gives a service the same rights on the servers as in dev", () => {
+    const rights = ({ configure, write, read }: Permission) => ({ configure, write, read });
+    const dev = new Map(committed.permissions.map((p) => [p.user, rights(p)]));
+    for (const input of serverPermissionInputs) {
+      for (const row of buildPermissions(input)) {
+        const service = row.user === "ops_admin" ? "dev" : row.user.replace(/_(prod|staging)$/, "");
+        expect(rights(row), `${row.user} on ${row.vhost}`).toEqual(dev.get(service));
+      }
+    }
+  });
+});
+
+describe("buildPermissions", () => {
+  it("reads the queues of the user's service, which defaults to its name", () => {
+    const queues = [{ name: "agent.x", service: "agent", bindings: ["a"] }];
+    const [named, mapped, other] = buildPermissions({
+      vhost: "/v",
+      queues,
+      users: [{ name: "agent" }, { name: "agent_v", service: "agent" }, { name: "agent_v2" }],
+    });
+    expect(named?.read).toBe("^(agent\\.x)$");
+    expect(mapped).toEqual({ ...named, user: "agent_v" });
+    // A user whose service has no queues reads nothing and writes nothing.
+    expect(other).toMatchObject({ configure: "^$", write: "^$", read: "^$" });
+  });
+
+  it("leaves users and permissions out of definitions built without users", () => {
+    expect(buildDefinitions({ vhost: "/v", queues: [] })).toMatchObject({
+      users: [],
+      permissions: [],
+    });
   });
 });
 

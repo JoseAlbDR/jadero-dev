@@ -19,7 +19,7 @@ const base = {
   PORT: "3002",
   NODE_ENV: "test",
   LOG_LEVEL: "fatal",
-  DATABASE_URL: "postgres://agent:agent@127.0.0.1:1/agent_dev",
+  DATABASE_URL: "postgres://agent_dev:agent_dev@127.0.0.1:1/agent_dev",
 };
 
 describe("agent config", () => {

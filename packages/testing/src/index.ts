@@ -3,12 +3,13 @@
 // `@jadero/testing/drizzle`, so a package that needs neither loads no drizzle-kit.
 export { useDockerContextHost } from "./docker-host.js";
 export { POSTGRES_IMAGE } from "./images.js";
-export { parseProvisionedExtensions, provisionedExtensions } from "./provisioned-extensions.js";
 export {
+  type ProvisionedDatabase,
   type ProvisionedRole,
-  parseProvisionedRoles,
+  type ProvisioningSnapshot,
+  provisionedExtensions,
   provisionedRoles,
-} from "./provisioned-roles.js";
+} from "./provisioned.js";
 export {
   createTestDatabase,
   type TestDatabase,

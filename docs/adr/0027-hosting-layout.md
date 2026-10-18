@@ -1,18 +1,18 @@
 ---
 id: ADR-027
 title: "Hosting layout"
-status: accepted
+status: superseded
 date: 2026-10-03
 deciders: [owner]
 decisions: [D-30, D-31, D-48]
 supersedes: []
-superseded_by: null
+superseded_by: ADR-050
 source: docs/plan/report.md ("ADR-027: Hosting layout (amended 2026-10-02)")
 ---
 
 # ADR-027: Hosting layout
 
-**Status:** Accepted (owner review 2026-10-03, D-30, D-31 and D-48). Amended for the service split (ADR-029): more containers, RabbitMQ, one database per service, the admin vhost and an edge cache.
+**Status:** Superseded by ADR-050. Accepted (owner review 2026-10-03, D-30, D-31 and D-48). Amended for the service split (ADR-029): more containers, RabbitMQ, one database per service, the admin vhost and an edge cache.
 
 Decided by the owner in the plan review of 2026-10-02 and 2026-10-03 (decisions D-30, D-31, D-48). This record was extracted verbatim from `docs/plan/report.md`; the narrative, traces and sources stay there. From now on this file is the canonical record: a new decision is a new ADR that supersedes this one, never an edit.
 
