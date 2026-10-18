@@ -36,5 +36,6 @@ AWS_SECRET_ACCESS_KEY={{ op://jadero-ops/backup-b2/credential }}
 BACKUP_HEARTBEAT_URL='{{ op://jadero-ops/uptime-kuma-backup-push-url/password }}'
 
 # Optional: a second push monitor for the weekly `restic check` (the runbook says when to add
-# it). Uncomment after the item exists, or `op inject` fails on the missing reference.
-# BACKUP_CHECK_HEARTBEAT_URL='{{ op://jadero-ops/uptime-kuma-backup-check-push-url/password }}'
+# it). Once its item exists, add this line, with the reference wrapped in double braces:
+#   BACKUP_CHECK_HEARTBEAT_URL='op://jadero-ops/uptime-kuma-backup-check-push-url/password'
+# `op inject` resolves a reference even inside a comment, so none is written here in braces.

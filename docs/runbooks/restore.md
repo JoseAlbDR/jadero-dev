@@ -101,7 +101,7 @@ The env file must stay root's with no group or other access: `backup.sh` refuses
 
 In Uptime Kuma (over the tunnel, Q2 B): a new monitor of type Push, named `jadero backup`, heartbeat interval 90000 seconds (25 hours: one night plus the timer's delay and the run), no retries. Kuma shows its push URL with its own public host; nginx does not open `/api/push/` on `status.`, so store it in 1Password with the host part changed to `http://127.0.0.1:3101` (the script runs on the server). Keep the query string Kuma shows (`?status=up&msg=OK&ping=`).
 
-Optional: a second push monitor for the weekly check (interval about 8 days), stored as `uptime-kuma-backup-check-push-url`, then uncomment `BACKUP_CHECK_HEARTBEAT_URL` in `infra/env/backup.env.tpl` and render again. Without it, a failed check shows only in `systemctl --failed` and the journal.
+Optional: a second push monitor for the weekly check (interval about 8 days), stored as `uptime-kuma-backup-check-push-url`, then add the `BACKUP_CHECK_HEARTBEAT_URL` line the template's comment gives (its reference in double braces) to `infra/env/backup.env.tpl` and render again. Without it, a failed check shows only in `systemctl --failed` and the journal.
 
 ## 3. The restore drill
 

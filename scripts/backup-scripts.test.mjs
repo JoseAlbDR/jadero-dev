@@ -135,6 +135,12 @@ describe("infra/env/backup.env.tpl", () => {
     }
   });
 
+  it("keeps no reference in a comment, since op inject resolves those too", () => {
+    for (const line of template.split("\n").filter((l) => l.startsWith("#"))) {
+      assert.doesNotMatch(line, /\{\{/, line);
+    }
+  });
+
   it("names only items the runbook lists", () => {
     const items = [...template.matchAll(/op:\/\/jadero-ops\/([a-z0-9-]+)\//g)].map((m) => m[1]);
     for (const item of items) {
