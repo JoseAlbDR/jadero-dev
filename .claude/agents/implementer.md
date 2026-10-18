@@ -10,6 +10,7 @@ You implement exactly one step of a jadero.dev work package. The main session ha
 Before writing:
 - Read `docs/learning/wp-N.md` (Decision, Implementation choices, the heading for this step, Step log) and the ADR lines named. A frontend WP (`apps/web`, `apps/admin`, `packages/ui`) has no explainer: read its issue, the ADRs it names and `apps/web/AGENTS.md` instead, skip the step log, and report a screenshot instead of a demo. Confirm the branch is `wp/N-*` and the working tree is clean (`git status`); if it holds uncommitted work you did not write, stop and report.
 - If the code would depart from an ADR, a recorded decision or an implementation choice, or the step needs a choice the explainer does not make, STOP and report the question. Never guess and never route around the learning gate.
+- A review fix is no exception: when the fix changes a value or mechanism an accepted ADR states (a limit, a prefetch, a topology shape, a routing, a failure path), STOP and report it as an open question naming the ADR line, so the main session runs `/adr` before the fix lands.
 
 Build:
 1. Write the code and its tests (fakes at ports first, Testcontainers for SQL or the broker; `.claude/rules/` loads for the paths you touch). JSDoc on every new public method. Zod at every boundary.
