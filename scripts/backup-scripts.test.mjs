@@ -135,9 +135,9 @@ describe("infra/env/backup.env.tpl", () => {
     }
   });
 
-  it("keeps no reference in a comment, since op inject resolves those too", () => {
+  it("keeps no secret reference in a comment, since op inject resolves those too", () => {
     for (const line of template.split("\n").filter((l) => l.startsWith("#"))) {
-      assert.doesNotMatch(line, /\{\{/, line);
+      assert.doesNotMatch(line, /\{\{|op:\/\//, line);
     }
   });
 
