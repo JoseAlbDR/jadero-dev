@@ -215,6 +215,79 @@ describe("provision.sql refuses to run half-configured", () => {
   });
 });
 
+// A deploy converges only its own service's roles (WP-9 D4, rotation ordering), on env=dev here so
+// the staging runs above and the prod refusal stay untouched.
+describe("provision.sql with service set", () => {
+  it("converges only api's roles and database, needing only api's passwords", async () => {
+    const { CONTENT_DB_PASSWORD = "", CONTENT_READER_DB_PASSWORD = "" } = freshPasswords();
+    const result = await runProvisioning(
+      container,
+      "dev",
+      { CONTENT_DB_PASSWORD, CONTENT_READER_DB_PASSWORD },
+      "api",
+    );
+    expect(result.exitCode, result.output).toBe(0);
+    const admin = urlFor(container.getDatabase());
+    const roles = await query<{ rolname: string }>(
+      admin,
+      "SELECT rolname FROM pg_roles WHERE rolname LIKE '%\\_dev' ORDER BY rolname",
+    );
+    expect(roles.map((row) => row.rolname)).toEqual(["content_dev", "content_reader_dev"]);
+    const databases = await query<{ datname: string }>(
+      admin,
+      "SELECT datname FROM pg_database WHERE datname LIKE '%\\_dev' ORDER BY datname",
+    );
+    expect(databases.map((row) => row.datname)).toEqual(["content_dev"]);
+  });
+
+  it("re-passwords only the named service: agent's run leaves api's roles as they were", async () => {
+    const all = freshPasswords();
+    expect((await runProvisioning(container, "dev", all)).exitCode).toBe(0);
+    const agentPassword = randomBytes(16).toString("hex");
+    const run = await runProvisioning(
+      container,
+      "dev",
+      { AGENT_DB_PASSWORD: agentPassword },
+      "agent",
+    );
+    expect(run.exitCode, run.output).toBe(0);
+    expect(run.output).not.toContain(agentPassword);
+    const agent = urlFor("agent_dev", { name: "agent_dev", password: agentPassword });
+    expect(await connectFailure(agent)).toBeUndefined();
+    const content = urlFor("content_dev", {
+      name: "content_dev",
+      password: all.CONTENT_DB_PASSWORD ?? "",
+    });
+    expect(await connectFailure(content)).toBeUndefined();
+  });
+
+  it("names only the missing passwords of the service it converges", async () => {
+    const result = await runProvisioning(
+      container,
+      "dev",
+      { CONTENT_DB_PASSWORD: randomBytes(16).toString("hex") },
+      "api",
+    );
+    expect(result.exitCode).not.toBe(0);
+    expect(result.output).toContain("missing or empty: CONTENT_READER_DB_PASSWORD");
+    expect(result.output).not.toContain("AGENT_DB_PASSWORD");
+  });
+
+  it("refuses a service it does not know, and a service on env=ops", async () => {
+    const unknown = await runProvisioning(container, "dev", freshPasswords(), "web" as "api");
+    expect(unknown.exitCode).not.toBe(0);
+    expect(unknown.output).toContain("service must be api, agent or contact");
+    const ops = await runProvisioning(
+      container,
+      "ops",
+      { UMAMI_DB_PASSWORD: randomBytes(16).toString("hex") },
+      "api",
+    );
+    expect(ops.exitCode).not.toBe(0);
+    expect(ops.output).toContain("service applies to dev, staging and prod only");
+  });
+});
+
 describe("provision.sql with env=ops", () => {
   it("converges only Umami's role and database, closed to PUBLIC", async () => {
     const password = randomBytes(16).toString("hex");

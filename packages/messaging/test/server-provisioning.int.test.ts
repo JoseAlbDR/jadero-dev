@@ -135,6 +135,26 @@ describe("the servers' RabbitMQ provisioning", () => {
     expect(await names("list_user_permissions", "agent_prod")).toEqual(["/prod"]);
   });
 
+  it("converges one user with the user filter, needing only its password (WP-9 D4)", async () => {
+    // A deploy of api on staging: only api_staging's password, rotated, and no other variable.
+    const rotated = randomBytes(16).toString("hex");
+    const run = provision({ RABBITMQ_API_STAGING_PASSWORD: rotated }, ["staging", "api_staging"]);
+    expect(run.status, run.output).toBe(0);
+    expect(run.output).toContain("provision-users: api_staging: password set");
+    expect(run.output).not.toMatch(/(agent_staging|ops_admin|api_prod|agent_prod): password set/);
+    expect(run.output).not.toContain(rotated);
+    const check = (user: string, password: string) =>
+      container.exec(["rabbitmqctl", "authenticate_user", user, password]);
+    expect((await check("api_staging", rotated)).exitCode).toBe(0);
+    // Another service's user keeps its password: nothing re-passworded behind its back.
+    expect((await check("agent_staging", PASSWORDS.agent_staging ?? "")).exitCode).toBe(0);
+    PASSWORDS.api_staging = rotated;
+    // A user with no row on the run's vhost is refused before any change.
+    const other = provision({ RABBITMQ_API_PROD_PASSWORD: rotated }, ["staging", "api_prod"]);
+    expect(other.status).toBe(1);
+    expect(other.output).toContain("api_prod has no row on /staging");
+  });
+
   it("lets api_prod publish and agent_prod consume on /prod, and nothing else", async () => {
     const publisher = await connect(amqpUrl("api_prod", "/prod"));
     const consumer = await connect(amqpUrl("agent_prod", "/prod"));

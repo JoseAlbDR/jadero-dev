@@ -14,6 +14,9 @@ const SCRIPT_IN_CONTAINER = "/jadero/provision.sql";
 /** The environments `provision.sql` accepts as `-v env=...`. */
 export type ProvisioningEnv = "dev" | "staging" | "prod" | "ops";
 
+/** The services `provision.sql` accepts as `-v service=...`, to converge only that one's roles. */
+export type ProvisioningService = "api" | "agent" | "contact";
+
 /**
  * The environment variables `provision.sql` reads its passwords from, per kind of run: the
  * service roles for `dev`, `staging` and `prod`, Umami's for `ops`.
@@ -57,12 +60,16 @@ function repositoryRoot(): string {
  * @param container the started container.
  * @param env the environment to provision.
  * @param passwords the password variables (`SERVICE_PASSWORD_VARIABLES`, or `UMAMI_DB_PASSWORD`).
+ * @param service when set, `-v service=...`: the run converges only that service's roles, as a
+ * deploy of it does (WP-9 D4); a string outside `ProvisioningService` is passed as it is, so a
+ * test can check the refusal.
  * @returns psql's exit code and output; the caller decides whether a non-zero code is a failure.
  */
 export async function runProvisioning(
   container: StartedPostgreSqlContainer,
   env: ProvisioningEnv,
   passwords: Readonly<Record<string, string>>,
+  service?: ProvisioningService,
 ): Promise<ProvisioningResult> {
   await container.copyFilesToContainer([
     { source: join(repositoryRoot(), PROVISION_SCRIPT), target: SCRIPT_IN_CONTAINER },
@@ -78,6 +85,7 @@ export async function runProvisioning(
       container.getDatabase(),
       "--set",
       `env=${env}`,
+      ...(service === undefined ? [] : ["--set", `service=${service}`]),
       "--file",
       SCRIPT_IN_CONTAINER,
     ],

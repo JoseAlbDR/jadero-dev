@@ -501,6 +501,7 @@ const services = (worker = "", migrate = "") => `${SERVICES_HEADER}
 services:
   api-migrate:
     <<: [*hardened, *migrate]
+    profiles: [api]
     image: \${API_IMAGE:?from versions.env}
     env_file:
       - path: /srv/jadero/\${JADERO_ENV:?staging or prod}/api.env
@@ -510,6 +511,7 @@ services:
     mem_limit: 300m${migrate}
   api-worker:
     <<: *hardened
+    profiles: [api]
     image: \${API_IMAGE:?from versions.env}
     restart: unless-stopped
     env_file:
@@ -637,6 +639,22 @@ describe("checkServicesHardening", () => {
       "required: false\n    environment:\n      PORT",
     );
     assert.equal(checkServices(optional).length, 1);
+  });
+
+  it("fails when a process type joins no profile, another service's, or more than one", () => {
+    const hint = "must join only its service's profile (profiles: [api]): deploy.sh activates one";
+    const none = services().replace(
+      `    profiles: [api]\n    image: ${IMAGE_VAR}\n    restart`,
+      `    image: ${IMAGE_VAR}\n    restart`,
+    );
+    assert.deepEqual(checkServices(none), [`services.yml: api-worker ${hint}`]);
+    for (const profiles of ["[agent]", "[api, agent]"]) {
+      const source = services().replace(
+        "    profiles: [api]\n    image",
+        `    profiles: ${profiles}\n    image`,
+      );
+      assert.deepEqual(checkServices(source), [`services.yml: api-migrate ${hint}`]);
+    }
   });
 
   it("fails on a network, unrotated logs, a peer dependency and an unlisted process type", () => {

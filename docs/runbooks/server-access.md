@@ -192,23 +192,24 @@ Before a risky change (a release upgrade, a firewall or SSH change), the owner t
 WP-9's deploy job reaches the server as `deploy`, a user that can do one thing: run `deploy.sh` with a validated environment, service and version (WP-8 D3, ADR-049 restating ADR-048's deploy mechanics). Its key sits in GitHub's secrets, so a leaked key must not mean a leaked server.
 
 - **No password, not in `docker` or `sudo`.** The `docker` group is root-equivalent: anyone in it can start a container that mounts `/`.
-- **One key, with a forced command.** Whatever the client asks for, `sshd` runs `/srv/jadero/bin/deploy-entry`. The client's words arrive only as the `SSH_ORIGINAL_COMMAND` variable. The wrapper accepts exactly `deploy <env> <service> <version>` (`staging` or `prod`; `api`, `agent` or `web`; a semver version without `v`), refuses anything else with exit 1, logs one line per call under the tag `jadero-deploy` (the values when accepted, a fixed reason when refused, never the raw input) and calls `sudo -n /srv/jadero/bin/deploy.sh <env> <service> <version>`.
+- **One key per environment, each with a forced command bound to it** (WP-9 D2). Whatever the client asks for, `sshd` runs `/srv/jadero/bin/deploy-entry staging` for the staging key and `/srv/jadero/bin/deploy-entry prod` for production's. The client's words arrive only as the `SSH_ORIGINAL_COMMAND` variable. The wrapper accepts exactly `deploy <env> <service> <version>` and `rollback <env> <service>` (`staging` or `prod`; `api`, `agent` or `web`; a semver version without `v`), and only when `<env>` is the key line's (`refused reason=env-mismatch` otherwise, `no-binding` for a key line without one). It refuses anything else with exit 1, logs one line per call under the tag `jadero-deploy` (the values when accepted, a fixed reason when refused, never the raw input) and calls `sudo -n /srv/jadero/bin/deploy.sh deploy <env> <service> <version>` (or `rollback <env> <service>`), with standard input passed through: the registry user and token, and for production the expected digest.
 - **One sudo rule.** It names `deploy.sh` and nothing else. A sudoers rule with no arguments allows any arguments, so `deploy.sh` checks them again.
-- **`deploy.sh` is a stub in WP-8**: it validates and prints `would deploy <service> <version> to <env>`. WP-9 fills in the real steps.
+- **`deploy.sh` is the deploy state machine** (WP-9 D1): one deploy per environment at a time (exit 75 when busy), a journal line per state in `/srv/jadero/<env>/deploy.log`, `versions.env` and `previous.env` beside it, the release's files in `releases/<service>-<version>/`. `redeploy <env> <service>` (the current version with fresh secrets) runs only from the owner's root shell; `deploy-entry` does not accept it and `deploy.sh` refuses it when `SUDO_USER` is `deploy`. The procedures arrive in `docs/runbooks/deploy.md` (WP-9 step 6).
 
-Sources: `infra/scripts/deploy-entry` and `infra/scripts/deploy.sh`, tested by `scripts/deploy-entry.test.mjs`.
+Sources: `infra/scripts/deploy-entry` and `infra/scripts/deploy.sh`, tested by `scripts/deploy-entry.test.mjs` and `scripts/deploy.test.mjs`.
 
 ### The key line
 
-`/home/deploy/.ssh/authorized_keys` holds one line:
+`/home/deploy/.ssh/authorized_keys` holds one line per environment (WP-9 step 5 replaces WP-8's single test key, whose line has no environment and is refused with `no-binding` from WP-9 on):
 
 ```
-restrict,from="100.64.0.0/10,fd7a:115c:a1e0::/48",command="/srv/jadero/bin/deploy-entry" <public-key>
+restrict,from="100.64.0.0/10,fd7a:115c:a1e0::/48",command="/srv/jadero/bin/deploy-entry staging" <staging-public-key>
+restrict,from="100.64.0.0/10,fd7a:115c:a1e0::/48",command="/srv/jadero/bin/deploy-entry prod" <prod-public-key>
 ```
 
 - `restrict` turns off port, agent and X11 forwarding and the terminal.
 - `from="100.64.0.0/10,fd7a:115c:a1e0::/48"` accepts the key only from tailnet addresses, IPv4 and IPv6 (Tailscale gives every node one of each, and a client may pick either).
-- `command=` is the forced command.
+- `command=` is the forced command, with the one environment this key may act on.
 
 ### Why the user needs a real login shell
 

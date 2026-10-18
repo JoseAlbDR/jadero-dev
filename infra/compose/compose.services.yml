@@ -21,6 +21,13 @@
 #   the credentials it does not use (`environment` wins over `env_file`), so api-worker never holds
 #   the read-only role and api never holds the broker user.
 #
+# Profiles: each process type joins its service's profile (api, agent, web), and deploy.sh activates
+# only the deployed service's (`--profile api`). Compose skips the env files of inactive profiles,
+# so the first agent deploy works before api.env and web.env exist. It still interpolates every
+# image variable, so deploy.sh fills one that versions.env does not hold yet with the inert
+# `jadero.invalid/not-deployed` (a reserved domain that never resolves), never for the deployed
+# service (WP-9 Decision, amendment of step 3).
+#
 # Startup order: the deploy runs a service's migrate one-off first (`docker compose run --rm
 # <service>-migrate`), then `up --wait --no-deps` on its process types. Postgres and RabbitMQ are in
 # the jadero-ops project, so no service here depends on them; the `depends_on` on the migrate step
@@ -53,6 +60,7 @@ x-migrate: &migrate
 services:
   api-migrate:
     <<: [*hardened, *migrate]
+    profiles: [api]
     image: ${API_IMAGE:?set in versions.env, a digest reference}
     command: ["node", "dist/migrate.js"]
     env_file:
@@ -67,6 +75,7 @@ services:
 
   api:
     <<: *hardened
+    profiles: [api]
     image: ${API_IMAGE:?set in versions.env, a digest reference}
     restart: unless-stopped
     env_file:
@@ -86,6 +95,7 @@ services:
 
   api-worker:
     <<: *hardened
+    profiles: [api]
     image: ${API_IMAGE:?set in versions.env, a digest reference}
     command: ["node", "--import", "@jadero/platform-nest/instrumentation", "dist/worker.js"]
     restart: unless-stopped
@@ -106,6 +116,7 @@ services:
 
   agent-migrate:
     <<: [*hardened, *migrate]
+    profiles: [agent]
     image: ${AGENT_IMAGE:?set in versions.env, a digest reference}
     command: ["node", "dist/migrate.js"]
     env_file:
@@ -118,6 +129,7 @@ services:
 
   agent:
     <<: *hardened
+    profiles: [agent]
     image: ${AGENT_IMAGE:?set in versions.env, a digest reference}
     restart: unless-stopped
     env_file:
@@ -138,6 +150,7 @@ services:
   # ADR-027's consumer row (`agent-ingest`, 256 MB): today's consumer process.
   agent-consumer:
     <<: *hardened
+    profiles: [agent]
     image: ${AGENT_IMAGE:?set in versions.env, a digest reference}
     command: ["node", "--import", "@jadero/platform-nest/instrumentation", "dist/consumer.js"]
     restart: unless-stopped
@@ -156,6 +169,7 @@ services:
 
   web:
     <<: *hardened
+    profiles: [web]
     image: ${WEB_IMAGE:?set in versions.env, a digest reference}
     restart: unless-stopped
     # Next's server cache on disk: a second tmpfs, owned by the image's `node` user (208 heap + 16

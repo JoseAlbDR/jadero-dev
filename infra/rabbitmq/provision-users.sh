@@ -18,11 +18,14 @@
 #     still bound and still filling). Removing one is a deliberate step, never a deploy's side
 #     effect: infra/compose/README.md, "Retiring a consumer".
 #
-#   RABBITMQ_CONTAINER=<container> provision-users.sh [prod|staging]
+#   RABBITMQ_CONTAINER=<container> provision-users.sh [prod|staging [<user>]]
 #
 # rabbitmqctl runs inside the broker's container through `docker exec`. With an environment, the
 # run touches only the users that have a row on that environment's vhost (its service users and
-# ops_admin), so a deploy of one environment needs only that environment's passwords.
+# ops_admin), so a deploy of one environment needs only that environment's passwords. With a user
+# as well (the user filter, WP-9 D4), the run converges that one user only: a deploy of api passes
+# api_<env>, so it needs only that password and never re-passwords another service's user behind
+# its back (rotation ordering). The user must have a row on the environment's vhost.
 #
 # Passwords come from this process's environment, one variable per user, named after it:
 # api_prod -> RABBITMQ_API_PROD_PASSWORD, ops_admin -> RABBITMQ_OPS_ADMIN_PASSWORD. A missing or
@@ -37,16 +40,18 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: RABBITMQ_CONTAINER=<container> $0 [prod|staging]" >&2
+  echo "usage: RABBITMQ_CONTAINER=<container> $0 [prod|staging [<user>]]" >&2
   exit 2
 }
 
-if [[ $# -gt 1 ]]; then usage; fi
+if [[ $# -gt 2 ]]; then usage; fi
 only_env="${1:-}"
+only_user="${2:-}"
 case "$only_env" in
   "" | prod | staging) ;;
   *) usage ;;
 esac
+if [[ $# -eq 2 && ( -z "$only_env" || ! "$only_user" =~ ^[a-z][a-z0-9_]*$ ) ]]; then usage; fi
 
 container="${RABBITMQ_CONTAINER:-}"
 if [[ -z "$container" ]]; then
@@ -110,10 +115,15 @@ all_users=() users=()
 for i in "${!row_user[@]}"; do
   user="${row_user[$i]}"
   if ! contains "$user" ${all_users[@]+"${all_users[@]}"}; then all_users+=("$user"); fi
-  if [[ -z "$only_env" || "${row_vhost[$i]}" == "/$only_env" ]]; then
+  if [[ -z "$only_env" || "${row_vhost[$i]}" == "/$only_env" ]] &&
+    [[ -z "$only_user" || "$user" == "$only_user" ]]; then
     if ! contains "$user" ${users[@]+"${users[@]}"}; then users+=("$user"); fi
   fi
 done
+if [[ ${#users[@]} -eq 0 && -n "$only_user" ]]; then
+  echo "provision-users: $only_user has no row on /$only_env in $table" >&2
+  exit 1
+fi
 if [[ ${#users[@]} -eq 0 ]]; then
   echo "provision-users: no users in $table" >&2
   exit 1

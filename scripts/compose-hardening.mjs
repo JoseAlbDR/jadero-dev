@@ -543,7 +543,8 @@ export function envTemplateProblems(
  * Checks the servers' shared services file (WP-9 step 2) on top of the runtime rules of
  * `checkComposeHardening`: each image is its service's required variable, never a build; each
  * process type reads its service's rendered env file, blanks every secret it does not read and
- * keeps the ones it does; nothing is published here (the overlays do) and no network is named;
+ * keeps the ones it does; each joins only its service's profile, so a deploy loads only that
+ * service's env file; nothing is published here (the overlays do) and no network is named;
  * logs rotate; a long-running process restarts and depends only on its own migrate step.
  * @param document the parsed `compose.services.yml`.
  * @param templates the parsed env template of each service, by service name.
@@ -562,6 +563,12 @@ export function checkServicesHardening(document, templates, path = COMPOSE_SERVI
       );
     }
     if (service.build !== undefined) problems.push(`${at} must not build: servers pull by digest`);
+    const profiles = service.profiles;
+    if (!Array.isArray(profiles) || profiles.length !== 1 || profiles[0] !== owner) {
+      problems.push(
+        `${at} must join only its service's profile (profiles: [${owner}]): deploy.sh activates one`,
+      );
+    }
     if (service.ports !== undefined) {
       problems.push(`${at} must not publish ports here: the environment overlays do`);
     }
