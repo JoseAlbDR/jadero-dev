@@ -345,7 +345,7 @@ export function logrotateProblems(text, file = LOGROTATE_FILE) {
   const paths = lines
     .slice(0, open + 1)
     .join(" ")
-    .replace("{", " ")
+    .replace(/\{/g, " ")
     .split(/\s+/)
     .filter(Boolean);
   if (!paths.includes(ERROR_LOG_GLOB)) problems.push(`${file}: must rotate ${ERROR_LOG_GLOB}`);
