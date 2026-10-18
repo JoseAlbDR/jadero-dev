@@ -4566,6 +4566,61 @@
       "decidedOption": "a",
       "decidedBy": "owner",
       "decidedAt": "2026-10-17"
+    },
+    {
+      "id": "D-81",
+      "area": "hosting",
+      "title": "First-party analytics path",
+      "question": "Is the Umami tracker served from its own host (stats.jadero.dev) with CORS opened for its collect endpoint, or first-party from the site host?",
+      "context": "WP-8 step 5 found that a separate stats host makes the collect call cross-origin, which ADR-047 keeps closed, and adds a host, a certificate and CSP sources.",
+      "options": [
+        {
+          "id": "a",
+          "label": "stats host with CORS for /api/send",
+          "description": "Keep stats.jadero.dev and allow the site origins on the collect route only.",
+          "pros": [
+            "Matches ADR-027"
+          ],
+          "cons": [
+            "Opens CORS",
+            "One more host and certificate",
+            "Two more CSP sources"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "First-party paths on the site host",
+          "description": "nginx proxies the tracker script and the collect endpoint under /s/ on the site host to Umami.",
+          "pros": [
+            "Same origin, no CORS",
+            "No CSP change",
+            "One host fewer"
+          ],
+          "cons": [
+            "Two analytics routes in the site vhost"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "No self-hosted analytics",
+          "description": "Drop Umami.",
+          "pros": [
+            "Nothing to run"
+          ],
+          "cons": [
+            "No traffic numbers"
+          ]
+        }
+      ],
+      "recommendation": "b",
+      "why": "The collect call can be same-origin, so nothing needs a CORS door or another host.",
+      "adr": "ADR-051",
+      "learn": "Same-origin policy, CORS as a door opener, first-party proxy, attack surface reduction.",
+      "status": "decided",
+      "ownerNote": "Answered in WP-8 step 5 (2026-10-18): B, after asking whether CORS would be overkill here.",
+      "decidedOption": "b",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-18"
     }
   ],
   "workPackages": [

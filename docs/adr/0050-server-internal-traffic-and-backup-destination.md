@@ -1,18 +1,18 @@
 ---
 id: ADR-050
 title: "Server internal traffic and backup destination"
-status: accepted
+status: superseded
 date: 2026-10-17
 deciders: [owner]
 decisions: [D-80]
 supersedes: [ADR-027]
-superseded_by: null
+superseded_by: ADR-051
 source: docs/learning/wp-8.md (Q1 and the Decision amendments, 2026-10-16 and 2026-10-17)
 ---
 
 # ADR-050: Server internal traffic and backup destination
 
-**Status:** accepted
+**Status:** superseded by ADR-051
 
 ## Context
 
