@@ -97,10 +97,13 @@ done
 
 if [[ -n "$env_file" ]]; then
   [[ -r "$env_file" ]] || die "cannot read $env_file"
+  # Read once, then evaluate: macOS's bash 3.2 sources an empty file from a pipe such as the
+  # laptop's <(op inject ...), and a pipe cannot be read twice.
+  env_text="$(cat "$env_file")"
   set -a
-  # shellcheck source=/dev/null
-  . "$env_file"
+  eval "$env_text"
   set +a
+  unset env_text
 fi
 [[ -n "${RESTIC_REPOSITORY:-}" ]] || die "RESTIC_REPOSITORY is not set"
 [[ -n "${RESTIC_PASSWORD:-}" || -n "${RESTIC_PASSWORD_FILE:-}" ]] || die "RESTIC_PASSWORD (or RESTIC_PASSWORD_FILE) is not set"
