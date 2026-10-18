@@ -285,7 +285,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 <script type="application/json" id="map-data">
 {
   "meta": {
-    "lastUpdated": "chore/dev-local-ports · LISTEN_HOST (loopback by default, 0.0.0.0 in the images) and configurable dev host ports for Postgres and RabbitMQ, 2026-10-16",
+    "lastUpdated": "wp/8-server-preparation · section 12: the server (perimeter, edge, ops stack, convergent provisioning, nightly backups and the restore drill), 2026-10-18",
     "kinds": {
       "app": "deployable app", "pkg": "library package", "module": "Nest module", "provider": "provider",
       "token": "DI token", "ext": "external library", "global": "app-level wiring", "env": "environment",
@@ -414,7 +414,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
         },
         {
           "type": "graph", "title": "The public read side: PublicContentModule.forRoot(reader)", "viewBox": [1000, 420],
-          "caption": "AppModule builds the module once from ApiConfig (`databaseReadUrl`, `databasePoolMax`) and hands the same object to HealthModule, so the readiness check and the reads share one pool. The module declares the two `/v1/content` controllers and binds ContentQueries to the Drizzle adapter on CONTENT_READER_POOL, a `pg` pool that logs in as `content_reader`. It exports only the pool. Nothing here can write: the role is read-only, and the module holds no use case and no unit of work.",
+          "caption": "AppModule builds the module once from ApiConfig (`databaseReadUrl`, `databasePoolMax`) and hands the same object to HealthModule, so the readiness check and the reads share one pool. The module declares the two `/v1/content` controllers and binds ContentQueries to the Drizzle adapter on CONTENT_READER_POOL, a `pg` pool that logs in as `content_reader_<env>`, a member of the read-only group `content_reader`. It exports only the pool. Nothing here can write: the role is read-only, and the module holds no use case and no unit of work.",
           "lanes": [
             { "x": 8, "y": 10, "w": 984, "h": 96, "label": "wiring" },
             { "x": 8, "y": 118, "w": 984, "h": 294, "label": "providers and controllers of PublicContentModule · plus the health check that shares its pool" }
@@ -1033,7 +1033,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     {
       "id": "data", "eyebrow": "9 · Data", "title": "The data layer: one database per service, one transaction per use case",
-      "intro": "WP-10: every service gets its pool and Drizzle from platform-nest's DatabaseModule, every write goes through one transaction on one connection, and every schema change is a generated, reviewed SQL migration that a one-off step applies to that service's own database before it starts. The outbox and inbox rows are written inside the same transaction as the change, so an event commits with it or not at all. WP-12 gives api a second database role: writes keep the owner role through the unit of work, public reads log in as `content_reader`, which can only SELECT the tables a migration granted it.",
+      "intro": "WP-10: every service gets its pool and Drizzle from platform-nest's DatabaseModule, every write goes through one transaction on one connection, and every schema change is a generated, reviewed SQL migration that a one-off step applies to that service's own database before it starts. The outbox and inbox rows are written inside the same transaction as the change, so an event commits with it or not at all. WP-12 gives api a second database role: writes keep the owner role through the unit of work, public reads log in as `content_reader_dev` (`content_reader_<env>` on a server), a member of the read-only group `content_reader`, which can only SELECT the tables a migration granted it.",
       "figures": [
         {
           "type": "graph", "title": "Who injects PG_POOL and DRIZZLE, and where each transaction starts", "viewBox": [1000, 570],
@@ -1070,10 +1070,10 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
         },
         {
           "type": "graph", "title": "api's two database roles: the owner writes, content_reader reads", "viewBox": [1000, 500],
-          "caption": "Both pools reach the same database, content_dev, with different credentials. Left: every write is a use case that runs inside `uow.run`, one transaction on PG_POOL, as the owner role `content`, with `expectedVersion` checked in the UPDATE. Today only `db:seed` calls them; the admin controllers arrive with WP-13. Right: the public reads use CONTENT_READER_POOL, logged in as `content_reader`: read-only by default (an INSERT fails with 25006) and granted SELECT table by table by migration 0002 (anything else fails with 42501). Provisioning creates the role (infra/compose/init/01-databases.sql in development); the migration only grants.",
+          "caption": "Both pools reach the same database, content_dev, with different credentials. Left: every write is a use case that runs inside `uow.run`, one transaction on PG_POOL, as the owner role `content_dev`, with `expectedVersion` checked in the UPDATE. Today only `db:seed` calls them; the admin controllers arrive with WP-13. Right: the public reads use CONTENT_READER_POOL, logged in as `content_reader_dev` (`content_reader_<env>` on a server), a member of the group `content_reader`: read-only by default (an INSERT fails with 25006) and granted SELECT table by table by migration 0002 (anything else fails with 42501). Provisioning creates the group and the login role (infra/postgres/provision.sql, one script for dev, tests and the servers); the migration only grants, to the group.",
           "lanes": [
-            { "x": 8, "y": 10, "w": 488, "h": 330, "label": "writes · owner role content · DATABASE_URL" },
-            { "x": 504, "y": 10, "w": 488, "h": 330, "label": "public reads · role content_reader · DATABASE_READ_URL" },
+            { "x": 8, "y": 10, "w": 488, "h": 330, "label": "writes · owner role content_dev · DATABASE_URL" },
+            { "x": 504, "y": 10, "w": 488, "h": 330, "label": "public reads · role content_reader_dev · DATABASE_READ_URL" },
             { "x": 8, "y": 360, "w": 984, "h": 130, "label": "content_dev · schema content" }
           ],
           "place": {
@@ -1205,7 +1205,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "id": "ship",
       "eyebrow": "11 · Images and releases",
       "title": "From a merge to a released image",
-      "intro": "Since WP-7 each service ships as one image, and the command picks the process type. The same image runs hardened on a laptop with `pnpm images:up`, is built and scanned on every pull request that affects it, and is released by release-please: one Release PR for every component, then per released service a build, a smoke run, a Trivy scan, a push to GHCR as a private package and a signed build provenance (ADR-049, which supersedes ADR-025 and ADR-048). The staging deploy arrives with WP-9.",
+      "intro": "Since WP-7 each service ships as one image, and the command picks the process type. The same image runs hardened on a laptop with `pnpm images:up`, is built and scanned on every pull request that affects it, and is released by release-please: one Release PR for every component, then per released service a build, a smoke run, a Trivy scan, a push to GHCR as a private package and a signed build provenance (ADR-049, which supersedes ADR-025 and ADR-048). The staging deploy arrives with WP-9, onto the server of section 12.",
       "figures": [
         {
           "type": "graph",
@@ -1474,6 +1474,453 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
           ]
         }
       ]
+    },
+    {
+      "id": "server",
+      "eyebrow": "12 · Server",
+      "title": "The server: perimeter, edge, ops stack and backups",
+      "intro": "Since WP-8 there is one server for staging and production (ADR-050 restating ADR-027): Ubuntu 26.04 on Hetzner, behind a cloud firewall that lets in only 80 and 443, with SSH only over Tailscale. A host nginx is the one way in from the internet; three Compose projects run behind it, `jadero-prod`, `jadero-staging` and `jadero-ops`, and every published port binds to 127.0.0.1. Postgres and RabbitMQ live once, in the ops stack, split per environment by database, role, vhost and user, and are provisioned by convergent scripts that run as often as you like. Every night the server backs itself up off-site and only reports success when every item was saved. The services themselves arrive with the WP-9 deploy, so their boxes are dashed.",
+      "figures": [
+        {
+          "type": "graph",
+          "title": "One host, one edge, three Compose projects",
+          "viewBox": [
+            1000,
+            512
+          ],
+          "caption": "Click a box to see its arrows. Each Compose project has its own Docker network with a fixed private subnet: Postgres joins all three, RabbitMQ and Uptime Kuma join only prod and staging, Umami only ops, and a service of one environment joins only its own (ADR-050, accepted risk with compensating controls: internal traffic stays plain on these networks, `pg_hba.conf` accepts each role only from its environment's subnet with scram-sha-256). nginx reaches the containers through ports published on 127.0.0.1; no database or broker port is published at all. The secrets reach the host as env files rendered from 1Password with `op inject`, root only, never in the repo.",
+          "lanes": [
+            {
+              "x": 8,
+              "y": 10,
+              "w": 984,
+              "h": 96,
+              "label": "outside the host"
+            },
+            {
+              "x": 8,
+              "y": 120,
+              "w": 984,
+              "h": 96,
+              "label": "host · Ubuntu 26.04 · ufw on"
+            },
+            {
+              "x": 8,
+              "y": 232,
+              "w": 240,
+              "h": 272,
+              "label": "jadero-staging"
+            },
+            {
+              "x": 256,
+              "y": 232,
+              "w": 488,
+              "h": 272,
+              "label": "jadero-ops · shared by both"
+            },
+            {
+              "x": 752,
+              "y": 232,
+              "w": 240,
+              "h": 272,
+              "label": "jadero-prod"
+            }
+          ],
+          "place": {
+            "srv-fw": [
+              24,
+              40,
+              220,
+              54
+            ],
+            "srv-op": [
+              290,
+              40,
+              180,
+              54
+            ],
+            "srv-b2": [
+              520,
+              40,
+              180,
+              54
+            ],
+            "srv-tailscale": [
+              736,
+              40,
+              240,
+              54
+            ],
+            "srv-nginx": [
+              24,
+              150,
+              220,
+              54
+            ],
+            "srv-backup": [
+              300,
+              150,
+              400,
+              54
+            ],
+            "srv-sshd": [
+              736,
+              150,
+              110,
+              54
+            ],
+            "srv-deploy": [
+              862,
+              150,
+              114,
+              54
+            ],
+            "srv-staging": [
+              24,
+              330,
+              208,
+              64
+            ],
+            "srv-postgres": [
+              284,
+              280,
+              200,
+              56
+            ],
+            "srv-rabbit": [
+              516,
+              280,
+              212,
+              56
+            ],
+            "srv-umami": [
+              284,
+              400,
+              200,
+              56
+            ],
+            "srv-kuma": [
+              516,
+              400,
+              212,
+              56
+            ],
+            "srv-prod": [
+              768,
+              330,
+              208,
+              64
+            ]
+          },
+          "edges": [
+            {
+              "from": "srv-fw",
+              "to": "srv-nginx",
+              "label": "80 and 443 only",
+              "kind": "flow"
+            },
+            {
+              "from": "srv-tailscale",
+              "to": "srv-sshd",
+              "label": "SSH over the tailnet",
+              "kind": "flow",
+              "via": [
+                [
+                  791,
+                  120
+                ]
+              ],
+              "labelAt": [
+                791,
+                112
+              ]
+            },
+            {
+              "from": "srv-sshd",
+              "to": "srv-deploy",
+              "label": "forced command",
+              "kind": "flow",
+              "labelAt": [
+                854,
+                220
+              ]
+            },
+            {
+              "from": "srv-op",
+              "to": "srv-backup",
+              "label": "op inject · env files",
+              "kind": "flow",
+              "labelAt": [
+                400,
+                112
+              ]
+            },
+            {
+              "from": "srv-backup",
+              "to": "srv-b2",
+              "label": "restic over S3 · encrypted",
+              "kind": "flow",
+              "labelAt": [
+                620,
+                112
+              ]
+            },
+            {
+              "from": "srv-nginx",
+              "to": "srv-staging",
+              "label": "web and /api/v1/content/",
+              "kind": "flow",
+              "via": [
+                [
+                  128,
+                  222
+                ]
+              ],
+              "labelAt": [
+                128,
+                290
+              ]
+            },
+            {
+              "from": "srv-nginx",
+              "to": "srv-umami",
+              "label": "/s/ only",
+              "kind": "flow",
+              "via": [
+                [
+                  250,
+                  212
+                ],
+                [
+                  250,
+                  428
+                ]
+              ],
+              "labelAt": [
+                250,
+                300
+              ]
+            },
+            {
+              "from": "srv-nginx",
+              "to": "srv-kuma",
+              "label": "public status page only",
+              "kind": "flow",
+              "via": [
+                [
+                  250,
+                  212
+                ],
+                [
+                  250,
+                  490
+                ],
+                [
+                  622,
+                  490
+                ]
+              ],
+              "labelAt": [
+                440,
+                490
+              ]
+            },
+            {
+              "from": "srv-nginx",
+              "to": "srv-prod",
+              "label": "at the cutover (WP-29)",
+              "kind": "planned",
+              "via": [
+                [
+                  200,
+                  224
+                ],
+                [
+                  872,
+                  224
+                ]
+              ],
+              "labelAt": [
+                872,
+                290
+              ]
+            },
+            {
+              "from": "srv-staging",
+              "to": "srv-postgres",
+              "label": "*_staging roles · scram",
+              "kind": "flow",
+              "labelAt": [
+                190,
+                316
+              ]
+            },
+            {
+              "from": "srv-staging",
+              "to": "srv-rabbit",
+              "label": "vhost /staging",
+              "kind": "flow",
+              "via": [
+                [
+                  600,
+                  370
+                ]
+              ],
+              "labelAt": [
+                420,
+                368
+              ]
+            },
+            {
+              "from": "srv-prod",
+              "to": "srv-rabbit",
+              "label": "vhost /prod",
+              "kind": "flow",
+              "labelAt": [
+                810,
+                316
+              ]
+            },
+            {
+              "from": "srv-prod",
+              "to": "srv-postgres",
+              "label": "*_prod roles · scram",
+              "kind": "flow",
+              "via": [
+                [
+                  740,
+                  380
+                ],
+                [
+                  400,
+                  380
+                ]
+              ],
+              "labelAt": [
+                640,
+                380
+              ]
+            },
+            {
+              "from": "srv-umami",
+              "to": "srv-postgres",
+              "label": "umami role · ops subnet",
+              "kind": "flow"
+            },
+            {
+              "from": "srv-kuma",
+              "to": "srv-prod",
+              "label": "probes health",
+              "kind": "flow",
+              "labelAt": [
+                800,
+                446
+              ]
+            },
+            {
+              "from": "srv-kuma",
+              "to": "srv-staging",
+              "label": "probes health",
+              "kind": "flow",
+              "via": [
+                [
+                  560,
+                  474
+                ],
+                [
+                  128,
+                  474
+                ]
+              ],
+              "labelAt": [
+                190,
+                474
+              ]
+            },
+            {
+              "from": "srv-backup",
+              "to": "srv-postgres",
+              "label": "pg_dump each database",
+              "kind": "flow",
+              "labelAt": [
+                400,
+                267
+              ]
+            },
+            {
+              "from": "srv-backup",
+              "to": "srv-rabbit",
+              "label": "definitions export",
+              "kind": "flow",
+              "labelAt": [
+                640,
+                267
+              ]
+            },
+            {
+              "from": "srv-backup",
+              "to": "srv-kuma",
+              "label": "data copy · heartbeat",
+              "kind": "flow",
+              "via": [
+                [
+                  500,
+                  362
+                ],
+                [
+                  622,
+                  362
+                ]
+              ],
+              "labelAt": [
+                560,
+                362
+              ]
+            }
+          ]
+        },
+        {
+          "type": "steps",
+          "title": "One backup night (infra/scripts/backup.sh at 02:30)",
+          "steps": [
+            "bk-timer",
+            "bk-run",
+            "bk-dbs",
+            "bk-broker",
+            "bk-kuma",
+            "bk-marker",
+            "bk-forget",
+            "bk-heartbeat"
+          ]
+        },
+        {
+          "type": "steps",
+          "title": "The restore drill (infra/scripts/restore.sh)",
+          "steps": [
+            "rs-pick",
+            "rs-sandbox",
+            "rs-counts"
+          ]
+        },
+        {
+          "type": "cards",
+          "title": "What keeps the server in shape (WP-8, ADR-050, ADR-051)",
+          "caption": "Provisioning is convergent: every run lands the same state from any starting state, so a deploy runs it every time and a password rotation is a re-run. Each rule the server depends on has a test or a CI job, so it cannot drift silently.",
+          "cards": [
+            "sv-pg-provision",
+            "sv-rabbit-provision",
+            "sv-netseg",
+            "sv-ops-hardening",
+            "sv-nginx-rules",
+            "sv-analytics",
+            "sv-deploy-user",
+            "sv-secrets",
+            "sv-backup-check",
+            "sv-backup-ci",
+            "sv-nginx-ci"
+          ]
+        }
+      ]
     }
   ],
   "nodes": {
@@ -1549,7 +1996,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     "ws-messaging": {
       "label": "messaging", "sub": "@jadero/messaging", "kind": "pkg", "status": "real", "wp": "WP-5",
-      "what": "The MessageBus port with RabbitMQ and in-memory adapters, the shared retry and dead-letter policy, the topology that generates infra/rabbitmq/definitions.json, the transactional outbox with its relay, the inbox, and (WP-10) the outbox and inbox tables as Drizzle schema.",
+      "what": "The MessageBus port with RabbitMQ and in-memory adapters, the shared retry and dead-letter policy, the topology that generates infra/rabbitmq/definitions.json for dev and, since WP-8, one definitions file per server vhost plus the server users' permissions table, the transactional outbox with its relay, the inbox, and (WP-10) the outbox and inbox tables as Drizzle schema.",
       "how": "Handlers return done, retry or dead; `dispatch` and `dispose` decide for both adapters (retries at 10 s, 1 min, 10 min through the service's retry exchange, then the DLQ). `addToOutbox(executor, ...)` and `recordInInbox(executor, ...)` join the caller's transaction through the `SqlExecutor` seam; apps pass `withTransaction`'s `executor`. `OutboxRelay` claims rows with FOR UPDATE SKIP LOCKED and publishes with confirms. `@jadero/messaging/schema` exports `outbox` and `inbox` for each service's drizzle-kit, and `uuidv7()` makes the event ids. A nine-behavior contract suite runs against both adapters.",
       "why": "ADR-012 and ADR-029: no lost events (outbox), no repeated effects (inbox), no hot loops (consumer-routed retries), one failure policy for every service. WP-10 Q1 A: the table definitions live next to the only code that reads them, and each service still migrates its own copy.",
       "files": ["packages/messaging/src/message-bus.ts", "packages/messaging/src/rabbitmq-message-bus.ts", "packages/messaging/src/outbox/", "packages/messaging/src/inbox/", "packages/messaging/src/topology/", "packages/messaging/src/schema.ts"]
@@ -1661,7 +2108,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     "apiconfig": {
       "label": "ApiConfig", "sub": "abstract class · DI token · useValue", "kind": "token", "status": "real", "wp": "WP-3 step 3",
-      "what": "The typed configuration providers inject: `nodeEnv`, `port`, `host`, `logLevel`, `serviceName`, `databaseUrl`, `databasePoolMax` and, since WP-12, `databaseReadUrl` (the read-only `content_reader` connection, never logged). api-worker has its own `ApiWorkerConfig` without the read URL: the worker serves no public reads, so it never holds that credential.",
+      "what": "The typed configuration providers inject: `nodeEnv`, `port`, `host`, `logLevel`, `serviceName`, `databaseUrl`, `databasePoolMax` and, since WP-12, `databaseReadUrl` (the read-only `content_reader_<env>` connection, never logged). api-worker has its own `ApiWorkerConfig` without the read URL: the worker serves no public reads, so it never holds that credential.",
       "how": "An abstract class is both the TypeScript type and the runtime DI token. AppModule provides it with `{ provide: ApiConfig, useValue: config }`. A provider writes `constructor(readonly config: ApiConfig)` and Nest resolves it from `design:paramtypes`. It must be imported as a value, never with `import type`, or the metadata becomes `Object` and DI fails.",
       "why": "WP-3 decision B2: matches the \"ports are abstract classes and DI tokens\" convention of ADR-003 and keeps string keys like `config.get(\"PORT\")` out of code. The DI test proves the token resolves under Vitest.",
       "files": ["apps/api/src/config/api-config.ts", "apps/api/test/app.module.test.ts"]
@@ -1913,7 +2360,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     "apienv": {
       "label": "apiEnv", "sub": "in api", "kind": "env", "status": "real", "wp": "WP-3 step 3",
-      "what": "api's environment schema: the platform variables, `SERVICE_NAME` defaulting to `api`, `DATABASE_URL` for its own database as the owner role, `DATABASE_POOL_MAX` and, since WP-12, `DATABASE_READ_URL`, the same database as the read-only `content_reader` role.",
+      "what": "api's environment schema: the platform variables, `SERVICE_NAME` defaulting to `api`, `DATABASE_URL` for its own database as the owner role, `DATABASE_POOL_MAX` and, since WP-12, `DATABASE_READ_URL`, the same database as the read-only `content_reader_<env>` role.",
       "how": "A shared `apiSharedEnv` (`platformEnv.extend({ SERVICE_NAME, DATABASE_URL, DATABASE_POOL_MAX })`, both URLs `z.url({ protocol: /^postgres(ql)?$/ })`) is extended twice: `apiEnv` adds `DATABASE_READ_URL`, `apiWorkerEnv` adds the broker and the heartbeat. A missing or non-Postgres URL stops the boot. The seed reads only `DATABASE_URL` and the pool size (`apiEnv.pick`).",
       "why": "Service-specific variables stay in the service; the shared ones stay identical everywhere. Least privilege by process: only the process that serves public reads gets the reader credential.",
       "files": ["apps/api/src/config/api-config.ts"]
@@ -2012,14 +2459,14 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "k-turbo": {
       "label": "turbo ^build", "sub": "build deps first, cache dist/**", "kind": "step", "status": "real", "wp": "WP-1, WP-3, WP-6",
       "what": "Builds every dependency before a package's build, typecheck or test.",
-      "how": "In `turbo.json`, `build`, `typecheck`, `test` and `test:int` all have `dependsOn: [\"^build\"]`; `build` caches `dist/**`, `test` caches `coverage/**`, `test:int` is never cached. config has no build, so it is skipped. Since WP-6 the future flag `affectedUsingTaskInputs` makes `--affected` select a task by its declared `inputs`, and a task that reads a file outside its package declares it (`$TURBO_ROOT$/infra/compose/**` on `test:int`, the compose files and `definitions.json` on messaging's `test`).",
+      "how": "In `turbo.json`, `build`, `typecheck`, `test` and `test:int` all have `dependsOn: [\"^build\"]`; `build` caches `dist/**`, `test` caches `coverage/**`, `test:int` is never cached. config has no build, so it is skipped. Since WP-6 the future flag `affectedUsingTaskInputs` makes `--affected` select a task by its declared `inputs`, and a task that reads a file outside its package declares it (`$TURBO_ROOT$/infra/compose/**` and, since WP-8, `infra/postgres/**` on `test:int`; the compose files and `infra/rabbitmq/**` on messaging's `test`).",
       "why": "api's typecheck and tests always see a fresh platform-nest dist, and cached builds keep `pnpm verify` fast (ADR-001).",
       "files": ["turbo.json"]
     },
     "c-verify": {
-      "label": "pnpm verify", "sub": "turbo run lint:check depcruise typecheck test test:scripts --affected && pnpm check:migrations", "kind": "check", "status": "real", "wp": "WP-1, WP-6, WP-7",
+      "label": "pnpm verify", "sub": "turbo run lint:check depcruise typecheck test test:scripts --affected && pnpm check:migrations", "kind": "check", "status": "real", "wp": "WP-1, WP-6, WP-7, WP-8",
       "what": "The single \"am I done\" command, run before every commit and again after merging main.",
-      "how": "Turborepo runs Biome, dependency-cruiser, typecheck, unit tests with coverage and the script tests for affected packages only, cached; then `pnpm check:migrations` runs outside Turborepo, because its input is git history, which no cache key sees. `pnpm verify:all` runs everything (on main and in CI on a push to main and weekly). The lefthook `pre-push` hook fetches main and runs `pnpm verify`, so a red verify never reaches the remote; CI's `verify` job runs it again on the pull request. Since WP-7 `test:scripts` also runs the image checks of section 11: the Compose hardening, the base image pin and the staleness of each `release-inputs.txt`. The Biome task is `lint:check`, not `lint`: pnpm 11 runs a built-in command when you type `pnpm lint`, so the script by that name never ran.",
+      "how": "Turborepo runs Biome, dependency-cruiser, typecheck, unit tests with coverage and the script tests for affected packages only, cached; then `pnpm check:migrations` runs outside Turborepo, because its input is git history, which no cache key sees. `pnpm verify:all` runs everything (on main and in CI on a push to main and weekly). The lefthook `pre-push` hook fetches main and runs `pnpm verify`, so a red verify never reaches the remote; CI's `verify` job runs it again on the pull request. Since WP-7 `test:scripts` also runs the image checks of section 11: the Compose hardening, the base image pin and the staleness of each `release-inputs.txt`. Since WP-8 it also runs the server checks of section 12: the ops stack and `pg_hba.conf` rules, the nginx hardening, the deploy forced command and the backup scripts' static rules. The Biome task is `lint:check`, not `lint`: pnpm 11 runs a built-in command when you type `pnpm lint`, so the script by that name never ran.",
       "why": "One command, one answer (AGENTS.md section 3).",
       "files": ["package.json", "turbo.json", "scripts/check-migrations.mjs"]
     },
@@ -2054,7 +2501,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "c-inputs": {
       "label": "declared task inputs", "sub": "scripts/out-of-package-reads.mjs · in pnpm verify", "kind": "check", "status": "real", "wp": "WP-6",
       "what": "Fails when a package's tests read a file outside the package that the reading task does not declare in its Turborepo `inputs`.",
-      "how": "Scans `src/` and `test/` of every workspace package for reads with literal paths (`new URL(..., import.meta.url)`, `join(import.meta.dirname, ...)`, a path starting at `infra` or `docs`). A read in `*.int.*` code belongs to that package's `test:int`, any other test file to its `test`, and a read in `src/` also to the `test:int` of each direct dependent (`@jadero/testing` reads the dev Postgres init script for agent's suites). Runs through `pnpm test:scripts`.",
+      "how": "Scans `src/` and `test/` of every workspace package for reads with literal paths (`new URL(..., import.meta.url)`, `join(import.meta.dirname, ...)`, a path starting at `infra` or `docs`). A read in `*.int.*` code belongs to that package's `test:int`, any other test file to its `test`, and a read in `src/` also to the `test:int` of each direct dependent (`@jadero/testing` runs the Postgres provisioning script for every service's suites). Runs through `pnpm test:scripts`.",
       "why": "An undeclared read is invisible twice: a PR that changes only that file selects no task under `--affected`, and the cache replays the old green. The weekly uncached CI run is the backstop for what this static scan misses (WP-6 D2).",
       "files": ["scripts/out-of-package-reads.mjs", "scripts/out-of-package-reads.test.mjs", "turbo.json", "packages/messaging/turbo.json", "packages/testing/turbo.json"]
     },
@@ -2068,9 +2515,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "c-testint": {
       "label": "pnpm test:int", "sub": "Testcontainers · needs Docker", "kind": "check", "status": "real", "wp": "WP-3 step 6",
       "what": "Integration tests against real containers, kept out of `pnpm verify`.",
-      "how": "`turbo run test:int` runs each package's `vitest.int.config.ts`, built from `integrationConfig()`: only `test/**/*.int.test.ts`, longer timeouts, and a global setup. The Postgres global setup of api, agent, messaging and the module template is the shared one in `@jadero/testing` (WP-12 step 1): it first calls `useDockerContextHost()`, then starts one `pgvector/pgvector:0.8.7-pg18` container per run and provides its URL; each test file creates and drops its own database with `createTestDatabase({ superuserExtensions, roles })`, owned by an ordinary role. The extensions and login roles it creates are parsed from `infra/compose/init/01-databases.sql` (`provisionedExtensions`, `provisionedRoles`), so the tests provision exactly what development does: api's tests get the `content_reader` role with its read-only default. A unit test keeps the image tag equal to `compose.dev.yml`. They prove the data layer: migrations from zero as an ordinary role, the repository and unit of work contracts on Drizzle, rollback and the atomic outbox, and since WP-12 the content repositories, the seed, the public reads over HTTP and what `content_reader` may not do.",
-      "why": "WP-3 decision H: one container per run, one database per file, so files run in parallel without sharing rows. `pnpm verify` stays fast and Docker-free; CI's `integration` job runs them on the runner's Docker (affected only on a PR, all on main and weekly). WP-6 added a RabbitMQ global setup in messaging and `rabbitmq-message-bus.int.test.ts`, the bus contract suite on a real broker. Testcontainers looks only at `DOCKER_HOST`, `~/.testcontainers.properties` and `/var/run/docker.sock`, not at the Docker CLI context that OrbStack, Colima and Docker Desktop use on macOS. `useDockerContextHost()` asks `docker context inspect` and sets `DOCKER_HOST` when none is set, so `pnpm test:int` works wherever `pnpm dev:up` works. WP-12 moved the four copies of these helpers into one package before a fifth appeared.",
-      "files": ["apps/api/vitest.int.config.ts", "packages/testing/src/postgres.global-setup.ts", "packages/testing/src/test-database.ts", "packages/testing/src/provisioned-roles.ts", "packages/testing/src/docker-host.ts", "apps/api/test/content-public.int.test.ts", "apps/api/test/outbox.int.test.ts", "packages/messaging/test/setup/rabbitmq.global-setup.ts", "packages/messaging/test/rabbitmq-message-bus.int.test.ts", "packages/config/vitest/base.js"]
+      "how": "`turbo run test:int` runs each package's `vitest.int.config.ts`, built from `integrationConfig()`: only `test/**/*.int.test.ts`, longer timeouts, and a global setup. The Postgres global setup of api, agent, messaging and the module template is the shared one in `@jadero/testing` (WP-12 step 1): it first calls `useDockerContextHost()`, then starts one `pgvector/pgvector:0.8.7-pg18-trixie` container per run, runs `infra/postgres/provision.sql` in it with `env=dev` (one random password for every role, never printed) and provides its URL and what provisioning created; each test file creates and drops its own database with `createTestDatabase({ superuserExtensions, roles })`, owned by an ordinary role. `provisionedExtensions` and `provisionedRoles` read that snapshot, so the tests run on the very roles, grants and extensions the servers get (WP-8 D4): api's tests get `content_reader_dev` with its group and read-only default. A unit test keeps the image tag equal to `compose.dev.yml`. They prove the data layer: migrations from zero as an ordinary role, the repository and unit of work contracts on Drizzle, rollback and the atomic outbox, and since WP-12 the content repositories, the seed, the public reads over HTTP and what the reader role may not do.",
+      "why": "WP-3 decision H: one container per run, one database per file, so files run in parallel without sharing rows. `pnpm verify` stays fast and Docker-free; CI's `integration` job runs them on the runner's Docker (affected only on a PR, all on main and weekly). WP-6 added a RabbitMQ global setup in messaging and `rabbitmq-message-bus.int.test.ts`, the bus contract suite on a real broker. Testcontainers looks only at `DOCKER_HOST`, `~/.testcontainers.properties` and `/var/run/docker.sock`, not at the Docker CLI context that OrbStack, Colima and Docker Desktop use on macOS. `useDockerContextHost()` asks `docker context inspect` and sets `DOCKER_HOST` when none is set, so `pnpm test:int` works wherever `pnpm dev:up` works. WP-12 moved the four copies of these helpers into one package before a fifth appeared. WP-8 replaced the parsed init file with a run of the real provisioning script, so a setting dropped from provisioning fails a test.",
+      "files": ["apps/api/vitest.int.config.ts", "packages/testing/src/postgres.global-setup.ts", "packages/testing/src/test-database.ts", "packages/testing/src/provision.ts", "packages/testing/src/provisioned.ts", "infra/postgres/provision.sql", "packages/testing/src/docker-host.ts", "apps/api/test/content-public.int.test.ts", "apps/api/test/outbox.int.test.ts", "packages/messaging/test/setup/rabbitmq.global-setup.ts", "packages/messaging/test/rabbitmq-message-bus.int.test.ts", "packages/config/vitest/base.js"]
     },
     "c-e2e": {
       "label": "pnpm test:e2e", "sub": "Playwright · axe · standalone build", "kind": "check", "status": "real", "wp": "WP-4, WP-16",
@@ -2299,14 +2746,14 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "c-compose": {
       "label": "pnpm dev:up", "sub": "Postgres 18 + pgvector, RabbitMQ 4", "kind": "check", "status": "real", "wp": "WP-1",
       "what": "Local dependencies in Docker; the apps run on the host.",
-      "how": "`infra/compose/compose.dev.yml`: pgvector on Postgres 18 and RabbitMQ with the management UI, ports bound to 127.0.0.1, healthchecks so `--wait` returns when ready. The host side of each port reads `POSTGRES_PORT`, `RABBITMQ_PORT` and `RABBITMQ_MANAGEMENT_PORT` from the shell (default 5432, 5672, 15672), for a machine where another project already holds one; the connection strings in each `.env` follow. Inside the Compose network the containers keep 5432 and 5672.",
-      "why": "ADR-027 and ADR-029. api's readiness check connects to Postgres (`content_dev`). Since WP-5 RabbitMQ loads vhost `dev`, its users, exchanges, queues and policies from `infra/rabbitmq/definitions.json`. The Postgres image tag is shared with the integration tests.",
-      "files": ["infra/compose/compose.dev.yml"]
+      "how": "`infra/compose/compose.dev.yml`: pgvector on Postgres 18 and RabbitMQ with the management UI, ports bound to 127.0.0.1, healthchecks so `--wait` returns when ready. The host side of each port reads `POSTGRES_PORT`, `RABBITMQ_PORT` and `RABBITMQ_MANAGEMENT_PORT` from the shell (default 5432, 5672, 15672), for a machine where another project already holds one; the connection strings in each `.env` follow. Inside the Compose network the containers keep 5432 and 5672. Since WP-8 Postgres runs `init/01-provision.sh` on an empty volume, which applies the convergent `infra/postgres/provision.sql` with `env=dev` (one database and one role per service, both named `<service>_dev`, plus `content_reader_dev`; `vector` in `agent_dev`); `pnpm dev:provision` runs it again on an existing volume after the script changes.",
+      "why": "ADR-027 and ADR-029. api's readiness check connects to Postgres (`content_dev`). Since WP-5 RabbitMQ loads vhost `dev`, its users, exchanges, queues and policies from `infra/rabbitmq/definitions.json`. The Postgres and RabbitMQ images are the ones the server's ops stack runs, and the Postgres tag is shared with the integration tests; tests keep all three equal.",
+      "files": ["infra/compose/compose.dev.yml", "infra/compose/init/01-provision.sh", "infra/postgres/provision.sql"]
     },
     "ci-ci": {
-      "label": "ci.yml", "sub": "verify · integration · web · images · workflows-lint", "kind": "check", "status": "real", "wp": "WP-6, WP-7",
+      "label": "ci.yml", "sub": "verify · integration · web · images · workflows-lint · nginx · backup", "kind": "check", "status": "real", "wp": "WP-6, WP-7, WP-8",
       "what": "The build and test workflow: on every pull request, on a push to main, weekly and by hand.",
-      "how": "`verify` runs `pnpm verify` on the tasks affected since the PR base, `pnpm verify:all` on main, and prints the coverage table. `integration` runs `test:int` and `web` runs `test:e2e`, both affected only on a PR. `images` (WP-7) builds, smoke-tests and scans the affected service images (section 11). `workflows-lint` runs zizmor offline over the workflows (`pnpm lint:workflows` locally). The weekly run forces every task without the Turborepo cache, and `backstop-issue` opens or comments one issue when it fails. A new push cancels a PR's outdated run.",
+      "how": "`verify` runs `pnpm verify` on the tasks affected since the PR base, `pnpm verify:all` on main, and prints the coverage table. `integration` runs `test:int` and `web` runs `test:e2e`, both affected only on a PR. `images` (WP-7) builds, smoke-tests and scans the affected service images (section 11). `workflows-lint` runs zizmor offline over the workflows (`pnpm lint:workflows` locally). Since WP-8 `nginx` installs the edge into Ubuntu 26.04 with the distro nginx, runs `nginx -t` and the edge smoke test (`pnpm nginx:check`), and `backup` runs the backup and restore scripts against throwaway containers and a local restic repository (`pnpm backup:check`, section 12); on a PR each runs only when the PR changes what it reads, by a step-level skip, and neither is a required check yet. The weekly run forces every task without the Turborepo cache, and `backstop-issue` opens or comments one issue when it fails. A new push cancels a PR's outdated run.",
       "why": "ADR-048: the same commands as on the laptop, so CI never holds logic of its own. Restoring caches everywhere but saving them only on main means a PR cannot poison a cache main reads; the uncached weekly run catches a green replayed from a stale cache.",
       "files": [".github/workflows/ci.yml", ".github/workflows/README.md", "scripts/ci/coverage-summary.mjs"]
     },
@@ -2572,7 +3019,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "d-t4": {
       "label": "T4 · topology as code", "sub": "generates definitions.json", "kind": "rule", "status": "real", "wp": "WP-5",
       "what": "A typed module describes exchanges, queues, policies, users and permissions.",
-      "how": "`pnpm --filter @jadero/messaging topology`; a test fails when the JSON is stale.",
+      "how": "`pnpm --filter @jadero/messaging topology`; a test fails when the JSON is stale. Since WP-8 the same command writes `infra/rabbitmq/server/definitions/<env>.json` (no users, so the broker never seeds `guest`) and `server/permissions.tsv`, which `provision-users.sh` converges with passwords from the environment; `buildPermissions` gives a service the same regexes in every environment.",
       "why": "Least privilege and no drift between code and broker.",
       "files": ["packages/messaging/src/topology/"]
     },
@@ -2901,9 +3348,9 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "ws-testing": {
       "label": "testing", "sub": "@jadero/testing", "kind": "pkg", "status": "real", "wp": "WP-12 step 1",
       "what": "Integration test helpers shared by the services and packages: the Postgres global setup for Vitest, one test database per file owned by an ordinary role, the Docker host detection for Testcontainers, the test image tag and the drizzle-kit schema drift check.",
-      "how": "Three `exports` entries: `.` (`createTestDatabase({ superuserExtensions, roles })`, `provisionedExtensions`, `provisionedRoles`, `useDockerContextHost`, `POSTGRES_IMAGE`), `./postgres-global-setup` (what a `vitest.int.config.ts` names as its global setup) and `./drizzle` (`pendingSchemaChanges`, which runs drizzle-kit against a service's schema files). `provisionedExtensions` and `provisionedRoles` parse `infra/compose/init/01-databases.sql`, so a test database gets the same extensions and login roles as development, `content_reader` with its read-only default included. A dev dependency of api, agent, messaging and the module template; drizzle-kit and platform-nest are optional peers, so a package that needs neither loads neither. Compiled to dist/.",
+      "how": "Three `exports` entries: `.` (`createTestDatabase({ superuserExtensions, roles })`, `provisionedExtensions`, `provisionedRoles`, `useDockerContextHost`, `POSTGRES_IMAGE`), `./postgres-global-setup` (what a `vitest.int.config.ts` names as its global setup) and `./drizzle` (`pendingSchemaChanges`, which runs drizzle-kit against a service's schema files). Since WP-8 the global setup runs the convergent `infra/postgres/provision.sql` with `env=dev` in the run's container and reads back what it created (`readProvisioningSnapshot`); `provisionedExtensions` and `provisionedRoles` read that snapshot, so a test database gets the real extensions and login roles, `content_reader_dev` with its group and read-only default included. A dev dependency of api, agent, messaging and the module template; drizzle-kit and platform-nest are optional peers, so a package that needs neither loads neither. Compiled to dist/.",
       "why": "WP-10 left four copies of the same setup files (api, agent, messaging, template); WP-12 needed roles and extensions in them, which would have meant four more edits. Infrastructure only, no domain code (AGENTS.md rule 5), and never imported by production code.",
-      "files": ["packages/testing/package.json", "packages/testing/src/index.ts", "packages/testing/src/test-database.ts", "packages/testing/src/provisioned-roles.ts", "packages/testing/src/provisioned-extensions.ts", "packages/testing/src/postgres.global-setup.ts", "packages/testing/src/pending-schema-changes.ts"]
+      "files": ["packages/testing/package.json", "packages/testing/src/index.ts", "packages/testing/src/test-database.ts", "packages/testing/src/provision.ts", "packages/testing/src/provisioned.ts", "packages/testing/src/postgres.global-setup.ts", "packages/testing/src/pending-schema-changes.ts"]
     },
     "di-publiccontent": {
       "label": "PublicContentModule.forRoot(reader)", "sub": "content · read side · its own pool", "kind": "module", "status": "real", "wp": "WP-12 step 7",
@@ -2913,11 +3360,11 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["apps/api/src/modules/content/public-content.module.ts", "apps/api/src/app.module.ts", "apps/api/src/modules/content/index.ts"]
     },
     "di-readerpool": {
-      "label": "CONTENT_READER_POOL", "sub": "pg Pool · as content_reader", "kind": "token", "status": "real", "wp": "WP-12 step 7",
-      "what": "The second `pg` pool to api's database, logged in as the read-only role `content_reader`, used only by the content query service.",
-      "how": "A symbol token in `content-reader-pool.ts`, provided by PublicContentModule with `createPool({ url: DATABASE_READ_URL, poolMax: DATABASE_POOL_MAX })`: the same settings as the owner pool (1 s connect timeout, 5 s query timeout, an `error` listener that logs only the code). The role is created by provisioning with `LOGIN` and `default_transaction_read_only = on`; migration 0002 grants it `USAGE` on schema `content` and `SELECT` on exactly the tables the queries read. An INSERT fails with 25006 (read-only transaction), and with 42501 even after `SET default_transaction_read_only = off`; any table not granted (`knowledge_entry_provenance`, `messaging.outbox`, `content.profile`) fails with 42501.",
+      "label": "CONTENT_READER_POOL", "sub": "pg Pool · as content_reader_<env>", "kind": "token", "status": "real", "wp": "WP-12 step 7",
+      "what": "The second `pg` pool to api's database, logged in as `content_reader_<env>`, which inherits the read-only group `content_reader`, used only by the content query service.",
+      "how": "A symbol token in `content-reader-pool.ts`, provided by PublicContentModule with `createPool({ url: DATABASE_READ_URL, poolMax: DATABASE_POOL_MAX })`: the same settings as the owner pool (1 s connect timeout, 5 s query timeout, an `error` listener that logs only the code). Provisioning (`infra/postgres/provision.sql`, WP-8) creates the group `content_reader` (`NOLOGIN`) and the login role `content_reader_<env>`, a member with `default_transaction_read_only = on` and `CONNECT` on its own environment's database only; migration 0002 grants the group `USAGE` on schema `content` and `SELECT` on exactly the tables the queries read. An INSERT fails with 25006 (read-only transaction), and with 42501 even after `SET default_transaction_read_only = off`; any table not granted (`knowledge_entry_provenance`, `messaging.outbox`, `content.profile`) fails with 42501.",
       "why": "Least privilege for the only code reachable by anonymous visitors. No `ALTER DEFAULT PRIVILEGES`, so a table added later stays unreadable until a migration grants it (deny by default).",
-      "files": ["apps/api/src/modules/content/infrastructure/content-reader-pool.ts", "apps/api/drizzle/0002_content_reader.sql", "infra/compose/init/01-databases.sql", "apps/api/test/content-public.int.test.ts"]
+      "files": ["apps/api/src/modules/content/infrastructure/content-reader-pool.ts", "apps/api/drizzle/0002_content_reader.sql", "infra/postgres/provision.sql", "apps/api/test/content-public.int.test.ts"]
     },
     "di-readercloser": {
       "label": "ContentReaderPoolCloser", "sub": "closes the reader pool", "kind": "provider", "status": "real", "wp": "WP-12 step 7",
@@ -2965,7 +3412,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "label": "DrizzleContentQueries", "sub": "plain SELECTs on the reader pool", "kind": "provider", "status": "real", "wp": "WP-12 step 7",
       "what": "The Drizzle adapter of ContentQueries.",
       "how": "Built by PublicContentModule's factory on `drizzleOn(readerPool)`. Plain read-only SQL from the `*_translations` rows whose `published_revision_id` is set, joined to the revision they point at; every row and `jsonb` document is parsed on the way in with the type's Zod schema (tolerant reader), and every DTO is built field by field. The posts cursor is opaque (`encodePostCursor`) and its index is migration 0003.",
-      "why": "Mapping field by field means a document field added later stays private until a contract and this mapper name it. The integration suite runs it as `content_reader`, so a query that needs a table the role was not granted fails in the test, not in production.",
+      "why": "Mapping field by field means a document field added later stays private until a contract and this mapper name it. The integration suite runs it as `content_reader_dev`, so a query that needs a table the role was not granted fails in the test, not in production.",
       "files": ["apps/api/src/modules/content/infrastructure/drizzle-content-queries.ts", "apps/api/drizzle/0003_posts_feed_index.sql", "apps/api/test/content-public.int.test.ts"]
     },
     "g-helmet": {
@@ -3082,7 +3529,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     "ct-tables": {
       "label": "content tables", "sub": "items · translations · revisions (jsonb)", "kind": "file", "status": "real", "wp": "WP-12 step 3",
-      "what": "The tables of schema `content` in content_dev, owned by the role `content`.",
+      "what": "The tables of schema `content` in content_dev, owned by the role `content_dev` (`content_<env>` on a server).",
       "how": "Written only by the owner role inside a use case's transaction; read by the reader role only where migration 0002 granted SELECT: the `*_translations` and `*_revisions` tables, the base tables of experience items, CV bullets, projects, posts and skills, and the knowledge entries with their revisions. See the content schema box in section 10.",
       "why": "One schema per bounded context inside the service's own database (ADR-029).",
       "files": ["apps/api/drizzle/0001_content.sql", "apps/api/drizzle/0002_content_reader.sql"]
@@ -3308,7 +3755,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "label": "Compose hardening test", "sub": "scripts/compose-hardening.mjs", "kind": "check", "status": "real", "wp": "WP-7",
       "what": "Fails when a service of `compose.images.yml` loses its hardening or gains a privilege.",
       "how": "Reads the file with the `yaml` package, merge keys on, as Compose does. Every service: read-only, all capabilities dropped, no new privileges, a size-capped `/tmp`, a memory limit, ports on 127.0.0.1. None: `privileged`, `cap_add`, root, host network, PID or IPC, the Docker socket. A long-running service: heap plus every tmpfs at most 80% of `mem_limit`, and it depends on its own migrate step; a migrate never restarts and has no healthcheck. Runs in `pnpm test:scripts`, so in `pnpm verify`.",
-      "why": "A fitness function, like dependency-cruiser for imports: the rules hold by test, not by review.",
+      "why": "A fitness function, like dependency-cruiser for imports: the rules hold by test, not by review. Since WP-8 the same file checks the server's ops stack too (section 12).",
       "files": ["scripts/compose-hardening.mjs","scripts/compose-hardening.test.mjs"]
     },
     "sh-baseimage": {
@@ -3352,6 +3799,258 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "how": "Starts with `*` and lets back only what the Dockerfiles copy; inside those folders `node_modules`, `dist`, `.next`, `.turbo`, coverage and every `.env` file are excluded again.",
       "why": "Least privilege for the build context: a new root file, an agent config or a local key never reaches a layer by accident (ADR-043).",
       "files": [".dockerignore"]
+    },
+    "srv-fw": {
+      "label": "Hetzner Cloud Firewall", "sub": "inbound 80 and 443 only", "kind": "ext", "status": "real", "wp": "WP-8 step 2",
+      "what": "The perimeter: a firewall in front of the VM that lets in only TCP 80 and 443 from anywhere, nothing else.",
+      "how": "Attached to the server in the Hetzner console. It filters before a packet reaches the VM, so nothing on the host can open a hole in it. That matters because Docker publishes a container port with a NAT rule that bypasses ufw; on the host ufw stays on, default deny, for host processes on the public interface.",
+      "why": "Defense in depth: even a port published by mistake on all interfaces stays unreachable from the internet. Published ports bind to 127.0.0.1 as the second layer, checked by the ops hardening test.",
+      "files": ["docs/runbooks/server-access.md"]
+    },
+    "srv-op": {
+      "label": "1Password", "sub": "op inject · vault for ops", "kind": "ext", "status": "real", "wp": "WP-8 steps 4 and 6",
+      "what": "Where every server secret lives: database and broker passwords, the restic password, the B2 keys, the heartbeat URL.",
+      "how": "The repo holds only templates with secret references (`infra/env/ops.env.tpl`, `infra/env/backup.env.tpl`). `op inject` renders each into an env file on the server, owned by root with mode 600. Compose stops before any container starts when a variable is missing (`${NAME:?...}`); the provisioning scripts read passwords from their environment, never from argv.",
+      "why": "ADR-043: no secret in the repo, in an image or in a process list. Only the variable names are public.",
+      "files": ["infra/env/ops.env.tpl", "infra/env/backup.env.tpl", "docs/runbooks/restore.md"]
+    },
+    "srv-b2": {
+      "label": "Backblaze B2", "sub": "EU Central · S3 backend", "kind": "ext", "status": "real", "wp": "WP-8 step 6",
+      "what": "The off-site backup destination: a private bucket in the EU Central region, written by restic over its S3 backend.",
+      "how": "restic encrypts on the server before upload (client-side encryption), so the bucket only ever holds ciphertext. Retention is 7 daily and 4 weekly snapshots (`restic forget --prune`). The data is a few MB, far below the free tier.",
+      "why": "ADR-050 backup destination F: free, an EU region and S3-compatible. A Storage Box was discarded for cost. When a home NAS arrives, `restic copy` moves the snapshots there and B2 stays as the off-site copy (3-2-1).",
+      "files": ["docs/adr/0050-server-internal-traffic-and-backup-destination.md"]
+    },
+    "srv-tailscale": {
+      "label": "Tailscale", "sub": "SSH only · policy with tests", "kind": "ext", "status": "real", "wp": "WP-8 step 2",
+      "what": "The only way to SSH into the server, and to reach the admin screens of Umami, Uptime Kuma and RabbitMQ through a tunnel.",
+      "how": "The server node carries `tag:server`; the policy grants tailnet members the SSH port on it and nothing else, and its tests make Tailscale refuse a policy change that opens another port or cuts the owner's SSH. Tailscale needs no inbound port. Tailscale SSH stays off, because the deploy key's forced command lives in `authorized_keys`. WP-9 adds a grant for the CI runner's tag.",
+      "why": "No SSH on the public interface at all. Policy as code with tests, applied make before break.",
+      "files": ["docs/runbooks/server-access.md"]
+    },
+    "srv-nginx": {
+      "label": "host nginx 1.28", "sub": "certbot · one vhost per name", "kind": "file", "status": "real", "wp": "WP-8 step 5",
+      "what": "The edge: TLS, security headers, rate limits and allowlist routing for every jadero.dev host on the server.",
+      "how": "The repo owns `nginx.conf` (TLS 1.2 and 1.3, no version, a 1 MiB body limit, the `jadero_api` rate limit zone answering 429), three snippets (security headers, proxy headers, API limits) and one file per host. Each host proxies only its public paths to a port on 127.0.0.1 and answers 404 to everything else: the staging host serves web and the public content API, the status host only the public status page, the admin host a placeholder. A catch-all default server refuses a TLS handshake for any other name. The `jadero` log format keeps only the client's network (a /24 or /48), never the address in clear or the query string. Certificates come from certbot, one per host, with a deploy hook that reloads nginx.",
+      "why": "ADR-002, ADR-047's edge part and ADR-050. Allowlist routing means a new internal route is unreachable from outside until someone adds it on purpose.",
+      "files": ["infra/nginx/nginx.conf", "infra/nginx/snippets/", "infra/nginx/sites/", "infra/nginx/README.md"]
+    },
+    "srv-backup": {
+      "label": "backup.sh", "sub": "systemd timer · nightly · restic", "kind": "step", "status": "real", "wp": "WP-8 step 6",
+      "what": "The nightly encrypted off-site backup of everything the server cannot rebuild from the repo: every database, the broker's definitions and Uptime Kuma's data.",
+      "how": "Installed as `/srv/jadero/bin/backup.sh`, run as root by `jadero-backup.service` from `jadero-backup.timer` at 02:30 (with a small random delay, `Persistent=true` so a missed night runs at boot). The steps are in the figure below. A second timer, `jadero-backup-check`, runs `backup.sh --check` every Sunday.",
+      "why": "WP-8 D7 and ADR-050. Fail loudly: a partial night never looks like a good one, and the dead man's switch reports a night that did not run at all.",
+      "files": ["infra/scripts/backup.sh", "infra/systemd/jadero-backup.service", "infra/systemd/jadero-backup.timer", "docs/runbooks/restore.md"]
+    },
+    "srv-sshd": {
+      "label": "sshd", "sub": "keys · tailnet", "kind": "file", "status": "real", "wp": "WP-8 step 2",
+      "what": "OpenSSH with password and keyboard-interactive login off, no root login and an `AllowUsers` list of the owner's login user and `deploy`.",
+      "how": "A drop-in, `/etc/ssh/sshd_config.d/00-jadero.conf`, sorted first so its values win (sshd keeps the first value it reads). Every change is checked with `sshd -t`, applied with a reload and tested from a second terminal before the first one closes.",
+      "why": "Make before break: a bad sshd change never locks the owner out.",
+      "files": ["docs/runbooks/server-access.md"]
+    },
+    "srv-deploy": {
+      "label": "deploy user", "sub": "forced command", "kind": "step", "status": "real", "wp": "WP-8 step 3",
+      "what": "The user WP-9's deploy job logs in as. It can do one thing: run `deploy.sh` with a checked environment, service and version.",
+      "how": "One key in `authorized_keys` with `restrict`, a `from=` limited to tailnet addresses and `command=` set to `/srv/jadero/bin/deploy-entry`. sshd runs that wrapper whatever the client asks; it accepts exactly `deploy <env> <service> <version>` (allowlists, `LC_ALL=C` so the checks are ASCII bytes), never hands the input to a shell and logs only accepted or refused with a reason. One sudoers rule names `deploy.sh`, which checks the arguments again and, in WP-8, only prints what it would do. The user is in neither `docker` nor `sudo`.",
+      "why": "WP-8 D3 and ADR-049: the deploy key sits in GitHub's secrets, so a leaked key must not mean a leaked server. Defense in depth: two copies of the checks, no shared file both trust.",
+      "files": ["infra/scripts/deploy-entry", "infra/scripts/deploy.sh", "scripts/deploy-entry.test.mjs", "docs/runbooks/server-access.md"]
+    },
+    "srv-staging": {
+      "label": "staging services", "sub": "web · api · agent · workers", "kind": "app", "status": "planned", "wp": "WP-9",
+      "what": "The images of section 11 running as `jadero-staging`, on the network `jadero_staging` only.",
+      "how": "Arrives with the WP-9 deploy. Each process reaches Postgres as its `<service>_staging` role and RabbitMQ as its `<service>_staging` user on vhost `/staging`; web and api publish their ports on 127.0.0.1 for nginx.",
+      "why": "ADR-029 and ADR-050: one network per environment, so staging cannot reach production's roles even with a wrong URL.",
+      "files": ["docs/adr/0050-server-internal-traffic-and-backup-destination.md"]
+    },
+    "srv-prod": {
+      "label": "prod services", "sub": "web · api · agent · workers", "kind": "app", "status": "planned", "wp": "WP-9, WP-29",
+      "what": "The same images as `jadero-prod`, on the network `jadero_prod` only.",
+      "how": "Deployed by WP-9; the public `jadero.dev` host file and its routes arrive with the cutover (WP-29). Roles and users named `<service>_prod`, vhost `/prod`.",
+      "why": "Staging and production share one Postgres and one broker, split by name and network, within ADR-027's memory budget.",
+      "files": ["docs/adr/0027-hosting-layout.md"]
+    },
+    "srv-postgres": {
+      "label": "Postgres 18 + pgvector", "sub": "a database and role per service", "kind": "ext", "status": "real", "wp": "WP-8 step 4",
+      "what": "The one Postgres of the server, with `content_<env>`, `agent_<env>` and `contact_<env>` databases for prod and staging, each owned by a login role of the same name, plus `content_reader_<env>` and Umami's `umami`.",
+      "how": "The same pinned image as `compose.dev.yml`. Its `pg_hba.conf` comes from the repo, read-only: the superuser only over the socket with peer auth, each role only to its own database and only from its environment's subnet with scram-sha-256, everything else rejected. Roles and databases come from `infra/postgres/provision.sql`, run by hand or by a deploy (card below). No published port.",
+      "why": "ADR-029: services own their database; ADR-050's compensating controls stand in for TLS on a single host.",
+      "files": ["infra/compose/compose.ops.yml", "infra/postgres/pg_hba.conf", "infra/postgres/provision.sql"]
+    },
+    "srv-rabbit": {
+      "label": "RabbitMQ 4", "sub": "vhosts /prod and /staging", "kind": "ext", "status": "real", "wp": "WP-8 step 4",
+      "what": "The one broker of the server, with the same topology on `/prod` and `/staging` and a user per service and environment.",
+      "how": "Boots with `infra/rabbitmq/server/rabbitmq.conf`, which loads the per-vhost definitions generated from `packages/messaging/src/topology` (exchanges, queues, policies, no users). `provision-users.sh` then converges the users from `permissions.tsv` (card below). Its management UI binds to 127.0.0.1 and is reached over the tunnel as `ops_admin`. Joins only the prod and staging networks: nothing on the ops network speaks AMQP.",
+      "why": "ADR-029 and WP-5 T4: the topology lives in code, services cannot declare or delete anything.",
+      "files": ["infra/compose/compose.ops.yml", "infra/rabbitmq/server/rabbitmq.conf", "infra/rabbitmq/server/definitions/"]
+    },
+    "srv-umami": {
+      "label": "Umami 3.4", "sub": "analytics · ops network only", "kind": "ext", "status": "real", "wp": "WP-8 step 4",
+      "what": "Privacy-friendly page analytics, storing into its own `umami` database.",
+      "how": "Runs read-only on the ops network. The edge exposes only its tracker script and collect call, first-party under `/s/` on the site's own host (ADR-051); its login and dashboards are reached over the tunnel. `TRACKER_SCRIPT_NAME` and `COLLECT_API_ENDPOINT` stay unset: the edge does the renaming.",
+      "why": "ADR-051: same origin, so no CORS and no CSP change, and no separate analytics host to block.",
+      "files": ["infra/compose/compose.ops.yml", "docs/adr/0051-first-party-analytics-path.md"]
+    },
+    "srv-kuma": {
+      "label": "Uptime Kuma 2.5", "sub": "monitors · push heartbeat", "kind": "ext", "status": "real", "wp": "WP-8 steps 4 and 6",
+      "what": "Uptime monitoring and the public status page, and the receiver of the backup's heartbeat.",
+      "how": "The rootless image, on the prod and staging networks so it can probe the services. The edge exposes only the public status page and its assets; the dashboard, setup, push and badge URLs answer 404 outside the tunnel. A push monitor expects one heartbeat a night from `backup.sh` and alerts when it does not arrive.",
+      "why": "A dead man's switch: silence is the alarm, so a backup that never ran is noticed as surely as one that failed.",
+      "files": ["infra/compose/compose.ops.yml", "infra/nginx/sites/"]
+    },
+    "bk-timer": {
+      "label": "Timer fires", "sub": "02:30 · systemd", "kind": "step", "status": "real", "wp": "WP-8 step 6",
+      "what": "`jadero-backup.timer` starts `jadero-backup.service` at 02:30 with up to ten minutes of random delay; `Persistent=true` runs a missed night at the next boot.",
+      "how": "The service runs `backup.sh` as root with the env file rendered from `infra/env/backup.env.tpl` and a two-hour timeout.",
+      "why": "systemd over cron: a missed run catches up, and the journal keeps the output.",
+      "files": ["infra/systemd/jadero-backup.timer", "infra/systemd/jadero-backup.service"]
+    },
+    "bk-run": {
+      "label": "One run tag", "sub": "run-<UTC time>", "kind": "step", "status": "real", "wp": "WP-8 step 6",
+      "what": "Every item of the night becomes its own restic snapshot tagged with the same `run-<UTC time>` tag.",
+      "how": "Each item is read from a command's output with `restic backup --stdin-from-command`, so nothing touches the disk unencrypted.",
+      "why": "A restore picks one complete night, never a mix: each outbox marks events as sent, so mixing nights can leave a consumer without events its producer thinks it delivered (ADR-050).",
+      "files": ["infra/scripts/backup.sh"]
+    },
+    "bk-dbs": {
+      "label": "Every database", "sub": "found in pg_database · pg_dump -Fc", "kind": "step", "status": "real", "wp": "WP-8 step 6",
+      "what": "Each database of the ops Postgres, found from `pg_database` (not the templates, not `postgres`), saved as `<database>.dump`.",
+      "how": "restic runs `pg_dump -Fc` itself and saves no snapshot when the command exits non-zero, so a failing dump never leaves a truncated file. The table data of LangGraph's checkpoints is left out (ADR-017); the tables themselves are kept.",
+      "why": "Discovery instead of a list: a new service database is backed up the night it appears.",
+      "files": ["infra/scripts/backup.sh"]
+    },
+    "bk-broker": {
+      "label": "Broker definitions", "sub": "rabbitmq-definitions.json", "kind": "step", "status": "real", "wp": "WP-8 step 6",
+      "what": "The broker's definitions export: users, vhosts, permissions, exchanges, queues and policies.",
+      "how": "Queued messages are not backed up (ADR-027): the outbox can publish again what was lost.",
+      "why": "Restoring the broker is loading one file, not running the deploy again.",
+      "files": ["infra/scripts/backup.sh"]
+    },
+    "bk-kuma": {
+      "label": "Uptime Kuma data", "sub": "5 s stop · tar of its folder", "kind": "step", "status": "real", "wp": "WP-8 step 6",
+      "what": "Kuma's data folder, copied while Kuma is stopped for about five seconds, then Kuma is started again whatever happened.",
+      "how": "A stop keeps the SQLite file consistent; a trap starts Kuma again even when the copy fails.",
+      "why": "It holds the monitors and the push monitor of this very backup (ADR-050).",
+      "files": ["infra/scripts/backup.sh"]
+    },
+    "bk-marker": {
+      "label": "backup-run.complete", "sub": "written last · only on full success", "kind": "step", "status": "real", "wp": "WP-8 step 6",
+      "what": "A last snapshot, the list of the run's items, written only when every item above was saved.",
+      "how": "A failing item does not stop the others, but the run then writes no marker and exits 1.",
+      "why": "The marker is what makes a night complete: `restore.sh` only offers runs that have one.",
+      "files": ["infra/scripts/backup.sh"]
+    },
+    "bk-forget": {
+      "label": "Forget and prune", "sub": "7 daily · 4 weekly", "kind": "step", "status": "real", "wp": "WP-8 step 6",
+      "what": "`restic forget --prune` keeps 7 daily and 4 weekly snapshots, only after a complete run.",
+      "how": "Skipped on a failed night, so a run of bad nights never prunes the last good one.",
+      "why": "Retention from ADR-027, restated by ADR-050.",
+      "files": ["infra/scripts/backup.sh"]
+    },
+    "bk-heartbeat": {
+      "label": "Heartbeat to Kuma", "sub": "only when everything worked", "kind": "step", "status": "real", "wp": "WP-8 step 6",
+      "what": "One push to Uptime Kuma's push monitor, the last thing a successful run does.",
+      "how": "The URL comes from the env file and is never printed. A failed or missing night sends nothing, and Kuma alerts.",
+      "why": "Dead man's switch: the alarm is the absence of a signal.",
+      "files": ["infra/scripts/backup.sh"]
+    },
+    "rs-pick": {
+      "label": "Pick a complete run", "sub": "the latest by default", "kind": "step", "status": "real", "wp": "WP-8 step 6",
+      "what": "`restore.sh snapshots` lists the runs and marks the complete ones; `restore.sh all` takes every database of one complete run.",
+      "how": "Runs on the server or on the laptop with only bash, restic, docker and the backup env, which on the laptop comes from `op inject` through a pipe, never written to disk.",
+      "why": "Every database from the same night (see the run tag above).",
+      "files": ["infra/scripts/restore.sh", "docs/runbooks/restore.md"]
+    },
+    "rs-sandbox": {
+      "label": "Throwaway Postgres", "sub": "no network · never the live one", "kind": "step", "status": "real", "wp": "WP-8 step 6",
+      "what": "Each dump is restored into a fresh Postgres container started with no network.",
+      "how": "`pg_restore` into the throwaway; a real restore into the live cluster is a separate, written procedure in the runbook.",
+      "why": "The drill can run any day without touching production.",
+      "files": ["infra/scripts/restore.sh", "docs/runbooks/restore.md"]
+    },
+    "rs-counts": {
+      "label": "Compare row counts", "sub": "--compare against the live database", "kind": "step", "status": "real", "wp": "WP-8 step 6",
+      "what": "Prints the row count of every restored table, next to the live database's with `--compare`.",
+      "how": "Matching counts are the acceptance test of the backup; the drill was run on the server in WP-8.",
+      "why": "ADR-050: a backup counts only once a restore of it has been seen to work (restore drill).",
+      "files": ["infra/scripts/restore.sh", "docs/runbooks/restore.md"]
+    },
+    "sv-pg-provision": {
+      "label": "provision.sql", "sub": "convergent Postgres provisioning", "kind": "check", "status": "real", "wp": "WP-8 step 4a",
+      "what": "One psql script that creates and sets every role, database, grant and extension for `env=dev`, `staging`, `prod` or `ops`.",
+      "how": "Run as the superuser over the socket. A role or database is created only when missing; attributes, passwords, owners, grants, the read-only default and `vector` in `agent_<env>` are set again on every run. Names carry the environment (`content_prod`), because roles are cluster-wide. Passwords come from psql's environment, never its argv; a missing one stops the run before any change, naming the variable. Statement logging is off for the session, so no password reaches the server log. The dev container runs it on first boot and `@jadero/testing` runs it in every integration test container.",
+      "why": "WP-8 D4: one script for dev, tests and servers, so the tests prove what the server gets. Convergent, so a rotation or a half-finished run is fixed by running it again.",
+      "files": ["infra/postgres/provision.sql", "infra/compose/init/01-provision.sh", "packages/testing/test/provision.int.test.ts"]
+    },
+    "sv-rabbit-provision": {
+      "label": "provision-users.sh", "sub": "convergent broker users", "kind": "check", "status": "real", "wp": "WP-8 step 4b",
+      "what": "Converges the broker's users and permissions from the generated `permissions.tsv`, per environment.",
+      "how": "Creates a missing user, sets its password on every run (read from stdin, never argv), sets its tags and permissions, clears its rights on vhosts the file does not list, deletes `guest`, and reports by name a user that is not in the file. It also warns about an orphan queue (declared on the broker but not in the definitions) with its message and consumer counts, and leaves it in place: removing a queue is a deliberate step.",
+      "why": "WP-8 D4 and WP-5 T4: users are the one thing the boot definitions leave out, so passwords never live in a file.",
+      "files": ["infra/rabbitmq/provision-users.sh", "infra/rabbitmq/server/permissions.tsv", "packages/messaging/test/server-provisioning.int.test.ts"]
+    },
+    "sv-netseg": {
+      "label": "One network per environment", "sub": "ADR-050 · accepted risk", "kind": "rule", "status": "real", "wp": "WP-8 Q1",
+      "what": "Internal traffic stays plain on the private Docker networks, written down as an accepted risk with compensating controls.",
+      "how": "Controls: one network per environment with a fixed private subnet, `pg_hba.conf` per subnet with scram-sha-256, one role and user per service and environment, no published database or broker port, every published port on 127.0.0.1.",
+      "why": "Everything is one kernel; the only parties that could read the traffic already hold the secrets that protect it. Any move of a database or broker off the box reopens the decision first.",
+      "files": ["docs/adr/0050-server-internal-traffic-and-backup-destination.md", "infra/postgres/pg_hba.conf"]
+    },
+    "sv-ops-hardening": {
+      "label": "Ops stack hardening test", "sub": "scripts/compose-hardening.mjs", "kind": "check", "status": "real", "wp": "WP-8 step 4c",
+      "what": "Fails when an ops service loses its digest pin, memory limit, no-new-privileges, healthcheck or log rotation, or publishes a port beyond 127.0.0.1.",
+      "how": "`checkOpsHardening` also bans publishing any database, broker or Erlang port, keeps the broker off the ops network and gives Postgres and RabbitMQ time to stop cleanly. `imageParityProblems` keeps their images equal to `compose.dev.yml`, and `pgHbaProblems` ties each `pg_hba.conf` line to its environment's network.",
+      "why": "A fitness function: dev runs what the server runs, and the compensating controls of ADR-050 hold by test.",
+      "files": ["scripts/compose-hardening.mjs", "scripts/compose-hardening.test.mjs", "infra/compose/compose.ops.yml"]
+    },
+    "sv-nginx-rules": {
+      "label": "nginx hardening test", "sub": "scripts/nginx-hardening.mjs", "kind": "check", "status": "real", "wp": "WP-8 step 5",
+      "what": "Static rules on the edge config, in `pnpm verify`.",
+      "how": "Every HTTPS server includes the security headers snippet and logs in the `jadero` format; no `add_header` or `proxy_set_header` inside a location (it would drop the inherited ones); every API location has the limits; every host ends with a 404 catch-all; TLS settings live only in `nginx.conf`.",
+      "why": "The rules that keep an added host safe hold without a reviewer remembering them.",
+      "files": ["scripts/nginx-hardening.mjs", "scripts/nginx-hardening.test.mjs"]
+    },
+    "sv-analytics": {
+      "label": "First-party tracker", "sub": "ADR-051 · /s/ on the site's host", "kind": "rule", "status": "real", "wp": "WP-8 step 5",
+      "what": "Umami's tracker and collect call are served under `/s/` on the site's own host, not from a separate analytics host.",
+      "how": "The edge proxies `/s/script.js` and `/s/api/send` (POST only) to Umami, and every other `/s/` path answers 404. The web WP that adds the tracker loads it with the page's CSP nonce and no `data-host-url`.",
+      "why": "Same origin: no CORS, no CSP change, and content blockers that list analytics hosts do not apply.",
+      "files": ["docs/adr/0051-first-party-analytics-path.md", "infra/nginx/README.md"]
+    },
+    "sv-deploy-user": {
+      "label": "deploy-entry test", "sub": "scripts/deploy-entry.test.mjs", "kind": "check", "status": "real", "wp": "WP-8 step 3",
+      "what": "Runs copies of `deploy-entry` and `deploy.sh` against accepted and refused commands.",
+      "how": "Shell metacharacters, extra words, unknown services, bad versions and non-ASCII letters under a UTF-8 locale are all refused, and the client's input never reaches the log.",
+      "why": "The forced command is the whole security of the deploy key, so it is tested like code.",
+      "files": ["scripts/deploy-entry.test.mjs", "infra/scripts/deploy-entry", "infra/scripts/deploy.sh"]
+    },
+    "sv-secrets": {
+      "label": "Env templates", "sub": "ops.env.tpl · backup.env.tpl", "kind": "file", "status": "real", "wp": "WP-8 steps 4 and 6",
+      "what": "The names of every server secret, with references into 1Password instead of values.",
+      "how": "`op inject` renders them on the server (root, mode 600). The ops file holds the per-environment database and broker passwords and Umami's; the backup file the restic repository and password, the B2 keys and the heartbeat URL. No reference appears in a comment.",
+      "why": "ADR-043: secrets have one home, and a deploy of one environment needs only that environment's passwords.",
+      "files": ["infra/env/ops.env.tpl", "infra/env/backup.env.tpl"]
+    },
+    "sv-backup-check": {
+      "label": "Weekly restic check", "sub": "Sunday · reads 5% of the data", "kind": "check", "status": "real", "wp": "WP-8 step 6",
+      "what": "`backup.sh --check` runs `restic check` and reads back 5% of the repository's data each week.",
+      "how": "`jadero-backup-check.timer` on Sundays; a failure shows in the journal and in the unit's status.",
+      "why": "Finds silent corruption in the bucket before a restore needs it.",
+      "files": ["infra/systemd/jadero-backup-check.service", "infra/systemd/jadero-backup-check.timer"]
+    },
+    "sv-backup-ci": {
+      "label": "backup (ci.yml)", "sub": "pnpm backup:check", "kind": "check", "status": "real", "wp": "WP-8 step 6",
+      "what": "Runs `backup.sh` and `restore.sh` against throwaway Postgres, RabbitMQ and Uptime Kuma containers and a local restic repository.",
+      "how": "Proves every database is found and saved, a failing dump saves no snapshot and sends no heartbeat, Kuma is started again, the last complete night restores into a container with no network with matching row counts, and no secret shows in the output. On a PR it runs only when the PR changes what the scripts read. Not a required check yet.",
+      "why": "The backup is tested in CI, not only on the night it is needed.",
+      "files": ["infra/scripts/backup-check.sh", "scripts/backup-scripts.test.mjs", ".github/workflows/ci.yml"]
+    },
+    "sv-nginx-ci": {
+      "label": "nginx (ci.yml)", "sub": "pnpm nginx:check", "kind": "check", "status": "real", "wp": "WP-8 step 5",
+      "what": "Installs the edge into Ubuntu 26.04 with the distro nginx, the server's release, then runs `nginx -t` and the smoke test.",
+      "how": "Throwaway self-signed certificates at certbot's paths. `smoke-edge.sh` checks the headers, no version, no CORS, internal paths answering 404, TLS 1.1 refused and where each `/s/` path lands (a stub Umami echoes it). On a PR it runs only when the PR changes the edge. Not a required check yet.",
+      "why": "A config that fails `nginx -t` never reaches the server.",
+      "files": ["infra/scripts/nginx-check.sh", "infra/scripts/smoke-edge.sh", ".github/workflows/ci.yml"]
     }
   }
 }
