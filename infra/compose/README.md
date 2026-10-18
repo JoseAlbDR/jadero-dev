@@ -32,6 +32,8 @@ The items to create in the `jadero-ops` vault, each a password item with the val
 
 RabbitMQ's Erlang cookie needs no item: the broker generates it on first boot into its data volume, and only `rabbitmqctl` inside the same container uses it.
 
+**Backups.** Every database, the RabbitMQ definitions export and Uptime Kuma's data volume are backed up nightly with restic to Backblaze B2 by `infra/scripts/backup.sh` under the systemd units in `infra/systemd/`; its secrets come from `infra/env/backup.env.tpl` (its own items in the same vault). The setup, the restore drill and a real restore: `docs/runbooks/restore.md`. The script finds the containers by their Compose names (`jadero-ops-postgres-1`, `jadero-ops-rabbitmq-1`, `jadero-ops-uptime-kuma-1`): renaming the project or a service breaks it, and `scripts/backup-scripts.test.mjs` fails first.
+
 ### First start and provisioning
 
 Provisioning is not done by the containers at boot (no `docker-entrypoint-initdb.d`): it is an explicit, convergent run, repeated on every deploy (WP-9) and after any change to `provision.sql`, `pg_hba.conf` or `permissions.tsv`. As root on the server, from the repository checkout (`/srv/jadero/<checkout>` below):

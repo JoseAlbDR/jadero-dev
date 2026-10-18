@@ -94,9 +94,13 @@
   ],
   "customManagers": [
     {
-      "description": "Container images run with `docker run` in the workflows and the root scripts (gitleaks and zizmor from GHCR, Trivy from Docker Hub), written as name:tag@digest. One pull request updates every file that names the image. GHCR returns no release dates, so the cooldown holds those updates on the dependency dashboard until a box there is ticked; Docker Hub images carry dates and follow the cooldown.",
+      "description": "Container images run with `docker run` in the workflows, the root scripts and the infra scripts (gitleaks and zizmor from GHCR, Trivy, restic, the docker CLI and the restore Postgres from Docker Hub), written as name:tag@digest. One pull request updates every file that names the image. GHCR returns no release dates, so the cooldown holds those updates on the dependency dashboard until a box there is ticked; Docker Hub images carry dates and follow the cooldown.",
       "customType": "regex",
-      "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/", "/^package\\.json$/"],
+      "managerFilePatterns": [
+        "/^\\.github/workflows/[^/]+\\.ya?ml$/",
+        "/^package\\.json$/",
+        "/^infra/scripts/[^/]+\\.sh$/"
+      ],
       "matchStrings": [
         "(?<depName>(?:ghcr\\.io/)?[a-z0-9][a-z0-9._-]*/[a-z0-9._/-]+):(?<currentValue>v?\\d[\\w.-]*)@(?<currentDigest>sha256:[a-f0-9]{64})"
       ],

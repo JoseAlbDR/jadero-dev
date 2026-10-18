@@ -1,0 +1,46 @@
+# The nightly backup (WP-8 D7; ADR-051 restating ADR-050 "Backup destination"): runs
+# /srv/jadero/bin/backup.sh (infra/scripts/backup.sh) as root, started by jadero-backup.timer.
+# Installed as /etc/systemd/system/jadero-backup.service; docs/runbooks/restore.md has the steps.
+# By hand: `sudo systemctl start jadero-backup.service`, then `journalctl -u jadero-backup`.
+[Unit]
+Description=jadero.dev nightly backup to the off-site restic repository
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/srv/jadero/bin/backup.sh
+# restic's cache, outside root's home (which is read-only below).
+Environment=RESTIC_CACHE_DIR=/var/cache/jadero-backup
+CacheDirectory=jadero-backup
+CacheDirectoryMode=0700
+# Most of a run is waiting on the network; a stuck run is stopped, which starts Uptime Kuma again
+# (the script's trap) and sends no heartbeat.
+TimeoutStartSec=2h
+Nice=10
+IOSchedulingClass=idle
+UMask=0077
+
+# Hardening that leaves what the script needs: the Docker socket (root's, so no capability is
+# needed to reach it), the env file (root's), the network and the cache directory. Access to the
+# socket is root-equivalent anyway; these keep a bug in restic, curl or the script from writing
+# anywhere else or touching the kernel.
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native

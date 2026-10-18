@@ -1,0 +1,13 @@
+# Starts jadero-backup-check.service every Sunday at 05:00 server time, well after the nightly
+# backup; restic's lock retry covers an overlap. Installed as
+# /etc/systemd/system/jadero-backup-check.timer and enabled with `systemctl enable --now`.
+[Unit]
+Description=jadero.dev weekly backup check on Sundays at 05:00
+
+[Timer]
+OnCalendar=Sun *-*-* 05:00:00
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

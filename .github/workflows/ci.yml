@@ -4,9 +4,9 @@
 # run that saves the caches. The weekly scheduled run (and a manual run) repeats the full run
 # without the Turborepo cache (`TURBO_FORCE`), unit, integration and web, so a test that reads a
 # file no task declares fails within a week; when it fails, the last job opens an issue.
-# The integration, web, workflows-lint and nginx jobs run next to verify on every event; gitleaks
-# and dependency review live in `security.yml`. The zizmor image is pinned by digest, the same
-# digest as the root `lint:workflows` script: change both (Renovate updates both in one pull
+# The integration, web, workflows-lint, nginx and backup jobs run next to verify on every event;
+# gitleaks and dependency review live in `security.yml`. The zizmor image is pinned by digest, the
+# same digest as the root `lint:workflows` script: change both (Renovate updates both in one pull
 # request).
 name: ci
 
@@ -606,6 +606,49 @@ jobs:
           docker run --rm -v "$GITHUB_WORKSPACE/infra:/infra:ro" "$NGINX_TEST_IMAGE"
           bash /infra/scripts/nginx-check.sh --smoke
 
+  # The server's backup and restore scripts (WP-8 step 6, D7; ADR-051 restating ADR-050 "Backup
+  # destination"): infra/scripts/backup-check.sh runs backup.sh and restore.sh against throwaway
+  # Postgres, RabbitMQ and Uptime Kuma containers (the images of compose.ops.yml) and a local
+  # restic repository, on the runner's Docker: every database found and saved, a failing dump
+  # saves no snapshot and sends no heartbeat, Kuma started again, the last complete night restored
+  # into a container with no network with matching row counts, no secret in the output. On a pull
+  # request it runs only when the PR changes what those scripts read; otherwise the job passes with
+  # nothing run (a step-level skip, as in the nginx job). Same command locally: `pnpm backup:check`.
+  # The restic and docker CLI images are pinned by digest in the script.
+  backup:
+    name: backup
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      # Full history: the change check diffs against the PR base.
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Select the run
+        id: changed
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          run=true
+          if [ "$EVENT_NAME" = pull_request ] && git diff --quiet "$BASE_SHA" HEAD -- \
+            infra/scripts/backup.sh infra/scripts/restore.sh infra/scripts/backup-check.sh \
+            infra/env/backup.env.tpl infra/compose/compose.ops.yml infra/postgres/pg_hba.conf \
+            .github/workflows/ci.yml; then
+            run=false
+            echo "Nothing the backup scripts read changed: no backup check." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
+      - name: Back up, fail and restore against throwaway containers
+        if: steps.changed.outputs.run == 'true'
+        run: bash infra/scripts/backup-check.sh
+
   # The backstop's alarm (WP-6 Q3): when the weekly uncached run fails, open an issue, or comment
   # on the one still open, so a red scheduled run is not missed. The only job with a write token,
   # and it runs no repository code. Deduplicated by the fixed title; the run URL reaches the shell
@@ -613,7 +656,7 @@ jobs:
   backstop-issue:
     name: backstop-issue
     if: failure() && github.event_name == 'schedule'
-    needs: [verify, integration, web, nginx]
+    needs: [verify, integration, web, nginx, backup]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:

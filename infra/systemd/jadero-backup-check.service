@@ -1,0 +1,39 @@
+# The weekly repository check (WP-8 D7): `backup.sh --check` runs `restic check
+# --read-data-subset=5%`, so a corrupt pack is found before a restore needs it. A failure shows
+# in `systemctl --failed` and the journal, and as a missed heartbeat when the optional
+# BACKUP_CHECK_HEARTBEAT_URL is set. Started by jadero-backup-check.timer.
+[Unit]
+Description=jadero.dev weekly check of the off-site restic repository
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/srv/jadero/bin/backup.sh --check
+Environment=RESTIC_CACHE_DIR=/var/cache/jadero-backup
+CacheDirectory=jadero-backup
+CacheDirectoryMode=0700
+TimeoutStartSec=2h
+Nice=10
+IOSchedulingClass=idle
+UMask=0077
+
+# The same hardening as jadero-backup.service; the check needs no Docker, only the network.
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native

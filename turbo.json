@@ -67,6 +67,8 @@
         "infra/postgres/pg_hba.conf",
         "infra/nginx/**",
         "infra/scripts/**",
+        "infra/env/*.tpl",
+        "docs/runbooks/restore.md",
         "turbo.json",
         "apps/*/turbo.json",
         "apps/*/package.json",
