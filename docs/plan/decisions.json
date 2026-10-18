@@ -4621,6 +4621,58 @@
       "decidedOption": "b",
       "decidedBy": "owner",
       "decidedAt": "2026-10-18"
+    },
+    {
+      "id": "D-82",
+      "area": "hosting",
+      "title": "Client addresses in the edge logs",
+      "question": "How long may nginx's error log keep the client address in clear, given that nginx has no format for it?",
+      "context": "The WP-8 PR review found that error_log writes the client address and the request line with its query string, kept 14 days by Ubuntu's shared logrotate rule, while ADR-010 says to hash IPs.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Log level crit on the jadero sites",
+          "description": "Only critical entries, which carry no request.",
+          "pros": [
+            "No client address at all"
+          ],
+          "cons": [
+            "Loses the upstream errors (refused, timed out) used to debug an outage"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Keep error level, three days, written down",
+          "description": "The jadero sites write their error logs to their own folder with their own logrotate rule: daily, three files.",
+          "pros": [
+            "Keeps the outage diagnostics",
+            "The exception is recorded and bounded"
+          ],
+          "cons": [
+            "Addresses in clear for up to three days in a root-only file"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Send the error log to syslog and filter it",
+          "description": "A syslog rule rewrites the address before writing.",
+          "pros": [
+            "Addresses masked"
+          ],
+          "cons": [
+            "More moving parts for a small site"
+          ]
+        }
+      ],
+      "recommendation": "b",
+      "why": "Upstream errors are the main tool when a service fails; three days in a root-only file is a small, bounded risk.",
+      "adr": "ADR-052",
+      "learn": "Data minimization, storage limitation, accepted risk with compensating controls.",
+      "status": "decided",
+      "ownerNote": "Answered in the WP-8 wrap review (2026-10-18): B, the recommendation.",
+      "decidedOption": "b",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-18"
     }
   ],
   "workPackages": [
