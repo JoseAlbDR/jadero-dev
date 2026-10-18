@@ -14,7 +14,7 @@
  * - Error logs (ADR-052): every server of a site sets its own `error_log`, and every `error_log` of
  *   a site writes a `.log` file in `/var/log/nginx/jadero/`, the folder `infra/logrotate/jadero-nginx`
  *   rotates; that rule names the folder's glob and no other path, rotates `daily` and keeps at
- *   most 3 files.
+ *   most 2 rotated files (three with the live one).
  * - Every HTTPS server includes the security headers snippet and runs HTTP/2; no location sets
  *   add_header, proxy_set_header or proxy_hide_header (one that did would drop every inherited
  *   value); no Access-Control-* header anywhere, and the proxy snippet hides the upstream copies.
@@ -54,8 +54,8 @@ export const LOGROTATE_FILE = "infra/logrotate/jadero-nginx";
 /** The glob the rule must rotate. */
 const ERROR_LOG_GLOB = `${ERROR_LOG_DIR}*.log`;
 
-/** The most rotated files the rule may keep: three days of client addresses (ADR-052). */
-const MAX_ROTATE = 3;
+/** The most rotated files the rule may keep: with the live file, three days of client addresses (ADR-052). */
+const MAX_ROTATE = 2;
 
 /** A site's error log path: a `.log` file directly in the folder, so the glob matches it. */
 const ERROR_LOG_PATH = /^\/var\/log\/nginx\/jadero\/[^/]+\.log$/;

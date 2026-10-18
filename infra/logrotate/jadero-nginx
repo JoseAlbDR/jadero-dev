@@ -4,11 +4,11 @@
 # /var/log/nginx/*.log) does not enter this subfolder, and logrotate refuses two rules for one
 # file; `infra/scripts/nginx-check.sh` proves both with `logrotate -d`. Otherwise a copy of
 # Ubuntu 26.04's packaged rule (nginx-common 1.28.3), so nginx reopens its logs the same way.
-# `scripts/nginx-hardening.test.mjs` checks the glob, `daily` and `rotate` at most 3.
+# `scripts/nginx-hardening.test.mjs` checks the glob, `daily` and `rotate` at most 2 (the live file plus two: three days).
 /var/log/nginx/jadero/*.log {
 	daily
 	missingok
-	rotate 3
+	rotate 2
 	compress
 	delaycompress
 	notifempty

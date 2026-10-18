@@ -400,7 +400,7 @@ describe("logrotateProblems", () => {
   const RULE = `# a comment
 /var/log/nginx/jadero/*.log {
 \tdaily
-\trotate 3
+\trotate 2
 \tcompress
 \tpostrotate
 \t\tinvoke-rc.d nginx rotate >/dev/null 2>&1
@@ -414,8 +414,8 @@ describe("logrotateProblems", () => {
   });
 
   it("fails when the rule keeps more than three files", () => {
-    assert.deepEqual(logrotateProblems(RULE.replace("rotate 3", "rotate 14")), [
-      "infra/logrotate/jadero-nginx: must set rotate once, at most 3 (ADR-052)",
+    assert.deepEqual(logrotateProblems(RULE.replace("rotate 2", "rotate 14")), [
+      "infra/logrotate/jadero-nginx: must set rotate once, at most 2 (ADR-052)",
     ]);
   });
 

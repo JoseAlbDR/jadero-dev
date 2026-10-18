@@ -125,7 +125,7 @@ For a server installed before ADR-052, from the updated repo files copied to the
    `sudo install -o www-data -g adm -m 640 /dev/null /var/log/nginx/jadero/<name>.error.log`.
 2. `sudo install -m 644 ~/jadero-nginx /etc/logrotate.d/jadero-nginx`, then
    `sudo logrotate -d /etc/logrotate.conf 2>&1 | grep -E 'error|jadero'`: the pattern
-   `/var/log/nginx/jadero/*.log` with 3 rotations, and no `duplicate log entry`.
+   `/var/log/nginx/jadero/*.log` with 2 rotations, and no `duplicate log entry`.
 3. `sudo install -m 644 ~/nginx.conf /etc/nginx/nginx.conf` and each site file to
    `/etc/nginx/sites-available/`; `sudo nginx -t`, then `sudo systemctl reload nginx`.
 4. Check that the new files grow (`sudo ls -l /var/log/nginx/jadero/`) and the old
