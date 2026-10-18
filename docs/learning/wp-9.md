@@ -404,7 +404,7 @@ Placeholders stand for values that stay out of a public repo: `<tailnet-host>`, 
 The explainer is the gate, not a step. **Owner** marks what only the owner can do (GitHub settings, the Tailscale policy, 1Password, `sudo` on the server). Each step ends with a green `pnpm verify`, one scoped commit and two lines in the step log.
 
 1. *Explainer* (this file); after your answers, the short ADR for Q1 and Q2 (with the superseding line if Q2 is B).
-2. *Per-environment Compose and env templates* (`known` candidate). Agent: `compose.services.yml` with the two overlays, the three templates, the hardening test, the release-inputs extension.
+2. *Per-environment Compose and env templates* (`known`: marked by the owner 2026-10-18, D-38 fast path; explained in the chat without a check question). Agent: `compose.services.yml` with the two overlays, the three templates, the hardening test, the release-inputs extension.
 3. *`deploy.sh` as a state machine* (learning). Agent: the verbs, the environment-bound `deploy-entry`, the journal and state files, the lock, the anti-rollback guard, the render, the registry login, the revision check, the scoped provisioning (`provision.sql` `service` variable, the user filter), migrate, start, rollback, the shell tests.
 4. *Topology and smoke* (learning). Agent: the live import with its wait, its integration test, `smoke-deploy.sh` with the ping check, the maintenance page. Then the mid-WP `reviewer`.
 5. *CI deploy workflow* (learning). Agent: `deploy.yml`, the jobs in `release.yml`, the workflows README. **Owner:** environments, keys, the Tailscale grant and federated identity, the tag ruleset, the required checks.

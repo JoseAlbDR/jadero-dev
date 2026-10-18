@@ -1,7 +1,7 @@
 ---
 id: ADR-053
 title: "Deploy files from the release tag"
-status: proposed
+status: accepted
 date: 2026-10-18
 deciders: [owner]
 decisions: [D-83, D-84]
@@ -12,7 +12,7 @@ source: docs/learning/wp-9.md (Open questions, Decision)
 
 # ADR-053: Deploy files from the release tag
 
-**Status:** proposed (owner, WP-9, 2026-10-18). Supersedes ADR-049 as a whole. It decides where the server gets the files a deploy runs besides the image, and it moves the RabbitMQ topology import from a separate infra deploy job into each service deploy. Everything else in ADR-049 (and what ADR-049 restates from ADR-048 and ADR-025) is restated unchanged; read ADR-049 for its full text.
+**Status:** Accepted (owner, WP-9, 2026-10-18). Supersedes ADR-049 as a whole. It decides where the server gets the files a deploy runs besides the image, and it moves the RabbitMQ topology import from a separate infra deploy job into each service deploy. Everything else in ADR-049 (and what ADR-049 restates from ADR-048 and ADR-025) is restated unchanged; read ADR-049 for its full text.
 
 ## Context
 
