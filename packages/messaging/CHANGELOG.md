@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/JoseAlbDR/jadero-dev/compare/messaging-v0.1.0...messaging-v0.2.0) (2026-10-18)
+
+
+### Features
+
+* **infra:** prepare the server with its perimeter, ops stack, edge and backups ([#143](https://github.com/JoseAlbDR/jadero-dev/issues/143)) ([077c995](https://github.com/JoseAlbDR/jadero-dev/commit/077c995f953edb75dbe2cad16f86ec598c46b415))
+
 ## 0.1.0 (2026-10-13)
 
 
