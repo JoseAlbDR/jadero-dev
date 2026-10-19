@@ -19,7 +19,9 @@
 # OPTIONS with an Origin), 404 on internal paths, the allowlisted paths routed (anything but 404)
 # with no Access-Control-* header, the POST-only paths routed for POST and refused (403) for GET,
 # a 301 to https on port 80, TLS 1.1 refused, TLS 1.2 and 1.3 accepted, and the days left on the
-# certificate. Once: a name no server claims gets no TLS handshake on 443 and no response on 80.
+# certificate. On new.jadero.dev, when / answers 502, 503 or 504 (an upstream down: a deploy's
+# recreate, or a local run), the answer must be the maintenance page with no-store and its CSP;
+# when the site is up that check says so and passes. Once: a name no server claims gets no TLS handshake on 443 and no response on 80.
 # Local run against a container with no upstreams: the proxied paths answer 502, which counts as
 # routed. Exit 0 when every check passed, 1 otherwise, 2 on a usage error.
 #
@@ -125,7 +127,7 @@ internal_paths() {
       echo /api/health/ready /api/health/live /api/revalidate /api/internal/ping \
         /api/v1/content/%2e%2e/%2e%2e/health/ready /api/v1/content/../../health/ready \
         /api/send /s/ /s/login /s/dashboard /s/api/auth/login /s/api/websites /s/api/heartbeat \
-        /s/api/record /s/recorder.js /s/api/send/../auth/login /s/script.js/x ;;
+        /s/api/record /s/recorder.js /s/api/send/../auth/login /s/script.js/x /maintenance.html ;;
     admin.jadero.dev) echo /api/health/ready /api/v1/content/ ;;
     status.jadero.dev)
       echo /dashboard /setup /metrics /socket.io/ /api/push/x /api/badge/1/status \
@@ -183,6 +185,42 @@ cert_days_left() {
   [[ -n "$end_s" ]] || return 0
   now_s="$(date -u +%s)"
   echo $(((end_s - now_s) / 86400))
+}
+
+# The hosts whose upstream errors nginx answers with the maintenance page (WP-9 step 4).
+has_maintenance_page() {
+  [[ "$1" == new.jadero.dev ]]
+}
+
+# On a host with the maintenance page: when / answers 502, 503 or 504, the body is the page and
+# the headers say no-store, with a CSP. Args: host, base URL.
+check_maintenance() {
+  local host="$1" base="$2" headers body code
+  headers="$(fetch "$host" -o /dev/null -D - "$base/" 2>/dev/null | tr -d '\r')"
+  code="$(head -n 1 <<<"$headers" | awk '{print $2}')"
+  case "$code" in
+    502 | 503 | 504) ;;
+    *)
+      pass "$host" "maintenance page not shown: / answers ${code:-nothing}"
+      return
+      ;;
+  esac
+  body="$(fetch "$host" "$base/" 2>/dev/null)"
+  if grep -q '<title>jadero.dev is updating</title>' <<<"$body"; then
+    pass "$host" "maintenance page on $code"
+  else
+    fail "$host" "maintenance page on $code" "another body"
+  fi
+  if grep -qi '^cache-control: no-store$' <<<"$headers"; then
+    pass "$host" "maintenance page not cached"
+  else
+    fail "$host" "maintenance page not cached" "$(grep -i '^cache-control:' <<<"$headers" || echo none)"
+  fi
+  if grep -qi "^content-security-policy: default-src 'none';" <<<"$headers"; then
+    pass "$host" "maintenance page CSP"
+  else
+    fail "$host" "maintenance page CSP" "missing"
+  fi
 }
 
 # Runs every check for one host.
@@ -276,6 +314,8 @@ check_host() {
       fail "$host" "GET $path refused (403)" "got $code"
     fi
   done
+
+  if has_maintenance_page "$host"; then check_maintenance "$host" "$base"; fi
 
   # Port 80: a permanent redirect to the same path on https.
   out="$(fetch "$host" -o /dev/null -w '%{http_code} %{redirect_url}' "http://$host:$http_port/x?y=1" 2>&1)"

@@ -16,10 +16,12 @@
 # else:
 #
 #   checked      the lock is held, the words are valid, the version is newer than the current one
-#   fetched      infra/ at the release tag is on disk in releases/<service>-<version>/
+#   fetched      infra/ and packages/messaging/package.json at the release tag are on disk in
+#                releases/<service>-<version>/
 #   rendered     op inject wrote <service>.env.new: exit 0, no {{ left, every credential parsed
 #   pulled       the image by tag; its digest and revision label checked
-#   provisioned  the topology (step 4) and this service's Postgres roles and broker user converged
+#   provisioned  the release's topology imported (or skipped as older), then this service's
+#                Postgres roles and broker user converged
 #   migrated     <service>.env.new renamed into place, then the one-off migrate exited 0
 #   started      up --wait on the service's process types, healthy
 #   verified     the release's smoke script passed
@@ -37,6 +39,19 @@
 # The journal holds the time, environment, service, version, state and a fixed reason token. Never
 # a secret: the output of docker, op, git, psql and rabbitmqctl is discarded (a `docker compose
 # config` would print the rendered secrets), and the run's credentials live only in variables.
+#
+# The topology (ADR-053, "Topology per service deploy"): an api or agent deploy imports its
+# release's infra/rabbitmq/server/definitions/<env>.json into the running broker first, through the
+# release's import-definitions.sh, which waits until every queue is listed. The import overwrites
+# policies, so a monotonic guard runs here, on the trusted side: versions.env records, as
+# MESSAGING_VERSION, the newest messaging version whose definitions were imported in this
+# environment, and a release whose messaging version is older is not imported (the journal says
+# `provisioned topology-skipped-older`). The record is written before the import, not at
+# `recorded`: the import moves the shared broker even when the deploy then rolls back, so the record
+# must describe the broker, not the release that is current (write-ahead, like the journal). A
+# record ahead of the broker (an import that failed before it changed anything) only skips older
+# imports, whose definitions the broker already holds. previous.env never carries it: shared state
+# moves forward only.
 #
 # Standard input of a deploy: line 1 the registry user, line 2 its token (the job's GITHUB_TOKEN,
 # packages: read), line 3 the expected image digest (sha256:...), required for prod. The login
@@ -66,6 +81,8 @@ trap '' HUP PIPE
 # Variables a root shell may carry that would steer Compose or op elsewhere: every value they
 # would give is set explicitly below instead.
 unset JADERO_ENV COMPOSE_FILE COMPOSE_PROJECT_NAME COMPOSE_PROFILES COMPOSE_ENV_FILES DOCKER_CONFIG
+# The same for the release's broker scripts, whose defaults read the release's own files.
+unset RABBITMQ_DEFINITIONS RABBITMQ_PERMISSIONS RABBITMQ_IMPORT_TIMEOUT
 
 readonly STATE_ROOT=/srv/jadero
 readonly LOCK_DIR=/run/lock
@@ -432,12 +449,46 @@ parse_credentials() {
   esac
 }
 
-# WP-9 step 4 builds this (ADR-053 D-84): import the release's RabbitMQ definitions into the
-# running broker when its messaging version is equal or newer than the one recorded, then wait
-# until every queue of the file is listed. Until then it changes nothing.
-# Arguments: the release folder.
+release_messaging="" # the release's messaging version, read before the point of no return
+topology_result=""   # imported or skipped-older, for the `provisioned` line
+
+# Reads the release's messaging version and checks that its topology files are there, so a release
+# without them aborts before anything shared moves. web imports no topology.
+# Arguments: the release folder. Returns 1 when a file is missing or the version is not semver.
+read_topology_inputs() {
+  local folder="$1" line version=""
+  [[ "$SERVICE" != web ]] || return 0
+  [[ -f "$folder/infra/rabbitmq/server/definitions/$ENV_NAME.json" ]] || return 1
+  [[ -f "$folder/infra/rabbitmq/import-definitions.sh" ]] || return 1
+  [[ -f "$folder/packages/messaging/package.json" ]] || return 1
+  # The package's own top-level "version" (two spaces of indent; Biome formats the file).
+  local pattern='^  "version": "([^"]+)",?$'
+  line="$(grep -m 1 -E '^  "version": ' "$folder/packages/messaging/package.json" || true)"
+  [[ "$line" =~ $pattern ]] && version="${BASH_REMATCH[1]}"
+  [[ "$version" =~ $VERSION_RE ]] || return 1
+  release_messaging="$version"
+}
+
+# The topology transition (ADR-053): the monotonic guard, the write-ahead record, then the import of
+# the release's definitions with the wait until every queue is listed (import-definitions.sh).
+# Arguments: the release folder. Returns 1 when the import or the wait fails.
 apply_topology() {
-  return 0
+  local recorded order
+  topology_result=""
+  [[ "$SERVICE" != web ]] || return 0
+  recorded="$(manifest_get "$VERSIONS" MESSAGING_VERSION)"
+  order=1
+  [[ -z "$recorded" ]] || order="$(semver_compare "$release_messaging" "$recorded")"
+  if [[ "$order" == -1 ]]; then
+    topology_result=skipped-older
+    return 0
+  fi
+  [[ "$order" == 0 ]] || manifest_set "$VERSIONS" MESSAGING_VERSION "$release_messaging"
+  (
+    export RABBITMQ_CONTAINER
+    bash "$1/infra/rabbitmq/import-definitions.sh" "$ENV_NAME" >/dev/null 2>&1
+  ) || return 1
+  topology_result=imported
 }
 
 # Converges this service's Postgres roles with provision.sql -v service=<service>. The passwords
@@ -524,8 +575,9 @@ fetch_release() {
   rm -rf "$release"
   new_release="$release"
   mkdir -p "$release"
-  git -C "$work_dir" archive --format=tar "$commit" infra 2>/dev/null |
-    tar -x -C "$release" 2>/dev/null || abort fetch-failed
+  # The messaging version travels with the definitions it generated (the topology guard).
+  git -C "$work_dir" archive --format=tar "$commit" infra packages/messaging/package.json \
+    2>/dev/null | tar -x -C "$release" 2>/dev/null || abort fetch-failed
   overlay_matches "$release" || abort env-mismatch
   [[ -f "$release/infra/env/$SERVICE.env.tpl" ]] || abort fetch-failed
   tag_commit="$commit"
@@ -600,7 +652,14 @@ prune() {
 roll_back() {
   journal rolling_back "$1"
   if [[ -z "$current_version" || -z "$current_image" ]]; then
-    journal failed nothing-to-roll-back-to
+    # A first deploy runs whole or not at all: the containers it created are stopped, not removed,
+    # so their logs stay readable (`docker compose logs`, `docker logs`).
+    # shellcheck disable=SC2086 # the process types are separate words on purpose
+    if [[ $containers_created -eq 1 ]] && ! compose_in "$release" "$new_image" stop $PROCESS_TYPES; then
+      journal failed stop-failed
+    else
+      journal failed nothing-to-roll-back-to
+    fi
     terminal=1
     exit 1
   fi
@@ -623,13 +682,15 @@ forward() {
   [[ $again -eq 0 ]] || checked_reason=same-version
   journal checked "$checked_reason"
 
+  local fetched_reason=tag-commit
   if [[ $again -eq 1 ]]; then
     release="$RELEASES/$SERVICE-$version"
-    journal fetched on-disk
+    fetched_reason=on-disk
   else
     fetch_release
-    journal fetched tag-commit
   fi
+  read_topology_inputs "$release" || abort no-topology-files
+  journal fetched "$fetched_reason"
 
   render_env "$release"
   journal rendered ok
@@ -650,7 +711,11 @@ forward() {
     provision_broker "$release" || roll_back provision-failed
   fi
   db_password="" db_read_password="" broker_password=""
-  journal provisioned this-service
+  if [[ -n "$topology_result" ]]; then
+    journal provisioned "topology-$topology_result"
+  else
+    journal provisioned this-service
+  fi
 
   # The rendered env is shared state from here on: in place before the first compose command,
   # because Compose reads the env file on every command (amendment of step 3).
@@ -662,6 +727,7 @@ forward() {
     journal migrated no-migrations
   fi
 
+  containers_created=1
   start_service "$release" "$new_image" || roll_back unhealthy
   journal started healthy
 
@@ -737,8 +803,12 @@ if [[ -n "$current_version" ]]; then
     refuse bad-manifest
   fi
 fi
+recorded_messaging="$(manifest_get "$VERSIONS" MESSAGING_VERSION)"
+if [[ -n "$recorded_messaging" && ! "$recorded_messaging" =~ $VERSION_RE ]]; then
+  refuse bad-manifest
+fi
 
-registry_user="" expected_digest="" tag_commit="" new_image="" release=""
+registry_user="" expected_digest="" tag_commit="" new_image="" release="" containers_created=0
 case "$verb" in
   deploy)
     version="$requested_version"

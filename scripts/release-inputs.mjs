@@ -51,6 +51,7 @@ export const DEPLOY_COMPOSE = [
 const PROVISIONING = [
   "infra/postgres/provision.sql",
   "infra/rabbitmq/provision-users.sh",
+  "infra/rabbitmq/import-definitions.sh",
   "infra/rabbitmq/server/permissions.tsv",
   "infra/rabbitmq/server/definitions",
 ];

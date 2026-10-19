@@ -165,6 +165,24 @@ describe("infra/rabbitmq/server (staging and production, WP-8 D4)", () => {
     }
   });
 
+  it("declares every queue of every file as quorum, with its type as the only argument", () => {
+    // A live import keeps an existing queue's type whatever the file says (RabbitMQ 4.3.6, pinned
+    // in topology-import.int.test.ts), so a type never changes in place: a queue that needs
+    // another type is a new name, and this test is where such a change shows up (ADR-053).
+    const files = [
+      committed,
+      ...SERVER_ENVIRONMENTS.map(
+        (env) => JSON.parse(serverFile(`definitions/${env.name}.json`)) as { queues: Queue[] },
+      ),
+    ];
+    for (const file of files) {
+      expect(file.queues.length).toBeGreaterThan(0);
+      for (const queue of file.queues) {
+        expect(queue.arguments, queue.name).toEqual({ "x-queue-type": "quorum" });
+      }
+    }
+  });
+
   it("names a user per service and vhost, plus ops_admin on both, and holds no password", () => {
     expect(SERVER_ENVIRONMENTS.map((env) => [env.vhost, env.users.map((u) => u.name)])).toEqual([
       ["/prod", ["api_prod", "agent_prod", "ops_admin"]],

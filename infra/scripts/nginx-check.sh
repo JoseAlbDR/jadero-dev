@@ -11,7 +11,8 @@
 #
 # The certificates are throwaway self-signed ones at the paths certbot uses on the server
 # (/etc/letsencrypt/live/<host>/), valid 30 days. Only a stub Umami runs (below), so the other
-# proxied paths answer 502 in the smoke run, which smoke-edge.sh counts as routed.
+# proxied paths answer 502 in the smoke run, which smoke-edge.sh counts as routed, and the site's
+# 502 is the maintenance page, which smoke-edge.sh checks.
 
 set -euo pipefail
 export LC_ALL=C
@@ -46,8 +47,10 @@ for site in "$SRC"/nginx/sites/*.conf; do
   install -m 644 "$site" /etc/nginx/sites-available/
   ln -sf "/etc/nginx/sites-available/$(basename "$site")" /etc/nginx/sites-enabled/
 done
-install -d -m 755 /srv/jadero/www/admin
-install -m 644 "$SRC"/nginx/www/admin/* /srv/jadero/www/admin/
+for page in admin maintenance; do
+  install -d -m 755 "/srv/jadero/www/$page"
+  install -m 644 "$SRC/nginx/www/$page"/* "/srv/jadero/www/$page/"
+done
 # The sites' error logs and their rotation (ADR-052); the folder owned like its parent.
 install -d -o root -g adm -m 755 /var/log/nginx/jadero
 install -m 644 "$SRC/logrotate/jadero-nginx" /etc/logrotate.d/jadero-nginx
@@ -134,6 +137,10 @@ STUB
     "$(umami https://new.jadero.dev/s/script.js)"
   expect "POST /s/api/send reaches Umami /api/send" "umami POST /api/send" \
     "$(umami -X POST -H 'Content-Type: application/json' -d '{}' https://new.jadero.dev/s/api/send)"
+  # The maintenance page's headers have a value only on the page: a proxied answer gets none.
+  expect "a proxied answer gets no maintenance header" "" \
+    "$(umami -o /dev/null -D - https://new.jadero.dev/s/script.js | tr -d '\r' |
+      grep -iE '^(cache-control|content-security-policy|retry-after):' || true)"
   expect "GET /s/api/send refused" 403 \
     "$(umami -o /dev/null -w '%{http_code}' https://new.jadero.dev/s/api/send)"
   expect "POST over 64k to /s/api/send refused" 413 \

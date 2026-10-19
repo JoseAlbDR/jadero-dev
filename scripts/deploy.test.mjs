@@ -4,8 +4,9 @@
 // no path from the environment, so each test copies it into a fresh temporary folder and rewrites
 // its PATH line and its three root paths (state, lock, op token). docker, op and git are stubs on
 // that PATH that record their calls and act on STUB_* variables; the git stub serves this
-// repository's own infra/ (plus a stub smoke script, which WP-9 step 4 replaces) as the release
-// tag's files. On a machine without util-linux's flock (macOS) a shim takes the same flock(2) lock
+// repository's own infra/ and packages/messaging/package.json (plus a stub smoke script) as the
+// release tag's files, and the docker stub lists the queues of the last definitions imported, so
+// the release's real import-definitions.sh and provision-users.sh run against it. On a machine without util-linux's flock (macOS) a shim takes the same flock(2) lock
 // through perl. Nothing here reaches Docker, 1Password, GitHub or a server.
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
@@ -39,6 +40,10 @@ const SECRET = "Canary0Secret0Value";
 // would print the rendered secrets.
 const COMPOSE_CANARY = "ComposeConfigCanary4242";
 const OP_TOKEN = "ops_tokenValueNeverPrinted";
+// The messaging version of this checkout, which the fixture's release carries.
+const MESSAGING = JSON.parse(
+  readFileSync(join(REPO, "packages/messaging/package.json"), "utf8"),
+).version;
 const STATES = [
   "checked",
   "fetched",
@@ -134,6 +139,14 @@ case "$1" in
     if [[ "$*" == *psql* ]]; then
       cat > /dev/null
       fails psql && exit 1
+    elif [[ "$*" == *import_definitions* ]]; then
+      cat > "$rec/rabbit-import"
+      fails import && exit 1
+    elif [[ "$*" == *list_queues* ]]; then
+      [[ -f "$rec/rabbit-import" ]] || exit 0
+      python3 -I -c 'import json, sys
+for queue in json.load(open(sys.argv[1]))["queues"]:
+    print(queue["name"] + "\tquorum")' "$rec/rabbit-import"
     elif [[ "$*" == *change_password* || "$*" == *add_user* ]]; then
       cat >> "$rec/rabbit-stdin"
     fi
@@ -144,7 +157,7 @@ case "$1" in
     args=("$@")
     for ((i = 0; i < @{#args[@]}; i++)); do
       [[ "@{args[$i]}" == --profile ]] && profile="@{args[$((i + 1))]}"
-      case "@{args[$i]}" in run | up | config) [[ -z "$sub" ]] && sub="@{args[$i]}" ;; esac
+      case "@{args[$i]}" in run | up | config | stop) [[ -z "$sub" ]] && sub="@{args[$i]}" ;; esac
     done
     var="$(upper "$profile")_IMAGE"
     image="@{!var-}"
@@ -153,6 +166,7 @@ case "$1" in
       "@{COMPOSE_PROJECT_NAME-}" "$*" >> "$rec/compose-calls"
     case "$sub" in
       run) fails migrate && exit 1; exit 0 ;;
+      stop) fails stop && exit 1; exit 0 ;;
       up)
         if [[ -n "@{STUB_SLOW_UP-}" ]]; then : > "$rec/up-started"; sleep "$STUB_SLOW_UP"; fi
         fails up-all && exit 1
@@ -189,7 +203,7 @@ case "$1" in
   init) exit 0 ;;
   fetch) [[ " @{STUB_FAIL-} " == *" fetch "* ]] && exit 128; exit 0 ;;
   rev-parse) echo "$STUB_COMMIT" ;;
-  archive) COPYFILE_DISABLE=1 tar -c -C "$STUB_FIXTURE" infra ;;
+  archive) COPYFILE_DISABLE=1 tar -c -C "$STUB_FIXTURE" infra packages ;;
 esac
 `;
 
@@ -207,16 +221,37 @@ exit 0
 `;
 
 /**
- * Copies this repository's deploy files into a fixture folder, as `git archive <tag> infra` would
- * unpack them, plus a stub smoke script.
+ * Copies this repository's deploy files into a fixture folder, as `git archive <tag> infra
+ * packages/messaging/package.json` would unpack them, plus a stub smoke script.
  * @param {string} target the fixture folder
+ * @param {{ messaging?: string | null }} [options] another messaging version, or null for a
+ *   release without the package file
  */
-function makeFixture(target) {
+function makeFixture(target, { messaging } = {}) {
   for (const part of ["compose", "env", "postgres", "rabbitmq"]) {
     cpSync(join(REPO, "infra", part), join(target, "infra", part), { recursive: true });
   }
   mkdirSync(join(target, "infra/scripts"), { recursive: true });
   writeScript(join(target, "infra/scripts/smoke-deploy.sh"), SMOKE_STUB);
+  if (messaging === null) return;
+  const pkg = join(target, "packages/messaging/package.json");
+  mkdirSync(join(target, "packages/messaging"), { recursive: true });
+  const text = readFileSync(join(REPO, "packages/messaging/package.json"), "utf8");
+  writeFileSync(
+    pkg,
+    messaging ? text.replace(`"version": "${MESSAGING}"`, `"version": "${messaging}"`) : text,
+  );
+}
+
+/**
+ * A fixture whose release carries another messaging version (or none), made once per name.
+ * @param {string | null} messaging the version, or null for no package file
+ * @returns {string} the fixture folder
+ */
+function fixtureWith(messaging) {
+  const target = join(root, `fixture-messaging-${messaging ?? "none"}`);
+  if (!existsSync(target)) makeFixture(target, { messaging });
+  return target;
 }
 
 before(() => {
@@ -265,9 +300,9 @@ function world({ env = "staging", versions, previous, releases = [], envFiles = 
   if (versions) writeFileSync(join(envDir, "versions.env"), manifest(versions));
   if (previous) writeFileSync(join(envDir, "previous.env"), manifest(previous));
   for (const release of releases) {
-    cpSync(join(fixture, "infra"), join(envDir, "releases", release, "infra"), {
-      recursive: true,
-    });
+    for (const part of ["infra", "packages"]) {
+      cpSync(join(fixture, part), join(envDir, "releases", release, part), { recursive: true });
+    }
   }
   for (const service of envFiles) writeFileSync(join(envDir, `${service}.env`), "OLD=1\n");
   let source = readFileSync(DEPLOY_SH, "utf8");
@@ -361,9 +396,10 @@ describe("deploy.sh deploy, the happy path", () => {
     assert.ok(journal(w).every((row) => row.version === "0.3.0"));
     // stdout carries the journal lines and nothing else.
     assert.equal(result.stdout, read(join(w.envDir, "deploy.log")));
+    // MESSAGING_VERSION came first, written before the topology import (write-ahead).
     assert.equal(
       read(join(w.envDir, "versions.env")),
-      `API_VERSION=0.3.0\nAPI_IMAGE=${REPO_PREFIX}api@sha256:${NEW}\n`,
+      `MESSAGING_VERSION=${MESSAGING}\nAPI_VERSION=0.3.0\nAPI_IMAGE=${REPO_PREFIX}api@sha256:${NEW}\n`,
     );
     assert.equal(
       read(join(w.envDir, "previous.env")),
@@ -555,8 +591,8 @@ describe("deploy.sh deploy, failures from provisioned on roll back", () => {
     assert.equal(journal(w).at(-2).reason, "unhealthy");
     assert.equal(
       read(join(w.envDir, "versions.env")),
-      before,
-      "a failed deploy never becomes current",
+      `${before}MESSAGING_VERSION=${MESSAGING}\n`,
+      "a failed deploy never becomes current; only the topology record moved forward",
     );
     const ups = composeCalls(w).filter((c) => c.includes(" up "));
     assert.equal(ups.length, 2);
@@ -602,7 +638,7 @@ describe("deploy.sh deploy, failures from provisioned on roll back", () => {
     }
   });
 
-  it("ends failed when there is nothing to roll back to", () => {
+  it("ends failed when there is nothing to roll back to, the new containers stopped", () => {
     const w = world();
     assert.equal(
       deploy(w, ["deploy", "staging", "api", "0.1.0"], { env: { STUB_FAIL: "up" } }).status,
@@ -613,6 +649,181 @@ describe("deploy.sh deploy, failures from provisioned on roll back", () => {
       state: "failed",
       reason: "nothing-to-roll-back-to",
     });
+    // A first deploy runs whole or not at all: stopped, not removed, so the logs stay readable.
+    const last = composeCalls(w).at(-1);
+    assert.match(last, new RegExp(`API_IMAGE=${REPO_PREFIX}api@sha256:${NEW} `));
+    assert.match(last, / stop api api-worker$/);
+    assert.ok(!composeCalls(w).some((c) => / (rm|down)\b/.test(c)), "nothing removed");
+  });
+
+  it("stops a first deploy's containers when its smoke fails, and only once they exist", () => {
+    const smoke = world();
+    assert.equal(
+      deploy(smoke, ["deploy", "staging", "agent", "0.1.0"], { env: { STUB_FAIL: "smoke" } })
+        .status,
+      1,
+    );
+    assert.deepEqual(journal(smoke).slice(-2), [
+      { version: "0.1.0", state: "rolling_back", reason: "smoke-failed" },
+      { version: "0.1.0", state: "failed", reason: "nothing-to-roll-back-to" },
+    ]);
+    assert.match(composeCalls(smoke).at(-1), / stop agent agent-consumer$/);
+    // A failed migrate created no container (run --rm): nothing to stop.
+    const migrate = world();
+    deploy(migrate, ["deploy", "staging", "api", "0.1.0"], { env: { STUB_FAIL: "migrate" } });
+    assert.equal(journal(migrate).at(-1).reason, "nothing-to-roll-back-to");
+    assert.ok(!composeCalls(migrate).some((c) => / stop /.test(c)));
+  });
+
+  it("says so when a first deploy's containers cannot be stopped", () => {
+    const w = world();
+    deploy(w, ["deploy", "staging", "api", "0.1.0"], { env: { STUB_FAIL: "up stop" } });
+    assert.deepEqual(journal(w).at(-1), {
+      version: "0.1.0",
+      state: "failed",
+      reason: "stop-failed",
+    });
+  });
+});
+
+describe("deploy.sh, the topology of the release (ADR-053)", () => {
+  const provisionedReason = (w) => journal(w).find((row) => row.state === "provisioned").reason;
+  const imports = (w) => calls(w, "docker").filter((c) => c.includes("import_definitions"));
+  const recordedMessaging = (w) =>
+    lines(join(w.envDir, "versions.env")).filter((line) => line.startsWith("MESSAGING_VERSION="));
+
+  it("imports its environment's definitions on stdin, before the roles, and records the version", () => {
+    for (const env of ["staging", "prod"]) {
+      const w = world({ env });
+      const stdin = env === "prod" ? input(NEW) : input();
+      assert.equal(deploy(w, ["deploy", env, "agent", "0.3.0"], { stdin }).status, 0);
+      assert.deepEqual(imports(w), [
+        "exec -i jadero-ops-rabbitmq-1 rabbitmqctl import_definitions",
+      ]);
+      assert.equal(
+        read(join(w.rec, "rabbit-import")),
+        read(join(fixture, `infra/rabbitmq/server/definitions/${env}.json`)),
+      );
+      // Waited for the queues, then provisioned the roles and the user.
+      const docker = calls(w, "docker");
+      const imported = docker.findIndex((c) => c.includes("import_definitions"));
+      assert.ok(docker.findIndex((c) => c.includes(`list_queues -p /${env}`)) > imported);
+      assert.ok(docker.findIndex((c) => c.includes("psql")) > imported);
+      assert.equal(provisionedReason(w), "topology-imported");
+      assert.deepEqual(recordedMessaging(w), [`MESSAGING_VERSION=${MESSAGING}`]);
+      assert.deepEqual(states(w), STATES);
+    }
+  });
+
+  it("skips an older messaging version (0.9.0 after 0.10.0) and deploys on", () => {
+    const w = apiAt020({
+      versions: {
+        API_VERSION: "0.2.0",
+        API_IMAGE: `${REPO_PREFIX}api@sha256:${OLD}`,
+        MESSAGING_VERSION: "0.10.0",
+      },
+    });
+    const result = deploy(w, ["deploy", "staging", "api", "0.3.0"], {
+      env: { STUB_FIXTURE: fixtureWith("0.9.0") },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(imports(w), [], "an older file would overwrite newer policies");
+    assert.equal(provisionedReason(w), "topology-skipped-older");
+    assert.deepEqual(recordedMessaging(w), ["MESSAGING_VERSION=0.10.0"]);
+    assert.deepEqual(states(w), STATES);
+  });
+
+  it("imports an equal version again and leaves the record as it was", () => {
+    const w = apiAt020({
+      versions: {
+        API_VERSION: "0.2.0",
+        API_IMAGE: `${REPO_PREFIX}api@sha256:${OLD}`,
+        MESSAGING_VERSION: MESSAGING,
+      },
+    });
+    assert.equal(deploy(w, ["deploy", "staging", "api", "0.3.0"]).status, 0);
+    assert.equal(imports(w).length, 1);
+    assert.equal(provisionedReason(w), "topology-imported");
+    assert.deepEqual(recordedMessaging(w), [`MESSAGING_VERSION=${MESSAGING}`]);
+  });
+
+  it("records a newer version before the import, so a rollback after it keeps the record", () => {
+    const w = apiAt020({
+      versions: {
+        API_VERSION: "0.2.0",
+        API_IMAGE: `${REPO_PREFIX}api@sha256:${OLD}`,
+        MESSAGING_VERSION: "0.1.0",
+      },
+    });
+    const result = deploy(w, ["deploy", "staging", "api", "0.3.0"], {
+      env: { STUB_FAIL: "import" },
+    });
+    assert.equal(result.status, 1);
+    assert.deepEqual(journal(w).slice(-2), [
+      { version: "0.3.0", state: "rolling_back", reason: "topology-failed" },
+      { version: "0.3.0", state: "rolled_back", reason: "previous-healthy" },
+    ]);
+    // The broker may hold the new definitions: shared state moves forward only.
+    assert.deepEqual(recordedMessaging(w), [`MESSAGING_VERSION=${MESSAGING}`]);
+    assert.match(read(join(w.envDir, "versions.env")), /^API_VERSION=0\.2\.0$/m);
+    assert.ok(!calls(w, "docker").some((c) => c.includes("psql")), "no role touched");
+  });
+
+  it("keeps the record through a rollback, and previous.env never carries it", () => {
+    const w = world({
+      versions: {
+        API_VERSION: "0.3.0",
+        API_IMAGE: `${REPO_PREFIX}api@sha256:${NEW}`,
+        MESSAGING_VERSION: "0.3.0",
+      },
+      previous: { API_VERSION: "0.2.0", API_IMAGE: `${REPO_PREFIX}api@sha256:${OLD}` },
+      releases: ["api-0.2.0", "api-0.3.0"],
+      envFiles: ["api"],
+    });
+    assert.equal(deploy(w, ["rollback", "staging", "api"], { stdin: "" }).status, 0);
+    assert.deepEqual(recordedMessaging(w), ["MESSAGING_VERSION=0.3.0"]);
+    assert.doesNotMatch(read(join(w.envDir, "previous.env")), /MESSAGING/);
+    assert.deepEqual(imports(w), [], "a rollback imports nothing");
+  });
+
+  it("imports nothing for web", () => {
+    const w = world();
+    assert.equal(deploy(w, ["deploy", "staging", "web", "0.1.0"]).status, 0);
+    assert.deepEqual(imports(w), []);
+    assert.equal(provisionedReason(w), "this-service");
+    assert.deepEqual(recordedMessaging(w), []);
+  });
+
+  it("aborts before anything shared moves when the release has no usable messaging version", () => {
+    // No package file at the tag: git archive fails on the missing path. A version that is not
+    // semver: the guard could not compare it.
+    for (const [messaging, reason] of [
+      [null, "fetch-failed"],
+      ["next", "no-topology-files"],
+    ]) {
+      const w = apiAt020();
+      const result = deploy(w, ["deploy", "staging", "api", "0.3.0"], {
+        env: { STUB_FIXTURE: fixtureWith(messaging) },
+      });
+      assert.equal(result.status, 1);
+      assert.deepEqual(journal(w).at(-1), { version: "0.3.0", state: "aborted", reason });
+      assert.deepEqual(states(w), ["checked", "aborted"]);
+      assert.ok(!calls(w, "docker").some((c) => c.startsWith("exec")));
+      assert.equal(existsSync(join(w.envDir, "releases/api-0.3.0")), false);
+    }
+  });
+
+  it("refuses a manifest whose recorded messaging version is not semver", () => {
+    const w = apiAt020({
+      versions: {
+        API_VERSION: "0.2.0",
+        API_IMAGE: `${REPO_PREFIX}api@sha256:${OLD}`,
+        MESSAGING_VERSION: "latest",
+      },
+    });
+    assert.equal(deploy(w, ["deploy", "staging", "api", "0.3.0"]).status, 1);
+    assert.deepEqual(states(w), ["refused"]);
+    assert.equal(journal(w)[0].reason, "bad-manifest");
   });
 });
 
@@ -719,7 +930,9 @@ describe("deploy.sh rollback and redeploy", () => {
     assert.equal(result.status, 0, result.stderr);
     assert.deepEqual(states(w), STATES);
     assert.ok(journal(w).every((row) => row.version === "0.3.0"));
-    assert.equal(read(join(w.envDir, "versions.env")), before);
+    // The same release again: its topology is imported again, nothing else in the manifest moves.
+    assert.equal(read(join(w.envDir, "versions.env")), `${before}MESSAGING_VERSION=${MESSAGING}\n`);
+    assert.ok(existsSync(join(w.rec, "rabbit-import")));
     assert.deepEqual(calls(w, "git"), []);
     assert.ok(!calls(w, "docker").some((c) => /^(login|pull)/.test(c)));
     assert.match(read(join(w.envDir, "api.env")), new RegExp(SECRET));

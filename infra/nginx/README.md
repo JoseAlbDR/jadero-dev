@@ -17,6 +17,7 @@ outside this public repo, and use the same `nginx.conf` and snippets.
 | `sites/00-default.conf` | `sites-available/`, linked in `sites-enabled/` | the catch-all default server: TLS handshake refused on 443, connection closed on 80 |
 | `sites/<host>.conf` | `sites-available/`, linked in `sites-enabled/` | one file per host, below |
 | `www/admin/index.html` | `/srv/jadero/www/admin/index.html` | the admin placeholder page until WP-17 |
+| `www/maintenance/maintenance.html` | `/srv/jadero/www/maintenance/maintenance.html` | the page `new.jadero.dev` serves on the 502, 503 and 504 nginx generates while a deploy recreates a service (WP-9 step 4): internal only, `no-store`, its own static CSP, `Retry-After` on 503 |
 | `../logrotate/jadero-nginx` | `/etc/logrotate.d/jadero-nginx` | the sites' error logs in `/var/log/nginx/jadero/`: daily, three files kept, compressed, nginx reopens its logs after a rotation (ADR-052) |
 
 `scripts/nginx-hardening.test.mjs` (in `pnpm verify`) checks the rules statically; the `nginx` job
@@ -108,11 +109,12 @@ In this order; every step after the backup can be undone by restoring it.
    `#!/bin/sh` and `systemctl reload nginx`, mode 755. Check the renewal timer
    (`systemctl list-timers | grep certbot`) and `sudo certbot renew --dry-run`.
 6. **Sites:** copy the three host files to `sites-available/` and link them into `sites-enabled/`;
-   `sudo install -D -m 644 www/admin/index.html /srv/jadero/www/admin/index.html`.
+   `sudo install -D -m 644 www/admin/index.html /srv/jadero/www/admin/index.html` and
+   `sudo install -D -m 644 www/maintenance/maintenance.html /srv/jadero/www/maintenance/maintenance.html`.
 7. `sudo nginx -t`, then `sudo systemctl reload nginx`.
 8. **Smoke** from the laptop: `infra/scripts/smoke-edge.sh`. Every check should pass; the
-   `new.jadero.dev` routes to `web` and `api` answer 502 until WP-9 deploys staging (502 counts as
-   routed), while `/s/script.js` and `/s/api/send` already reach Umami in the ops stack.
+   `new.jadero.dev` routes to `web` and `api` answer 502 with the maintenance page until WP-9
+   deploys staging (502 counts as routed, and the page is checked), while `/s/script.js` and `/s/api/send` already reach Umami in the ops stack.
 9. After a week with no problem: HSTS to `max-age=31536000; includeSubDomains` in the headers
    snippet (ADR-047), never `preload` until every subdomain is confirmed HTTPS only.
 

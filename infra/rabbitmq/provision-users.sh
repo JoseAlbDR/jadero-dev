@@ -4,8 +4,9 @@
 #
 # Run on every deploy and as often as you like: each run lands the broker in the same state,
 # whatever state it starts from. The topology (vhosts, exchanges, queues, policies) is loaded at
-# boot from infra/rabbitmq/server/definitions/; this script owns only what the definitions leave
-# out on purpose, the users:
+# boot from infra/rabbitmq/server/definitions/ and imported live by each api and agent deploy
+# (import-definitions.sh, WP-9 step 4); this script owns only what the definitions leave out on
+# purpose, the users:
 #
 #   - each user of permissions.tsv is created when missing, and its password is set on every run
 #     (a rotation is a re-run), then its tags are set;
