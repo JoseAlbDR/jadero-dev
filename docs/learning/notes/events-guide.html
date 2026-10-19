@@ -69,12 +69,16 @@ p { margin: 0; }
 nav.toc {
   position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
   background: var(--paper); border-bottom: 1px solid var(--line);
-  display: flex; gap: 4px 18px; flex-wrap: wrap; padding-block: 10px;
+  display: grid; gap: 6px; padding-block: 8px; min-width: 0;
 }
+nav.toc .toc-row { display: flex; gap: 4px 16px; flex-wrap: wrap; align-items: baseline; min-width: 0; }
+nav.toc .toc-part { font: 600 10.5px/1.4 var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); white-space: nowrap; min-width: 4.6em; }
+nav.toc .toc-row.p2 .toc-part { color: var(--consume); }
+nav.toc a[aria-current="true"] { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 nav.toc a { color: var(--ink); text-decoration: none; font: 500 13px/1.4 var(--font-mono); white-space: nowrap; }
 nav.toc a span { color: var(--muted); margin-right: 6px; }
 nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); }
-section.sec { padding-block: 40px 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; scroll-margin-top: 56px; min-width: 0; }
+section.sec { padding-block: 40px 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; scroll-margin-top: 96px; min-width: 0; }
 section.sec > header { display: grid; gap: 8px; }
 .prose { display: grid; gap: 12px; max-width: 76ch; min-width: 0; }
 .prose ul, .prose ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
@@ -116,7 +120,7 @@ table.compare { min-width: 860px; }
 .chip:focus-visible, .pbtn:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* topology */
 .topo { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); align-items: start; }
-@media (min-width: 1240px) { .topo { grid-template-columns: minmax(0, 1fr) 390px; } .topo .player { position: sticky; top: 60px; max-height: calc(100vh - 76px); overflow-y: auto; } }
+@media (min-width: 1240px) { .topo { grid-template-columns: minmax(0, 1fr) 390px; } .topo .player { position: sticky; top: 92px; max-height: calc(100vh - 108px); overflow-y: auto; } }
 .topo figure { margin: 0; display: grid; gap: 10px; min-width: 0; }
 .canvas {
   overflow-x: auto; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px;
@@ -239,8 +243,50 @@ details p { margin-top: 8px; color: var(--ink); }
 #panel p { font-size: 14px; }
 #panel ul { margin: 0; padding-left: 18px; font-size: 13.5px; display: grid; gap: 3px; }
 #panel .files li { font-family: var(--font-mono); font-size: 12.5px; overflow-wrap: anywhere; }
+/* part 2 */
+.part-head { margin-top: 56px; padding-block: 28px 4px; border-top: 3px solid var(--consume); display: grid; gap: 10px; scroll-margin-top: 96px; }
+.part-head .eyebrow { color: var(--consume); }
+.pats { min-width: 720px; }
+.pats td:first-child { white-space: nowrap; }
+.smfig { margin: 0; display: grid; gap: 10px; min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.sm-wrap { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1240px) { .sm-wrap { grid-template-columns: minmax(0, 1fr) 390px; } .sm-wrap .player { position: sticky; top: 92px; max-height: calc(100vh - 108px); overflow-y: auto; } }
+#sm-svg { min-width: 900px; }
+#rt-svg { min-width: 700px; }
+#src-canvas { max-width: 1000px; }
+.zone { fill-opacity: 0.5; stroke: var(--line); stroke-dasharray: 3 4; }
+.zone.before { fill: var(--accent-soft); }
+.zone.shared { fill: var(--consume-soft); }
+.zone-label { font: 600 11px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; }
+.zone-label.before { fill: var(--accent); }
+.zone-label.shared { fill: var(--consume); }
+.node.k-stop rect { fill: var(--stop-soft); stroke: var(--stop); }
+.node.k-done rect { fill: var(--fill-q); stroke: var(--ok); stroke-width: 1.8; }
+.node.k-build rect { stroke-dasharray: 5 3; }
+.node.sel rect { stroke: var(--accent); stroke-width: 3.2; }
+.node.k-stop.sel rect { stroke: var(--stop); }
+.ln.soft { stroke: var(--muted); stroke-width: 1.2; }
+.mk-soft { fill: var(--muted); }
+.ln.cut { stroke: var(--stop); stroke-dasharray: 3 4; }
+.smedge.off { opacity: 0.18; }
+.smedge.on .ln { stroke: var(--accent); stroke-width: 2.6; }
+.smedge.on .mk-ink { fill: var(--accent); }
+.smedge.done .ln { stroke: var(--muted); stroke-width: 1.8; }
+.smedge.done .mk-ink { fill: var(--muted); }
+.checks { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+.tag.build { color: var(--consume); border-color: var(--consume); border-style: dashed; }
+.statusgrid { display: grid; gap: 6px 14px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); font: 12.5px/1.4 var(--font-mono); max-width: 1120px; }
+.statusgrid div { background: var(--sheet); border: 1px solid var(--line); border-radius: 4px; padding: 6px 9px; min-width: 0; overflow-wrap: anywhere; }
+.statusgrid b { display: block; font: 600 10.5px/1.3 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.statusgrid div:last-child { grid-column: 1 / -1; }
+.statusgrid .bad { border-color: var(--stop); color: var(--stop); }
+.statusgrid .ok { border-color: var(--ok); }
+.qcount { font: 700 13px var(--font-mono); fill: var(--ink); }
+.gate-where { font: 600 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); white-space: nowrap; }
+table.gates { min-width: 760px; }
 @media (max-width: 760px) {
-  nav.toc { flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; }
+  nav.toc .toc-row { flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; scrollbar-width: thin; }
+  nav.toc .toc-row > * { flex: none; }
   .ctl-row.chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
   .ctl-row.chips > * { flex: none; }
   #panel { top: auto; left: 0; width: 100%; max-height: 72vh; border-left: 0; border-top: 1px solid var(--line); border-radius: 12px 12px 0 0; box-shadow: 0 -8px 24px rgb(0 0 0 / 0.18); }
@@ -258,13 +304,15 @@ footer.foot p { color: var(--muted); font-size: 13.5px; max-width: 90ch; }
 <header class="top">
   <div class="eyebrow">jadero.dev learning guide · messaging</div>
   <h1>Events Field Guide</h1>
-  <p class="lede">Event-driven design as this repo builds it, traced through one real event, <code>system.ping.v1</code>, from a Postgres row in <code>api</code> to a Postgres row in <code>agent</code>. Every name below is a real name from the code. Section 2 is a live map of the broker: pick a trace, step through it, and tap any box for what it is.</p>
+  <p class="lede">Event-driven design as this repo builds it, traced through one real event, <code>system.ping.v1</code>, from a Postgres row in <code>api</code> to a Postgres row in <code>agent</code>. Every name below is a real name from the code. Section 2 is a live map of the broker: pick a trace, step through it, and tap any box for what it is. Part 2 follows the same broker into operations: where its topology comes from, how a consumer is retired, how a deploy moves through its states, and every check that keeps the pieces consistent.</p>
   <div class="route" aria-label="The path of one event">
     <span>messaging.outbox</span><i>→</i><span>OutboxRelay</span><i>→</i><span>jadero.events</span><i>→</i><span>agent.system.ping</span><i>→</i><span>HeartbeatConsumer</span><i>→</i><span>messaging.inbox</span>
   </div>
 </header>
 
-<nav class="toc" aria-label="Sections">
+<nav class="toc" aria-label="Contents">
+  <div class="toc-row p1">
+  <span class="toc-part">Part 1</span>
   <a href="#model"><span>1</span>Mental model</a>
   <a href="#map"><span>2</span>Broker map and traces</a>
   <a href="#broker"><span>3</span>Exchanges, queues, policies</a>
@@ -275,6 +323,17 @@ footer.foot p { color: var(--muted); font-size: 13.5px; max-width: 90ch; }
   <a href="#sagas"><span>8</span>Sagas</a>
   <a href="#glossary"><span>9</span>Glossary</a>
   <a href="#check"><span>10</span>Self-check</a>
+  </div>
+  <div class="toc-row p2">
+  <span class="toc-part">Part 2</span>
+  <a href="#topo-src"><span>11</span>Where the topology comes from</a>
+  <a href="#additive"><span>12</span>Create, never delete</a>
+  <a href="#retire"><span>13</span>Retiring a consumer</a>
+  <a href="#deploy"><span>14</span>The deploy state machine</a>
+  <a href="#nminus1"><span>15</span>Rollback and shared state</a>
+  <a href="#gates"><span>16</span>Every consistency gate</a>
+  <a href="#drift"><span>17</span>Orphans and drift</a>
+  </div>
 </nav>
 
 <main>
@@ -598,10 +657,269 @@ footer.foot p { color: var(--muted); font-size: 13.5px; max-width: 90ch; }
   <p>No: outbox rows are deleted after delivery and are not the source of truth. Full event sourcing would work but is costly. The cheapest fit is versioned snapshots, like this repo's content revisions: keep every policy version with its validity time, and store the version id on the booking.</p></details>
   </div>
 </section>
+
+<!-- ================= PART 2 ================= -->
+<header class="part-head" id="part2">
+  <p class="eyebrow">Part 2</p>
+  <h2>How this project does it</h2>
+  <p class="lede">Part 1 is the broker while it runs. Part 2 is everything around it: where the broker's objects come from, how they change and retire, how a release reaches the server, and what stops two pieces from disagreeing. Built from <code>packages/messaging/src/topology</code>, <code>infra/rabbitmq</code>, <code>infra/scripts/deploy.sh</code> and <code>deploy-entry</code> on <code>wp/9-deploy-pipeline</code>, ADR-053 and the WP-9 explainer. Parts marked <span class="tag build">step 4, being built</span> are described from the explainer and ADR-053, not from code.</p>
+</header>
+
+<!-- 11 -->
+<section class="sec" id="topo-src">
+  <header><p class="eyebrow">Section 11</p><h2>Where the topology comes from</h2></header>
+  <div class="prose">
+    <p>One TypeScript module is the only place a queue, exchange, binding or policy is written by a person. A script turns it into the files each broker loads. Part 1 explains <a href="#broker">why tunables are policies and why services have no configure right</a>; this section is the pipeline.</p>
+  </div>
+  <div class="fig">
+    <div class="canvas" id="src-canvas"><svg class="small" id="src-svg" viewBox="0 0 1000 300" role="img" aria-label="From the topology module to the brokers: write-definitions.mjs writes the dev definitions, one file per server vhost, and permissions.tsv; compose loads the first two at boot, provision-users.sh applies the third"></svg></div>
+  </div>
+  <div class="grid2">
+    <div>
+      <h4>The three source files</h4>
+      <ul class="checks">
+        <li><code>names.ts</code>: the naming rules. <code>jadero.events</code>, <code>jadero.dlx</code>, <code>jadero.unrouted</code>, <code>&lt;service&gt;.retry</code>, <code>&lt;queue&gt;.retry.10s</code>, <code>&lt;queue&gt;.dlq</code>.</li>
+        <li><code>jadero.ts</code>: the data. Today one line, <code>{ name: "agent.system.ping", service: "agent", bindings: [systemPingV1.routingKey] }</code>, plus the users per environment (<code>api_prod</code>, <code>agent_prod</code>, <code>ops_admin</code>, the same for staging), without passwords.</li>
+        <li><code>definitions.ts</code>: <code>buildDefinitions</code> expands each queue into its exchanges, wait queues, DLQ, bindings and policies; <code>buildPermissions</code> derives each user's rights.</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Who loads what</h4>
+      <ul class="checks">
+        <li><strong>Dev:</strong> <code>compose.dev.yml</code> mounts <code>infra/rabbitmq/definitions.json</code>; the broker loads it at boot. It holds the dev users with fixed dev passwords. After a topology change, restart the broker.</li>
+        <li><strong>Server:</strong> <code>compose.ops.yml</code> mounts <code>infra/rabbitmq/server/definitions/</code> (<code>prod.json</code>, <code>staging.json</code>, one vhost each, no users, so RabbitMQ never seeds <code>guest</code>). <code>rabbitmq.conf</code> says <code>load_definitions = /etc/rabbitmq/definitions</code>.</li>
+        <li><strong>Users:</strong> <code>provision-users.sh</code> reads <code>permissions.tsv</code> and sets passwords from its environment, on stdin, never in argv. It also reports orphan queues (section 17).</li>
+        <li><strong>Stale files:</strong> a unit test fails while the generated files differ from what the module would write.</li>
+      </ul>
+    </div>
+  </div>
+  <details>
+    <summary>Real excerpt: <code>infra/rabbitmq/server/definitions/staging.json</code> (6 queues, 4 exchanges, 8 bindings, 4 policies)</summary>
+<pre><code>{
+  "users": [],            // empty on purpose: provision-users.sh owns users
+  "vhosts": [{ "name": "/staging" }],
+  "queues": [
+    { "name": "agent.system.ping", "vhost": "/staging", "durable": true,
+      "auto_delete": false, "arguments": { "x-queue-type": "quorum" } },
+    ...  // jadero.unrouted, agent.system.ping.retry.10s / .1m / .10m, agent.system.ping.dlq
+  ],
+  "bindings": [
+    { "source": "jadero.events", "destination": "agent.system.ping",
+      "destination_type": "queue", "routing_key": "system.ping.v1" },
+    ...
+  ],
+  "policies": [
+    { "name": "agent.system.ping", "pattern": "^agent\\.system\\.ping$",
+      "apply-to": "queues", "priority": 10,
+      "definition": { "dead-letter-strategy": "at-least-once", "overflow": "reject-publish",
+        "dead-letter-exchange": "jadero.dlx", "dead-letter-routing-key": "agent.system.ping",
+        "delivery-limit": 20 } },
+    ...
+  ]
+}</code></pre>
+    <p>And <code>infra/rabbitmq/server/permissions.tsv</code>, the rows <code>provision-users.sh</code> applies (user, vhost, tags, configure, write, read):</p>
+<pre><code>api_staging    /staging  -              ^$   ^(jadero\.events)$  ^$
+agent_staging  /staging  -              ^$   ^(agent\.retry)$    ^(agent\.system\.ping)$
+ops_admin      /staging  administrator  .*   .*                  .*</code></pre>
+  </details>
+  <div class="table-wrap"><table>
+    <tr><th></th><th>Queue argument</th><th>Policy</th></tr>
+    <tr><td>What here</td><td>only <code>x-queue-type: quorum</code></td><td>TTL, dead-lettering, delivery limit, overflow</td></tr>
+    <tr><td>Set when</td><td>the queue is declared, once</td><td>any time; the broker re-applies it at once</td></tr>
+    <tr><td>Change it</td><td>refused (redeclare with other arguments fails): a new queue name instead</td><td>edit the generator, regenerate, deploy</td></tr>
+  </table></div>
+  <div class="table-wrap"><table class="pats">
+    <tr><th>Pattern</th><th>One alternative, and when it wins</th><th>In supplier management</th></tr>
+    <tr><td><span class="pattern">topology as code</span></td><td>Each service declares its own queues at boot. Wins with many teams and no shared ops review, at the cost of any deploy reshaping the broker.</td><td>the queues behind "assessment completed" defined in one reviewed file, not created by whichever service starts first</td></tr>
+    <tr><td><span class="pattern">single source of truth</span></td><td>Hand-edited JSON per environment. Wins for a one-off broker nobody regenerates; drifts the first time staging gets a fix production does not.</td><td>one list of approval-flow event consumers, generated for every tenant environment</td></tr>
+    <tr><td><span class="pattern">least privilege</span></td><td>One shared broker user with full rights. Wins only in a throwaway dev setup.</td><td>the rating service can read its queues and nothing else</td></tr>
+  </table></div>
+</section>
+
+<!-- 12 -->
+<section class="sec" id="additive">
+  <header><p class="eyebrow">Section 12</p><h2>Create and update, never delete</h2></header>
+  <div class="prose">
+    <p>Both ways the definitions reach a broker, the boot load and the live <code>rabbitmqctl import_definitions</code> of <span class="tag build">step 4, being built</span>, are additive: they create what is missing and update what can change, and never remove anything. The reason is the asymmetry of mistakes. A queue created by accident costs a few bytes and a warning. A queue deleted by accident takes its messages with it, and nothing brings them back.</p>
+  </div>
+  <div class="table-wrap"><table>
+    <tr><th>Object in the file</th><th>Missing on the broker</th><th>Present, different</th><th>On the broker, not in the file</th></tr>
+    <tr><td>exchange, binding</td><td><span class="tag ok">created</span></td><td>same name means same thing</td><td><span class="tag warn">left in place</span></td></tr>
+    <tr><td>queue</td><td><span class="tag ok">created</span></td><td><span class="tag bad">type change refused</span>: give it a new name</td><td><span class="tag warn">left in place</span>, reported as an orphan</td></tr>
+    <tr><td>policy</td><td><span class="tag ok">created</span></td><td><span class="tag ok">updated in place</span>, applied at once</td><td><span class="tag warn">left in place</span>, still applied</td></tr>
+    <tr><td>user (server)</td><td colspan="3">not in the file at all: <code>provision-users.sh</code> creates and re-passwords, deletes only <code>guest</code>, and reports unknown users</td></tr>
+  </table></div>
+  <div class="prose">
+    <p>Because a policy updates in place, an older file could undo a newer policy. So the step 4 import records the <code>messaging</code> version whose definitions it imported, per environment, and imports only an equal or newer one: the same anti-rollback rule the service versions use (ADR-053). ADR-053 also names a generator test that fails when a queue's type changes under the same name.</p>
+    <h3>When full reconciliation would win</h3>
+    <p>The other model is a tool that owns everything and makes the broker match the file exactly, deletes included: Terraform's RabbitMQ provider, Pulumi, or a Kubernetes operator. It wins when retirements are frequent (dozens of queues a year), when one config owns every object so nothing on the broker is hand-made, and when a reviewed plan shows each delete before it runs, with <code>prevent_destroy</code> on queues that must never go. Here one owner retires a queue once in a long while, so a warning plus a short manual sequence is cheaper than a state file to keep in sync.</p>
+  </div>
+  <div class="table-wrap"><table class="pats">
+    <tr><th>Pattern</th><th>One alternative, and when it wins</th><th>In supplier management</th></tr>
+    <tr><td><span class="pattern">additive infrastructure change</span></td><td>Full reconciliation with a plan (above). Wins with frequent retirements and one owner of every object.</td><td>a new "certificate expired" queue ships with the release; the old one is retired by a ticket, not by a deploy</td></tr>
+    <tr><td><span class="pattern">expand/contract for topology</span></td><td>Delete and recreate the queue in place. Wins only when it is empty and nothing publishes to it.</td><td>moving a supplier-update queue to quorum: <code>supplier.sync.v2</code> next to the old one, then retire the old</td></tr>
+    <tr><td><span class="pattern">monotonic counter</span></td><td>Always import whatever release deploys. Wins when rollbacks never happen.</td><td>a rolled-back rating service must not shorten the retry TTL a newer release set</td></tr>
+  </table></div>
+</section>
+
+<!-- 13 -->
+<section class="sec" id="retire">
+  <header>
+    <p class="eyebrow">Section 13</p>
+    <h2>Retiring a consumer</h2>
+    <p class="lede">The producer never knows its consumers, so it keeps publishing. While the binding exists, every new event lands in the retiring queue. Step through the right order, then try the two wrong ones and watch the queue.</p>
+  </header>
+  <div class="ctl-row chips" id="rt-chips" role="group" aria-label="Order"><span class="lead">Order</span></div>
+  <div class="sm-wrap">
+    <figure class="smfig">
+      <div class="canvas" id="rt-canvas"><svg id="rt-svg" viewBox="0 0 900 250" role="img" aria-label="Producer, exchange, binding, the retiring queue with its message count, its consumer and its DLQ"></svg></div>
+      <div class="statusgrid" id="rt-status" aria-live="polite"></div>
+    </figure>
+    <aside class="player" id="rt-player" aria-label="Retirement steps">
+      <div class="pctl">
+        <button type="button" class="pbtn" id="rt-prev">Previous</button>
+        <button type="button" class="pbtn" id="rt-next">Next</button>
+        <span class="count" id="rt-count"></span>
+      </div>
+      <h3 id="rt-title"></h3>
+      <div class="body" id="rt-body" aria-live="polite"></div>
+      <ol class="steplist" id="rt-list" aria-label="All steps"></ol>
+    </aside>
+  </div>
+  <div class="prose">
+    <p class="note warn"><strong>Where the runbook lives.</strong> There is no retirement runbook in <code>docs/runbooks/</code> (it holds <code>restore.md</code> and <code>server-access.md</code>). The procedure is in <code>infra/compose/README.md</code>, "Retiring a consumer", and <code>provision-users.sh</code> points to it. Its current order stops the consumer first and removes the binding only with the final delete, so with a live producer the queue keeps filling and the warning never reaches 0 messages: the second wrong order below. The order on this page is the one to move into a runbook.</p>
+    <p>Why the generator change comes before each hand delete: the import re-creates anything the file still lists, at the next broker restart or the next <code>api</code> or <code>agent</code> deploy. Delete a binding by hand while <code>jadero.ts</code> still declares it, and it comes back. The other direction is safe: drop it from the file first, and the broker keeps it (additive) until you delete it.</p>
+    <h3>Per-queue limits as a bulkhead <span class="pattern">bulkhead</span></h3>
+    <p>A retired or stuck consumer's queue grows without bound and eats the broker's memory (here a 200 MiB watermark under a 256 MB container), which blocks every publisher. A limit per queue keeps one queue's trouble in that queue. Two shapes, both as policies:</p>
+    <ul>
+      <li><strong><code>max-length</code>.</strong> With this repo's safe dead-lettering (<code>dead-letter-strategy: at-least-once</code>) a quorum queue needs <code>overflow: reject-publish</code>, so a full queue rejects new messages and the publisher gets a nack. The relay then retries the row, and because one event routes to every bound queue, one full queue stalls that event for everyone. That is the opposite of a bulkhead.</li>
+      <li><strong><code>message-ttl</code> that dead-letters.</strong> Old messages expire into the queue's DLQ instead of being dropped, and the publish path stays clear. The DLQ then needs its own limit or an alert.</li>
+    </ul>
+    <p>The repo sets neither on consumer queues today. If one is added, the TTL is the shape that fits.</p>
+  </div>
+  <div class="table-wrap"><table class="pats">
+    <tr><th>Pattern</th><th>One alternative, and when it wins</th><th>In supplier management</th></tr>
+    <tr><td><span class="pattern">drain before removal</span></td><td>Move messages with a shovel to the queue that takes over. Wins when another consumer must still process them.</td><td>retiring the old notification consumer: unbind, let it finish the pending "assessment due" reminders, then remove it</td></tr>
+    <tr><td><span class="pattern">expand/contract, contract phase</span></td><td>Purge the queue. Wins only when the messages are not needed, and you write down why.</td><td>purging a queue of test events from a disabled pilot integration</td></tr>
+    <tr><td><span class="pattern">bulkhead</span></td><td>One global memory alarm and nothing else. Wins while every consumer is healthy.</td><td>a stuck document-analysis consumer must not block approval-flow events</td></tr>
+  </table></div>
+</section>
+
+<!-- 14 -->
+<section class="sec" id="deploy">
+  <header>
+    <p class="eyebrow">Section 14</p>
+    <h2>The deploy state machine</h2>
+    <p class="lede"><code>deploy.sh</code> runs as root through one forced SSH command. Every state is appended to <code>/srv/jadero/&lt;env&gt;/deploy.log</code> the moment it is reached, before the next transition starts. Tap a state for what it checks and where it fails to.</p>
+  </header>
+  <div class="ctl-row chips" id="sm-chips" role="group" aria-label="Path"><span class="lead">Path</span></div>
+  <div class="sm-wrap">
+    <figure class="smfig">
+      <div class="canvas" id="sm-canvas"><svg id="sm-svg" viewBox="0 0 1080 330" role="img" aria-label="Deploy states from deploy-entry through checked, fetched, rendered, pulled, provisioned, migrated, started, verified and recorded, with refused, aborted, rolling_back, rolled_back and failed"></svg></div>
+      <div class="legend" aria-hidden="true">
+        <span><svg viewBox="0 0 30 10"><rect x="1" y="1" width="28" height="8" fill="var(--accent-soft)" stroke="var(--line)"/></svg>before: a failure is aborted, nothing shared changed</span>
+        <span><svg viewBox="0 0 30 10"><rect x="1" y="1" width="28" height="8" fill="var(--consume-soft)" stroke="var(--line)"/></svg>shared: a failure rolls back</span>
+        <span><svg viewBox="0 0 30 10"><rect x="1" y="1" width="28" height="8" fill="var(--sheet)" stroke="var(--ink)" stroke-dasharray="5 3"/></svg>part of it is step 4, being built</span>
+      </div>
+    </figure>
+    <aside class="player" id="sm-player" aria-label="State details">
+      <div class="pctl">
+        <button type="button" class="pbtn" id="sm-prev">Previous</button>
+        <button type="button" class="pbtn" id="sm-next">Next</button>
+        <span class="count" id="sm-count"></span>
+      </div>
+      <h3 id="sm-title"></h3>
+      <div class="tags" id="sm-tags"></div>
+      <div class="body" id="sm-body" aria-live="polite"></div>
+    </aside>
+  </div>
+  <div class="prose">
+    <p>A journal line, as the script writes it (time, environment, service, version, state, a fixed reason token, never a secret):</p>
+<pre><code>2026-10-21T09:00:01Z staging api 0.3.0 checked reason=newer
+2026-10-21T09:00:04Z staging api 0.3.0 fetched reason=tag-commit
+2026-10-21T09:00:06Z staging api 0.3.0 rendered reason=ok
+...
+2026-10-21T09:00:31Z staging api 0.3.0 recorded reason=current</code></pre>
+    <p>Exit codes: 0 <code>recorded</code>; 1 refused, <code>aborted</code>, <code>rolled_back</code> or <code>failed</code>; 75 when another run holds the environment's lock. The separate <code>rollback</code> verb goes back once to what <code>previous.env</code> records, with the env file and release files already on disk (nothing remote needed), and removes that entry, so a second rollback is refused.</p>
+  </div>
+  <div class="table-wrap"><table class="pats">
+    <tr><th>Pattern</th><th>One alternative, and when it wins</th><th>In supplier management</th></tr>
+    <tr><td><span class="pattern">finite state machine</span></td><td>A plain list of commands with <code>set -e</code>. Wins for a script nobody needs to resume or audit.</td><td>an approval flow: draft, in review, approved, rejected, each transition recorded</td></tr>
+    <tr><td><span class="pattern">write-ahead journal</span></td><td>A state table in a database. Wins when several hosts write or history drives decisions.</td><td>an approval step logged before the notification goes out, so a crash never loses who approved</td></tr>
+    <tr><td><span class="pattern">point of no return</span></td><td>Make every step reversible (blue/green with two databases). Wins when shared state can be copied cheaply.</td><td>once a supplier is told "approved", the fix for a later error is a new message, not an undo</td></tr>
+    <tr><td><span class="pattern">compensating action</span></td><td>Retry forward until it works. Wins when the failure is transient and the old version is unsafe.</td><td>a contract status set back to "in review" when a later step fails</td></tr>
+    <tr><td><span class="pattern">anti-rollback</span></td><td>Allow any version. Wins only on a laptop.</td><td>a stale approval-flow config version must not overwrite a newer one</td></tr>
+    <tr><td><span class="pattern">defense in depth</span></td><td>Trust <code>deploy-entry</code>'s checks alone. Wins never, since the sudoers rule lets the deploy user pass any words.</td><td>the UI hides a reviewer's button, and the API checks the right again</td></tr>
+  </table></div>
+</section>
+
+<!-- 15 -->
+<section class="sec" id="nminus1">
+  <header><p class="eyebrow">Section 15</p><h2>Rollback and shared state (N-1)</h2></header>
+  <div class="grid2">
+    <div>
+      <h4>Travels with a release, swapped whole</h4>
+      <p>The image (by digest), the Compose files, the env templates and the smoke script, all from <code>releases/&lt;service&gt;-&lt;version&gt;/</code>. A rollback uses the previous release's own copy, so an old image never runs with today's files.</p>
+    </div>
+    <div>
+      <h4>Shared, moves forward only</h4>
+      <p>The database schema (expand-only migrations), the broker topology (guarded import) and the rendered env file (the passwords just set). A rollback leaves them at the newest version, so every release must work on the next release's shared state: N-1 compatibility.</p>
+    </div>
+  </div>
+  <div class="prose">
+    <h3>Trace: a password rotation meets a failed migration</h3>
+    <p>Staging runs <code>api</code> 0.3.0. The owner rotates <code>postgres-content-staging</code> in 1Password, then deploys 0.4.0. Pick which env file the rollback starts 0.3.0 with:</p>
+  </div>
+  <div class="ctl-row chips" id="nm-chips" role="group" aria-label="Rollback env"><span class="lead">Rollback starts 0.3.0 with</span></div>
+  <ol class="estream" id="nm-stream" aria-live="polite" style="max-width:1120px"></ol>
+  <p class="caption" id="nm-cap"></p>
+  <div class="table-wrap"><table class="pats">
+    <tr><th>Pattern</th><th>One alternative, and when it wins</th><th>In supplier management</th></tr>
+    <tr><td><span class="pattern">N-1 compatibility</span></td><td>Down migrations on rollback. Wins when no data was written in between, which is rarely true.</td><td>a new optional "risk score" column that the previous release simply ignores</td></tr>
+    <tr><td><span class="pattern">rotation ordering</span></td><td>Two valid passwords at once (dual credentials). Wins when many clients rotate at their own pace.</td><td>rotating the API key of a supplier data provider with old and new both valid for a day</td></tr>
+    <tr><td><span class="pattern">static stability</span></td><td>Re-render secrets during rollback. Wins never here: it would need 1Password at the worst moment.</td><td>an approval flow keeps working from its cached config while the config service is down</td></tr>
+  </table></div>
+</section>
+
+<!-- 16 -->
+<section class="sec" id="gates">
+  <header>
+    <p class="eyebrow">Section 16</p>
+    <h2>Every consistency gate, end to end</h2>
+    <p class="lede">Each row is a check that exists in the repo today (or in step 4, marked). Filter by where it runs.</p>
+  </header>
+  <div class="ctl-row chips" id="gt-chips" role="group" aria-label="Where it runs"><span class="lead">Where</span></div>
+  <div class="table-wrap"><table class="gates" id="gt-table"></table></div>
+</section>
+
+<!-- 17 -->
+<section class="sec" id="drift">
+  <header><p class="eyebrow">Section 17</p><h2>Orphans and drift</h2></header>
+  <div class="prose">
+    <p>Anything a script creates and never removes becomes an orphan; anything changed by hand becomes drift. Each has an owner here:</p>
+  </div>
+  <div class="table-wrap"><table>
+    <tr><th>What</th><th>How it appears</th><th>What handles it</th></tr>
+    <tr><td>Orphan queue</td><td>removed from the generator, still on the broker (additive import)</td><td><code>provision-users.sh</code> warns on every run with its message and consumer counts, <code>WARN queue agent.retired on /prod is not in the definitions (3 messages, 0 consumers); left in place</code>; deleting it is section 13</td></tr>
+    <tr><td>Orphan user</td><td>a user on the broker that <code>permissions.tsv</code> does not list</td><td>reported by name and left in place; <code>guest</code> is the one user always deleted</td></tr>
+    <tr><td>Stray permissions</td><td>a user with rights on a vhost the file no longer lists for it</td><td>cleared on the next run (<code>set_permissions</code> overwrites; other vhosts cleared)</td></tr>
+    <tr><td>Old images</td><td>one per deployed version</td><td><code>prune</code> after <code>recorded</code> keeps the current and previous digest of the service</td></tr>
+    <tr><td>Old release folders</td><td><code>releases/&lt;service&gt;-&lt;version&gt;/</code> per deploy</td><td>pruned to current and previous; an aborted run removes the folder it fetched</td></tr>
+    <tr><td>Leftover <code>&lt;service&gt;.env.new</code></td><td>a render before a failure</td><td>removed on <code>aborted</code>, and by the exit trap on an unexpected error before the point of no return</td></tr>
+    <tr><td>Role or password drift</td><td>a hand change in Postgres or RabbitMQ</td><td>convergent provisioning: <code>provision.sql</code> and <code>provision-users.sh</code> set every value again on each deploy of that service</td></tr>
+    <tr><td>Topology drift</td><td>a hand-edited policy</td><td>the next import overwrites it with the generated one (step 4); a hand-made extra object stays and, if it is a queue, warns</td></tr>
+  </table></div>
+  <div class="table-wrap"><table class="pats">
+    <tr><th>Pattern</th><th>One alternative, and when it wins</th><th>In supplier management</th></tr>
+    <tr><td><span class="pattern">convergent provisioning</span></td><td>Run-once setup scripts. Wins for a box rebuilt from scratch each time.</td><td>a nightly job sets each supplier's portal role from the source of truth, whatever someone changed by hand</td></tr>
+    <tr><td><span class="pattern">report, do not delete</span></td><td>Garbage-collect automatically. Wins when the objects hold nothing of value.</td><td>flag suppliers with no activity for review instead of archiving them silently</td></tr>
+    <tr><td><span class="pattern">retention window</span></td><td>Keep everything. Wins when disk is free and rollback may go further back.</td><td>keep the current and previous version of a rating model, drop older ones</td></tr>
+  </table></div>
+</section>
 </main>
 
 <footer class="foot">
-  <p>Built from the code on branch <code>learning/notes</code>, 2026-10-19: <code>packages/messaging</code>, <code>packages/contracts</code>, <code>apps/api</code> (ping and relay), <code>apps/agent</code> (heartbeat consumer), ADR-012, ADR-029 and ADR-054 (the messaging topology as built, which supersedes ADR-029). When the topology or the messaging code changes, this page changes with it.</p>
+  <p>Built from the code on branch <code>learning/notes</code>, 2026-10-19: <code>packages/messaging</code>, <code>packages/contracts</code>, <code>apps/api</code> (ping and relay), <code>apps/agent</code> (heartbeat consumer), ADR-012, ADR-029 and ADR-054 (the messaging topology as built, which supersedes ADR-029). Part 2, 2026-10-20: <code>packages/messaging/src/topology</code>, <code>infra/rabbitmq</code>, <code>infra/compose/README.md</code>, <code>infra/scripts/deploy.sh</code> and <code>deploy-entry</code> on <code>wp/9-deploy-pipeline</code> after step 3, <code>.github/workflows/README.md</code>, ADR-053 and <code>docs/learning/wp-9.md</code>. Step 4 (topology import, smoke script, maintenance page) is described from the explainer and ADR-053 while it is being built. When the topology, the messaging code or the deploy changes, this page changes with it.</p>
 </footer>
 </div>
 
@@ -1154,5 +1472,315 @@ footer.foot p { color: var(--muted); font-size: 13.5px; max-width: 90ch; }
     rows.forEach((r) => { var ok = !q || r.textContent.toLowerCase().indexOf(q) >= 0; r.hidden = !ok; if (ok) shown++; });
     $("g-none").hidden = shown > 0;
   });
+
+  // =====================================================================================
+  // PART 2
+  // =====================================================================================
+  function chipRow(container, items, onPick) {
+    var els = {};
+    items.forEach((x) => {
+      var b = document.createElement("button"); b.type = "button"; b.className = "chip" + (x.fail ? " fail" : ""); b.textContent = x.label;
+      b.setAttribute("aria-pressed", "false");
+      b.addEventListener("click", () => onPick(x.id));
+      container.appendChild(b); els[x.id] = b;
+    });
+    return function mark(id) { Object.keys(els).forEach((k) => els[k].setAttribute("aria-pressed", String(k === id))); };
+  }
+  function arrowG(g, pts, cls) {
+    var grp = el("g", { "class": cls || "" }, g);
+    el("path", { d: pts.map((p, i) => (i ? "L" : "M") + p[0] + "," + p[1]).join(" "), "class": "ln" }, grp);
+    var a = pts[pts.length - 2], b = pts[pts.length - 1], ang = Math.atan2(b[1] - a[1], b[0] - a[0]), L = 8, W = 4;
+    el("path", { d: "M" + b[0] + "," + b[1] + " L" + (b[0] - L * Math.cos(ang) + W * Math.sin(ang)) + "," + (b[1] - L * Math.sin(ang) - W * Math.cos(ang)) + " L" + (b[0] - L * Math.cos(ang) - W * Math.sin(ang)) + "," + (b[1] - L * Math.sin(ang) + W * Math.cos(ang)) + " z", "class": "mk-ink" }, grp);
+    return grp;
+  }
+
+  // ---------- section 11: where the topology comes from ----------
+  (function () {
+    var s = $("src-svg");
+    box(s, 20, 115, 180, 70, "box-q", "packages/messaging", "src/topology/*.ts");
+    arrowG(s, [[200, 150], [238, 150]]);
+    box(s, 240, 125, 180, 50, "box-svc", "write-definitions.mjs", "pnpm ... topology");
+    var outs = [[25, "definitions.json", "dev vhost + dev users"], [125, "server/definitions/", "prod.json, staging.json"], [225, "server/permissions.tsv", "users, tags, rights"]];
+    var tgt = [["compose.dev.yml", "dev broker, boot load"], ["compose.ops.yml", "/prod, /staging, boot load"], ["provision-users.sh", "per deploy, passwords on stdin"]];
+    outs.forEach((o, k) => {
+      arrowG(s, [[420, 150], [445, 150], [445, o[0] + 25], [468, o[0] + 25]]);
+      box(s, 470, o[0], 210, 50, "box-q", o[1], o[2]);
+      arrowG(s, [[680, o[0] + 25], [718, o[0] + 25]]);
+      box(s, 720, o[0], 260, 50, k === 2 ? "box-svc" : "box-ex", tgt[k][0], tgt[k][1]);
+    });
+    txt(s, 850, 196, "+ live import per deploy (step 4)", "svgm");
+    txt(s, 110, 210, "the only hand-written place", "svgm");
+  })();
+
+  // ---------- section 13: retiring a consumer ----------
+  var RT = [
+    { id: "right", label: "Right order", steps: [
+      { t: "Live, before anything changes", bind: 1, cons: "running", q: 2, dlq: 0, gen: "declared", pol: 1, warn: "",
+        b: "`agent.retired` is bound to `content.published.v1` on `jadero.events`. The consumer keeps up; two messages are in flight. The producer, `api`, has no idea this queue exists." },
+      { t: "Drop the binding in the generator, then unbind by hand", bind: 0, cons: "running", q: 3, dlq: 0, gen: "bindings: []", pol: 1, warn: "",
+        b: "Set `bindings: []` for the queue in `jadero.ts`, regenerate and release. The queue, its policies and agent's read right stay in the file.\n\nThe import cannot remove a binding, so unbind it by hand over the tunnel (management UI as `ops_admin`). From now on no new copy arrives. File first, broker second: the other way round, the next import re-creates the binding." },
+      { t: "Let the running consumer drain to zero", bind: 0, cons: "running", q: 0, dlq: 0, gen: "bindings: []", pol: 1, warn: "",
+        b: "The consumer processes what is left, with its retries and DLQ still working (the policies are still there).\n\nIf another consumer must process these messages instead, move them to its queue with a shovel. If nobody needs them, purge, and write down why." },
+      { t: "Stop and remove the consumer", bind: 0, cons: "gone", q: 0, dlq: 0, gen: "bindings: []", pol: 1, warn: "",
+        b: "An `agent` release removes the subscription. Nothing reads the queue, and nothing arrives either, so it stays at 0." },
+      { t: "Remove the queue from the generator and deploy", bind: 0, cons: "gone", q: 0, dlq: 0, gen: "removed", pol: 1, warn: "agent.retired on /prod is not in the definitions (0 messages, 0 consumers)",
+        b: "Delete the line in `jadero.ts` and regenerate: the definitions lose the queue, its three wait queues, its DLQ, their bindings and policies; `permissions.tsv` loses agent's read right on it.\n\nDeploy `agent`: `provision-users.sh` narrows the right, the broker keeps the queue and its policies (additive), and the orphan warning appears with 0 messages." },
+      { t: "Delete it on the broker, by hand", bind: 0, cons: "gone", q: null, dlq: null, gen: "removed", pol: 0, warn: "",
+        b: "Inside the broker's container: `rabbitmqctl delete_queue -p /prod agent.retired --if-empty`, then its three wait queues and its DLQ (check the DLQ is empty, or export it first), and `clear_policy` for each of its policies. Bindings go with their queues.\n\nThe `agent_prod` user stays: it belongs to the service, not the queue. A user is deleted by hand only when the whole service retires. Next run: no warning, the file and the broker match." }
+    ] },
+    { id: "delete", label: "Delete the queue first", fail: true, steps: [
+      { t: "Live", bind: 1, cons: "running", q: 3, dlq: 0, gen: "declared", pol: 1, warn: "",
+        b: "Same start: bound, consumed, three messages waiting." },
+      { t: "Delete the queue by hand", bind: 0, cons: "running", q: null, dlq: 0, gen: "declared", pol: 1, warn: "", bad: 1, lost: 3,
+        b: "Three messages are gone, unprocessed, and nothing records which ones. The consumer's channel fails on a missing queue." },
+      { t: "The next import brings it back", bind: 1, cons: "running", q: 1, dlq: 0, gen: "declared", pol: 1, warn: "", bad: 1, lost: 3,
+        b: "`jadero.ts` still declares the queue, so the next broker restart, or the next `api` or `agent` deploy (step 4), re-creates it with its binding, and events fill it again. The retirement undid itself, after losing data." }
+    ] },
+    { id: "stopfirst", label: "Stop first, binding stays", fail: true, steps: [
+      { t: "Live", bind: 1, cons: "running", q: 2, dlq: 0, gen: "declared", pol: 1, warn: "",
+        b: "Same start. This is the order `infra/compose/README.md` gives today." },
+      { t: "Stop the consumer", bind: 1, cons: "stopped", q: 6, dlq: 0, gen: "declared", pol: 1, warn: "", bad: 1,
+        b: "The binding is still there, so every new event keeps landing in a queue nobody reads." },
+      { t: "Remove it from the generator and deploy", bind: 1, cons: "stopped", q: 14, dlq: 0, gen: "removed", pol: 1, warn: "agent.retired on /prod is not in the definitions (14 messages, 0 consumers)", bad: 1,
+        b: "The import never deletes, so the binding stays on the broker and the queue keeps filling. The procedure says to delete once the warning shows 0 messages; with a live producer it never does." },
+      { t: "delete_queue --if-empty refuses, forever", bind: 1, cons: "stopped", q: 23, dlq: 0, gen: "removed", pol: 1, warn: "agent.retired on /prod is not in the definitions (23 messages, 0 consumers)", bad: 1,
+        b: "`--if-empty` refuses while messages are inside. The ways out: delete it with messages (they are lost), or go back and unbind first, which is the right order." }
+    ] }
+  ];
+  var rt = { s: 0, i: 0 };
+  var rtMark = chipRow($("rt-chips"), RT, (id) => { rt.s = RT.findIndex((x) => x.id === id); rt.i = 0; renderRt(); });
+  function renderRt() {
+    var sc = RT[rt.s], st = sc.steps[rt.i], s = $("rt-svg");
+    rtMark(sc.id); s.textContent = "";
+    box(s, 20, 90, 130, 56, "box-svc", "api", "publishes, unaware");
+    arrowG(s, [[150, 118], [198, 118]]);
+    box(s, 200, 90, 150, 56, "box-ex", "jadero.events", "content.published.v1");
+    if (st.bind) { arrowG(s, [[350, 118], [428, 118]]); txt(s, 389, 108, "binding", "svgm"); }
+    else { el("path", { d: "M350,118 L428,118", "class": "ln cut" }, s); txt(s, 389, 108, "unbound", "svgm"); }
+    if (st.q === null) box(s, 430, 70, 220, 96, "box-down", "agent.retired", "deleted");
+    else {
+      el("rect", { x: 430, y: 70, width: 220, height: 96, rx: 5, "class": "box-q" }, s);
+      txt(s, 540, 92, "agent.retired", "svgt");
+      var shown = Math.min(st.q, 24);
+      for (var m = 0; m < shown; m++) el("rect", { x: 442 + (m % 12) * 17, y: 104 + Math.floor(m / 12) * 18, width: 13, height: 13, rx: 2, "class": "box-msg" + (st.bad ? " late" : "") }, s);
+      var t = txt(s, 540, 158, st.q + (st.q === 1 ? " message" : " messages"), "qcount");
+    }
+    if (st.lost) txt(s, 540, 60, st.lost + " messages lost", "svgt").setAttribute("style", "fill: var(--stop)");
+    if (st.cons === "running" && st.q !== null) arrowG(s, [[650, 118], [718, 118]]);
+    box(s, 720, 90, 160, 56, st.cons === "running" ? "box-svc" : "box-down", "consumer", st.cons);
+    if (st.dlq === null) box(s, 430, 190, 220, 44, "box-down", "agent.retired.dlq", "deleted");
+    else box(s, 430, 190, 220, 44, "box-q", "agent.retired.dlq", "+ 3 wait queues");
+    var cells = [
+      ["Binding", st.bind ? "on: new copies arrive" : "off", st.bind && st.cons !== "running" ? "bad" : ""],
+      ["Consumer", st.cons, ""],
+      ["Queue", st.q === null ? "deleted" : st.q + " messages", st.bad ? "bad" : st.q === 0 ? "ok" : ""],
+      ["Policies", st.pol ? "on the broker" : "cleared", ""],
+      ["jadero.ts", st.gen, ""],
+      ["Orphan warning", st.warn || "none", st.warn && st.q ? "bad" : ""]
+    ];
+    $("rt-status").innerHTML = cells.map((c) => '<div class="' + c[2] + '"><b>' + c[0] + "</b>" + esc(c[1]) + "</div>").join("");
+    $("rt-player").className = "player" + (st.bad ? " bad" : "");
+    $("rt-count").textContent = "Step " + (rt.i + 1) + " of " + sc.steps.length;
+    $("rt-title").textContent = st.t;
+    $("rt-body").innerHTML = paras(st.b);
+    $("rt-prev").disabled = rt.i === 0; $("rt-next").disabled = rt.i === sc.steps.length - 1;
+    var list = $("rt-list"); list.textContent = "";
+    sc.steps.forEach((x, k) => {
+      var li = document.createElement("li"), b = document.createElement("button");
+      b.type = "button"; b.innerHTML = '<span class="n">' + (k + 1) + "</span><span>" + esc(x.t) + "</span>";
+      if (k === rt.i) b.setAttribute("aria-current", "step");
+      b.addEventListener("click", () => { rt.i = k; renderRt(); });
+      li.appendChild(b); list.appendChild(li);
+    });
+  }
+  $("rt-prev").addEventListener("click", () => { if (rt.i > 0) { rt.i--; renderRt(); } });
+  $("rt-next").addEventListener("click", () => { if (rt.i < RT[rt.s].steps.length - 1) { rt.i++; renderRt(); } });
+  renderRt();
+
+  // ---------- section 14: deploy state machine ----------
+  var MAIN = ["entry", "checked", "fetched", "rendered", "pulled", "provisioned", "migrated", "started", "verified", "recorded"];
+  var SUBS = { entry: "forced command", checked: "lock, semver", fetched: "release tag", rendered: "op inject", pulled: "digest, label", provisioned: "no return", migrated: "env, migrate", started: "--wait 120 s", verified: "smoke", recorded: "manifests" };
+  var SMN = {};
+  MAIN.forEach((id, i) => { SMN[id] = { r: [14 + i * 106, 70, 92, 54], label: id === "entry" ? "deploy-entry" : id, sub: SUBS[id], k: id === "recorded" ? "done" : "svc" }; });
+  SMN.provisioned.build = 1; SMN.verified.build = 1;
+  SMN.refused = { r: [50, 210, 110, 50], label: "refused", sub: "nothing touched", k: "stop" };
+  SMN.aborted = { r: [290, 210, 120, 50], label: "aborted", sub: "files removed", k: "stop" };
+  SMN.rolling_back = { r: [628, 210, 130, 50], label: "rolling_back", sub: "previous release", k: "stop" };
+  SMN.rolled_back = { r: [800, 210, 120, 50], label: "rolled_back", sub: "exit 1, healthy", k: "done" };
+  SMN.failed = { r: [954, 210, 110, 50], label: "failed", sub: "exit 1, no retry", k: "stop" };
+  var ST = {
+    entry: { t: "deploy-entry, the forced command", z: "before", tags: ["least privilege", "allowlist"],
+      checks: ["sshd runs it whatever the client asks; the key line binds it to one environment (`deploy-entry staging`), so a staging key never reaches prod (`env-mismatch`)", "`LC_ALL=C` first, so letter ranges mean ASCII whatever locale the client sends", "at most 128 characters, only letters, digits, space, dot and hyphen", "exactly `deploy <env> <service> <version>` or `rollback <env> <service>`; no `redeploy`", "service in `api agent web`; version is semver, no `v`", "logs a fixed reason, never the raw input; then `exec sudo -n deploy.sh` with separate arguments, stdin passed through"],
+      fail: "Any check fails: `refused`, exit 1, nothing touched." },
+    checked: { t: "checked", z: "before", tags: ["defense in depth", "mutual exclusion", "anti-rollback"],
+      checks: ["the same word checks again, as a copy: the sudoers rule lets the deploy user pass any words, so this is the last gate before root acts", "`redeploy` refused when `SUDO_USER` is `deploy`: the owner's root shell only", "`flock -n /run/lock/jadero-deploy-<env>.lock`, or exit 75 busy", "`trap '' HUP PIPE`: a lost SSH session does not stop it half way; `COMPOSE_*`, `DOCKER_CONFIG` unset", "`versions.env` parsed, never sourced (`bad-manifest`)", "semver strictly newer than the current one (`not-newer`): 0.10.0 beats 0.9.0, 1.0.0-rc.1 loses to 1.0.0", "stdin: registry user, token, and for prod the expected digest (`no-digest`)"],
+      code: "... staging api 0.4.0 checked reason=newer", fail: "A refusal: `refused`, exit 1. Busy: exit 75." },
+    fetched: { t: "fetched", z: "before", tags: ["configuration versioned with the artifact", "trust anchor"],
+      checks: ["`git fetch --depth 1` of `refs/tags/<service>-v<version>` from the public repository", "the fetched commit is 40 hex characters", "`git archive <commit> infra` into `releases/<service>-<version>/`", "the overlay's `name:` must be `jadero-<env>` (`env-mismatch`), and the env template must exist"],
+      code: "... fetched reason=tag-commit", fail: "`aborted fetch-failed` or `env-mismatch`; the release folder is removed." },
+    rendered: { t: "rendered", z: "before", tags: ["validate before you act", "fail closed"],
+      checks: ["the 1Password service token file is readable", "`op inject` of the release's template into `<service>.env.new`, mode 600", "exit 0, the file exists, no `{{` left", "every password in `DATABASE_URL`, `DATABASE_READ_URL`, `RABBITMQ_URL` is letters and digits only: generated secrets never need escaping in a URL, so anything else is a broken value and fails closed (`bad-credential`)"],
+      code: "... rendered reason=ok", fail: "`aborted op-exit-1` (1Password down) and the like; the `.new` file is removed; running services never noticed." },
+    pulled: { t: "pulled", z: "before", tags: ["immutable reference", "build once deploy many"],
+      checks: ["login with a temporary `DOCKER_CONFIG` from `mktemp -d`, password on stdin; removed right after the pull, token cleared", "pull by tag, then read the repo digest: must be this service's repository `@sha256:...`", "equal to stdin's third line when given (`digest-mismatch`): prod runs the bytes staging tested", "the image's `org.opencontainers.image.revision` label equals the tag's commit (`revision-mismatch`)"],
+      code: "... pulled reason=digest-and-revision", fail: "`aborted`, files removed." },
+    provisioned: { t: "provisioned, the point of no return", z: "shared", build: 1, tags: ["point of no return", "convergent provisioning", "rotation ordering"],
+      checks: ["**step 4, being built:** import the release's definitions into the running broker when its `messaging` version is equal or newer than the recorded one, then wait until every queue of the file is listed", "`provision.sql -v service=<service>` through `docker exec -e`: passwords travel in the environment, never in argv", "`provision-users.sh <env> <service>_<env>`: only this service's broker user", "the passwords come from this run's `.env.new`, so the password set is the one the service will use, by construction"],
+      code: "... provisioned reason=this-service", fail: "`rolling_back topology-failed` or `provision-failed`." },
+    migrated: { t: "migrated", z: "shared", tags: ["expand/contract", "one-off task"],
+      checks: ["first, `<service>.env.new` is renamed to `<service>.env`: Compose reads the env file on every command, so migrate must see the new passwords", "`docker compose run --rm --no-deps <service>-migrate` must exit 0", "`web` has none (`no-migrations`)"],
+      code: "... migrated reason=ok", fail: "`rolling_back migrate-failed`." },
+    started: { t: "started", z: "shared", tags: ["health gate"],
+      checks: ["`up -d --wait --wait-timeout 120 --no-deps` on the service's process types (`api api-worker`, `agent agent-consumer`, `web`)", "only this service's Compose profile is active; other image variables come from `versions.env`, or the inert `jadero.invalid/not-deployed`", "healthy means each container's own `/health/ready` passed"],
+      code: "... started reason=healthy", fail: "`rolling_back unhealthy`." },
+    verified: { t: "verified", z: "shared", build: 1, tags: ["synthetic transaction", "blast radius of a check"],
+      checks: ["runs the release's own `infra/scripts/smoke-deploy.sh`; missing script fails closed", "**step 4, being built:** `/health/ready` on `127.0.0.1`; on staging the pages `es`, `en`, `de` and the content API through `new.jadero.dev`, on prod through `127.0.0.1`", "**step 4:** the ping check: a `heartbeat.broker_heartbeat` row newer than the deploy's start; it gates only `api` and `agent`, the pages gate `web` and `api`", "**step 4:** nginx serves a static maintenance page on 502, 503 and 504 during the recreate"],
+      code: "... verified reason=smoke-passed", fail: "`rolling_back smoke-failed`." },
+    recorded: { t: "recorded", z: "shared", tags: ["release manifest", "atomic file swap", "retention window"],
+      checks: ["`previous.env` gets the old current version and digest; `versions.env` the new ones, each through a temp file and a rename", "images and release folders pruned to current and previous (best effort: never undoes a recorded deploy)"],
+      code: "... recorded reason=current", fail: "" },
+    refused: { t: "refused", z: "before", tags: ["fail closed"], checks: ["a word, a version, a manifest or the input failed a check", "nothing was fetched, rendered or touched; exit 1"], fail: "" },
+    aborted: { t: "aborted", z: "before", tags: ["validate before you act"], checks: ["a failure before `provisioned`: `<service>.env.new` and the fetched release folder are removed", "the running release never noticed; rerun later (1Password back, tag fixed)", "the exit trap writes `aborted unexpected-error` for a failure outside the handled paths"], fail: "" },
+    rolling_back: { t: "rolling_back", z: "shared", tags: ["compensating action", "N-1 compatibility"],
+      checks: ["the release that was current: its files from `releases/<service>-<current>/`, its image by digest", "the env file rendered in this run (section 15 explains why)", "the health gate again", "no current version (a first deploy): `failed nothing-to-roll-back-to`; **step 4** stops the new containers so a first deploy runs whole or not at all"],
+      fail: "`rolled_back previous-healthy` or `failed previous-unhealthy`." },
+    rolled_back: { t: "rolled_back", z: "shared", tags: ["compensating action"], checks: ["the previous release is healthy again; exit 1 so the job is red", "schema and topology stay at the newest version"], fail: "" },
+    failed: { t: "failed", z: "shared", tags: ["fail stop"], checks: ["the previous release did not become healthy either; exit 1", "no retry loop: a person reads the journal and decides (the deploy runbook arrives in step 6)"], fail: "" }
+  };
+  var SME = [];
+  for (var mi = 0; mi < MAIN.length - 1; mi++) SME.push([MAIN[mi], MAIN[mi + 1]]);
+  [["entry", "refused"], ["checked", "refused"], ["fetched", "aborted"], ["rendered", "aborted"], ["pulled", "aborted"], ["provisioned", "rolling_back"], ["migrated", "rolling_back"], ["started", "rolling_back"], ["verified", "rolling_back"], ["rolling_back", "rolled_back"], ["rolling_back", "failed"]].forEach((e) => SME.push(e));
+  var PATHS = [
+    { id: "happy", label: "Happy path", p: MAIN },
+    { id: "abort", label: "1Password down", fail: true, p: ["entry", "checked", "fetched", "rendered", "aborted"] },
+    { id: "back", label: "Migration fails", fail: true, p: ["entry", "checked", "fetched", "rendered", "pulled", "provisioned", "migrated", "rolling_back", "rolled_back"] },
+    { id: "fail", label: "Previous unhealthy too", fail: true, p: ["entry", "checked", "fetched", "rendered", "pulled", "provisioned", "migrated", "started", "rolling_back", "failed"] },
+    { id: "refuse", label: "Older version", fail: true, p: ["entry", "checked", "refused"] }
+  ];
+  var sm = { p: 0, i: 0, sel: null }, smSvg = $("sm-svg"), smNodes = {}, smEdges = [];
+  el("rect", { x: 6, y: 22, width: 534, height: 290, rx: 8, "class": "zone before" }, smSvg);
+  el("rect", { x: 544, y: 22, width: 530, height: 290, rx: 8, "class": "zone shared" }, smSvg);
+  txt(smSvg, 18, 44, "before: a failure is aborted", "zone-label before", "start");
+  txt(smSvg, 556, 44, "shared: a failure rolls back", "zone-label shared", "start");
+  function mid(id, side) { var r = SMN[id].r; return side === "e" ? [r[0] + r[2], r[1] + r[3] / 2] : side === "w" ? [r[0], r[1] + r[3] / 2] : side === "s" ? [r[0] + r[2] / 2, r[1] + r[3]] : [r[0] + r[2] / 2, r[1]]; }
+  SME.forEach((e) => {
+    var a = SMN[e[0]], b = SMN[e[1]], pts;
+    if (a.r[1] === b.r[1]) pts = [mid(e[0], "e"), mid(e[1], "w")];
+    else { var s0 = mid(e[0], "s"), t0 = mid(e[1], "n"); pts = [s0, [s0[0], 170], [t0[0], 170], t0]; }
+    var g = arrowG(smSvg, pts, "smedge");
+    smEdges.push({ e: e, g: g });
+  });
+  Object.keys(SMN).forEach((id) => {
+    var n = SMN[id], r = n.r;
+    var g = el("g", { "class": "node k-" + n.k + (n.build ? " k-build" : ""), tabindex: "0", role: "button", "aria-label": n.label + ": show what it checks" }, smSvg);
+    el("rect", { x: r[0], y: r[1], width: r[2], height: r[3], rx: 5 }, g);
+    txt(g, r[0] + r[2] / 2, r[1] + r[3] / 2 - 2, n.label, "lbl").setAttribute("style", "font-size:12.5px");
+    txt(g, r[0] + r[2] / 2, r[1] + r[3] / 2 + 14, n.sub, "sub").setAttribute("style", "font-size:10.5px");
+    g.addEventListener("click", () => { sm.sel = id; var k = PATHS[sm.p].p.indexOf(id); if (k >= 0) sm.i = k; renderSm(); });
+    g.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); g.dispatchEvent(new Event("click")); } });
+    smNodes[id] = g;
+  });
+  var smMark = chipRow($("sm-chips"), PATHS, (id) => { sm.p = PATHS.findIndex((x) => x.id === id); sm.i = 0; sm.sel = null; renderSm(); });
+  function renderSm() {
+    var path = PATHS[sm.p].p, cur = sm.sel || path[sm.i];
+    smMark(PATHS[sm.p].id);
+    Object.keys(smNodes).forEach((id) => {
+      var n = SMN[id], inP = path.indexOf(id) >= 0;
+      smNodes[id].setAttribute("class", "node k-" + n.k + (n.build ? " k-build" : "") + (id === cur ? " sel" : "") + (inP ? "" : " dim"));
+    });
+    smEdges.forEach((x) => {
+      var k = path.indexOf(x.e[0]), on = k >= 0 && path[k + 1] === x.e[1], done = on && k < path.indexOf(cur);
+      x.g.setAttribute("class", "smedge" + (on ? (done ? " done" : " on") : " off"));
+    });
+    var st = ST[cur];
+    $("sm-player").className = "player" + (SMN[cur].k === "stop" ? " bad" : "");
+    $("sm-count").textContent = path.indexOf(cur) >= 0 ? "State " + (path.indexOf(cur) + 1) + " of " + path.length : "Not on this path";
+    $("sm-title").textContent = st.t;
+    var tags = '<span class="tag ' + (st.z === "before" ? "type" : "warn") + '">' + (st.z === "before" ? "before the point of no return" : "shared state") + "</span>";
+    if (st.build) tags += '<span class="tag build">step 4, being built</span>';
+    tags += st.tags.map((p) => '<span class="pattern">' + esc(p) + "</span>").join("");
+    $("sm-tags").innerHTML = tags;
+    var h = '<ul class="checks">' + st.checks.map((c) => "<li>" + fmt(c) + "</li>").join("") + "</ul>";
+    if (st.code) h += "<pre><code>" + esc(st.code) + "</code></pre>";
+    if (st.fail) h += "<p><strong>On failure:</strong> " + fmt(st.fail) + "</p>";
+    $("sm-body").innerHTML = h;
+    var k = path.indexOf(cur);
+    $("sm-prev").disabled = k <= 0; $("sm-next").disabled = k < 0 || k >= path.length - 1;
+  }
+  $("sm-prev").addEventListener("click", () => { var p = PATHS[sm.p].p, k = p.indexOf(sm.sel || p[sm.i]); if (k > 0) { sm.sel = null; sm.i = k - 1; renderSm(); } });
+  $("sm-next").addEventListener("click", () => { var p = PATHS[sm.p].p, k = p.indexOf(sm.sel || p[sm.i]); if (k >= 0 && k < p.length - 1) { sm.sel = null; sm.i = k + 1; renderSm(); } });
+  renderSm();
+
+  // ---------- section 15: N-1 trace ----------
+  var NM_COMMON = [
+    ["1", "checked", "newer", "0.4.0 is newer than the current 0.3.0."],
+    ["2", "fetched", "tag-commit", "`infra/` of `api-v0.4.0` lands in `releases/api-0.4.0/`."],
+    ["3", "rendered", "ok", "`api.env.new` holds the new password, just read from 1Password."],
+    ["4", "pulled", "digest-and-revision", "Image digest and revision label match."],
+    ["5", "provisioned", "this-service", "`provision.sql` sets the new password on `content_staging`. Running 0.3.0 keeps its open pool connections; any new connection with the old password now fails. Point of no return."],
+    ["-", "(rename)", "", "`api.env.new` becomes `api.env`, before migrate. The old file is gone."],
+    ["6", "rolling_back", "migrate-failed", "The 0.4.0 migration fails. The schema stays wherever it was left; expand-only means 0.3.0 still works on it."]
+  ];
+  var NM = [
+    { id: "new", label: "This run's env (what deploy.sh does)", row: ["7", "rolled_back", "previous-healthy", "0.3.0 starts from `releases/api-0.3.0/` with its digest and `api.env` holding the new password. It connects, `/health/ready` passes inside 120 s. Exit 1: the job is red, the site serves."],
+      cap: "The env file became shared state at `provisioned`, and shared state only moves forward. Postgres already has the new password, so only the new env can connect." },
+    { id: "old", label: "The old env (what if)", fail: true, row: ["7", "failed", "previous-unhealthy", "0.3.0 starts with the old password. Every new connection fails authentication, `/health/ready` fails, `--wait` gives up after 120 s. Exit 1, and staging's `api` is down until someone acts."],
+      cap: "The script cannot take this path: the rename already replaced the old file. It shows why the rollback must use the newest env: an old one does not match the shared state." }
+  ];
+  var nm = "new";
+  var nmMark = chipRow($("nm-chips"), NM, (id) => { nm = id; renderNm(); });
+  function renderNm() {
+    nmMark(nm);
+    var x = NM.find((v) => v.id === nm);
+    var rows = NM_COMMON.concat([x.row]);
+    $("nm-stream").innerHTML = rows.map((r, k) => '<li' + (k === rows.length - 1 && nm === "old" ? ' style="border-color:var(--stop)"' : "") + "><span>" + r[0] + "</span><span>" + esc(r[1]) + "</span><span>" + esc(r[2]) + "</span><span>" + fmt(r[3]) + "</span></li>").join("");
+    $("nm-cap").innerHTML = fmt(x.cap);
+  }
+  renderNm();
+
+  // ---------- section 16: gates ----------
+  var GW = [{ id: "all", label: "All" }, { id: "pr", label: "Pull request" }, { id: "release", label: "Release" }, { id: "deploy", label: "Deploy" }, { id: "runtime", label: "Runtime" }, { id: "after", label: "After" }];
+  var G = [
+    ["pr", "`verify`: Biome lint, typecheck, unit tests with coverage gates", "a broken or untested change merging", "ci.yml, `pnpm verify`"],
+    ["pr", "`depcruise` architecture rules", "an import across a boundary, a package importing Nest or a driver it must not", ".dependency-cruiser.cjs"],
+    ["pr", "`check:migrations` and the schema drift test", "editing a migration `main` has, a journal entry the migrator would skip, schema files ahead of the last migration", "scripts/check-migrations.mjs"],
+    ["pr", "consumer contract tests", "a consumer that cannot parse the producer's fixture", "apps/agent/test/heartbeat.contract.test.ts"],
+    ["pr", "frozen event schemas (`compat:accept` freezes a new version)", "a published event version changed in a non-additive way", "packages/contracts/compat/, compat.test.ts"],
+    ["pr", "generated topology is fresh", "`definitions.json`, the server files or `permissions.tsv` out of step with the module", "packages/messaging/test/topology.test.ts"],
+    ["pr", "`release-inputs.txt` is fresh", "a dependency or deploy-file change that would not release the services it reaches", "scripts/release-inputs.mjs"],
+    ["pr", "script tests: Compose and nginx hardening, deploy and deploy-entry with stubs", "a lost hardening line, a deploy path that no longer rolls back", "scripts/*.test.mjs"],
+    ["pr", "`integration`", "SQL and broker behavior that only real containers show", "Testcontainers, `*.int.test.ts`"],
+    ["pr", "`web`", "a page, CSP or accessibility regression per locale", "Playwright and axe"],
+    ["pr", "`images`", "an image that does not build, start or pass Trivy", "ci.yml"],
+    ["pr", "`workflows-lint`, `pr-title`, `osv-scanner / osv-scan`, `dependency-review`, `secrets`", "unsafe workflows, a title release-please cannot read, new vulnerabilities, denied licenses, leaked secrets", "ci.yml, pr-title.yml, security.yml"],
+    ["pr", "`nginx`, `backup` (not required yet)", "a broken edge config, a backup that does not restore", "ci.yml"],
+    ["release", "build once, from the commit the tag points at", "different bytes per environment", "release.yml `images`"],
+    ["release", "hardened smoke run, Trivy (a secret fails), pushed image equals the scanned one", "a broken or unscanned image in the registry", "release.yml"],
+    ["release", "SBOM and SLSA build provenance", "an image nobody can trace to its build", "`gh attestation verify`"],
+    ["deploy", "forced command, environment-bound key, word allowlist", "a stolen key acting on another environment or passing shell text", "deploy-entry"],
+    ["deploy", "lock, words again, manifest parse, anti-rollback semver", "two deploys at once, a downgrade", "deploy.sh `checked`"],
+    ["deploy", "tag fetch, overlay name", "files from another commit or environment", "deploy.sh `fetched`"],
+    ["deploy", "render checks, letters-and-digits passwords", "half-rendered secrets reaching a service", "deploy.sh `rendered`"],
+    ["deploy", "digest and revision label", "an image other than the one staging tested or the tag built", "deploy.sh `pulled`"],
+    ["deploy", "topology import with monotonic guard and queue wait (step 4)", "a consumer starting before its queue, a rollback reverting a policy", "deploy.sh `provisioned`"],
+    ["deploy", "scoped provisioning, migrate, health gate, smoke (step 4)", "a service with the wrong password, schema or path", "deploy.sh"],
+    ["runtime", "outbox and publisher confirms", "an event lost between the database and the broker", "packages/messaging/src/outbox"],
+    ["runtime", "inbox and stale-update guard", "a duplicate or late event applied twice or backwards", "inbox/idempotent.ts, heartbeat.repository.ts"],
+    ["runtime", "dispatch validation, retry tiers, DLQ, delivery limit 20, alternate exchange", "poison messages, crash loops, silently unroutable events", "outcome.ts, topology"],
+    ["runtime", "prefetch 4 under a pool of 6, memory watermark 200 MiB", "a burst exhausting the pool, the broker killed before it blocks publishers", "heartbeat.module.ts, rabbitmq.conf"],
+    ["runtime", "heartbeat ping (60 s on the servers), Uptime Kuma", "a broken broker path or a dead service nobody notices", "api-worker, jadero-ops"],
+    ["after", "nightly restic backups with a push heartbeat", "a night without a backup going unseen", "backup.sh"],
+    ["after", "restore drill (passed in WP-8; `backup-check.sh` restores in CI)", "backups that do not restore", "docs/runbooks/restore.md"],
+    ["after", "weekly scan of released images, weekly uncached CI run", "a new CVE in a shipped image, a cache hiding a failure", "security.yml, ci.yml"]
+  ];
+  var gw = "all";
+  var gwMark = chipRow($("gt-chips"), GW, (id) => { gw = id; renderG(); });
+  var GN = { pr: "pull request", release: "release", deploy: "deploy", runtime: "runtime", after: "after" };
+  function renderG() {
+    gwMark(gw);
+    $("gt-table").innerHTML = "<tr><th>Where</th><th>Gate</th><th>What it stops</th><th>Source</th></tr>" +
+      G.filter((r) => gw === "all" || r[0] === gw).map((r) => '<tr><td class="gate-where">' + GN[r[0]] + "</td><td>" + fmt(r[1]) + "</td><td>" + fmt(r[2]) + "</td><td>" + fmt(r[3].indexOf("`") >= 0 ? r[3] : "`" + r[3] + "`") + "</td></tr>").join("");
+  }
+  renderG();
 })();
 </script>
