@@ -30,12 +30,20 @@
 #
 # Two zones. Before `provisioned` nothing shared has changed: a failure is `aborted`, the files
 # this run wrote are removed, the running services never noticed. The provisioning transition is
-# the point of no return (a role password set, then a migration, a container): from there a
-# failure is `rolling_back` to the release that was current, with that release's files, its image
-# by digest and the env file rendered in this run (the passwords just provisioned are in it), then
-# the health gate again: `rolled_back` (exit 1) or `failed` (exit 1, no retry loop). For a
-# redeploy the release that was current is the same one, so rolling back is one more start of it
-# with the new env file.
+# the point of no return (the topology import, a role password set, then a migration, a
+# container): from there a failure is `rolling_back` to the release that was current, with that
+# release's files and its image by digest, then the health gate again: `rolled_back` (exit 1) or
+# `failed` (exit 1, no retry loop). For a redeploy the release that was current is the same one,
+# so rolling back is one more start of it.
+#
+# The env file a rollback starts with follows the first provisioning write, not the `provisioned`
+# line (WP-9 Decision, amendment of 2026-10-23): once provision_postgres has started, Postgres may
+# hold the passwords of this run's render (provision.sql can fail after an ALTER ROLE, or the
+# broker step after it), so roll_back moves <service>.env.new into place before it starts the
+# previous release. Compose sees a changed env and recreates the containers with the matching
+# passwords; with the old file it would keep them, their pooled connections would pass the health
+# gate, and the next restart would fail authentication. A failure before that write (the topology
+# import) leaves the old env file in place and removes the .new file, which holds secrets.
 #
 # The journal holds the time, environment, service, version, state and a fixed reason token. Never
 # a secret: the output of docker, op, git, psql and rabbitmqctl is discarded (a `docker compose
@@ -87,7 +95,6 @@ unset RABBITMQ_DEFINITIONS RABBITMQ_PERMISSIONS RABBITMQ_IMPORT_TIMEOUT SMOKE_PI
   SMOKE_PING_INTERVAL
 
 readonly STATE_ROOT=/srv/jadero
-readonly LOCK_DIR=/run/lock
 readonly OP_TOKEN_FILE=/etc/jadero/op-token
 readonly REPO_URL=https://github.com/JoseAlbDR/jadero-dev.git
 readonly REGISTRY=ghcr.io
@@ -153,6 +160,9 @@ fi
 
 readonly ENV_DIR="$STATE_ROOT/$ENV_NAME"
 readonly JOURNAL="$ENV_DIR/deploy.log"
+# The environment's lock, in the root-owned state folder: a world-writable /run/lock would let any
+# local user pre-create it (holding every deploy at exit 75) or plant a symlink root then opens.
+readonly LOCK_FILE="$ENV_DIR/deploy.lock"
 readonly VERSIONS="$ENV_DIR/versions.env"
 readonly PREVIOUS="$ENV_DIR/previous.env"
 readonly RELEASES="$ENV_DIR/releases"
@@ -179,6 +189,7 @@ work_dir=""       # the run's scratch folder (git, docker config), removed on ex
 docker_config=""  # the temporary DOCKER_CONFIG, removed right after the pull and on exit
 new_release=""    # the release folder this run fetched, removed when the run aborts
 registry_token="" # never printed, never journaled; cleared after the pull
+credentials_written=0 # 1 from the first provisioning write: Postgres may hold this run's passwords
 
 # Appends one line to the journal and prints it. A closed stdout (the runner went away) never
 # stops the run: the write to the journal comes first and the print is best effort, from a
@@ -209,10 +220,24 @@ on_exit() {
       [[ -n "$new_release" ]] && rm -rf "$new_release"
       journal aborted unexpected-error
     else
+      settle_env
       journal failed unexpected-error
     fi
   fi
   cleanup
+}
+
+# Settles the rendered env after a failure past the point of no return. From the first
+# provisioning write on, <service>.env.new holds the passwords Postgres may already have, so it
+# moves into place (shared state, forward only) and the next start uses it; before that write it
+# matches nothing that moved and is removed, since it holds secrets. No-op once it was renamed.
+settle_env() {
+  [[ -f "$ENV_NEW" ]] || return 0
+  if [[ $credentials_written -eq 1 ]]; then
+    mv -f "$ENV_NEW" "$ENV_FILE"
+  else
+    rm -f "$ENV_NEW"
+  fi
 }
 
 # Journals a refusal (nothing was touched) and exits 1.
@@ -559,7 +584,9 @@ provision_broker() {
 
 # Takes the environment's lock, or exits 75 without touching anything.
 take_lock() {
-  exec 9>"$LOCK_DIR/jadero-deploy-$ENV_NAME.lock"
+  # Under the root-owned /srv/jadero, so only root can create the folder; umask 077 makes it 700.
+  mkdir -p "$ENV_DIR"
+  exec 9>"$LOCK_FILE"
   if ! flock -n 9; then
     echo "busy: another deploy runs on $ENV_NAME" >&2
     exit 75
@@ -671,10 +698,12 @@ prune() {
 }
 
 # The compensating action: the release that was current, its files and its image by digest, with
-# the env file rendered in this run, then the health gate again. Exits 1 either way.
+# the env file that matches what provisioning wrote (settle_env), then the health gate again.
+# Exits 1 either way.
 # Arguments: the reason token of the failure.
 roll_back() {
   journal rolling_back "$1"
+  settle_env
   if [[ -z "$current_version" || -z "$current_image" ]]; then
     # A first deploy runs whole or not at all: the containers it created are stopped, not removed,
     # so their logs stay readable (`docker compose logs`, `docker logs`).
@@ -731,6 +760,8 @@ forward() {
   zone=shared
   apply_topology "$release" || roll_back topology-failed
   if [[ "$SERVICE" != web ]]; then
+    # The first write that can change a password: from here a rollback keeps this run's env.
+    credentials_written=1
     provision_postgres "$release" || roll_back provision-failed
     provision_broker "$release" || roll_back provision-failed
   fi

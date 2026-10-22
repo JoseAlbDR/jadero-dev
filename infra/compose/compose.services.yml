@@ -4,7 +4,8 @@
 # gives the project name, the published ports and the network, so staging and production run this
 # same file and cannot drift apart.
 #
-#   docker compose --env-file /srv/jadero/<env>/versions.env \
+#   JADERO_ENV=<env> API_IMAGE=... AGENT_IMAGE=... WEB_IMAGE=... \
+#     docker compose --project-name jadero-<env> --profile <service> \
 #     -f infra/compose/compose.services.yml -f infra/compose/compose.<env>.yml ...
 #
 # Run by deploy.sh as root, from the files of the release being deployed (ADR-053), with
@@ -13,9 +14,10 @@
 # - JADERO_ENV (staging or prod): the folder of the rendered env files, and the role, user and
 #   vhost names inside them (the templates write `${JADERO_ENV}`; Compose interpolates env_file
 #   values). Every secret in them is letters and digits only, so interpolation changes nothing else.
-# - API_IMAGE, AGENT_IMAGE, WEB_IMAGE from versions.env: digest references
-#   (ghcr.io/josealbdr/jadero-dev-api@sha256:...), never a tag, so a deploy runs exactly the bytes
-#   staging tested.
+# - API_IMAGE, AGENT_IMAGE, WEB_IMAGE, passed through the environment (no --env-file): deploy.sh
+#   reads them from versions.env (the deployed service's is the digest just pulled) as digest
+#   references (ghcr.io/josealbdr/jadero-dev-api@sha256:...), never a tag, so a deploy runs exactly
+#   the bytes staging tested.
 # - /srv/jadero/<env>/<service>.env: rendered by `op inject` from infra/env/<service>.env.tpl right
 #   before `up` (root, mode 600). Every process type of a service reads the same file and blanks
 #   the credentials it does not use (`environment` wins over `env_file`), so api-worker never holds

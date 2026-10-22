@@ -2,7 +2,7 @@
 //
 // Tests `infra/scripts/deploy.sh`, the deploy state machine of WP-9 D1, D3 and D4. The script reads
 // no path from the environment, so each test copies it into a fresh temporary folder and rewrites
-// its PATH line and its three root paths (state, lock, op token). docker, op and git are stubs on
+// its PATH line and its two root paths (state, op token); the lock lives in the state folder. docker, op and git are stubs on
 // that PATH that record their calls and act on STUB_* variables; the git stub serves this
 // repository's own infra/ and packages/messaging/package.json (plus a stub smoke script) as the
 // release tag's files, and the docker stub lists the queues of the last definitions imported, so
@@ -149,6 +149,7 @@ for queue in json.load(open(sys.argv[1]))["queues"]:
     print(queue["name"] + "\tquorum")' "$rec/rabbit-import"
     elif [[ "$*" == *change_password* || "$*" == *add_user* ]]; then
       cat >> "$rec/rabbit-stdin"
+      fails broker && exit 1
     fi
     exit 0 ;;
   compose)
@@ -291,9 +292,8 @@ function world({ env = "staging", versions, previous, releases = [], envFiles = 
   const base = join(root, `run-${run}`);
   const stateRoot = join(base, "srv");
   const envDir = join(stateRoot, env);
-  const lockDir = join(base, "lock");
   const rec = join(base, "rec");
-  for (const folder of [envDir, lockDir, rec]) mkdirSync(folder, { recursive: true });
+  for (const folder of [envDir, rec]) mkdirSync(folder, { recursive: true });
   const tokenFile = join(base, "op-token");
   writeFileSync(tokenFile, OP_TOKEN, { mode: 0o600 });
   const manifest = (entries) =>
@@ -315,7 +315,6 @@ function world({ env = "staging", versions, previous, releases = [], envFiles = 
     `PATH='${stubDir}:/usr/bin:/bin:/usr/sbin:/sbin'`,
   );
   source = rewriteLine(source, /^readonly STATE_ROOT=.*$/m, `readonly STATE_ROOT='${stateRoot}'`);
-  source = rewriteLine(source, /^readonly LOCK_DIR=.*$/m, `readonly LOCK_DIR='${lockDir}'`);
   source = rewriteLine(
     source,
     /^readonly OP_TOKEN_FILE=.*$/m,
@@ -323,7 +322,7 @@ function world({ env = "staging", versions, previous, releases = [], envFiles = 
   );
   const copy = join(base, "deploy.sh");
   writeScript(copy, source.replace(/^#!.*\n/, ""));
-  return { base, stateRoot, envDir, lockDir, rec, script: copy, env };
+  return { base, stateRoot, envDir, rec, script: copy, env };
 }
 
 /** The variables the stubs act on, merged with a test's own. */
@@ -640,6 +639,57 @@ describe("deploy.sh deploy, failures from provisioned on roll back", () => {
         ],
       );
     }
+  });
+
+  it("rolls back with this run's env when a provisioning write already happened", () => {
+    // Postgres converged (a role password may be new), then the broker step failed: the previous
+    // release must start with the env that matches Postgres, so Compose recreates its containers.
+    const w = apiAt020();
+    const result = deploy(w, ["deploy", "staging", "api", "0.3.0"], {
+      env: { STUB_FAIL: "broker" },
+    });
+    assert.equal(result.status, 1);
+    assert.deepEqual(journal(w).slice(-2), [
+      { version: "0.3.0", state: "rolling_back", reason: "provision-failed" },
+      { version: "0.3.0", state: "rolled_back", reason: "previous-healthy" },
+    ]);
+    assert.ok(
+      calls(w, "docker").some((c) => c.includes("psql")),
+      "Postgres was provisioned",
+    );
+    const envFile = join(w.envDir, "api.env");
+    assert.match(read(envFile), new RegExp(`content_\\$\\{JADERO_ENV\\}:${SECRET}@`));
+    assert.equal(statSync(envFile).mode & 0o777, 0o600);
+    assert.equal(existsSync(join(w.envDir, "api.env.new")), false);
+    // No migrate, no new containers: the one up is the previous release on the new env.
+    const files = `-f ${w.envDir}/releases/api-0.2.0/infra/compose/compose.services.yml -f ${w.envDir}/releases/api-0.2.0/infra/compose/compose.staging.yml`;
+    assert.deepEqual(composeCalls(w), [
+      `JADERO_ENV=staging API_IMAGE=${REPO_PREFIX}api@sha256:${OLD} AGENT_IMAGE=${INERT} WEB_IMAGE=${INERT} COMPOSE_PROJECT_NAME= :: compose --project-name jadero-staging --profile api ${files} up -d --wait --wait-timeout 120 --no-deps api api-worker`,
+    ]);
+  });
+
+  it("keeps this run's env on a redeploy whose provisioning fails half way", () => {
+    const w = apiAt020();
+    const result = deploy(w, ["redeploy", "staging", "api"], { env: { STUB_FAIL: "psql" } });
+    assert.equal(result.status, 1);
+    assert.deepEqual(journal(w).slice(-2), [
+      { version: "0.2.0", state: "rolling_back", reason: "provision-failed" },
+      { version: "0.2.0", state: "rolled_back", reason: "previous-healthy" },
+    ]);
+    assert.match(read(join(w.envDir, "api.env")), new RegExp(SECRET));
+    assert.equal(existsSync(join(w.envDir, "api.env.new")), false);
+  });
+
+  it("keeps the old env and removes the .new file when the topology fails before any role", () => {
+    const w = apiAt020();
+    const result = deploy(w, ["deploy", "staging", "api", "0.3.0"], {
+      env: { STUB_FAIL: "import" },
+    });
+    assert.equal(result.status, 1);
+    assert.equal(journal(w).at(-2).reason, "topology-failed");
+    assert.ok(!calls(w, "docker").some((c) => c.includes("psql")), "no role touched");
+    assert.equal(read(join(w.envDir, "api.env")), "OLD=1\n", "the passwords did not move");
+    assert.equal(existsSync(join(w.envDir, "api.env.new")), false, "no rendered secrets left");
   });
 
   it("ends failed when there is nothing to roll back to, the new containers stopped", () => {
@@ -998,7 +1048,7 @@ describe("deploy.sh rollback and redeploy", () => {
 describe("deploy.sh, mutual exclusion and lost sessions", () => {
   it("exits 75 without touching anything while another run holds the lock", async () => {
     const w = apiAt020();
-    const lockFile = join(w.lockDir, "jadero-deploy-staging.lock");
+    const lockFile = join(w.envDir, "deploy.lock");
     const holder = spawn("perl", [
       "-e",
       'use Fcntl qw(:flock); open(my $f, ">>", $ARGV[0]) or die; flock($f, LOCK_EX) or die; $| = 1; print "held\\n"; sleep 30',
@@ -1018,6 +1068,10 @@ describe("deploy.sh, mutual exclusion and lost sessions", () => {
     }
     // Released with its holder: the next run goes through.
     assert.equal(deploy(w, ["deploy", "staging", "api", "0.3.0"]).status, 0);
+    // The lock is in the state folder (root-owned on the server); one deploy creates it 600.
+    const fresh = apiAt020();
+    assert.equal(deploy(fresh, ["deploy", "staging", "api", "0.3.0"]).status, 0);
+    assert.equal(statSync(join(fresh.envDir, "deploy.lock")).mode & 0o777, 0o600);
   });
 
   it("ignores SIGHUP and a closed stdout, and runs on to recorded", async () => {
@@ -1152,7 +1206,7 @@ describe("deploy.sh, refused words", () => {
         /^refused: expected "deploy\.sh deploy <env> <service> <version>"/,
       );
       assert.equal(existsSync(join(w.envDir, "deploy.log")), false);
-      assert.equal(existsSync(join(w.lockDir, "jadero-deploy-staging.lock")), false);
+      assert.equal(existsSync(join(w.envDir, "deploy.lock")), false);
     });
   }
 });
