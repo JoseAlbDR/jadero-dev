@@ -1,18 +1,18 @@
 ---
 id: ADR-029
 title: "Service boundaries and messaging"
-status: accepted
+status: superseded
 date: 2026-10-03
 deciders: [owner]
 decisions: [D-39, D-40, D-41, D-42, D-43, D-49]
 supersedes: []
-superseded_by: null
+superseded_by: ADR-054
 source: docs/plan/report.md ("ADR-029: Service boundaries and messaging (new 2026-10-02)")
 ---
 
 # ADR-029: Service boundaries and messaging
 
-**Status:** Accepted (second pass 2026-10-03): boundaries (D-39), broker (D-40), client (D-41), contracts (D-43), how the agent gets content (D-42, a: the content in `api` is the source of truth, the agent's index is a derived CQRS read model rebuildable from events, so nothing is stored twice in the sense the owner feared) and the resilience library (D-49, cockatiel) are decided. One edge rule is added: stateless **edge adapters** (the future gateway, WP-53, and the MCP service, WP-36) may call the owning services synchronously because they translate an outside protocol into calls and own no data; the no-synchronous-calls rule still holds between `api`, `agent` and `contact`.
+**Status:** Superseded by ADR-054. Accepted (second pass 2026-10-03): boundaries (D-39), broker (D-40), client (D-41), contracts (D-43), how the agent gets content (D-42, a: the content in `api` is the source of truth, the agent's index is a derived CQRS read model rebuildable from events, so nothing is stored twice in the sense the owner feared) and the resilience library (D-49, cockatiel) are decided. One edge rule is added: stateless **edge adapters** (the future gateway, WP-53, and the MCP service, WP-36) may call the owning services synchronously because they translate an outside protocol into calls and own no data; the no-synchronous-calls rule still holds between `api`, `agent` and `contact`.
 
 Decided by the owner in the plan review of 2026-10-02 and 2026-10-03 (decisions D-39, D-40, D-41, D-42, D-43, D-49). This record was extracted verbatim from `docs/plan/report.md`; the narrative, traces and sources stay there. From now on this file is the canonical record: a new decision is a new ADR that supersedes this one, never an edit.
 

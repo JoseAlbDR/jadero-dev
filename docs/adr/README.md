@@ -41,7 +41,7 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-026 | Pipeline, environments, images and deploy | superseded by ADR-048 | D-29, D-32 | [0026-pipeline-environments-images-and-deploy.md](0026-pipeline-environments-images-and-deploy.md) |
 | ADR-027 | Hosting layout | superseded by ADR-050 | D-30, D-31, D-48 | [0027-hosting-layout.md](0027-hosting-layout.md) |
 | ADR-028 | Agent tooling for the repo | accepted | D-34 | [0028-agent-tooling-for-the-repo.md](0028-agent-tooling-for-the-repo.md) |
-| ADR-029 | Service boundaries and messaging | accepted | D-39, D-40, D-41, D-42, D-43, D-49 | [0029-service-boundaries-and-messaging.md](0029-service-boundaries-and-messaging.md) |
+| ADR-029 | Service boundaries and messaging | superseded by ADR-054 | D-39, D-40, D-41, D-42, D-43, D-49 | [0029-service-boundaries-and-messaging.md](0029-service-boundaries-and-messaging.md) |
 | ADR-030 | Contact service | accepted | D-28, D-37, D-46 | [0030-contact-service.md](0030-contact-service.md) |
 | ADR-031 | Two-layer content and the approval gate | accepted | D-11, D-16, D-50, D-51, D-52, D-53, D-65, D-66, D-67 | [0031-two-layer-content-and-the-approval-gate.md](0031-two-layer-content-and-the-approval-gate.md) |
 | ADR-032 | Recruiter mode | accepted | D-54, D-55 | [0032-recruiter-mode.md](0032-recruiter-mode.md) |
@@ -65,6 +65,7 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-050 | Server internal traffic and backup destination | superseded by ADR-051 | D-80 | [0050-server-internal-traffic-and-backup-destination.md](0050-server-internal-traffic-and-backup-destination.md) |
 | ADR-051 | First-party analytics path | accepted | D-81 | [0051-first-party-analytics-path.md](0051-first-party-analytics-path.md) |
 | ADR-052 | Client addresses in the edge logs | accepted | D-82 | [0052-client-addresses-in-the-edge-logs.md](0052-client-addresses-in-the-edge-logs.md) |
+| ADR-054 | Messaging topology as built | accepted | D-85 | [0054-messaging-topology-as-built.md](0054-messaging-topology-as-built.md) |
 <!-- adr-index:end -->
 
 Read in this order for a first pass: 029 (service boundaries), 002 (topology and edge), 003 (inside a service), 012 (async work), 031 (content layers), 013 to 016 (AI layer and RAG), 020 and 021 (security), 025 to 027 (delivery and hosting), 041 (work tracking).
