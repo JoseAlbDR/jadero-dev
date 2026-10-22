@@ -3774,7 +3774,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     "sh-release-inputs": {
       "label": "release-inputs.txt", "sub": "pnpm release-inputs · staleness test", "kind": "check", "status": "real", "wp": "WP-7",
-      "what": "Each service's production dependency closure, one `name@version` per line, so a dependency-only change releases the services it reaches.",
+      "what": "Each service's production dependency closure, one `name@version` per line, type packages left out, so a dependency-only change releases the services it reaches.",
       "how": "`scripts/release-inputs.mjs` reads only `pnpm-lock.yaml` (offline, deterministic), follows `dependencies` and `optionalDependencies` from each app and leaves workspace packages out (the plugin covers them). `pnpm release-inputs` rewrites `apps/{api,agent,web}/release-inputs.txt`; a stale file fails `pnpm verify`.",
       "why": "ADR-049 dependency-only releases B: release-please attributes a commit only by the files it touches, and a catalog or lockfile change touches none of a service's. A generated file with a staleness test. The hosted Renovate runs no repository commands, so a dependency pull request runs the command by hand.",
       "files": ["scripts/release-inputs.mjs","scripts/release-inputs.test.mjs","apps/api/release-inputs.txt","apps/agent/release-inputs.txt","apps/web/release-inputs.txt"]

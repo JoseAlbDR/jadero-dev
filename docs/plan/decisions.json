@@ -4715,6 +4715,59 @@
       "decidedOption": "b",
       "decidedBy": "owner",
       "decidedAt": "2026-10-19"
+    },
+    {
+      "id": "D-86",
+      "area": "delivery",
+      "title": "Type packages out of the release inputs",
+      "question": "ADR-049 lists each service's whole production dependency closure in release-inputs.txt, type packages included. Should a type-only bump change the file?",
+      "context": "Renovate PR #149 bumped @types/node, which reaches api and agent through @opentelemetry/instrumentation-pg and @types/pg. Type files never change what Node runs, and the hosted Renovate cannot regenerate the file, so the pull request failed verify.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Keep listing type packages",
+          "description": "The file stays the full production closure.",
+          "pros": [
+            "The file matches ADR-049 as written"
+          ],
+          "cons": [
+            "Every type-only bump makes the files stale and needs a manual regeneration",
+            "A fix(deps) type bump releases services that run the same code"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Leave @types/* out of the listed closure",
+          "description": "Walk through type packages so their runtime dependencies stay listed, but do not list the type packages themselves.",
+          "pros": [
+            "Type-only bumps leave the files unchanged: no CI failure, no regeneration, no release"
+          ],
+          "cons": [
+            "The file is the shipped runtime closure, not every installed package"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "A workflow that regenerates the files on Renovate pull requests",
+          "description": "Run pnpm release-inputs on each Renovate branch and push the result.",
+          "pros": [
+            "Removes the manual step for every dependency bump"
+          ],
+          "cons": [
+            "Needs a GitHub App token so the pushed commit starts the checks",
+            "Still releases services for a type-only bump"
+          ]
+        }
+      ],
+      "recommendation": "b",
+      "why": "A type package never changes what a service runs, so it should not make the file stale or release a service; the regenerate workflow stays a separate chore.",
+      "adr": "ADR-055",
+      "learn": "Declared inputs, generated files with a staleness test, and false-positive release triggers.",
+      "status": "decided",
+      "ownerNote": "Answered on 2026-10-23 during WP-9: exclude type packages",
+      "decidedOption": "b",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-23"
     }
   ],
   "workPackages": [
