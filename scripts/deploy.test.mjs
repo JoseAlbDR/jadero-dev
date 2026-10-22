@@ -171,6 +171,7 @@ for queue in json.load(open(sys.argv[1]))["queues"]:
         if [[ -n "@{STUB_SLOW_UP-}" ]]; then : > "$rec/up-started"; sleep "$STUB_SLOW_UP"; fi
         fails up-all && exit 1
         if fails up && [[ "$image" == *"$STUB_DIGEST" ]]; then exit 1; fi
+        date -u +%s > "$rec/up-returned"
         exit 0 ;;
     esac
     exit 0 ;;
@@ -217,6 +218,8 @@ exec perl -e 'use Fcntl qw(:flock); open(my $fh, ">&=", $ARGV[0]) or exit 1; flo
 const SMOKE_STUB = bash`
 printf '%s\n' "$*" >> "$STUB_REC/smoke-calls"
 [[ " @{STUB_FAIL-} " == *" smoke "* ]] && exit 1
+echo "check=ready result=ok"
+for name in @{STUB_SKIPPED-}; do echo "check=$name result=skipped"; done
 exit 0
 `;
 
@@ -469,7 +472,8 @@ describe("deploy.sh deploy, the happy path", () => {
       `${head} run --rm --no-deps api-migrate`,
       `${head} up -d --wait --wait-timeout 120 --no-deps api api-worker`,
     ]);
-    assert.deepEqual(calls(w, "smoke"), ["staging api"]);
+    const [smoke] = calls(w, "smoke");
+    assert.match(smoke, /^staging api \d+ api$/, "no other service is deployed on staging yet");
   });
 
   it("deploys the first service of an environment, filling only the others' images", () => {
@@ -824,6 +828,58 @@ describe("deploy.sh, the topology of the release (ADR-053)", () => {
     assert.equal(deploy(w, ["deploy", "staging", "api", "0.3.0"]).status, 1);
     assert.deepEqual(states(w), ["refused"]);
     assert.equal(journal(w)[0].reason, "bad-manifest");
+  });
+});
+
+describe("deploy.sh, the smoke checks (D7)", () => {
+  it("opens the ping window when up --wait returned healthy, never before", () => {
+    const w = apiAt020();
+    assert.equal(deploy(w, ["deploy", "staging", "api", "0.3.0"]).status, 0);
+    const since = Number(calls(w, "smoke")[0].split(" ")[2]);
+    const upReturned = Number(read(join(w.rec, "up-returned")).trim());
+    assert.ok(since >= upReturned, `${since} is not before ${upReturned}`);
+  });
+
+  it("passes the services deployed in the environment, this one first", () => {
+    const w = world({
+      versions: {
+        AGENT_VERSION: "0.2.0",
+        AGENT_IMAGE: `${REPO_PREFIX}agent@sha256:${OLD}`,
+        WEB_VERSION: "0.1.0",
+        WEB_IMAGE: `${REPO_PREFIX}web@sha256:${OLD}`,
+      },
+    });
+    assert.equal(deploy(w, ["deploy", "staging", "api", "0.3.0"]).status, 0);
+    assert.match(calls(w, "smoke")[0], /^staging api \d+ api,agent,web$/);
+  });
+
+  it("journals the skipped checks as fixed tokens, and ignores any other output", () => {
+    const w = world();
+    const result = deploy(w, ["deploy", "staging", "agent", "0.1.0"], {
+      env: { STUB_SKIPPED: "ping evil;id pages" },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(
+      journal(w).find((row) => row.state === "verified"),
+      {
+        version: "0.1.0",
+        state: "verified",
+        reason: "smoke-passed-partial-ping-pages",
+      },
+    );
+    assert.equal(journal(w).at(-1).state, "recorded");
+  });
+
+  it("says smoke-passed when nothing was skipped, on a deploy and on a rollback", () => {
+    const w = world({
+      versions: { API_VERSION: "0.3.0", API_IMAGE: `${REPO_PREFIX}api@sha256:${NEW}` },
+      previous: { API_VERSION: "0.2.0", API_IMAGE: `${REPO_PREFIX}api@sha256:${OLD}` },
+      releases: ["api-0.2.0", "api-0.3.0"],
+      envFiles: ["api"],
+    });
+    assert.equal(deploy(w, ["rollback", "staging", "api"], { stdin: "" }).status, 0);
+    assert.equal(journal(w).find((row) => row.state === "verified").reason, "smoke-passed");
+    assert.match(calls(w, "smoke")[0], /^staging api \d+ api$/);
   });
 });
 

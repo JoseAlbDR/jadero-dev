@@ -24,7 +24,8 @@
 #                Postgres roles and broker user converged
 #   migrated     <service>.env.new renamed into place, then the one-off migrate exited 0
 #   started      up --wait on the service's process types, healthy
-#   verified     the release's smoke script passed
+#   verified     the release's smoke script passed (smoke-passed-partial-<checks> when a check was
+#                skipped because a service on its path is not deployed yet)
 #   recorded     versions.env and previous.env written, older images pruned
 #
 # Two zones. Before `provisioned` nothing shared has changed: a failure is `aborted`, the files
@@ -82,7 +83,8 @@ trap '' HUP PIPE
 # would give is set explicitly below instead.
 unset JADERO_ENV COMPOSE_FILE COMPOSE_PROJECT_NAME COMPOSE_PROFILES COMPOSE_ENV_FILES DOCKER_CONFIG
 # The same for the release's broker scripts, whose defaults read the release's own files.
-unset RABBITMQ_DEFINITIONS RABBITMQ_PERMISSIONS RABBITMQ_IMPORT_TIMEOUT
+unset RABBITMQ_DEFINITIONS RABBITMQ_PERMISSIONS RABBITMQ_IMPORT_TIMEOUT SMOKE_PING_TIMEOUT \
+  SMOKE_PING_INTERVAL
 
 readonly STATE_ROOT=/srv/jadero
 readonly LOCK_DIR=/run/lock
@@ -401,13 +403,35 @@ start_service() {
   compose_in "$1" "$2" up -d --wait --wait-timeout "$WAIT_TIMEOUT" --no-deps $PROCESS_TYPES
 }
 
-# The smoke checks of D7, from the release's own files (infra/scripts/smoke-deploy.sh arrives in
-# WP-9 step 4). A release without the script fails closed: no smoke, no `verified`.
-# Arguments: the release folder.
+smoke_skipped="" # the checks the smoke skipped, joined by `-`, for the `verified` reason
+
+# The smoke checks of D7, from the release's own files (infra/scripts/smoke-deploy.sh). A release
+# without the script fails closed: no smoke, no `verified`. It gets the time `up --wait` returned
+# healthy (its ping window opens then: only new containers exist) and the services deployed in
+# the environment, so it skips a check whose path is not whole yet. Its stdout is read for the
+# skipped checks only, each name matched against the fixed list, never journaled as given.
+# Arguments: the release folder, the Unix seconds `up --wait` returned at.
 run_smoke() {
-  local smoke="$1/infra/scripts/smoke-deploy.sh"
+  local smoke="$1/infra/scripts/smoke-deploy.sh" deployed="$SERVICE" name output line
   [[ -f "$smoke" ]] || return 1
-  bash "$smoke" "$ENV_NAME" "$SERVICE" >/dev/null 2>&1
+  for name in $SERVICES; do
+    [[ "$name" == "$SERVICE" ]] && continue
+    local upper
+    upper="$(printf '%s' "$name" | tr '[:lower:]' '[:upper:]')"
+    [[ -z "$(manifest_get "$VERSIONS" "${upper}_VERSION")" ]] || deployed="$deployed,$name"
+  done
+  output="$(bash "$smoke" "$ENV_NAME" "$SERVICE" "$2" "$deployed" 2>/dev/null)" || return 1
+  smoke_skipped=""
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^check=(ready|pages|content|ping)\ result=skipped$ ]]; then
+      smoke_skipped="${smoke_skipped:+$smoke_skipped-}${BASH_REMATCH[1]}"
+    fi
+  done <<<"$output"
+}
+
+# The `verified` reason: smoke-passed, or smoke-passed-partial-<skipped checks>.
+smoke_reason() {
+  if [[ -n "$smoke_skipped" ]]; then echo "smoke-passed-partial-$smoke_skipped"; else echo smoke-passed; fi
 }
 
 # ---------------------------------------------------------------------------------------------
@@ -729,10 +753,11 @@ forward() {
 
   containers_created=1
   start_service "$release" "$new_image" || roll_back unhealthy
+  healthy_at="$(date -u +%s)"
   journal started healthy
 
-  run_smoke "$release" || roll_back smoke-failed
-  journal verified smoke-passed
+  run_smoke "$release" "$healthy_at" || roll_back smoke-failed
+  journal verified "$(smoke_reason)"
 
   if [[ $again -eq 0 ]]; then
     if [[ -n "$current_version" ]]; then
@@ -769,13 +794,14 @@ backward() {
     terminal=1
     exit 1
   fi
+  healthy_at="$(date -u +%s)"
   journal started healthy
-  if ! run_smoke "$target_release"; then
+  if ! run_smoke "$target_release" "$healthy_at"; then
     journal failed smoke-failed
     terminal=1
     exit 1
   fi
-  journal verified smoke-passed
+  journal verified "$(smoke_reason)"
   manifest_set "$VERSIONS" "${KEY}_VERSION" "$target_version" "${KEY}_IMAGE" "$target_image"
   manifest_set "$PREVIOUS" "${KEY}_VERSION" "" "${KEY}_IMAGE" ""
   journal recorded rolled-back-once

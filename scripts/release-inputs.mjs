@@ -58,9 +58,9 @@ const PROVISIONING = [
 
 /** The deploy files of each service, besides its Compose entries; a folder means every file in it. */
 export const DEPLOY_FILES = {
-  agent: ["infra/env/agent.env.tpl", ...PROVISIONING],
-  api: ["infra/env/api.env.tpl", ...PROVISIONING],
-  web: ["infra/env/web.env.tpl"],
+  agent: ["infra/env/agent.env.tpl", "infra/scripts/smoke-deploy.sh", ...PROVISIONING],
+  api: ["infra/env/api.env.tpl", "infra/scripts/smoke-deploy.sh", ...PROVISIONING],
+  web: ["infra/env/web.env.tpl", "infra/scripts/smoke-deploy.sh"],
 };
 
 /** The dependency fields that reach a production install (`pnpm deploy --prod`). */
