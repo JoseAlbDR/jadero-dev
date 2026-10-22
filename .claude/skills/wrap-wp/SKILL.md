@@ -8,6 +8,7 @@ allowed-tools: Read, Glob, Grep, Agent, Bash(git *), Bash(gh pr *), Bash(gh issu
 Close WP-$wp. Go through the list in order, mark each item done or n/a with the reason, and stop where the owner is needed.
 
 1. **Steps logged.** Every step in the explainer's Proposed steps is done and has its two step-log lines; `git log origin/main..HEAD` matches them.
+1b. **ADRs match the code.** List every decision the WP took after its explainer: Decision amendments, implementation choices changed in a step, review fixes that changed a value or mechanism, step-log notes like "chose X instead". Each one either matches a line of an accepted ADR or gets `/adr` (a superseding ADR, plus its `decisions.json` entry) before the PR is announced ready. The reviewer's ADR drift finding blocks the same way. An explainer is history; the ADR is the record (ADR-054 is the example of a catch-up).
 2. **Map.** `/map` (the `cartographer` agent): code map JSON in sync, rendered clean, event catalog and flow updated for new events.
 3. **Docs.** `AGENTS.md` status line and section 3 commands, `README.md` (scripts, services, environment), the touched apps' `AGENTS.md`, `docs/sessions.md` or the process pages when the flow changed. Delegate to the `implementer` agent (as a docs step) when the edits are more than a few lines.
 4. **Artifacts.** Every artifact in `docs/artifacts.md` whose source changed is republished and its row updated (the cartographer does it; check the rows).
