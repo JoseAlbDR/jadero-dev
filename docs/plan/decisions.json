@@ -4791,6 +4791,48 @@
       "why": "Ordering by construction beats ordering a manual run can skip; the guard keeps shared topology moving forward only.",
       "learn": "Ordering by construction, additive infrastructure change, monotonic counter.",
       "ownerNote": "Answered in the WP-9 explainer dialogue (2026-10-18): B; the anti-rollback guard on the topology version was added by the main session after reading the generator (import overwrites policies)."
+    },
+    {
+      "id": "D-85",
+      "area": "messaging",
+      "title": "Prefetch and dead-letter exchange as built",
+      "question": "ADR-029 says a dead-letter exchange per queue and a prefetch of 10; WP-5 built one shared dead-letter exchange and a prefetch of 4 on the agent consumer. Which one is the decision?",
+      "context": "The events guide check of 2026-10-19 found that two WP-5 choices (one from the PR #89 review) were recorded only in the WP-5 explainer, and that the retry routing and what the delivery limit counts were never in an ADR.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Change the code back to ADR-029",
+          "description": "Prefetch 10 and one dead-letter exchange per queue.",
+          "pros": [
+            "The ADR stays as written"
+          ],
+          "cons": [
+            "Prefetch above the database pool makes delivered messages wait for a connection",
+            "One more exchange per queue to declare and permit, for the same result"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Record the code in a superseding ADR",
+          "description": "Prefetch per consumer below its pool, one shared jadero.dlx, retry by a confirmed copy then ack, and what the delivery limit counts.",
+          "pros": [
+            "The ADR matches the code",
+            "Backpressure sized to the limiting resource"
+          ],
+          "cons": [
+            "A new ADR restating ADR-029"
+          ]
+        }
+      ],
+      "recommendation": "b",
+      "why": "The code's choices are the better ones; the gap is that they were never recorded where decisions live.",
+      "adr": "ADR-054",
+      "learn": "Backpressure, dead-letter routing, documentation drift and how a process catches it.",
+      "status": "decided",
+      "ownerNote": "Answered on 2026-10-19 during WP-9 step 3: yes to recording the code, plus a check so it does not happen again.",
+      "decidedOption": "b",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-19"
     }
   ],
   "workPackages": [
