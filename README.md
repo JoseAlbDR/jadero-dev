@@ -204,7 +204,7 @@ Root scripts (`pnpm <script>`):
 | `test:int` | Integration tests (`*.int.test.ts`) against real containers; needs Docker |
 | `test:e2e` | Builds `web` and runs its Playwright smoke and axe checks per locale; needs Chrome |
 | `check:migrations` | Fails when a branch edits a migration `main` already has, or adds one the migrator would skip |
-| `release-inputs` | Regenerates each service's `release-inputs.txt` (its production dependency closure) |
+| `release-inputs` | Regenerates each service's `release-inputs.txt` (its production dependency closure, type packages `@types/*` left out) |
 | `lint:workflows` | zizmor over `.github/workflows/`, in Docker |
 | `scan:secrets` | gitleaks over the git history, in Docker |
 | `nginx:check` | Installs `infra/nginx/` into Ubuntu 26.04 with the distro nginx, runs `nginx -t` and the edge smoke checks, in Docker |
