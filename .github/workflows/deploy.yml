@@ -71,10 +71,14 @@ jobs:
     # The environment holds DEPLOY_SSH_KEY and its protection rules: main only, and for production
     # the owner as required reviewer. The key is readable only once the job may start.
     environment: ${{ inputs.environment }}
-    # One deploy per environment at a time, never cancelled in progress: a cancelled deploy is the
-    # worst case of D1 (the server ignores the hangup, but the job loses the journal's tail).
+    # One deploy per environment and service at a time, never cancelled in progress: a cancelled
+    # deploy is the worst case of D1 (the server ignores the hangup, but the job loses the
+    # journal's tail). A newer pending deploy of the same service in the same environment replaces
+    # an older pending one, which the newer version supersedes anyway. Two services of one
+    # environment can still meet on the server's lock (exit 75, nothing touched, rerun the job).
+    # The same group covers a call from release.yml (one per matrix leg) and a manual dispatch.
     concurrency:
-      group: deploy-${{ inputs.environment }}
+      group: deploy-${{ inputs.environment }}-${{ inputs.service }}
       cancel-in-progress: false
     permissions:
       contents: read
@@ -179,7 +183,7 @@ jobs:
           version: 1.104.1
           sha256sum: 108d1d96ecf410d305571e173516f27038f870919a9b89c914a167c6d33a4528
           use-cache: "false"
-          ping: ${{ vars.DEPLOY_HOST }}
+          ping: ${{ secrets.DEPLOY_HOST }}
 
       # The key and the pinned host key go to files only this user reads, removed on exit (and by
       # the last step if the job is stopped). Standard input: line 1 the registry user, line 2 the
@@ -196,9 +200,11 @@ jobs:
           REGISTRY_USER: ${{ github.repository_owner }}
           REGISTRY_TOKEN: ${{ github.token }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
-          DEPLOY_SSH_PORT: ${{ vars.DEPLOY_SSH_PORT }}
-          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+          # Secrets, not variables: a variable's value is printed in the public log's env block,
+          # and the tailnet host and SSH port stay out of public view.
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
           for name in DEPLOY_SSH_KEY DEPLOY_HOST DEPLOY_SSH_PORT DEPLOY_KNOWN_HOSTS; do
             if [ -z "${!name}" ]; then echo "::error::$name is not set for this environment"; exit 1; fi
@@ -208,7 +214,9 @@ jobs:
           trap 'rm -rf "$dir"' EXIT
           (umask 077 && mkdir -p "$dir")
           (umask 077 && printf '%s\n' "$DEPLOY_SSH_KEY" > "$dir/key")
-          (umask 077 && printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$dir/known_hosts")
+          # known_hosts may hold several lines (one per key type): written whole from the secret,
+          # quoted, carriage returns from a paste removed, never echoed.
+          (umask 077 && printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > "$dir/known_hosts")
           if [ "$ACTION" = deploy ]; then
             command="deploy $SERVER_ENV $SERVICE $VERSION"
             send() { printf '%s\n%s\n%s\n' "$REGISTRY_USER" "$REGISTRY_TOKEN" "$DIGEST"; }

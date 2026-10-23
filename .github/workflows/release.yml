@@ -31,14 +31,17 @@ on:
 # Nothing by default; each job lists what it needs.
 permissions: {}
 
-# One run at a time per branch and event, never cancelled: a release half done (a tag without its
-# image) is worse than a queued run. A newer pending push run replaces an older pending one, which
-# is safe: release-please reads every commit and every merged Release PR still marked pending, and
-# the images job builds the commit it tagged. The event is in the group so a manual dry run never
-# replaces a pending push run, which would skip release-please for that push.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: false
+# Concurrency is set per job, not for the whole run (WP-9, owner decision of 2026-10-24): a
+# workflow-level group would stay held while deploy-production waits for its approval, and every
+# later release (Release PR update, tags, images, staging) would wait behind it.
+# - release-please: one at a time per branch, never cancelled in progress. A newer pending job
+#   replaces an older pending one, which is safe: release-please reads every commit and every
+#   merged Release PR still marked pending, so the newer run tags what the replaced one would have.
+# - images: no group. Each leg builds and pushes the version its tag names, so legs of two runs
+#   never touch the same tag and can run side by side; nothing ever cancels one, so no tag is left
+#   without its image (a group would let a newer pending leg replace an older one). A manual dry
+#   run pushes nothing.
+# - deploys: deploy.yml's group `deploy-<environment>-<service>` (see there).
 
 jobs:
   # The job's GITHUB_TOKEN opens the Release PR (D11; needs the repository setting "Allow GitHub
@@ -49,6 +52,9 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-release-please
+      cancel-in-progress: false
     permissions:
       contents: write # release branch, tags and GitHub releases
       pull-requests: write # open and update the Release PR
@@ -402,8 +408,8 @@ jobs:
 
   # Staging deploys by itself (D8). max-parallel 1 runs the legs one at a time in the matrix order
   # (agent, api, web); fail-fast cancels the legs not started yet when one fails, so a producer
-  # never ships after its consumer failed. deploy.yml serializes per environment and validates
-  # every input again.
+  # never ships after its consumer failed. deploy.yml serializes per environment and service
+  # (each leg's group takes its own service from `with`) and validates every input again.
   deploy-staging:
     name: deploy-staging (${{ matrix.service }})
     needs: [release-please, digests]
@@ -418,7 +424,10 @@ jobs:
       max-parallel: 1
       matrix:
         service: ${{ fromJSON(needs.release-please.outputs.services) }}
-    uses: $/.github/workflows/deploy.yml
+    # zizmor's self-repository rule is ignored on purpose: for a reusable workflow call GitHub
+    # resolves `./` at the caller's commit, not from the runner's filesystem (a `uses:` job has no
+    # steps or checkout), so `$/` adds nothing here, and actionlint 1.7.12 still rejects `$/`.
+    uses: ./.github/workflows/deploy.yml # zizmor: ignore[self-repository]
     with:
       environment: staging
       service: ${{ matrix.service }}
@@ -442,7 +451,10 @@ jobs:
       max-parallel: 1
       matrix:
         service: ${{ fromJSON(needs.release-please.outputs.services) }}
-    uses: $/.github/workflows/deploy.yml
+    # zizmor's self-repository rule is ignored on purpose: for a reusable workflow call GitHub
+    # resolves `./` at the caller's commit, not from the runner's filesystem (a `uses:` job has no
+    # steps or checkout), so `$/` adds nothing here, and actionlint 1.7.12 still rejects `$/`.
+    uses: ./.github/workflows/deploy.yml # zizmor: ignore[self-repository]
     with:
       environment: production
       service: ${{ matrix.service }}

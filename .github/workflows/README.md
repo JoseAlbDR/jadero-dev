@@ -43,8 +43,11 @@ GitHub Advanced Security: that is the code scanning result of the uploaded SARIF
 
 ### `release.yml`
 
-Triggers: `push` to `main`, `workflow_dispatch` with a `service` input (the dry run). One run at a
-time, never cancelled: a tag without its image is worse than a queued run. Not a gate.
+Triggers: `push` to `main`, `workflow_dispatch` with a `service` input (the dry run). Not a gate.
+Concurrency is per job, never cancelled in progress: `release-please` runs one at a time; `images`
+legs have no group (each pushes the version its tag names, so nothing can cancel one and leave a
+tag without its image); the deploy jobs use `deploy.yml`'s group. A workflow-level group would stay
+held while production waits for approval and stop every later release behind it.
 
 | Job (check name) | Runs on | Does |
 |---|---|---|
@@ -59,9 +62,9 @@ Verify an image from anywhere: `gh attestation verify oci://<image>:<version> --
 After merging a Release PR:
 1. Wait for the `release` run of that push on `main` to go green: `release-please` tags each
    component and creates its GitHub release, then one `images (<service>)` job per released service
-   pushes its image. A later push to `main` while it runs queues behind it; GitHub keeps one pending
-   run per group and cancels the older pending one, which is harmless because the newer run
-   reads all of `main`.
+   pushes its image. A later push's `release-please` waits while one runs; GitHub keeps one
+   pending job per group and cancels the older pending one, which is harmless because the newer
+   job reads all of `main` and tags every merged Release PR still marked pending.
 2. Check that the GitHub releases (`gh release list`) and the packages (the repository's Packages
    tab) are there.
 3. Verify the provenance of each new image with the command above. The packages are private, and
@@ -82,8 +85,8 @@ Triggers: `workflow_call` from `release.yml` (inputs `environment`, `service`, `
 production, `service` agent, api or web, and a `version` for a deploy). Not a gate.
 
 One job, named `<action> <service> to <environment>`, on the GitHub environment of that name; at
-most one per environment at a time (`concurrency: deploy-<environment>`, never cancelled in
-progress). It checks every input (main only, a known environment and service, a semver version, a
+most one per environment and service at a time (`concurrency: deploy-<environment>-<service>`,
+never cancelled in progress, the same group for a call and a manual dispatch). It checks every input (main only, a known environment and service, a semver version, a
 `sha256:` digest from `release.yml`, no version on a rollback), joins the tailnet, and runs one SSH
 command as `deploy`: `deploy <env> <service> <version>` or `rollback <env> <service>`, where
 `<env>` is the server's word, `staging` or `prod`. Standard input carries the registry user (the
@@ -101,14 +104,15 @@ its guards are the approval, the provenance check and the server's anti-rollback
 rollback goes back to the release the server recorded as previous, once.
 
 Concurrency, as GitHub runs it: a group holds one running and one pending job, and a newly queued
-job cancels the pending one. Release runs never meet in `deploy-<environment>`, because
-`release.yml` already runs one at a time, and a run's own legs wait on `max-parallel`, not on the
-group. A manual dispatch to the same environment can: while it runs, the next release leg waits as
-the pending job, and a second dispatch cancels that leg (shown as cancelled; its later services and
-production are skipped for that release; redeploy them by hand). Avoid dispatching while a release
-deploys. `release.yml`'s own group is held for the whole run, including the production approval:
-until you approve or reject, the next push's release run waits (no Release PR update, no tags, no
-staging deploy), and a later push replaces that waiting run.
+job cancels the pending one. Each matrix leg's group takes its own service (the caller passes
+`matrix.service` as the `service` input), so a pending deploy can only be replaced by a newer
+pending deploy of the same service in the same environment, which carries the newer version
+anyway. A replaced leg shows as cancelled, and `fail-fast` then skips that run's later services
+and its production: deploy those by hand if no newer release carries them. Within one run the
+legs wait on `max-parallel`, so the order `agent`, `api`, `web` holds per run, not across two runs.
+The residual case: two releases deploying different services to one environment at the same time
+(two approved production runs, or a manual dispatch during a release) meet on the server's lock.
+The second gets exit 75, *busy*, with nothing touched: rerun the failed job once the first ends.
 
 ### `pr-title.yml`
 
@@ -283,11 +287,14 @@ Agents never change these settings; each item is yours.
    it locally. The public halves go into `/home/deploy/.ssh/authorized_keys` as the two lines of
    `docs/runbooks/server-access.md` section 8 (`deploy-entry staging`, `deploy-entry prod`), and the
    WP-8 test key line is removed.
-3. **Variables** (repository variables, both environments use the same server): `DEPLOY_HOST`
-   (the server's tailnet name), `DEPLOY_SSH_PORT`, `DEPLOY_KNOWN_HOSTS` (the output of
+3. **Server secrets** (environment secrets in both `staging` and `production`, not variables: a
+   variable's value is printed in the public log): `DEPLOY_HOST` (the server's tailnet name),
+   `DEPLOY_SSH_PORT`, `DEPLOY_KNOWN_HOSTS` (the output of
    `ssh-keyscan -p <ssh-port> -t ed25519 <tailnet-host>` run over the tailnet, checked against
-   `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the server), `TS_OAUTH_CLIENT_ID` and
-   `TS_AUDIENCE` (from the federated identity below).
+   `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the server; several lines are fine, the
+   job writes the secret whole to a file and never prints it). **Variables** (repository):
+   `TS_OAUTH_CLIENT_ID` and `TS_AUDIENCE` (from the federated identity below; identifiers, not
+   secrets).
 4. **Tailscale**: `tag:ci` in `tagOwners` and a grant from `tag:ci` to `tag:server` on
    `tcp:<ssh-port>` only, with a test that accepts that port and denies another
    (`docs/runbooks/server-access.md` section 1a). A federated identity for GitHub Actions: issuer
