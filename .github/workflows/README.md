@@ -2,7 +2,8 @@
 
 The CI pipeline of ADR-048 (built in WP-6, explained in `docs/learning/wp-6.md`), with the images,
 releases and image scans of ADR-049, which supersedes it (built in WP-7, explained in
-`docs/learning/wp-7.md`). Five workflows, plus Renovate (`renovate.json`) and pnpm's release cooldown (`pnpm-workspace.yaml`). This page is
+`docs/learning/wp-7.md`), and the deploy of ADR-049 and ADR-053 (built in WP-9, explained in
+`docs/learning/wp-9.md`). Six workflows, plus Renovate (`renovate.json`) and pnpm's release cooldown (`pnpm-workspace.yaml`). This page is
 the map and the runbook; the comments in each file carry the detail.
 
 ## What runs where
@@ -48,7 +49,10 @@ time, never cancelled: a tag without its image is worse than a queued run. Not a
 | Job (check name) | Runs on | Does |
 |---|---|---|
 | `release-please` | push to `main` | opens or updates the one Release PR from the conventional commits (components by path, `release-please-config.json`); merging it tags each released component `<component>-v<version>` and outputs the released services. Uses the job's `GITHUB_TOKEN`, so its PRs and tags start no workflow |
-| `images (<service>)` | push to `main` with a released service; manual | per released service, from the commit its tag points at: build, hardened smoke run, Trivy (a secret fails; HIGH and CRITICAL OS findings are reported only), then push to GHCR (private) as `:<version>` and `:sha-<short>` with a BuildKit SBOM, check the pushed image is the scanned one and attest its SLSA build provenance (keyless, Sigstore). The manual run builds, smoke-tests and scans one service and never logs in, pushes or attests |
+| `images (<service>)` | push to `main` with a released service; manual | per released service, from the commit its tag points at: build, hardened smoke run, Trivy (a secret fails; HIGH and CRITICAL OS findings are reported only), then push to GHCR (private) as `:<version>` and `:sha-<short>` with a BuildKit SBOM, check the pushed image is the scanned one and attest its SLSA build provenance (keyless, Sigstore), then upload `image-<service>` (its version and pushed digest). The manual run builds, smoke-tests and scans one service and never logs in, pushes, attests or deploys |
+| `digests` | push to `main`, every `images` leg green | joins the `image-<service>` artifacts into one output, `{"api": {"version", "digest"}}`. A matrix job's outputs overwrite each other across legs, so each leg uploads its own artifact instead. If any `images` leg failed, this job and every deploy are skipped |
+| `deploy-staging (<service>) / deploy <service> to staging` | after `digests` | `deploy.yml` for each released service on the `staging` environment, in the order `agent`, `api`, `web` (consumers before producers, the HTTP provider before `web`; WP-9 D6), one at a time (`max-parallel: 1`); `fail-fast` cancels the services not started yet when one fails |
+| `deploy-production (<service>) / deploy <service> to production` | after every staging leg succeeded | the same services, versions and digests on the `production` environment, each waiting for the owner's approval; the server refuses an image whose digest differs, so production runs the bytes staging tested |
 
 Verify an image from anywhere: `gh attestation verify oci://<image>:<version> --owner JoseAlbDR`.
 
@@ -68,7 +72,43 @@ After merging a Release PR:
 4. A service released for the first time creates its GHCR package with the repository's
    visibility, which is public. Set it private once (the package page, Package settings, Change
    visibility); there is no API for user packages. Later versions keep the setting.
-5. Nothing deploys yet: the deploy that pulls these images arrives in WP-9.
+5. Staging deploys by itself; production waits on the run page for your approval (Review
+   deployments). See `deploy.yml` below.
+
+### `deploy.yml`
+
+Triggers: `workflow_call` from `release.yml` (inputs `environment`, `service`, `version`,
+`digest`) and `workflow_dispatch` (choices `action` deploy or rollback, `environment` staging or
+production, `service` agent, api or web, and a `version` for a deploy). Not a gate.
+
+One job, named `<action> <service> to <environment>`, on the GitHub environment of that name; at
+most one per environment at a time (`concurrency: deploy-<environment>`, never cancelled in
+progress). It checks every input (main only, a known environment and service, a semver version, a
+`sha256:` digest from `release.yml`, no version on a rollback), joins the tailnet, and runs one SSH
+command as `deploy`: `deploy <env> <service> <version>` or `rollback <env> <service>`, where
+`<env>` is the server's word, `staging` or `prod`. Standard input carries the registry user (the
+repository owner), the job's `GITHUB_TOKEN` (`packages: read`, valid until the job ends) and the
+digest; a rollback sends nothing. It prints the server's journal lines and writes them to the job
+summary.
+
+A manual deploy has no `images` job behind it, so it resolves the tag's digest itself
+(`docker buildx imagetools inspect`, the top-level index, the same kind the images job pushed and
+the server reads from `RepoDigests`) and sends it only after
+`gh attestation verify oci://<image>@<digest> --repo JoseAlbDR/jadero-dev --signer-workflow
+JoseAlbDR/jadero-dev/.github/workflows/release.yml --source-ref refs/heads/main
+--deny-self-hosted-runners` passes. A manual production deploy does not need a staging run first:
+its guards are the approval, the provenance check and the server's anti-rollback rule. A manual
+rollback goes back to the release the server recorded as previous, once.
+
+Concurrency, as GitHub runs it: a group holds one running and one pending job, and a newly queued
+job cancels the pending one. Release runs never meet in `deploy-<environment>`, because
+`release.yml` already runs one at a time, and a run's own legs wait on `max-parallel`, not on the
+group. A manual dispatch to the same environment can: while it runs, the next release leg waits as
+the pending job, and a second dispatch cancels that leg (shown as cancelled; its later services and
+production are skipped for that release; redeploy them by hand). Avoid dispatching while a release
+deploys. `release.yml`'s own group is held for the whole run, including the production approval:
+until you approve or reject, the next push's release run waits (no Release PR update, no tags, no
+staging deploy), and a later push replaces that waiting run.
 
 ### `pr-title.yml`
 
@@ -102,7 +142,20 @@ reported on `main` (expand, see the last section).
   `id-token: write` for Scorecard, `issues: write` for `backstop-issue` and `image-scan`, which
   run no repository code, and in `release.yml`, which runs only on `main`: `contents`,
   `pull-requests` and `issues: write` for `release-please`, `packages`, `id-token`,
-  `attestations` and `artifact-metadata: write` for `images`.
+  `attestations` and `artifact-metadata: write` for `images`. The deploy jobs read only:
+  `contents`, `packages` and `attestations: read`, plus `id-token: write` for Tailscale.
+- Deploys (WP-9 D2): the runner joins the tailnet as an ephemeral `tag:ci` node through workload
+  identity federation (GitHub's OIDC token, subject `repo:JoseAlbDR/jadero-dev:environment:<name>`;
+  no Tailscale secret is stored), and the tailnet policy lets `tag:ci` reach the server's SSH port
+  only. Each environment holds its own `DEPLOY_SSH_KEY`, and the server's key line forces
+  `deploy-entry staging` or `deploy-entry prod`, so the staging key never reaches production.
+  Production's key is readable only after your approval. The host key is pinned
+  (`StrictHostKeyChecking=yes`, `BatchMode=yes`, `IdentitiesOnly=yes`), the key lives in
+  `$RUNNER_TEMP` with mode 600 until the step ends, and the registry token goes on standard input,
+  never in the command line, which the server logs. The Tailscale tarball is checked against a
+  pinned checksum and the actions cache stays off for it (a cache hit skips the check). The
+  server's output is printed with workflow commands stopped, so nothing it prints can act on the
+  job.
 - Every action is pinned by commit SHA with the version in a comment; container images (zizmor,
   gitleaks, Trivy) by digest. The repository setting that requires actions pinned to a full-length
   commit SHA (one of the owner's manual settings in ADR-048) makes an unpinned action fail.
@@ -122,6 +175,24 @@ pnpm 11 that name runs a pnpm built-in instead of the script, so it checks nothi
 at a time locally). Smoke: `pnpm images:up` runs every process type hardened. Trivy: a secret, or
 a fixable HIGH or CRITICAL OS finding in a PR that changes the image inputs; fix it with a base
 digest update, or mute it in `.trivyignore.yaml` with a statement and an `expired_at` date.
+
+**A deploy red.** The job's last lines are the server's journal, one line per state
+(`<time> <env> <service> <version> <state> reason=<token>`), and an error line that names the case:
+- *busy* (exit 75): another deploy holds the environment's lock; nothing was touched. Rerun the job
+  once the other one ends.
+- *refused* (exit 1, journal `refused`, or a message from `deploy-entry` with no journal line): the
+  words, the input or the state said no (`not-newer`, `env-mismatch`, `no-digest`, ...); nothing
+  was touched. Fix the cause; a downgrade is a rollback, never a deploy.
+- *aborted* (exit 1): it failed before the point of no return (`op` down, pull or digest mismatch,
+  missing release files); the running release never noticed. Rerun when the cause is gone.
+- *rolled_back* (exit 1): the new release failed after the point of no return (migrate, health,
+  smoke) and the previous one is healthy again. Fix forward with a new release; the same version
+  can be retried, since a failed deploy never becomes current.
+- *failed* (exit 1): the rollback did not get healthy either. Leave it to the owner on the server:
+  read `/srv/jadero/<env>/deploy.log` and the containers' logs. No retry loop runs.
+- *SSH failed* (exit 255): with no journal line, the tailnet, host key or key line refused the
+  connection. With journal lines, the session dropped mid-deploy: the server ignores the hangup and
+  runs to its end state, so read its journal before a rerun.
 
 **`release` red.** A failed `images (<service>)` after the Release PR merged leaves the tag and
 the GitHub release without an image. Fix the cause and rerun the failed job; the dry run
@@ -198,6 +269,36 @@ own cooldown (`minimumReleaseAge: 4320` minutes in `pnpm-workspace.yaml`), so an
 version younger than three days fails in CI. For an urgent fix, add the exact version under
 `minimumReleaseAgeExclude` with a comment (advisory or bug, date, when to drop it), and remove
 the entry once the version is three days old.
+
+## Owner setup for the deploy (WP-9 step 5)
+
+Agents never change these settings; each item is yours.
+1. **Environments** (Settings, Environments): `staging` with deployment branches "main" only and
+   no reviewer; `production` with deployment branches "main" only and you as required reviewer.
+   Keep **"Prevent self-reviews" off** on `production`: you merge the Release PR and are the only
+   reviewer, so with it on nobody could approve.
+2. **Keys**: two new ed25519 keys on your machine
+   (`ssh-keygen -t ed25519 -N '' -C jadero-deploy-staging`, and `-prod`). The private half goes
+   only into the environment secret `DEPLOY_SSH_KEY` of `staging` and of `production`, then delete
+   it locally. The public halves go into `/home/deploy/.ssh/authorized_keys` as the two lines of
+   `docs/runbooks/server-access.md` section 8 (`deploy-entry staging`, `deploy-entry prod`), and the
+   WP-8 test key line is removed.
+3. **Variables** (repository variables, both environments use the same server): `DEPLOY_HOST`
+   (the server's tailnet name), `DEPLOY_SSH_PORT`, `DEPLOY_KNOWN_HOSTS` (the output of
+   `ssh-keyscan -p <ssh-port> -t ed25519 <tailnet-host>` run over the tailnet, checked against
+   `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the server), `TS_OAUTH_CLIENT_ID` and
+   `TS_AUDIENCE` (from the federated identity below).
+4. **Tailscale**: `tag:ci` in `tagOwners` and a grant from `tag:ci` to `tag:server` on
+   `tcp:<ssh-port>` only, with a test that accepts that port and denies another
+   (`docs/runbooks/server-access.md` section 1a). A federated identity for GitHub Actions: issuer
+   `https://token.actions.githubusercontent.com`, subject `repo:JoseAlbDR/jadero-dev:environment:*`,
+   tag `tag:ci`, scope to create auth keys. If your plan does not offer federation, an OAuth client
+   with the same tag is the fallback (its secret in an environment secret, and `deploy.yml` then
+   passes it as `oauth-secret`: a change to review, not a setting).
+5. **Tag ruleset** (ADR-053): release tags `*-v*` cannot be updated or deleted. Leave creation
+   allowed: release-please creates them with the job's token.
+6. **Required checks**: add `nginx` and `backup` to `protect-main`, then update the table and the
+   list under "Required checks" above.
 
 ## Adding or renaming a required check
 

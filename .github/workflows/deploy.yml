@@ -1,0 +1,264 @@
+# Deploy one service to one environment (WP-9 D2 and D8; ADR-049 deploy mechanics B, restating
+# ADR-048; ADR-053 for the files the server fetches at the release tag).
+#
+# Two ways in:
+# - workflow_call from release.yml: after the images job, staging for each released service, then
+#   production after the owner's approval, both with the digest the images job pushed and attested
+#   (promotion by digest: production runs the bytes staging tested).
+# - workflow_dispatch by hand: `deploy` resolves the version's tag to its digest now and verifies its
+#   build provenance before sending it; `rollback` sends no version and no digest, the server goes
+#   back to the release it recorded as previous (D3).
+#
+# The runner joins the tailnet as an ephemeral `tag:ci` node through workload identity federation
+# (the job's OIDC token, no Tailscale secret stored here) and runs one SSH command as `deploy`. The
+# server's key line forces `deploy-entry <env>` whatever the command says, so this environment's key
+# reaches only this environment. The registry token travels on standard input, never in argv: the
+# server logs the command line. The server prints only its journal lines, which this job shows.
+#
+# Exit codes of the server (infra/scripts/deploy.sh): 0 recorded; 1 refused, aborted, rolled_back
+# or failed (the last journal line says which); 75 another deploy holds the environment's lock.
+name: deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub environment, staging or production
+        required: true
+        type: string
+      service:
+        description: Service to deploy, agent, api or web
+        required: true
+        type: string
+      version:
+        description: Version to deploy, as released (0.3.0)
+        required: true
+        type: string
+      digest:
+        description: The image digest the images job pushed and attested (sha256:...)
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      action:
+        description: deploy a version, or roll back to the previous one
+        required: true
+        type: choice
+        options: [deploy, rollback]
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options: [staging, production]
+      service:
+        description: Service
+        required: true
+        type: choice
+        options: [agent, api, web]
+      version:
+        description: Version to deploy (deploy only, empty for a rollback), e.g. 0.3.0
+        required: false
+        type: string
+
+# Nothing by default; the job lists what it needs.
+permissions: {}
+
+jobs:
+  deploy:
+    name: ${{ inputs.action || 'deploy' }} ${{ inputs.service }} to ${{ inputs.environment }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    # The environment holds DEPLOY_SSH_KEY and its protection rules: main only, and for production
+    # the owner as required reviewer. The key is readable only once the job may start.
+    environment: ${{ inputs.environment }}
+    # One deploy per environment at a time, never cancelled in progress: a cancelled deploy is the
+    # worst case of D1 (the server ignores the hangup, but the job loses the journal's tail).
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: read # the job's token, handed to the server for one pull, and the dispatch lookup
+      id-token: write # the OIDC token Tailscale exchanges for an ephemeral node
+      attestations: read # gh attestation verify on a manual deploy
+    steps:
+      # Every input reaches the shell as a variable and is checked before use. A call from
+      # release.yml has no `action` input, so it is a deploy.
+      - name: Check the inputs
+        id: inputs
+        env:
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ inputs.action }}
+          TARGET: ${{ inputs.environment }}
+          SERVICE: ${{ inputs.service }}
+          VERSION: ${{ inputs.version }}
+          DIGEST: ${{ inputs.digest }}
+        run: |
+          version_re='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::error::deploys run from main only (this run is on $GITHUB_REF)"; exit 1
+          fi
+          action="${ACTION:-deploy}"
+          case "$action" in deploy|rollback) ;; *) echo "::error::unknown action"; exit 1 ;; esac
+          # The server's environment word: the key line binds `staging` or `prod`.
+          case "$TARGET" in
+            staging) server_env=staging ;;
+            production) server_env=prod ;;
+            *) echo "::error::unknown environment"; exit 1 ;;
+          esac
+          case "$SERVICE" in agent|api|web) ;; *) echo "::error::unknown service"; exit 1 ;; esac
+          resolve=false
+          if [ "$action" = deploy ]; then
+            if ! [[ "$VERSION" =~ $version_re ]]; then
+              echo "::error::the version must be a semver version without v (0.3.0)"; exit 1
+            fi
+            if [ "$EVENT" = workflow_dispatch ]; then
+              resolve=true
+            elif ! [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "::error::a deploy from release.yml needs the pushed digest (sha256:...)"; exit 1
+            fi
+          elif [ -n "$VERSION" ]; then
+            echo "::error::a rollback takes no version: it returns to the release recorded as previous"
+            exit 1
+          fi
+          {
+            echo "action=$action"
+            echo "server_env=$server_env"
+            echo "resolve=$resolve"
+          } >> "$GITHUB_OUTPUT"
+          echo "$action $SERVICE ${VERSION:+$VERSION }to $TARGET (server word $server_env)"
+
+      # A manual deploy has no digest from an images job: resolve the tag now, and send the digest
+      # only once its provenance says release.yml built it on main from this repository.
+      - name: Log in to GHCR
+        if: steps.inputs.outputs.resolve == 'true'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The digest of the tag's top-level manifest (the index with the image and its SBOM): the one
+      # the images job pushed and attested, and the one the server reads from RepoDigests after its
+      # pull by tag, so the server's comparison is like for like.
+      - name: Resolve and verify the digest
+        id: resolve
+        if: steps.inputs.outputs.resolve == 'true'
+        env:
+          SERVICE: ${{ inputs.service }}
+          VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          image="ghcr.io/josealbdr/jadero-dev-$SERVICE"
+          digest="$(docker buildx imagetools inspect "$image:$VERSION" --format '{{json .Manifest}}' \
+            | jq -r '.digest // empty')"
+          if ! [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::$image:$VERSION not found in GHCR (or not readable with this job's token)"
+            exit 1
+          fi
+          echo "$image:$VERSION is $digest"
+          if ! gh attestation verify "oci://$image@$digest" --repo JoseAlbDR/jadero-dev \
+            --signer-workflow JoseAlbDR/jadero-dev/.github/workflows/release.yml \
+            --source-ref refs/heads/main --deny-self-hosted-runners; then
+            echo "::error::$image@$digest has no valid provenance from release.yml on main"; exit 1
+          fi
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      # Federation: GitHub's OIDC token (subject repo:JoseAlbDR/jadero-dev:environment:<name>) is
+      # exchanged for an ephemeral node tagged tag:ci, which the tailnet policy lets reach the
+      # server's SSH port only. The Tailscale tarball is checked against a pinned checksum, and the
+      # actions cache stays off: a cache hit installs binaries without that check, and any workflow
+      # on main can write the cache. Bump `version` and `sha256sum` together
+      # (https://pkgs.tailscale.com/stable/tailscale_<version>_amd64.tgz.sha256).
+      - name: Join the tailnet
+        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
+        with:
+          oauth-client-id: ${{ vars.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ vars.TS_AUDIENCE }}
+          tags: tag:ci
+          version: 1.104.1
+          sha256sum: 108d1d96ecf410d305571e173516f27038f870919a9b89c914a167c6d33a4528
+          use-cache: "false"
+          ping: ${{ vars.DEPLOY_HOST }}
+
+      # The key and the pinned host key go to files only this user reads, removed on exit (and by
+      # the last step if the job is stopped). Standard input: line 1 the registry user, line 2 the
+      # job's token (printf is a shell builtin, so the token is in no process's argv), line 3 the
+      # digest. A rollback sends nothing. The server's lines are shown with workflow commands
+      # stopped, so nothing it prints can act on this job.
+      - name: Run the deploy on the server
+        env:
+          ACTION: ${{ steps.inputs.outputs.action }}
+          SERVER_ENV: ${{ steps.inputs.outputs.server_env }}
+          SERVICE: ${{ inputs.service }}
+          VERSION: ${{ inputs.version }}
+          DIGEST: ${{ steps.resolve.outputs.digest || inputs.digest }}
+          REGISTRY_USER: ${{ github.repository_owner }}
+          REGISTRY_TOKEN: ${{ github.token }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_SSH_PORT: ${{ vars.DEPLOY_SSH_PORT }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          for name in DEPLOY_SSH_KEY DEPLOY_HOST DEPLOY_SSH_PORT DEPLOY_KNOWN_HOSTS; do
+            if [ -z "${!name}" ]; then echo "::error::$name is not set for this environment"; exit 1; fi
+          done
+          if ! [[ "$DEPLOY_SSH_PORT" =~ ^[0-9]{1,5}$ ]]; then echo "::error::DEPLOY_SSH_PORT is not a port"; exit 1; fi
+          dir="$RUNNER_TEMP/deploy-ssh"
+          trap 'rm -rf "$dir"' EXIT
+          (umask 077 && mkdir -p "$dir")
+          (umask 077 && printf '%s\n' "$DEPLOY_SSH_KEY" > "$dir/key")
+          (umask 077 && printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$dir/known_hosts")
+          if [ "$ACTION" = deploy ]; then
+            command="deploy $SERVER_ENV $SERVICE $VERSION"
+            send() { printf '%s\n%s\n%s\n' "$REGISTRY_USER" "$REGISTRY_TOKEN" "$DIGEST"; }
+          else
+            command="rollback $SERVER_ENV $SERVICE"
+            send() { :; }
+          fi
+          echo "ssh: $command"
+          stop="$(openssl rand -hex 16)"
+          echo "::stop-commands::$stop"
+          set +e
+          send | ssh -T -i "$dir/key" -p "$DEPLOY_SSH_PORT" \
+            -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$dir/known_hosts" -o GlobalKnownHostsFile=/dev/null \
+            -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=4 \
+            "deploy@$DEPLOY_HOST" "$command" 2> "$dir/stderr" | tee "$dir/journal"
+          code="${PIPESTATUS[1]}"
+          set -e
+          cat "$dir/stderr"
+          echo "::$stop::"
+          last="$(tail -n 1 "$dir/journal" | awk '{print $5}')"
+          {
+            echo "### $command (exit $code)"
+            echo
+            echo '```'
+            cat "$dir/journal"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          case "$code" in
+            0) echo "$SERVICE: $ACTION on $SERVER_ENV recorded" ;;
+            75) echo "::error::busy: another deploy holds the $SERVER_ENV lock; nothing was touched, rerun once it ends"; exit 1 ;;
+            1)
+              case "$last" in
+                aborted) echo "::error::aborted before the point of no return: nothing shared changed, the running release keeps serving; the reason is in the last journal line" ;;
+                rolled_back) echo "::error::rolled back: the new release failed after the point of no return and the previous one is healthy again; the reason is in the journal lines above" ;;
+                failed) echo "::error::FAILED: the rollback did not get healthy either; the environment needs the owner on the server (the journal /srv/jadero/$SERVER_ENV/deploy.log)" ;;
+                refused) echo "::error::refused by the server: nothing was touched; the reason is in the last journal line" ;;
+                *) echo "::error::refused before the journal (deploy-entry, or bad input); see the server's message above" ;;
+              esac
+              exit 1 ;;
+            255)
+              if [ -s "$dir/journal" ]; then
+                echo "::error::the SSH session dropped mid-deploy; the server ignores the hangup and runs to its end state, so read the journal (/srv/jadero/$SERVER_ENV/deploy.log) before a rerun"
+              else
+                echo "::error::SSH failed before the server answered (tailnet, host key or key line); most likely nothing ran, the journal says for sure"
+              fi
+              exit 1 ;;
+            *) echo "::error::unexpected exit $code from the server"; exit 1 ;;
+          esac
+
+      - name: Remove the key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/deploy-ssh"
