@@ -63,6 +63,28 @@ describe("productionClosure", () => {
     ]);
   });
 
+  it("leaves type packages out but keeps the runtime packages reached through them", () => {
+    const typed = {
+      importers: {
+        "apps/app": {
+          dependencies: { instrumentation: { specifier: "catalog:", version: "1.0.0" } },
+        },
+      },
+      snapshots: {
+        "instrumentation@1.0.0": { dependencies: { "@types/x": "2.0.0" } },
+        "@types/x@2.0.0": { dependencies: { "@types/node": "24.0.0", "x-runtime": "3.0.0" } },
+        "@types/node@24.0.0": {},
+        "x-runtime@3.0.0": {},
+      },
+    };
+    const closure = productionClosure(typed, "apps/app");
+    assert.deepEqual(
+      closure.filter((line) => line.startsWith("@types/")),
+      [],
+    );
+    assert.deepEqual(closure, ["instrumentation@1.0.0", "x-runtime@3.0.0"]);
+  });
+
   it("fails loudly when the lockfile misses a snapshot", () => {
     const broken = { ...LOCK, snapshots: { ...LOCK.snapshots, "peer@2.0.0": undefined } };
     assert.throws(() => productionClosure(broken, "apps/app"), /no snapshot "peer@2.0.0"/);

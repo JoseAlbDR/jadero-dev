@@ -59,10 +59,6 @@
 @standard-schema/spec@1.1.0
 @tokenizer/inflate@0.4.1
 @tokenizer/token@0.3.0
-@types/node@24.19.1
-@types/pg-pool@2.0.7
-@types/pg@8.15.6
-@types/pg@8.23.1
 accepts@2.0.0
 amqp-connection-manager@5.0.0
 amqplib@0.10.9

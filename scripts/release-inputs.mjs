@@ -15,6 +15,10 @@
  * hashed after YAML parsing (anchors merged, comments dropped), so a comment or another service's
  * entry changes nothing.
  *
+ * Type packages (`@types/*`) are left out of the closure (ADR-055): they hold `.d.ts` files only and
+ * never change what Node runs, so a bump of one (a Renovate update of `@types/node`, say) releases
+ * no service.
+ *
  * Read from `pnpm-lock.yaml` and those files only: offline and deterministic, whatever is
  * installed. A stale file fails `scripts/release-inputs.test.mjs` (`pnpm test:scripts`, so
  * `pnpm verify`): a generated file with a staleness test. Regenerate with `pnpm release-inputs`.
@@ -66,6 +70,9 @@ export const DEPLOY_FILES = {
 /** The dependency fields that reach a production install (`pnpm deploy --prod`). */
 const PROD_FIELDS = ["dependencies", "optionalDependencies"];
 
+/** The scope of DefinitelyTyped packages: type declarations only, no runtime code. */
+const TYPES_SCOPE = "@types/";
+
 /**
  * Turns a lockfile dependency entry into its snapshot key, or a workspace path for `link:`.
  * @param name the dependency's name as declared (an alias for `npm:` aliases).
@@ -86,7 +93,8 @@ function resolveEntry(name, version, from) {
  * Lists the production dependency closure of one workspace package from the parsed lockfile.
  * @param lock the parsed `pnpm-lock.yaml` (v9: `importers` and `snapshots`).
  * @param importer the package's path in the workspace, such as `apps/api`.
- * @returns every third-party package it runs with, as `name@version` (no peer suffix), sorted.
+ * @returns every third-party package it runs with, as `name@version` (no peer suffix), sorted,
+ *   without type packages (`@types/*`).
  */
 export function productionClosure(lock, importer) {
   const seenImporters = new Set();
@@ -120,7 +128,14 @@ export function productionClosure(lock, importer) {
     }
   }
   // "@nestjs/core@12.1.2(peers...)" and its other peer variants are one package version.
-  const packages = new Set([...seenKeys].map((key) => key.replace(/\(.*$/, "")));
+  // Type packages are dropped only here, after the walk: the walk still goes through them because
+  // some depend on runtime packages (`@types/pg` on `pg-types` and `pg-protocol`), and those are
+  // installed in the image by `pnpm deploy --prod` whoever pulled them in, so they stay listed.
+  const packages = new Set(
+    [...seenKeys]
+      .filter((key) => !key.startsWith(TYPES_SCOPE))
+      .map((key) => key.replace(/\(.*$/, "")),
+  );
   return [...packages].sort();
 }
 
