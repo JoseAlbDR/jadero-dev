@@ -104,12 +104,20 @@ its guards are the approval, the provenance check and the server's anti-rollback
 rollback goes back to the release the server recorded as previous, once.
 
 Concurrency, as GitHub runs it: a group holds one running and one pending job, and a newly queued
-job cancels the pending one. Each matrix leg's group takes its own service (the caller passes
-`matrix.service` as the `service` input), so a pending deploy can only be replaced by a newer
-pending deploy of the same service in the same environment, which carries the newer version
-anyway. A replaced leg shows as cancelled, and `fail-fast` then skips that run's later services
-and its production: deploy those by hand if no newer release carries them. Within one run the
-legs wait on `max-parallel`, so the order `agent`, `api`, `web` holds per run, not across two runs.
+job cancels the pending one, whatever its version: the job that queued later wins, not the higher
+version. Each matrix leg's group takes its own service (the caller passes `matrix.service` as the
+`service` input), so a pending deploy is only replaced by another deploy of the same service in the
+same environment. Within one run the legs wait on `max-parallel`, so the order `agent`, `api`, `web`
+holds per run, not across two runs: release N+1's `api` leg can run before release N's. N's then
+reaches a server that already runs N+1 and is refused as `not-newer`; on a call from `release.yml`
+the job maps that one refusal (the exact journal line, `refused reason=not-newer` for this
+environment, service and version) to a notice and ends green, since a newer version already runs
+there and nothing is needed, so `fail-fast` does not cancel N's later services or its production.
+A leg that was replaced while pending shows as cancelled, and `fail-fast` then skips that run's
+later services and its production: deploy those by hand if no newer release carries them.
+Approve production runs in release order, oldest first. Before a manual rollback of a service,
+reject any production approval still waiting for it: a waiting approval holds the group, so the
+rollback would wait behind it instead of running.
 The residual case: two releases deploying different services to one environment at the same time
 (two approved production runs, or a manual dispatch during a release) meet on the server's lock.
 The second gets exit 75, *busy*, with nothing touched: rerun the failed job once the first ends.
@@ -149,8 +157,9 @@ reported on `main` (expand, see the last section).
   `attestations` and `artifact-metadata: write` for `images`. The deploy jobs read only:
   `contents`, `packages` and `attestations: read`, plus `id-token: write` for Tailscale.
 - Deploys (WP-9 D2): the runner joins the tailnet as an ephemeral `tag:ci` node through workload
-  identity federation (GitHub's OIDC token, subject `repo:JoseAlbDR/jadero-dev:environment:<name>`;
-  no Tailscale secret is stored), and the tailnet policy lets `tag:ci` reach the server's SSH port
+  identity federation (GitHub's OIDC token, subject `repo:JoseAlbDR/jadero-dev:environment:<name>`,
+  trusted only for the exact names `staging` and `production`, one federated identity each; no
+  Tailscale secret is stored), and the tailnet policy lets `tag:ci` reach the server's SSH port
   only. Each environment holds its own `DEPLOY_SSH_KEY`, and the server's key line forces
   `deploy-entry staging` or `deploy-entry prod`, so the staging key never reaches production.
   Production's key is readable only after your approval. The host key is pinned
@@ -186,7 +195,17 @@ digest update, or mute it in `.trivyignore.yaml` with a statement and an `expire
   once the other one ends.
 - *refused* (exit 1, journal `refused`, or a message from `deploy-entry` with no journal line): the
   words, the input or the state said no (`not-newer`, `env-mismatch`, `no-digest`, ...); nothing
-  was touched. Fix the cause; a downgrade is a rollback, never a deploy.
+  was touched. Fix the cause; a downgrade is a rollback, never a deploy. The one exception is green:
+  a call from `release.yml` refused as `not-newer` ends with a notice, because a later release
+  already deployed that service (see Concurrency under `deploy.yml`).
+- *aborted* with a `-timeout` reason (`fetch-timeout`, `render-timeout`, `login-timeout`,
+  `pull-timeout`): that step hit its time limit in `deploy.sh` before the point of no return;
+  nothing shared changed. *rolling_back* `migrate-timeout`: the migration hit its limit (Postgres
+  also cancels a statement after 60 s or a lock wait after 10 s); the previous release starts again.
+  Look for a long transaction on that database before a rerun.
+- *SSH port did not answer* (no journal line): the runner joined the tailnet but the server's SSH
+  port never answered within about a minute; nothing ran on the server. Check the Tailscale grant
+  for `tag:ci` and that the server is up, then rerun.
 - *aborted* (exit 1): it failed before the point of no return (`op` down, pull or digest mismatch,
   missing release files); the running release never noticed. Rerun when the cause is gone.
 - *rolled_back* (exit 1): the new release failed after the point of no return (migrate, health,
@@ -292,16 +311,23 @@ Agents never change these settings; each item is yours.
    `DEPLOY_SSH_PORT`, `DEPLOY_KNOWN_HOSTS` (the output of
    `ssh-keyscan -p <ssh-port> -t ed25519 <tailnet-host>` run over the tailnet, checked against
    `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the server; several lines are fine, the
-   job writes the secret whole to a file and never prints it). **Variables** (repository):
-   `TS_OAUTH_CLIENT_ID` and `TS_AUDIENCE` (from the federated identity below; identifiers, not
-   secrets).
+   job writes the secret whole to a file and never prints it). **Variables** (per environment):
+   `TS_OAUTH_CLIENT_ID` and `TS_AUDIENCE` (from that environment's federated identity below;
+   identifiers, not secrets).
 4. **Tailscale**: `tag:ci` in `tagOwners` and a grant from `tag:ci` to `tag:server` on
    `tcp:<ssh-port>` only, with a test that accepts that port and denies another
-   (`docs/runbooks/server-access.md` section 1a). A federated identity for GitHub Actions: issuer
-   `https://token.actions.githubusercontent.com`, subject `repo:JoseAlbDR/jadero-dev:environment:*`,
-   tag `tag:ci`, scope to create auth keys. If your plan does not offer federation, an OAuth client
-   with the same tag is the fallback (its secret in an environment secret, and `deploy.yml` then
-   passes it as `oauth-secret`: a change to review, not a setting).
+   (`docs/runbooks/server-access.md` section 1a). Two federated identities for GitHub Actions,
+   one per environment, each with issuer `https://token.actions.githubusercontent.com`, tag
+   `tag:ci` and the scope to create auth keys, and each with one exact subject:
+   `repo:JoseAlbDR/jadero-dev:environment:staging` and
+   `repo:JoseAlbDR/jadero-dev:environment:production`. Never a wildcard like `environment:*`:
+   GitHub creates an unprotected environment for any name a workflow on any branch names, so a
+   wildcard would let any branch mint a `tag:ci` node. Each identity has its own client ID and
+   audience: set `TS_OAUTH_CLIENT_ID` and `TS_AUDIENCE` as **environment variables** of `staging`
+   and of `production` (an environment variable wins over a repository one of the same name, so
+   remove any repository-level pair). If your plan does not offer federation, an OAuth client with
+   the same tag is the fallback (its secret in an environment secret, and `deploy.yml` then passes
+   it as `oauth-secret`: a change to review, not a setting).
 5. **Tag ruleset** (ADR-053): release tags `*-v*` cannot be updated or deleted. Leave creation
    allowed: release-please creates them with the job's token.
 6. **Required checks**: add `nginx` and `backup` to `protect-main`, then update the table and the

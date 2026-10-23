@@ -409,7 +409,11 @@ jobs:
   # Staging deploys by itself (D8). max-parallel 1 runs the legs one at a time in the matrix order
   # (agent, api, web); fail-fast cancels the legs not started yet when one fails, so a producer
   # never ships after its consumer failed. deploy.yml serializes per environment and service
-  # (each leg's group takes its own service from `with`) and validates every input again.
+  # (each leg's group takes its own service from `with`) and validates every input again. Across
+  # two runs the order is not kept: the group's pending job is replaced by the one queued later,
+  # not by the higher version, so a newer run's leg can get there first. The server then refuses
+  # the older one as not newer, and deploy.yml reports that as green with a notice, so it never
+  # trips fail-fast.
   deploy-staging:
     name: deploy-staging (${{ matrix.service }})
     needs: [release-please, digests]

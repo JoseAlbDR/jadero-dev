@@ -17,6 +17,9 @@
 #
 # Exit codes of the server (infra/scripts/deploy.sh): 0 recorded; 1 refused, aborted, rolled_back
 # or failed (the last journal line says which); 75 another deploy holds the environment's lock.
+# One exit 1 is not a failure here: on a call from release.yml, the server's own line
+# `<time> <env> <service> <version> refused reason=not-newer` means this or a newer version already
+# runs there (two release runs met in the queue, below), so the job ends green with a notice.
 name: deploy
 
 on:
@@ -73,10 +76,14 @@ jobs:
     environment: ${{ inputs.environment }}
     # One deploy per environment and service at a time, never cancelled in progress: a cancelled
     # deploy is the worst case of D1 (the server ignores the hangup, but the job loses the
-    # journal's tail). A newer pending deploy of the same service in the same environment replaces
-    # an older pending one, which the newer version supersedes anyway. Two services of one
-    # environment can still meet on the server's lock (exit 75, nothing touched, rerun the job).
-    # The same group covers a call from release.yml (one per matrix leg) and a manual dispatch.
+    # journal's tail). A group holds one running and one pending job, and the job that queued later
+    # replaces the pending one, whatever its version: GitHub knows nothing of versions. So release
+    # N+1's leg can queue, or run, before release N's, and N's then reaches a server that already
+    # runs N+1: the server refuses it (`refused reason=not-newer`, the anti-rollback guard) and
+    # this job ends green with a notice, so fail-fast does not cancel N's later services. Two
+    # services of one environment can still meet on the server's lock (exit 75, nothing touched,
+    # rerun the job). The same group covers a call from release.yml (one per matrix leg) and a
+    # manual dispatch.
     concurrency:
       group: deploy-${{ inputs.environment }}-${{ inputs.service }}
       cancel-in-progress: false
@@ -169,7 +176,10 @@ jobs:
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
       # Federation: GitHub's OIDC token (subject repo:JoseAlbDR/jadero-dev:environment:<name>) is
-      # exchanged for an ephemeral node tagged tag:ci, which the tailnet policy lets reach the
+      # exchanged for an ephemeral node through one federated identity per
+      # environment that trusts that exact subject, never a wildcard (GitHub creates an unprotected
+      # environment for any name a branch's workflow names); TS_OAUTH_CLIENT_ID and TS_AUDIENCE are
+      # environment variables. The node is tagged tag:ci, which the tailnet policy lets reach the
       # server's SSH port only. The Tailscale tarball is checked against a pinned checksum, and the
       # actions cache stays off: a cache hit installs binaries without that check, and any workflow
       # on main can write the cache. Bump `version` and `sha256sum` together
@@ -183,15 +193,18 @@ jobs:
           version: 1.104.1
           sha256sum: 108d1d96ecf410d305571e173516f27038f870919a9b89c914a167c6d33a4528
           use-cache: "false"
-          ping: ${{ secrets.DEPLOY_HOST }}
 
       # The key and the pinned host key go to files only this user reads, removed on exit (and by
-      # the last step if the job is stopped). Standard input: line 1 the registry user, line 2 the
+      # the last step if the job is stopped). The tailnet may need a few seconds after the join
+      # before the server answers: a bounded wait on its SSH port first (no `ping:` on the join,
+      # which prints the server's tailnet address in the public log). The wait prints nothing about
+      # the host: the name is a masked secret, and the address it resolves to is never shown. Standard input: line 1 the registry user, line 2 the
       # job's token (printf is a shell builtin, so the token is in no process's argv), line 3 the
       # digest. A rollback sends nothing. The server's lines are shown with workflow commands
       # stopped, so nothing it prints can act on this job.
       - name: Run the deploy on the server
         env:
+          EVENT: ${{ github.event_name }}
           ACTION: ${{ steps.inputs.outputs.action }}
           SERVER_ENV: ${{ steps.inputs.outputs.server_env }}
           SERVICE: ${{ inputs.service }}
@@ -217,6 +230,24 @@ jobs:
           # known_hosts may hold several lines (one per key type): written whole from the secret,
           # quoted, carriage returns from a paste removed, never echoed.
           (umask 077 && printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > "$dir/known_hosts")
+          # Up to 6 tries of a TCP connect to the SSH port, 5 s each, 5 s apart: at most about a
+          # minute. bash's /dev/tcp resolves the name as ssh will; its errors (which would name the
+          # host or its address) go nowhere.
+          reachable=false
+          for attempt in 1 2 3 4 5 6; do
+            # shellcheck disable=SC2016 # $1 and $2 expand in the inner bash, from the arguments
+            if timeout 5 bash -c 'exec 3<>"/dev/tcp/$1/$2"' probe "$DEPLOY_HOST" "$DEPLOY_SSH_PORT" \
+              >/dev/null 2>&1; then
+              reachable=true
+              break
+            fi
+            echo "the server's SSH port does not answer over the tailnet yet (try $attempt of 6)"
+            sleep 5
+          done
+          if [ "$reachable" != true ]; then
+            echo "::error::the server's SSH port did not answer over the tailnet within about a minute; nothing ran on the server"
+            exit 1
+          fi
           if [ "$ACTION" = deploy ]; then
             command="deploy $SERVER_ENV $SERVICE $VERSION"
             send() { printf '%s\n%s\n%s\n' "$REGISTRY_USER" "$REGISTRY_TOKEN" "$DIGEST"; }
@@ -237,7 +268,8 @@ jobs:
           set -e
           cat "$dir/stderr"
           echo "::$stop::"
-          last="$(tail -n 1 "$dir/journal" | awk '{print $5}')"
+          last_line="$(tail -n 1 "$dir/journal")"
+          last="$(awk '{print $5}' <<<"$last_line")"
           {
             echo "### $command (exit $code)"
             echo
@@ -249,11 +281,24 @@ jobs:
             0) echo "$SERVICE: $ACTION on $SERVER_ENV recorded" ;;
             75) echo "::error::busy: another deploy holds the $SERVER_ENV lock; nothing was touched, rerun once it ends"; exit 1 ;;
             1)
+              # Exactly the server's refusal of this request as not newer: the 6 fields of a
+              # journal line, its environment, service and version, state and reason, never a
+              # substring. Only on a call from release.yml: a manual deploy of an older version is
+              # a mistake to show (a downgrade is a rollback).
+              read -r _ line_env line_service line_version line_state line_reason line_rest \
+                <<<"$last_line" || true
+              if [ "$EVENT" != workflow_dispatch ] && [ -z "$line_rest" ] \
+                && [ "$line_env" = "$SERVER_ENV" ] && [ "$line_service" = "$SERVICE" ] \
+                && [ "$line_version" = "$VERSION" ] && [ "$line_state" = refused ] \
+                && [ "$line_reason" = reason=not-newer ]; then
+                echo "::notice::$SERVICE $VERSION not deployed to $SERVER_ENV: the server already runs this or a newer version (a later release got there first); nothing to do"
+                exit 0
+              fi
               case "$last" in
                 aborted) echo "::error::aborted before the point of no return: nothing shared changed, the running release keeps serving; the reason is in the last journal line" ;;
                 rolled_back) echo "::error::rolled back: the new release failed after the point of no return and the previous one is healthy again; the reason is in the journal lines above" ;;
                 failed) echo "::error::FAILED: the rollback did not get healthy either; the environment needs the owner on the server (the journal /srv/jadero/$SERVER_ENV/deploy.log)" ;;
-                refused) echo "::error::refused by the server: nothing was touched; the reason is in the last journal line" ;;
+                refused) echo "::error::refused by the server: nothing was touched; the reason is in the last journal line (not-newer: a downgrade is a rollback)" ;;
                 *) echo "::error::refused before the journal (deploy-entry, or bad input); see the server's message above" ;;
               esac
               exit 1 ;;
