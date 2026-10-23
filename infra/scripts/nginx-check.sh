@@ -12,7 +12,8 @@
 # The certificates are throwaway self-signed ones at the paths certbot uses on the server
 # (/etc/letsencrypt/live/<host>/), valid 30 days. Only a stub Umami runs (below), so the other
 # proxied paths answer 502 in the smoke run, which smoke-edge.sh counts as routed, and the site's
-# 502 is the maintenance page, which smoke-edge.sh checks.
+# 502 is the maintenance page, which smoke-edge.sh checks; the content API's is the 503 problem
+# details body, checked there and, header by header, below.
 
 set -euo pipefail
 export LC_ALL=C
@@ -141,6 +142,17 @@ STUB
   expect "a proxied answer gets no maintenance header" "" \
     "$(umami -o /dev/null -D - https://new.jadero.dev/s/script.js | tr -d '\r' |
       grep -iE '^(cache-control|content-security-policy|retry-after):' || true)"
+  # No api runs here, so the content API answers with the edge's maintenance problem details.
+  api_down="$(umami -D - https://new.jadero.dev/api/v1/content/pages | tr -d '\r')"
+  expect "the content API answers 503 while api is down" 503 \
+    "$(head -n 1 <<<"$api_down" | awk '{print $2}')"
+  for header in 'content-type: application/problem+json' 'cache-control: no-store' \
+    'retry-after: 10' "content-security-policy: default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"; do
+    expect "the API's maintenance answer has ${header%%:*}" "$header" \
+      "$(grep -ix "$header" <<<"$api_down" || true)"
+  done
+  expect "the API's maintenance body is the problem details file" \
+    "$(cat "$SRC/nginx/www/maintenance/maintenance.problem.json")" "$(sed -n '/^$/,$p' <<<"$api_down" | sed '1d')"
   expect "GET /s/api/send refused" 403 \
     "$(umami -o /dev/null -w '%{http_code}' https://new.jadero.dev/s/api/send)"
   expect "POST over 64k to /s/api/send refused" 413 \

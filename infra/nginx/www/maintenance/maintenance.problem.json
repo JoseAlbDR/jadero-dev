@@ -1,0 +1,6 @@
+{
+  "type": "about:blank",
+  "title": "Service Unavailable",
+  "status": 503,
+  "detail": "The API is updating. Try again in a few seconds."
+}

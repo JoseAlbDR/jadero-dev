@@ -106,6 +106,25 @@ readonly RABBITMQ_CONTAINER=jadero-ops-rabbitmq-1
 # image variable, even of an inactive profile. A reserved domain, so it can never be pulled.
 readonly INERT_IMAGE=jadero.invalid/not-deployed
 readonly WAIT_TIMEOUT=120
+# Time limits, in seconds, for the steps that wait on something remote or on a lock (WP-9 step 5
+# review): without one, a hung fetch, op call, pull or migration outlives the CI job's 20 minutes,
+# keeps the environment's lock, and every later deploy exits 75. Each runs under GNU `timeout`
+# with --kill-after=10. The worst case that still ends in a state is about 14 minutes, inside the
+# job's 20 with the runner's own steps: fetch 30 + render 30 + login 30 + pull 180 + the topology
+# import's own 60 + migrate 120 + up 120 + the smoke's ping wait (90) and its requests + the
+# rollback's up 120. The fetch is one shallow tag, op renders a dozen references and the login is
+# one request, so 30 s each is generous; an image is a few hundred MB over the host's link, so 3
+# minutes; a migration is expand-only and bounded inside Postgres too (lock_timeout 10 s,
+# statement_timeout 60 s, packages/platform-nest migrations.ts), so 2 minutes covers its container
+# start. A timeout is journaled like a failure of its step, with its own reason: before the point
+# of no return `aborted reason=<step>-timeout` (fetch, render, login, pull), after it
+# `rolling_back reason=migrate-timeout`. `timeout` runs in its own process group: a hangup sent to this script's group never
+# reaches it, so `trap '' HUP` still holds (D1).
+readonly FETCH_LIMIT=30
+readonly RENDER_LIMIT=30
+readonly LOGIN_LIMIT=30
+readonly PULL_LIMIT=180
+readonly MIGRATE_LIMIT=120
 
 # The services release-please publishes today. `contact` joins when it ships.
 readonly SERVICES="api agent web"
@@ -383,6 +402,21 @@ semver_compare() {
 # Compose
 # ---------------------------------------------------------------------------------------------
 
+# Runs a command under a time limit: GNU timeout sends TERM at the limit and KILL 10 s later.
+# Arguments: the limit in seconds, then the command. Returns the command's status, or 124 (137
+# when the KILL was needed) on a timeout.
+bounded() {
+  local limit="$1"
+  shift
+  timeout --kill-after=10 "$limit" "$@"
+}
+
+# Whether a status from `bounded` means the limit was reached.
+# Arguments: the status.
+timed_out() {
+  [[ "$1" -eq 124 || "$1" -eq 137 ]]
+}
+
 # Checks that a release's overlay names the project this environment runs, so a release whose
 # files disagree with the environment word is refused before it is used.
 # Arguments: the release folder.
@@ -398,11 +432,12 @@ overlay_matches() {
 # Only the deployed service's profile is active; its image variable is the given digest, the
 # others come from versions.env or are the inert reference. Output discarded (a `config` would
 # print the rendered secrets; `up` errors are summarised by the journal's reason).
+# Under `compose_bounded`, the call runs under its time limit (`bounded`).
 # Arguments: the release folder, this service's image reference, then the compose arguments.
 compose_in() {
   local files="$1" image="$2" name value
   shift 2
-  local -a images=()
+  local -a images=() command=()
   for name in $SERVICES; do
     local upper
     upper="$(printf '%s' "$name" | tr '[:lower:]' '[:upper:]')"
@@ -414,11 +449,36 @@ compose_in() {
     fi
     images+=("${upper}_IMAGE=$value")
   done
-  env JADERO_ENV="$ENV_NAME" "${images[@]}" \
-    docker compose --project-name "jadero-$ENV_NAME" --profile "$SERVICE" \
-    -f "$files/infra/compose/compose.services.yml" \
-    -f "$files/infra/compose/compose.$ENV_NAME.yml" \
-    "$@" >/dev/null 2>&1
+  command=(env JADERO_ENV="$ENV_NAME" "${images[@]}"
+    docker compose --project-name "jadero-$ENV_NAME" --profile "$SERVICE"
+    -f "$files/infra/compose/compose.services.yml"
+    -f "$files/infra/compose/compose.$ENV_NAME.yml"
+    "$@")
+  if [[ -n "${compose_limit-}" ]]; then
+    bounded "$compose_limit" "${command[@]}" >/dev/null 2>&1
+  else
+    "${command[@]}" >/dev/null 2>&1
+  fi
+}
+
+# Runs compose_in under a time limit; returns 124 or 137 on a timeout (`timed_out`).
+# Arguments: the limit in seconds, then compose_in's arguments.
+compose_bounded() {
+  local compose_limit="$1"
+  shift
+  compose_in "$@"
+}
+
+# Removes the one-off migrate containers a timed-out `compose run` may leave behind: killing the
+# compose client does not always stop its container, which would keep the migration's session
+# (Postgres bounds it with its own timeouts). Best effort, output discarded.
+remove_migrate_runs() {
+  local ids
+  ids="$(docker ps -aq --filter "label=com.docker.compose.project=jadero-$ENV_NAME" \
+    --filter "label=com.docker.compose.service=$MIGRATE" \
+    --filter "label=com.docker.compose.oneoff=True" 2>/dev/null || true)"
+  # shellcheck disable=SC2086 # one id per word
+  [[ -z "$ids" ]] || docker rm -f $ids >/dev/null 2>&1 || true
 }
 
 # Starts the service's process types and waits until they are healthy (the health gate).
@@ -615,11 +675,13 @@ read_input() {
 # Fetches infra/ at the release tag into releases/<service>-<version>/ (ADR-053) and prints the
 # tag's commit. The folder cannot be the current or the previous release: the version is newer.
 fetch_release() {
-  local tag="$SERVICE-v$version" commit
+  local tag="$SERVICE-v$version" commit status=0
   work_dir="$(mktemp -d "$ENV_DIR/.deploy.XXXXXX")"
   GIT_TERMINAL_PROMPT=0 git -C "$work_dir" init -q >/dev/null 2>&1 || abort git-failed
-  GIT_TERMINAL_PROMPT=0 git -C "$work_dir" fetch -q --depth 1 --no-tags "$REPO_URL" \
-    "refs/tags/$tag" >/dev/null 2>&1 || abort fetch-failed
+  GIT_TERMINAL_PROMPT=0 bounded "$FETCH_LIMIT" git -C "$work_dir" fetch -q --depth 1 --no-tags \
+    "$REPO_URL" "refs/tags/$tag" >/dev/null 2>&1 || status=$?
+  if timed_out "$status"; then abort fetch-timeout; fi
+  [[ $status -eq 0 ]] || abort fetch-failed
   commit="$(git -C "$work_dir" rev-parse -q --verify 'FETCH_HEAD^{commit}' 2>/dev/null || true)"
   [[ "$commit" =~ $COMMIT_RE ]] || abort fetch-failed
   release="$RELEASES/$SERVICE-$version"
@@ -642,7 +704,9 @@ render_env() {
   [[ -r "$OP_TOKEN_FILE" ]] || abort op-token
   rm -f "$ENV_NEW"
   JADERO_ENV="$ENV_NAME" OP_SERVICE_ACCOUNT_TOKEN="$(cat "$OP_TOKEN_FILE")" \
-    op inject --force -i "$template" -o "$ENV_NEW" >/dev/null 2>&1 || status=$?
+    bounded "$RENDER_LIMIT" op inject --force -i "$template" -o "$ENV_NEW" >/dev/null 2>&1 ||
+    status=$?
+  if timed_out "$status"; then abort render-timeout; fi
   [[ $status -eq 0 ]] || abort "op-exit-$status"
   [[ -f "$ENV_NEW" ]] || abort op-no-output
   chmod 600 "$ENV_NEW"
@@ -653,12 +717,17 @@ render_env() {
 # Logs in with a temporary DOCKER_CONFIG, pulls the image by tag, removes the config, then checks
 # the digest (against stdin's line 3 when given) and the revision label against the tag's commit.
 pull_image() {
-  local ref="$IMAGE_REPO:$version" digests revision line
+  local ref="$IMAGE_REPO:$version" digests revision line status=0
   docker_config="$(mktemp -d "$ENV_DIR/.docker.XXXXXX")"
-  printf '%s' "$registry_token" | DOCKER_CONFIG="$docker_config" \
+  printf '%s' "$registry_token" | DOCKER_CONFIG="$docker_config" bounded "$LOGIN_LIMIT" \
     docker login "$REGISTRY" --username "$registry_user" --password-stdin >/dev/null 2>&1 ||
-    abort login-failed
-  DOCKER_CONFIG="$docker_config" docker pull "$ref" >/dev/null 2>&1 || abort pull-failed
+    status=$?
+  if timed_out "$status"; then abort login-timeout; fi
+  [[ $status -eq 0 ]] || abort login-failed
+  DOCKER_CONFIG="$docker_config" bounded "$PULL_LIMIT" docker pull "$ref" >/dev/null 2>&1 ||
+    status=$?
+  if timed_out "$status"; then abort pull-timeout; fi
+  [[ $status -eq 0 ]] || abort pull-failed
   rm -rf "$docker_config"
   docker_config="" registry_token=""
   digests="$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$ref" 2>/dev/null || true)"
@@ -776,7 +845,14 @@ forward() {
   # because Compose reads the env file on every command (amendment of step 3).
   mv -f "$ENV_NEW" "$ENV_FILE"
   if [[ -n "$MIGRATE" ]]; then
-    compose_in "$release" "$new_image" run --rm --no-deps "$MIGRATE" || roll_back migrate-failed
+    local status=0
+    compose_bounded "$MIGRATE_LIMIT" "$release" "$new_image" run --rm --no-deps "$MIGRATE" ||
+      status=$?
+    if timed_out "$status"; then
+      remove_migrate_runs
+      roll_back migrate-timeout
+    fi
+    [[ $status -eq 0 ]] || roll_back migrate-failed
     journal migrated ok
   else
     journal migrated no-migrations

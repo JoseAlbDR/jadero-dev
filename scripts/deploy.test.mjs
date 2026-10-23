@@ -209,6 +209,20 @@ case "$1" in
 esac
 `;
 
+// GNU timeout's interface: records the limit and the command, then runs the command, or, when a
+// word of STUB_TIMEOUT is one of the command's words (`fetch`, `inject`, `login`, `pull`,
+// `run`), exits as a timeout does without running it: 124, or STUB_TIMEOUT_STATUS (137 after
+// the KILL). The real one is not on macOS, and a stub makes the timeout instant.
+const TIMEOUT_STUB = bash`
+printf '%s\n' "$*" >> "$STUB_REC/timeout-calls"
+[[ "$1" == --kill-after=10 && "$2" =~ ^[1-9][0-9]*$ ]] || exit 125
+shift 2
+for word in @{STUB_TIMEOUT-}; do
+  [[ " $* " == *" $word "* ]] && exit "@{STUB_TIMEOUT_STATUS:-124}"
+done
+exec "$@"
+`;
+
 // flock(2) on file descriptor $2, as util-linux's `flock -n <fd>` does. The lock belongs to the
 // open file description the caller holds, so it stays after perl exits.
 const FLOCK_SHIM = bash`
@@ -265,6 +279,7 @@ before(() => {
   writeScript(join(stubDir, "docker"), DOCKER_STUB);
   writeScript(join(stubDir, "op"), OP_STUB);
   writeScript(join(stubDir, "git"), GIT_STUB);
+  writeScript(join(stubDir, "timeout"), TIMEOUT_STUB);
   const hasFlock = spawnSync("sh", ["-c", "command -v flock"]).status === 0;
   if (!hasFlock) writeScript(join(stubDir, "flock"), FLOCK_SHIM);
   fixture = join(root, "fixture");
@@ -572,6 +587,28 @@ describe("deploy.sh deploy, failures before provisioned abort and change nothing
     expectAborted(apiAt020(), "login-failed", { env: { STUB_FAIL: "login" } });
   });
 
+  it("aborts with the step's own timeout reason when fetch, op, login or pull hangs", () => {
+    for (const [word, reason, limit, status] of [
+      ["fetch", "fetch-timeout", 30, "124"],
+      ["inject", "render-timeout", 30, "124"],
+      ["login", "login-timeout", 30, "137"],
+      ["pull", "pull-timeout", 180, "124"],
+    ]) {
+      const w = apiAt020();
+      expectAborted(w, reason, { env: { STUB_TIMEOUT: word, STUB_TIMEOUT_STATUS: status } });
+      const bounded = calls(w, "timeout").at(-1);
+      assert.match(bounded, new RegExp(`^--kill-after=10 ${limit} \\S+ .*\\b${word}\\b`), bounded);
+    }
+  });
+
+  it("runs every remote step under its limit, and nothing else", () => {
+    const w = apiAt020();
+    assert.equal(deploy(w, ["deploy", "staging", "api", "0.3.0"]).status, 0);
+    const bounded = calls(w, "timeout").map((call) => call.split(" ").slice(1, 3).join(" "));
+    assert.deepEqual(bounded, ["30 git", "30 op", "30 docker", "180 docker", "120 env"]);
+    assert.ok(calls(w, "timeout")[4].includes(" run --rm --no-deps api-migrate"));
+  });
+
   it("refuses prod without an expected digest, and aborts on a different one", () => {
     const w = world({ env: "prod" });
     const result = deploy(w, ["deploy", "prod", "api", "0.3.0"]);
@@ -639,6 +676,32 @@ describe("deploy.sh deploy, failures from provisioned on roll back", () => {
         ],
       );
     }
+  });
+
+  it("rolls back on a migrate timeout and removes the migrate container it may leave", () => {
+    const w = apiAt020();
+    const result = deploy(w, ["deploy", "staging", "api", "0.3.0"], {
+      env: { STUB_TIMEOUT: "run" },
+    });
+    assert.equal(result.status, 1);
+    assert.deepEqual(
+      journal(w)
+        .slice(-2)
+        .map((row) => [row.state, row.reason]),
+      [
+        ["rolling_back", "migrate-timeout"],
+        ["rolled_back", "previous-healthy"],
+      ],
+    );
+    assert.ok(
+      calls(w, "docker").includes(
+        "ps -aq --filter label=com.docker.compose.project=jadero-staging " +
+          "--filter label=com.docker.compose.service=api-migrate " +
+          "--filter label=com.docker.compose.oneoff=True",
+      ),
+    );
+    // The previous release starts again, with no time limit of ours (up --wait has its own).
+    assert.equal(composeCalls(w).filter((c) => c.includes(" up ")).length, 1);
   });
 
   it("rolls back with this run's env when a provisioning write already happened", () => {
@@ -1173,9 +1236,12 @@ describe("deploy.sh, what reaches the journal and stdout", () => {
     assert.ok(
       !code.some((line) => /compose_in .*\bconfig\b|docker compose .*\bconfig\b/.test(line)),
     );
-    const composeLine = code.findIndex((line) => line.includes("docker compose --project-name"));
-    const block = code.slice(composeLine, composeLine + 4).join("\n");
-    assert.match(block, />\/dev\/null 2>&1/);
+    // compose_in builds the command once and runs it with or without its time limit: both runs
+    // discard the output.
+    assert.ok(code.some((line) => line.includes("command=(env JADERO_ENV=")));
+    const runs = code.filter((line) => line.includes(`"\${command[@]}"`));
+    assert.equal(runs.length, 2);
+    for (const line of runs) assert.match(line, />\/dev\/null 2>&1$/);
   });
 });
 

@@ -1,8 +1,14 @@
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { MigrationError, migrationJournal, runMigrations } from "@jadero/platform-nest";
+import {
+  MIGRATION_LOCK_TIMEOUT_MS,
+  MIGRATION_STATEMENT_TIMEOUT_MS,
+  MigrationError,
+  migrationJournal,
+  runMigrations,
+} from "@jadero/platform-nest";
 import type { TestDatabase } from "@jadero/testing";
 import pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
@@ -141,6 +147,42 @@ describe("api migrations from zero, as an ordinary role", () => {
       ).toEqual([{ n: 0 }]);
     } finally {
       rmSync(copy, { recursive: true, force: true });
+    }
+  });
+
+  it("run with lock_timeout and statement_timeout set on the migrate session (WP-9 step 5 review)", async () => {
+    // One migration that stores the settings it runs under, read back after the run.
+    const probe = mkdtempSync(join(tmpdir(), "api-drizzle-"));
+    try {
+      const tag = "0000_session_settings";
+      writeFileSync(
+        join(probe, `${tag}.sql`),
+        `CREATE TABLE public.migrate_settings AS SELECT current_setting('lock_timeout') AS lock_timeout,
+  current_setting('statement_timeout') AS statement_timeout;\n`,
+      );
+      mkdirSync(join(probe, "meta"));
+      writeFileSync(
+        join(probe, "meta", "_journal.json"),
+        JSON.stringify({
+          version: "7",
+          dialect: "postgresql",
+          entries: [{ idx: 0, version: "7", when: 1, tag, breakpoints: true }],
+        }),
+      );
+      const url = await emptyDatabase();
+      await runMigrations({ service: "api", url, migrationsFolder: probe });
+      expect(await rows(url, "SELECT * FROM public.migrate_settings")).toEqual([
+        {
+          lock_timeout: `${MIGRATION_LOCK_TIMEOUT_MS / 1000}s`,
+          statement_timeout: `${MIGRATION_STATEMENT_TIMEOUT_MS / 60_000}min`,
+        },
+      ]);
+      // Only the migrate session: a plain connection to the same database keeps the defaults.
+      expect(await rows(url, "SELECT current_setting('lock_timeout') AS lock_timeout")).toEqual([
+        { lock_timeout: "0" },
+      ]);
+    } finally {
+      rmSync(probe, { recursive: true, force: true });
     }
   });
 

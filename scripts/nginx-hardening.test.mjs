@@ -228,6 +228,36 @@ describe("the maintenance page on new.jadero.dev (WP-9 step 4, ADR-049 Downtime)
     assert.doesNotMatch(page, /—/, "no em dash");
   });
 
+  it("answers the content API with problem details, always 503, never the HTML page", () => {
+    const api = selectLocation(server, "/api/v1/content/pages")?.block ?? [];
+    assert.deepEqual(
+      api.filter((d) => d.name === "error_page").map((d) => d.args),
+      [["502", "503", "504", "=503", "/maintenance.problem.json"]],
+    );
+    const block = selectLocation(server, "/maintenance.problem.json")?.block ?? [];
+    assert.ok(block.some((d) => d.name === "internal"));
+    assert.equal(arg(block, "root"), "/srv/jadero/www/maintenance");
+    assert.equal(arg(block, "default_type"), "application/problem+json");
+    // An empty types table, so the .json extension never maps to application/json.
+    assert.deepEqual(block.find((d) => d.name === "types")?.block, []);
+    assert.equal(
+      mapped("$jadero_maintenance_cache_control", "/maintenance.problem.json"),
+      "no-store",
+    );
+    assert.equal(
+      mapped("$jadero_maintenance_csp", "/maintenance.problem.json"),
+      mapped("$jadero_maintenance_csp", "/maintenance.html"),
+    );
+    assert.equal(mapped("$jadero_maintenance_retry_after", "/maintenance.problem.json:503"), "10");
+    const problem = JSON.parse(
+      readFileSync(join(REPO_ROOT, "infra/nginx/www/maintenance/maintenance.problem.json"), "utf8"),
+    );
+    assert.deepEqual(Object.keys(problem), ["type", "title", "status", "detail"]);
+    assert.equal(problem.type, "about:blank");
+    assert.equal(problem.title, "Service Unavailable");
+    assert.equal(problem.status, 503);
+  });
+
   it("refuses an error_page served by a location that is not internal", () => {
     const extra = `
   error_page 502 /oops.html;
@@ -239,6 +269,15 @@ describe("the maintenance page on new.jadero.dev (WP-9 step 4, ADR-049 Downtime)
   error_page 502 /oops.html;
   location = /oops.html { internal; root /srv/jadero/www/oops; }`;
     assert.deepEqual(check({ sites: { "sites/a.conf": site(fine) } }), []);
+  });
+
+  it("applies the same rule to an error_page inside a location", () => {
+    const extra = `
+  location = /x/ { error_page 502 /oops.json; return 404; }
+  location = /oops.json { root /srv/jadero/www/oops; }`;
+    assert.deepEqual(check({ sites: { "sites/a.conf": site(extra) } }), [
+      "sites/a.conf:20: error_page /oops.json must be served by an exact, internal location with a root in /srv/jadero/www/",
+    ]);
   });
 });
 
