@@ -471,6 +471,13 @@ Recorded 2026-10-18 in [ADR-053](../adr/0053-deploy-files-from-the-release-tag.m
 
 ## Recap
 
+Explain-back deferred by the owner on 2026-10-24, to finish the WP; no question asked yet. The four questions below, both halves each, are asked at `/review-release R0`, like the deferred WP-6 and WP-7 ones.
+
+- P1. Point of no return and compensating rollback. Here: the health gate fails after `started` for `api` 0.4.0 over 0.3.0; what does `deploy.sh` do, which env file does 0.3.0 start with, and why does it never run a down migration? Transfer: an online shop checkout charges the card, then the shipment booking fails; what undoes the charge, and why is it a new action and not an undo (compensating actions, saga).
+- P2. Promotion by digest. Here: the `api:0.3.0` tag is moved in the registry between the staging deploy and the production approval; what does production run, and what stops it? Transfer: an antifraud service fetches its rules bundle as `rules-latest` at every start; what changes if it fetches it by content hash (immutable reference versus movable pointer).
+- P3. Monitoring by failure domain. Here: the box loses power at night; which monitor alerts, and why not Uptime Kuma (it dies with the box); and the backup timer is disabled by mistake: who notices, and how (push heartbeat, dead man's switch). Transfer: a nightly invoice job that only sends a mail when it fails; what does nobody see.
+- P4. The main trace from memory: from the merged Release PR to `api` running in production, each piece in order (tags, images, staging deploy, the states of `deploy.sh`, the approval, the production deploy, the ping). Transfer: none, the trace is the question.
+
 ## Named here
 
 | Name | What it is, in one line | When |
