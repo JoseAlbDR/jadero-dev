@@ -4364,24 +4364,24 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": [".github/workflows/release.yml", ".release-please-manifest.json"]
     },
     "r-build": {
-      "label": "Build once", "sub": "loaded into the runner's Docker", "kind": "step", "status": "real", "wp": "WP-7",
-      "what": "The released service's image is built for linux/amd64 and loaded locally, not pushed yet.",
-      "how": "`docker/build-push-action` with `load: true`, labels for source, revision and version, and main's BuildKit cache read only. The push later runs the same build on the same builder, so every layer comes from that cache.",
-      "why": "Build once, deploy many: the bytes pushed are the bytes tested and scanned, checked by digest two steps on.",
+      "label": "Build once", "sub": "an OCI archive on the runner · SBOM", "kind": "step", "status": "real", "wp": "WP-7",
+      "what": "The released service's image is built once for linux/amd64 into an OCI layout on the runner, with a BuildKit SBOM, not pushed yet.",
+      "how": "`docker/build-push-action` with `outputs: type=oci,tar=false`, `sbom: true`, `provenance: false`, labels for source, revision and version, and main's BuildKit cache read only. The archive holds one image index (the amd64 image manifest and the SBOM attestation manifest); its digest is what is pushed, attested and deployed. For the smoke run, regctl exports the amd64 image as a tar the runner's Docker (classic image store) can load, and the loaded image must carry the archive's config digest.",
+      "why": "Build once, deploy many: the smoke run, the scan and the push all read the same archive. A second build for the push, trusted to give the same bytes from the cache, gave the agent another config digest on release #166 (run 40126554215).",
       "files": [".github/workflows/release.yml"]
     },
     "r-smoke-scan": {
       "label": "Smoke run and Trivy", "sub": "hardened run · secret scan blocks", "kind": "step", "status": "real", "wp": "WP-7",
       "what": "The image runs hardened, not as root, and Trivy scans it before anything is pushed.",
-      "how": "Smoke: api and agent started with no configuration must stop on the config error naming `DATABASE_URL` with no `ERR_MODULE_NOT_FOUND` (every import resolved); web must turn `healthy`. Trivy, run as its container pinned by digest on the saved image: a secret always fails; fixable HIGH and CRITICAL OS findings go to the job summary and do not block.",
+      "how": "Smoke: api and agent started with no configuration must stop on the config error naming `DATABASE_URL` with no `ERR_MODULE_NOT_FOUND` (every import resolved); web must turn `healthy`. Trivy, run as its container pinned by digest, reads the archive itself (`--input` on the layout, `--platform linux/amd64`): a secret always fails; fixable HIGH and CRITICAL OS findings go to the job summary and do not block.",
       "why": "WP-7 D10: a release may be the one that carries the fix, so the release scan reports; the pull request gate and the weekly scan are the other two channels.",
       "files": [".github/workflows/release.yml",".trivyignore.yaml"]
     },
     "r-push": {
       "label": "Push to GHCR", "sub": ":<version> · :sha-<short> · SBOM", "kind": "step", "status": "real", "wp": "WP-7",
-      "what": "The image goes to `ghcr.io/josealbdr/jadero-dev-<service>` with its version tag, its commit tag and a BuildKit SBOM, then is checked against the scanned one.",
-      "how": "Login with the job's `GITHUB_TOKEN` (`packages: write`). After the push, the pushed linux/amd64 manifest's config digest must equal BuildKit's `containerimage.config.digest` of the scanned build, or the job fails before signing. The first push creates the package private.",
-      "why": "ADR-049 registry B: private images, pulled later by the deploy job's short-lived token; private to public stays possible, the reverse is not (a one-way door kept closed). The local image ID is not the config digest under Docker's containerd store, so the check reads BuildKit's metadata.",
+      "what": "The scanned archive goes unchanged to `ghcr.io/josealbdr/jadero-dev-<service>` under its version tag and its commit tag, SBOM included, then is checked against the scanned one.",
+      "how": "Login with the job's `GITHUB_TOKEN` (`packages: write`). regctl, run as its container pinned by digest, copies the archive to each tag with `image copy ocidir://…@<index digest>`, byte for byte, reading the token from the Docker config the login wrote. Each tag, read back with buildx (not the tool that pushed), must name the archive's index digest, or the job fails before signing. The first push creates the package private.",
+      "why": "ADR-049 registry B: private images, pulled later by the deploy job's short-lived token; private to public stays possible, the reverse is not (a one-way door kept closed). ADR-049 also scans before the push, so nothing unscanned reaches the registry; the check is a cheap index-digest equality.",
       "files": [".github/workflows/release.yml"]
     },
     "r-attest": {
