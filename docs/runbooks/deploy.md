@@ -90,7 +90,7 @@ Back to the release the server recorded as previous for that service, once (D3).
 gh workflow run deploy.yml -f action=rollback -f environment=production -f service=api
 ```
 
-or from the owner's root shell on the server: `sudo /srv/jadero/bin/deploy.sh rollback <env> <service> </dev/null`.
+or from the owner's root shell on the server: `sudo /srv/jadero/bin/deploy.sh rollback <env> <service>`.
 
 - **What it uses.** Only what is on disk: the previous release's files in `releases/<service>-<previous version>/`, its image (the prune keeps the current and the previous one), and the env file in place. No 1Password, no registry, no topology import and no migration: the schema and the topology only move forward, and the previous release runs on them because both change expand-only.
 - **What it checks.** The health gate and the smoke again: `checked previous-recorded`, `started healthy`, `verified ...`, `recorded rolled-back-once`. `versions.env` then names the previous version and its entry in `previous.env` is removed, so a second rollback is `refused reason=no-previous`.
@@ -107,16 +107,16 @@ A deploy rolls back by itself when it fails past the point of no return (section
 
 ```bash
 ssh <profile>
-sudo /srv/jadero/bin/deploy.sh redeploy staging api </dev/null
+sudo /srv/jadero/bin/deploy.sh redeploy staging api
 ```
 
 - The release files and the image are already on disk (`fetched on-disk`, `pulled on-disk`). The render, the provisioning (which sets the rotated password in Postgres or RabbitMQ), the migrate run, the health gate and the smoke run as in a deploy, and the run ends `recorded unchanged`.
 - Between `provisioned` and `started` the old containers still hold the old password: a pooled connection keeps working (Postgres checks a password only at connect), a new one fails authentication. In a normal run that window is seconds (step 6c drill: 49 s from `checked` to `recorded`).
 - Refusals: `nothing-deployed`, `no-release-files`, `no-image`.
 
-**End every manual run with `</dev/null`** until `deploy.sh` with sha256 `b11737628becde38b21ab2eced6959435112a0fe112dc59fc9cdf7886bb16997` is installed from `main` (check with `sudo sha256sum /srv/jadero/bin/deploy.sh`), and keep doing it after, since it costs nothing. Why: `deploy.sh` runs each slow step under GNU `timeout`, which puts its command in its own process group. From an interactive shell that group is in the background, so when `docker compose run` touched the terminal the kernel sent SIGTTOU and stopped compose and `timeout` with it; the 120 s limit never fired and the run hung after `provisioned` (step 6c). The fixed script gives compose `/dev/null` as stdin and runs migrate with `-T`; the other bounded steps (`git fetch`, `op inject`, `docker pull`) still take the caller's stdin, which `</dev/null` covers.
+**No `</dev/null` needed.** The fixed `deploy.sh` (sha256 `b11737628becde38b21ab2eced6959435112a0fe112dc59fc9cdf7886bb16997`, from `main`) was installed on the server on 2026-10-24 and its hash checked (`sudo sha256sum /srv/jadero/bin/deploy.sh`). Why the terminal mattered: `deploy.sh` runs each slow step under GNU `timeout`, which puts its command in its own process group, in the background of an interactive shell. When `docker compose run` touched the terminal, the kernel sent SIGTTOU and stopped compose and `timeout` with it, so the 120 s limit never fired and the run hung after `provisioned` (step 6c). The fixed script gives compose `/dev/null` as stdin and runs migrate with `-T`.
 
-If a run hangs anyway: `ps -eo pid,pgid,stat,cmd | grep -E '[t]imeout|[d]ocker compose'` shows the stopped ones with `T` in `STAT`. `sudo kill -KILL -<pgid>` ends that process group; `deploy.sh` reads it as a timeout of the step and rolls back (`rolling_back reason=migrate-timeout`, then `rolled_back reason=previous-healthy` in the drill). Then run it again with `</dev/null`.
+If a run hangs anyway: `ps -eo pid,pgid,stat,cmd | grep -E '[t]imeout|[d]ocker compose'` shows the stopped ones with `T` in `STAT`. `sudo kill -KILL -<pgid>` ends that process group; `deploy.sh` reads it as a timeout of the step and rolls back (`rolling_back reason=migrate-timeout`, then `rolled_back reason=previous-healthy` in the drill). Then run it again.
 
 ## 5. Busy (exit 75)
 
@@ -164,7 +164,7 @@ The last line of a run tells where it ended. A run with no final line after `che
    - `nothing-to-roll-back-to`: a first deploy failed past the point of no return (topology, provisioning, migrate, `up` or smoke); its containers are stopped. `stop-failed`: stopping them failed too, so they may still run.
    - `unexpected-error`: a command failed past the point of no return outside the handled paths.
 2. **Find the shared cause.** When the previous release fails too, the cause is rarely the release: check that `jadero-ops-postgres-1` and `jadero-ops-rabbitmq-1` are healthy (a RabbitMQ memory alarm blocks publishers), the memory (`free -m`, `sudo journalctl -k --since today | grep -i oom`), and the containers' logs for authentication errors. The env file in place always matches what provisioning wrote: past the first provisioning write the run moves `<service>.env.new` into place before it starts anything (step 4b), and removes it otherwise.
-3. **Fix it, then bring the recorded release back:** `sudo /srv/jadero/bin/deploy.sh redeploy <env> <service> </dev/null` starts the version `versions.env` names, with a fresh render and the full checks. After a failed first deploy there is nothing to redeploy: fix the cause and deploy the version again (`checked reason=first-deploy`). After `stop-failed`, stop the project's containers by hand first (`docker stop` on the names `docker ps` lists for the project).
+3. **Fix it, then bring the recorded release back:** `sudo /srv/jadero/bin/deploy.sh redeploy <env> <service>` starts the version `versions.env` names, with a fresh render and the full checks. After a failed first deploy there is nothing to redeploy: fix the cause and deploy the version again (`checked reason=first-deploy`). After `stop-failed`, stop the project's containers by hand first (`docker stop` on the names `docker ps` lists for the project).
 4. **Or move forward:** a fixed newer release deploys normally, through the pipeline or `gh workflow run`.
 5. Write down in the step log or the issue what failed and why.
 
