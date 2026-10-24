@@ -1,0 +1,15 @@
+# gitleaks config: the default rules plus one reviewed allowlist. Fingerprints of single findings
+# stay in `.gitleaksignore`; this file holds only allowlists for findings that come back on every
+# change, so a fingerprint would not cover them.
+[extend]
+useDefault = true
+
+# `release-inputs.txt` lists a SHA-256 of each deploy file (scripts/release-inputs.mjs). The hash
+# changes with every edit of that file, and `generic-api-key` matches the `#api` key next to it.
+# Both conditions must hold: the line is a deploy-file hash, and it is in a release-inputs file.
+[[allowlists]]
+description = "deploy-file hashes in release-inputs.txt"
+condition = "AND"
+paths = ['''(^|/)release-inputs\.txt$''']
+regexTarget = "match"
+regexes = [''' sha256:[0-9a-f]{64}$''']

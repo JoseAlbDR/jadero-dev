@@ -386,7 +386,7 @@ function stubEnv(w, extra = {}) {
 }
 
 /** Standard input of a deploy: the registry user, its token and, optionally, the digest. */
-const input = (digest) => `octocat\nghs_registryToken123\n${digest ? `sha256:${digest}\n` : ""}`;
+const input = (digest) => `octocat\nfake-registry-token-123\n${digest ? `sha256:${digest}\n` : ""}`;
 
 /**
  * Runs the test's copy of deploy.sh to completion.
@@ -473,13 +473,13 @@ describe("deploy.sh deploy, the happy path", () => {
         ),
       ),
     );
-    assert.equal(read(join(w.rec, "login-stdin")), "ghs_registryToken123");
+    assert.equal(read(join(w.rec, "login-stdin")), "fake-registry-token-123");
     const config = read(join(w.rec, "login-config")).trim();
     assert.ok(config.startsWith(w.envDir), "the config folder is on the state filesystem");
     assert.equal(existsSync(config), false, "the temporary DOCKER_CONFIG is gone");
     assert.ok(calls(w, "docker").includes(`pull ${REPO_PREFIX}api:0.3.0`));
-    assert.ok(!calls(w, "docker").some((c) => c.includes("ghs_registryToken123")));
-    assert.ok(!read(join(w.envDir, "deploy.log")).includes("ghs_"));
+    assert.ok(!calls(w, "docker").some((c) => c.includes("fake-registry-token-123")));
+    assert.ok(!read(join(w.envDir, "deploy.log")).includes("fake-registry-token-123"));
   });
 
   it("converges only this service's roles and broker user, the passwords off every argv", () => {
@@ -1258,7 +1258,7 @@ describe("deploy.sh, what reaches the journal and stdout", () => {
       });
       const shown = `${result.stdout}${result.stderr}${read(join(w.envDir, "deploy.log"))}`;
       assert.ok(composeCalls(w).length > 0, "compose ran and printed the canary");
-      for (const secret of [COMPOSE_CANARY, SECRET, OP_TOKEN, "ghs_registryToken123"]) {
+      for (const secret of [COMPOSE_CANARY, SECRET, OP_TOKEN, "fake-registry-token-123"]) {
         assert.ok(!shown.includes(secret), `${secret} stays out of what the run shows`);
       }
     }
