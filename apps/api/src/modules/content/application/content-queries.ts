@@ -3,8 +3,10 @@ import type {
   KnowledgeEntryDto,
   KnowledgeEntryListDto,
   Locale,
+  NowDto,
   PostCursorPosition,
   PostDto,
+  PostKind,
   PostPageDto,
   ProfileDto,
   ProjectDto,
@@ -35,6 +37,13 @@ export abstract class ContentQueries {
 
   /**
    * @param locale the requested locale.
+   * @returns the published /now page with the time its published text last changed, or undefined
+   * when there is none (WP-39 D2).
+   */
+  abstract now(locale: Locale): Promise<NowDto | undefined>;
+
+  /**
+   * @param locale the requested locale.
    * @returns every published experience item in display order, each with its published CV bullets
    * in the item's own language and the ids of the approved entries under each bullet.
    */
@@ -57,16 +66,17 @@ export abstract class ContentQueries {
 
   /**
    * @param locale the requested locale.
+   * @param kind only posts of this kind: `post` for the blog, `journal` for the journal (WP-39 D1).
    * @param after the position of the last post of the previous page, or undefined for the first.
    * @returns up to {@link POSTS_PAGE_SIZE} posts, newest first publication first, and the cursor of
    * the next page.
    */
-  abstract posts(locale: Locale, after?: PostCursorPosition): Promise<PostPageDto>;
+  abstract posts(locale: Locale, kind: PostKind, after?: PostCursorPosition): Promise<PostPageDto>;
 
   /**
    * @param locale the requested locale.
    * @param slug a published localized slug, with the same German fallback as {@link project}.
-   * @returns the published post, or undefined.
+   * @returns the published post of either kind, with its kind and work package, or undefined.
    */
   abstract post(locale: Locale, slug: string): Promise<PostDto | undefined>;
 

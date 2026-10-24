@@ -3,6 +3,8 @@ import {
   experienceListDto,
   localeParams,
   localizedSlugParams,
+  type NowDto,
+  nowDto,
   type PostDto,
   type PostPageDto,
   type ProfileDto,
@@ -59,6 +61,21 @@ export class LocalizedContentController {
   }
 
   /**
+   * `GET /v1/content/:locale/now` (WP-39 D2).
+   * @param params the locale.
+   * @returns the published /now page and when its text last changed.
+   * @throws {NotFoundException} when no /now page is published in that locale (or, for German, in
+   * English either).
+   */
+  @Get("now")
+  @SerializeOptions({ schema: nowDto })
+  async now(@Param({ schema: localeParams }) params: LocaleParams): Promise<NowDto> {
+    const now = await this.queries.now(params.locale);
+    if (!now) throw new NotFoundException(`No published now page in ${params.locale}.`);
+    return now;
+  }
+
+  /**
    * `GET /v1/content/:locale/experience`.
    * @param params the locale.
    * @returns every published experience item with its CV bullets, in display order.
@@ -101,9 +118,11 @@ export class LocalizedContentController {
   }
 
   /**
-   * `GET /v1/content/:locale/posts?cursor=`: 20 posts per page, newest first.
+   * `GET /v1/content/:locale/posts?kind=&cursor=`: 20 posts per page, newest first; blog posts
+   * unless `kind=journal`.
    * @param params the locale.
-   * @param query the opaque cursor of the previous page's `nextCursor`, decoded by its schema.
+   * @param query the kind (`post` by default) and the opaque cursor of the previous page's
+   * `nextCursor`, decoded by its schema.
    * @returns one page and the next page's cursor.
    */
   @Get("posts")
@@ -112,7 +131,7 @@ export class LocalizedContentController {
     @Param({ schema: localeParams }) params: LocaleParams,
     @Query({ schema: postListQuery }) query: z.output<typeof postListQuery>,
   ): Promise<PostPageDto> {
-    return this.queries.posts(params.locale, query.cursor);
+    return this.queries.posts(params.locale, query.kind, query.cursor);
   }
 
   /**

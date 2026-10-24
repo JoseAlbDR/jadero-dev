@@ -25,7 +25,7 @@ export function localeAlternates(href: Href, locale: Locale): Metadata["alternat
 }
 
 /** A page of one content item, addressed by the item's own localized slug. */
-type ContentPathname = "/projects/[slug]" | "/blog/[slug]";
+type ContentPathname = "/projects/[slug]" | "/blog/[slug]" | "/journal/[slug]";
 
 /**
  * Canonical and hreflang alternates for the page of one content item whose slug differs per locale

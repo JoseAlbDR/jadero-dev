@@ -20,6 +20,12 @@ export const routing = defineRouting({
     "/stack": "/stack",
     "/blog": "/blog",
     "/blog/[slug]": "/blog/[slug]",
+    // The build journal (ADR-034): posts of kind `journal`, one per work package, the same word in
+    // every locale like `/blog`; a journal post's slug is its own localized slug.
+    "/journal": "/journal",
+    "/journal/[slug]": "/journal/[slug]",
+    // What the owner is focused on now (WP-39, a nownownow-style page), the same word everywhere.
+    "/now": "/now",
     // The work log (ADR-031, D-52): entries are English only (D-50) and addressed by their stable
     // id (`kb-...`) in every locale, the target of a citation (`/en/work/<id>#tradeoffs`).
     "/work": { en: "/work", es: "/trabajo", de: "/arbeit" },

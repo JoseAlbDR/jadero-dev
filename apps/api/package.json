@@ -20,7 +20,9 @@
     "start:worker": "node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/worker.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env dist/migrate.js",
-    "db:seed": "node --env-file-if-exists=.env dist/seed.js"
+    "db:seed": "node --env-file-if-exists=.env dist/seed.js",
+    "journal:import": "node --env-file-if-exists=.env dist/journal.js import",
+    "journal:publish": "node --env-file-if-exists=.env dist/journal.js publish"
   },
   "dependencies": {
     "@jadero/contracts": "workspace:*",
@@ -33,6 +35,7 @@
     "pg": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
+    "yaml": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

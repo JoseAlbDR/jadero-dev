@@ -13,8 +13,8 @@ export interface ArchivedContentItem {
 
 /**
  * Archives an experience item, project, post, skill or CV bullet: every locale is hidden at once
- * and every revision and pointer is kept (no per-locale unpublish, D-20). The profile is not
- * archivable: its command schema has no member for it.
+ * and every revision and pointer is kept (no per-locale unpublish, D-20). The singletons (the
+ * profile, Now) are not archivable: the command schema has no member for them.
  */
 @Injectable()
 export class ArchiveContentItem {
@@ -27,7 +27,7 @@ export class ArchiveContentItem {
    * Validates the command and archives in its own transaction.
    * @param command the item and the version the caller loaded.
    * @returns the item and its new version.
-   * @throws {ZodError} when the command breaks its schema (the profile included); nothing runs.
+   * @throws {ZodError} when the command breaks its schema (the singletons included); nothing runs.
    * @throws {ItemNotFound} when no item of that type has the id.
    * @throws {InvalidTransition} when it is already archived; nothing is stored.
    * @throws {ConcurrentModification} when the item is no longer at `expectedVersion`.
@@ -36,7 +36,7 @@ export class ArchiveContentItem {
     const parsed = archiveContentItemCommand.parse(command);
     return this.uow.run(async (scope) => {
       const { item, save } = await loadLocalized(scope, parsed.type, parsed.id);
-      // Unreachable through the schema, which has no profile member; kept as the domain's answer.
+      // Unreachable through the schema, which has no singleton member; kept as the domain's answer.
       if (!item.archive) throw new InvalidTransition(item.id, "archive", "it cannot be archived");
       item.archive(this.clock.now());
       await save(parsed.expectedVersion);

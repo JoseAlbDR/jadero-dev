@@ -127,6 +127,30 @@
     "older": "Ältere Beiträge",
     "back": "Alle Beiträge"
   },
+  "JournalPage": {
+    "metaTitle": "Journal",
+    "metaDescription": "Ein Beitrag pro Arbeitspaket dieser Website: was ich gebaut habe, was ich gelernt habe, was ich ändern würde.",
+    "eyebrow": "Journal",
+    "title": "Bau-Journal",
+    "lead": "Ein Beitrag pro Arbeitspaket: was ich gebaut habe, was ich gelernt habe, was ich ändern würde.",
+    "empty": "Noch keine Journal-Beiträge veröffentlicht.",
+    "pagination": "Weitere Journal-Beiträge",
+    "older": "Ältere Journal-Beiträge",
+    "back": "Alle Journal-Beiträge",
+    "workPackage": "WP-{wp}"
+  },
+  "NowPage": {
+    "metaTitle": "Jetzt",
+    "metaDescription": "Worauf ich mich gerade konzentriere: die aktuelle Arbeit, was ich lerne und die neuesten Beiträge aus dem Bau-Journal.",
+    "eyebrow": "Jetzt",
+    "title": "Jetzt",
+    "lead": "Worauf ich mich gerade konzentriere.",
+    "updated": "Aktualisiert am <date>{when}</date>",
+    "empty": "In dieser Sprache ist noch kein Update veröffentlicht.",
+    "lastFinished": "Zuletzt abgeschlossenes Arbeitspaket",
+    "latestJournal": "Neueste Journal-Beiträge",
+    "allJournal": "Alle Journal-Beiträge"
+  },
   "StackPage": {
     "metaTitle": "Stack",
     "metaDescription": "Die Sprachen, Werkzeuge und Plattformen, mit denen ich arbeite, nach Bereich gruppiert.",
@@ -200,7 +224,9 @@
   "Footer": {
     "copyright": "© {year} jadero.dev",
     "note": "Gebaut, ein Release nach dem anderen.",
-    "work": "Arbeitsprotokoll"
+    "work": "Arbeitsprotokoll",
+    "journal": "Journal",
+    "now": "Jetzt"
   },
   "ThemeToggle": {
     "label": "Farbschema",

@@ -29,6 +29,20 @@
       "when": 1791627883803,
       "tag": "0003_posts_feed_index",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792859932818,
+      "tag": "0004_post_kind",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792860659376,
+      "tag": "0005_now",
+      "breakpoints": true
     }
   ]
 }

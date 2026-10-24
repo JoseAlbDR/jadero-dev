@@ -1,0 +1,12 @@
+{
+  "en": {
+    "locale": "en",
+    "body": "Building the **journal** and this page, one work package at a time.\n\n## Learning\n\n- Message brokers and how their delivery guarantees differ.\n- Writing shorter explainers.\n\n<script>window.__xss = true</script>\n",
+    "publishedAt": "2026-10-20T09:30:00.000Z"
+  },
+  "es": {
+    "locale": "es",
+    "body": "Construyendo el **diario** y esta página, un paquete de trabajo cada vez.\n\n## Aprendiendo\n\n- Brokers de mensajes y en qué se diferencian sus garantías de entrega.\n- A escribir explicaciones más cortas.\n",
+    "publishedAt": "2026-10-20T09:30:00.000Z"
+  }
+}

@@ -77,6 +77,7 @@ function localizedMember<K extends LocalizedType, L extends z.ZodRawShape>(
 const contentSeedItems: z.ZodType<readonly ContentSeedItem[]> = z.array(
   z.discriminatedUnion("type", [
     localizedMember("profile", uuidId, layoutFields.profile),
+    localizedMember("now", uuidId, layoutFields.now),
     localizedMember("experience-item", uuidId, layoutFields["experience-item"]),
     localizedMember("project", uuidId, layoutFields.project),
     localizedMember("post", uuidId, layoutFields.post),
@@ -106,11 +107,12 @@ const SEED_CHECKLIST: ApprovalChecklist = {
 /**
  * Loads placeholder content through the use cases (Q2 A), so seeded data passes the same rules as
  * any other. Idempotent by "create if missing, never touch what exists" (owner decision A): every
- * item has a fixed id; an item already stored (for the profile, any profile) is skipped, never
- * updated; a missing one is created, given a revision per locale and published (entries: created
- * and approved) in ONE unit of work run, one aggregate per transaction, so a failure leaves that
- * item absent, never half-seeded, and the next run tries it again. Never upserts, never truncates.
- * Run by hand (`db:seed`), never by a deploy.
+ * item has a fixed id; an item already stored (for a singleton, any profile or Now; for a journal
+ * post, any journal post of its work package) is skipped, never updated; a missing one is created,
+ * given a revision per locale and published (entries: created and approved) in ONE unit of work
+ * run, one aggregate per transaction, so a failure leaves that item absent, never half-seeded, and
+ * the next run tries it again. Never upserts, never truncates. Run by hand (`db:seed`), never by a
+ * deploy.
  */
 @Injectable()
 export class SeedContent {
@@ -134,11 +136,11 @@ export class SeedContent {
     const parsed = contentSeedItems.parse(items);
     const report = emptyReport();
     for (const item of parsed) {
-      const created = await this.uow.run((scope) =>
-        item.type === "knowledge-entry"
-          ? this.seedEntry(scope, item)
-          : this.seedLocalized(scope, item),
-      );
+      const created = await this.uow.run(async (scope) => {
+        if (item.type === "knowledge-entry") return this.seedEntry(scope, item);
+        if (await journalSlotTaken(scope, item)) return false;
+        return this.seedLocalized(scope, item);
+      });
       report[item.type][created ? "created" : "skipped"] += 1;
     }
     return report;
@@ -187,9 +189,21 @@ export class SeedContent {
   }
 }
 
+/**
+ * True when the item is a journal post and its work package already has one, whatever its id: the
+ * journal import (`journal:import`, WP-39 D3) creates journal posts with ids of its own, and the
+ * database allows one journal post per WP (`posts_journal_wp_unique`), so the seed skips the slot
+ * like a taken singleton instead of failing on the unique index.
+ */
+async function journalSlotTaken(scope: ContentScope, item: ContentSeedItem): Promise<boolean> {
+  if (item.type !== "post" || item.kind !== "journal" || item.wp == null) return false;
+  return (await scope.posts.findJournal(item.wp)) !== undefined;
+}
+
 function emptyReport(): SeedReport {
   return {
     profile: { created: 0, skipped: 0 },
+    now: { created: 0, skipped: 0 },
     "experience-item": { created: 0, skipped: 0 },
     project: { created: 0, skipped: 0 },
     post: { created: 0, skipped: 0 },
