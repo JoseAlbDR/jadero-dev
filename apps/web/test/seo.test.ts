@@ -232,6 +232,13 @@ describe("buildSitemap", () => {
       de: "https://jadero.dev/de/erfahrung",
       "x-default": "https://jadero.dev/en/experience",
     });
+    const now = entries.find((e) => e.url === "https://jadero.dev/es/now");
+    expect(now?.alternates?.languages).toEqual({
+      en: "https://jadero.dev/en/now",
+      es: "https://jadero.dev/es/now",
+      de: "https://jadero.dev/de/now",
+      "x-default": "https://jadero.dev/en/now",
+    });
     expect(entries.map((e) => e.url).slice(0, 3)).toEqual([
       "https://jadero.dev/en",
       "https://jadero.dev/es",

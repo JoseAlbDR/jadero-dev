@@ -1,3 +1,4 @@
+import now from "@jadero/contracts/fixtures/content/now.json" with { type: "json" };
 import profile from "@jadero/contracts/fixtures/content/profile.json" with { type: "json" };
 import project from "@jadero/contracts/fixtures/content/project.json" with { type: "json" };
 import workEntry from "@jadero/contracts/fixtures/content/work-entry.json" with { type: "json" };
@@ -6,6 +7,7 @@ import {
   CONTENT_REVALIDATE_SECONDS,
   ContentApiError,
   findPost,
+  getNow,
   getPost,
   getPosts,
   getProfile,
@@ -114,6 +116,18 @@ describe("content API client", () => {
 
     await expect(findPost("en", "missing")).resolves.toBeNull();
     await expectNotFound(getPost("en", "missing"));
+  });
+
+  it("answers the Now text, or null for its 404 problem so the /now page still renders", async () => {
+    fetchMock.mockResolvedValueOnce(json(now));
+    fetchMock.mockResolvedValueOnce(json(NOT_FOUND_PROBLEM, 404, "application/problem+json"));
+
+    await expect(getNow("de")).resolves.toEqual(now);
+    await expect(getNow("es")).resolves.toBeNull();
+
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe(`${BASE}/v1/content/de/now`);
+    expect(init?.next?.tags).toEqual(["content:now"]);
   });
 
   it("treats a 404 without a problem body as an error, not a missing page", async () => {

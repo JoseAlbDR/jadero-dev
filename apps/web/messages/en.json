@@ -139,6 +139,18 @@
     "back": "All journal posts",
     "workPackage": "WP-{wp}"
   },
+  "NowPage": {
+    "metaTitle": "Now",
+    "metaDescription": "What I am focused on now: the current work, what I am learning and the latest posts from the build journal.",
+    "eyebrow": "Now",
+    "title": "Now",
+    "lead": "What I am focused on now.",
+    "updated": "Updated <date>{when}</date>",
+    "empty": "No update is published in this language yet.",
+    "lastFinished": "Last finished work package",
+    "latestJournal": "Latest journal posts",
+    "allJournal": "All journal posts"
+  },
   "StackPage": {
     "metaTitle": "Stack",
     "metaDescription": "The languages, tools and platforms I work with, grouped by area.",
@@ -213,7 +225,8 @@
     "copyright": "© {year} jadero.dev",
     "note": "Built one release at a time.",
     "work": "Work log",
-    "journal": "Journal"
+    "journal": "Journal",
+    "now": "Now"
   },
   "ThemeToggle": {
     "label": "Color theme",

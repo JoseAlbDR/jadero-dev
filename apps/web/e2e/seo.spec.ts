@@ -45,6 +45,16 @@ test.describe("Open Graph and Twitter card (ADR-022)", () => {
     expect(await metaName(page, "twitter:title")).toBe(es.ExperiencePage.metaTitle);
   });
 
+  test("the /now page describes itself in its own language", async ({ page }) => {
+    await page.goto("/es/now");
+    const og = await openGraph(page);
+    expect(og["og:type"]).toEqual(["website"]);
+    expect(og["og:title"]).toEqual([es.NowPage.metaTitle]);
+    expect(og["og:description"]).toEqual([es.NowPage.metaDescription]);
+    expect(og["og:url"]).toEqual([`${SITE}/es/now`]);
+    expect(og["og:locale"]).toEqual(["es_ES"]);
+  });
+
   test("a post is an article with its publish time and tags", async ({ page }) => {
     await page.goto("/en/blog/why-an-outbox");
     const og = await openGraph(page);
@@ -97,6 +107,8 @@ test.describe("sitemap and robots", () => {
     expect(locs).toContain(`${SITE}/de/journal`);
     expect(locs).toContain(`${SITE}/es/journal/el-dominio-de-contenido`);
     expect(locs).not.toContain(`${SITE}/en/blog/the-content-domain`);
+    // The /now page in every locale, the same word everywhere.
+    for (const locale of ["en", "es", "de"]) expect(locs).toContain(`${SITE}/${locale}/now`);
     // Work-log entries under /en only, and only the indexable ones (D-50, D-52).
     expect(locs).toContain(`${SITE}/en/work/kb-outbox-relay`);
     expect(locs).not.toContain(`${SITE}/en/work/kb-inbox-dedup`);

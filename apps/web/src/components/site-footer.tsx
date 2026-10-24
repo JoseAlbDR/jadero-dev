@@ -6,9 +6,9 @@ const FOOTER_LINK =
   "rounded-md underline-offset-4 outline-none transition-colors hover:text-foreground hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 /**
- * Site footer: the copyright line, the links to the work log (also in the main nav) and the build
- * journal, and the one-line note. Links to pages of later WPs (/now, Under the hood) are added with
- * those pages, never before.
+ * Site footer: the copyright line, the links to the work log (also in the main nav), the build
+ * journal and the /now page, and the one-line note. Links to pages of later WPs (Under the hood)
+ * are added with those pages, never before.
  */
 export function SiteFooter() {
   const t = useTranslations("Footer");
@@ -22,6 +22,9 @@ export function SiteFooter() {
           </Link>
           <Link href="/journal" className={FOOTER_LINK}>
             {t("journal")}
+          </Link>
+          <Link href="/now" className={FOOTER_LINK}>
+            {t("now")}
           </Link>
         </div>
         <p>{t("note")}</p>

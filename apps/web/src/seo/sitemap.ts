@@ -20,6 +20,7 @@ export const STATIC_PAGES = [
   "/stack",
   "/blog",
   "/journal",
+  "/now",
   "/work",
 ] as const;
 

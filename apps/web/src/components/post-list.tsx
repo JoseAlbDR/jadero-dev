@@ -72,6 +72,8 @@ type PostListProps = Readonly<{
   locale: Locale;
   /** True on the first page: its newest post is a wide tile. */
   firstPage: boolean;
+  /** The level of each card's title: `h2` on a list page, `h3` inside a section with its own `h2`. */
+  headingLevel?: "h2" | "h3";
 }>;
 
 /**
@@ -84,9 +86,11 @@ type PostListProps = Readonly<{
  * @param props.items the posts of the page in API order.
  * @param props.locale the page locale.
  * @param props.firstPage whether this is the first page of the list.
+ * @param props.headingLevel the level of each card's title, `h2` by default.
  */
-export function PostList({ items, locale, firstPage }: PostListProps) {
+export function PostList({ items, locale, firstPage, headingLevel = "h2" }: PostListProps) {
   const t = useTranslations("BlogPage");
+  const Heading = headingLevel;
   return (
     <ul className="mt-8 grid gap-4 md:grid-cols-2">
       {items.map((item, index) => {
@@ -98,14 +102,14 @@ export function PostList({ items, locale, firstPage }: PostListProps) {
               <article>
                 <PublishDate value={item.publishedAt} locale={locale} />
                 <div className="mt-3 flex items-baseline justify-between gap-3">
-                  <h2
+                  <Heading
                     lang={lang}
                     className={cn("font-semibold tracking-tight", wide ? "text-2xl" : "text-lg")}
                   >
                     <Link href={postHref(item.slug, item.kind)} className={STRETCHED_LINK}>
                       {item.title}
                     </Link>
-                  </h2>
+                  </Heading>
                   <WorkPackageLabel wp={item.wp} className="shrink-0" />
                 </div>
                 <p lang={lang} className="mt-3 flex-1 text-muted-foreground">

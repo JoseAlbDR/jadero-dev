@@ -7,6 +7,8 @@ import {
   knowledgeEntryId,
   knowledgeEntryListDto,
   type Locale,
+  type NowDto,
+  nowDto,
   type PostDto,
   type PostKind,
   type PostPageDto,
@@ -53,6 +55,7 @@ export const contentTags = {
   posts: "content:posts",
   skills: "content:skills",
   work: "content:work",
+  now: "content:now",
   /**
    * @param projectSlug the localized slug of the project.
    * @returns the tag of one project page.
@@ -346,6 +349,18 @@ export async function findPost(locale: Locale, postSlug: string): Promise<PostDt
     contentTags.posts,
     contentTags.post(postSlug),
   ]);
+}
+
+/**
+ * `GET /v1/content/:locale/now`: the owner's published /now text (WP-39 D2), a singleton.
+ * Unlike the other singletons, its 404 is not the page's 404: the /now page still shows the
+ * journal blocks and a short note when no text is published in the locale.
+ * @param locale the page locale.
+ * @returns the text; a German page may get the English one (German fallback); `null` when nothing
+ *   is published in the locale.
+ */
+export async function getNow(locale: Locale): Promise<NowDto | null> {
+  return fetchContent("now", `/v1/content/${locale}/now`, nowDto, [contentTags.now]);
 }
 
 /**
