@@ -209,18 +209,46 @@ case "$1" in
 esac
 `;
 
+// The lookup deploy.sh runs to remove the one-off migrate containers a timed-out run may leave.
+const MIGRATE_RUNS_LOOKUP =
+  "ps -aq --filter label=com.docker.compose.project=jadero-staging " +
+  "--filter label=com.docker.compose.service=api-migrate " +
+  "--filter label=com.docker.compose.oneoff=True";
+
 // GNU timeout's interface: records the limit and the command, then runs the command, or, when a
 // word of STUB_TIMEOUT is one of the command's words (`fetch`, `inject`, `login`, `pull`,
 // `run`), exits as a timeout does without running it: 124, or STUB_TIMEOUT_STATUS (137 after
-// the KILL). The real one is not on macOS, and a stub makes the timeout instant.
+// the KILL), and moves the fake clock (DATE_STUB) past the limit plus the KILL's 10 s, as the
+// real wait would. When a word of STUB_EXIT is one of the command's words, it exits with
+// STUB_EXIT_STATUS at once and leaves the clock alone: a command that died on its own (an OOM
+// kill is 137). The real one is not on macOS, and a stub makes the timeout instant.
 const TIMEOUT_STUB = bash`
 printf '%s\n' "$*" >> "$STUB_REC/timeout-calls"
 [[ "$1" == --kill-after=10 && "$2" =~ ^[1-9][0-9]*$ ]] || exit 125
+limit="$2"
 shift 2
 for word in @{STUB_TIMEOUT-}; do
-  [[ " $* " == *" $word "* ]] && exit "@{STUB_TIMEOUT_STATUS:-124}"
+  if [[ " $* " == *" $word "* ]]; then
+    offset="$(cat "$STUB_REC/clock" 2>/dev/null || echo 0)"
+    echo "$((offset + limit + 10))" > "$STUB_REC/clock"
+    exit "@{STUB_TIMEOUT_STATUS:-124}"
+  fi
+done
+for word in @{STUB_EXIT-}; do
+  [[ " $* " == *" $word "* ]] && exit "@{STUB_EXIT_STATUS:-1}"
 done
 exec "$@"
+`;
+
+// The real date (REAL_DATE, filled in when written), except that `date -u +%s` adds the seconds
+// the timeout stub's fake waits moved the clock, so deploy.sh measures a timeout's elapsed time as
+// the real wait would make it.
+const DATE_STUB = bash`
+if [[ "$*" == "-u +%s" && -f "$STUB_REC/clock" ]]; then
+  echo "$(($(REAL_DATE -u +%s) + $(cat "$STUB_REC/clock")))"
+  exit 0
+fi
+exec REAL_DATE "$@"
 `;
 
 // flock(2) on file descriptor $2, as util-linux's `flock -n <fd>` does. The lock belongs to the
@@ -280,6 +308,8 @@ before(() => {
   writeScript(join(stubDir, "op"), OP_STUB);
   writeScript(join(stubDir, "git"), GIT_STUB);
   writeScript(join(stubDir, "timeout"), TIMEOUT_STUB);
+  const realDate = spawnSync("sh", ["-c", "command -v date"], { encoding: "utf8" }).stdout.trim();
+  writeScript(join(stubDir, "date"), DATE_STUB.replaceAll("REAL_DATE", realDate));
   const hasFlock = spawnSync("sh", ["-c", "command -v flock"]).status === 0;
   if (!hasFlock) writeScript(join(stubDir, "flock"), FLOCK_SHIM);
   fixture = join(root, "fixture");
@@ -679,9 +709,35 @@ describe("deploy.sh deploy, failures from provisioned on roll back", () => {
   });
 
   it("rolls back on a migrate timeout and removes the migrate container it may leave", () => {
+    // 124: TERM ended the migration at the limit; 137: the KILL 10 s later was needed.
+    for (const status of ["124", "137"]) {
+      const w = apiAt020();
+      const result = deploy(w, ["deploy", "staging", "api", "0.3.0"], {
+        env: { STUB_TIMEOUT: "run", STUB_TIMEOUT_STATUS: status },
+      });
+      assert.equal(result.status, 1);
+      assert.deepEqual(
+        journal(w)
+          .slice(-2)
+          .map((row) => [row.state, row.reason]),
+        [
+          ["rolling_back", "migrate-timeout"],
+          ["rolled_back", "previous-healthy"],
+        ],
+        status,
+      );
+      assert.ok(calls(w, "docker").includes(MIGRATE_RUNS_LOOKUP), status);
+      // The previous release starts again, with no time limit of ours (up --wait has its own).
+      assert.equal(composeCalls(w).filter((c) => c.includes(" up ")).length, 1);
+    }
+  });
+
+  it("reads a 137 before the migrate limit as the migration's own failure, not a timeout", () => {
+    // `docker compose run` returns 137 when the kernel OOM-kills the container under its
+    // mem_limit: the limit has not passed, so the reason is the step's normal failure.
     const w = apiAt020();
     const result = deploy(w, ["deploy", "staging", "api", "0.3.0"], {
-      env: { STUB_TIMEOUT: "run" },
+      env: { STUB_EXIT: "run", STUB_EXIT_STATUS: "137" },
     });
     assert.equal(result.status, 1);
     assert.deepEqual(
@@ -689,19 +745,11 @@ describe("deploy.sh deploy, failures from provisioned on roll back", () => {
         .slice(-2)
         .map((row) => [row.state, row.reason]),
       [
-        ["rolling_back", "migrate-timeout"],
+        ["rolling_back", "migrate-failed"],
         ["rolled_back", "previous-healthy"],
       ],
     );
-    assert.ok(
-      calls(w, "docker").includes(
-        "ps -aq --filter label=com.docker.compose.project=jadero-staging " +
-          "--filter label=com.docker.compose.service=api-migrate " +
-          "--filter label=com.docker.compose.oneoff=True",
-      ),
-    );
-    // The previous release starts again, with no time limit of ours (up --wait has its own).
-    assert.equal(composeCalls(w).filter((c) => c.includes(" up ")).length, 1);
+    assert.ok(!calls(w, "docker").includes(MIGRATE_RUNS_LOOKUP));
   });
 
   it("rolls back with this run's env when a provisioning write already happened", () => {

@@ -403,18 +403,26 @@ semver_compare() {
 # ---------------------------------------------------------------------------------------------
 
 # Runs a command under a time limit: GNU timeout sends TERM at the limit and KILL 10 s later.
-# Arguments: the limit in seconds, then the command. Returns the command's status, or 124 (137
-# when the KILL was needed) on a timeout.
+# Arguments: the limit in seconds, then the command. Returns the command's status, or 124 on a
+# timeout. GNU timeout returns 124 when TERM ended the command and 137 when the KILL was needed,
+# but 137 is also the status of a command killed by anyone else: `docker compose run` returns it
+# when the kernel OOM-kills the container under its mem_limit. Timeout's KILL comes 10 s after
+# the limit, so a 137 counts as a timeout only when the limit has passed (whole seconds from
+# `date`, a margin of 10 s); one before it is the command's own failure and stays 137.
 bounded() {
-  local limit="$1"
+  local limit="$1" started status=0
   shift
-  timeout --kill-after=10 "$limit" "$@"
+  started="$(date -u +%s)"
+  timeout --kill-after=10 "$limit" "$@" || status=$?
+  if [[ $status -eq 137 ]] && (($(date -u +%s) - started >= limit)); then status=124; fi
+  return "$status"
 }
 
-# Whether a status from `bounded` means the limit was reached.
+# Whether a status from `bounded` means the limit was reached (124: `bounded` maps timeout's
+# KILL to it, and leaves a 137 of the command's own as a failure).
 # Arguments: the status.
 timed_out() {
-  [[ "$1" -eq 124 || "$1" -eq 137 ]]
+  [[ "$1" -eq 124 ]]
 }
 
 # Checks that a release's overlay names the project this environment runs, so a release whose
@@ -461,7 +469,7 @@ compose_in() {
   fi
 }
 
-# Runs compose_in under a time limit; returns 124 or 137 on a timeout (`timed_out`).
+# Runs compose_in under a time limit; returns 124 on a timeout (`timed_out`).
 # Arguments: the limit in seconds, then compose_in's arguments.
 compose_bounded() {
   local compose_limit="$1"
