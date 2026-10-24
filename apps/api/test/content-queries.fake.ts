@@ -3,8 +3,10 @@ import type {
   KnowledgeEntryDto,
   KnowledgeEntryListDto,
   Locale,
+  NowDto,
   PostCursorPosition,
   PostDto,
+  PostKind,
   PostPageDto,
   ProfileDto,
   ProjectDto,
@@ -40,9 +42,12 @@ const germanProject: ProjectDto = {
   alternates: { ...englishProject.alternates, de: "beispielprojekt" },
 };
 
-/** Canned content; records the last post cursor it was given. */
+/** Canned content; records the last post kind and cursor it was given. */
 export class FakeContentQueries extends ContentQueries {
+  lastKind: PostKind | undefined;
   lastCursor: PostCursorPosition | undefined;
+  /** Whether a /now page is published; a test sets it to false to see the 404. */
+  nowPublished = true;
 
   /** {@inheritDoc ContentQueries.profile} */
   async profile(locale: Locale): Promise<ProfileDto | undefined> {
@@ -53,6 +58,12 @@ export class FakeContentQueries extends ContentQueries {
       summary: "Placeholder.",
       links: [{ kind: "website", url: "https://example.com" }],
     };
+  }
+
+  /** {@inheritDoc ContentQueries.now} */
+  async now(locale: Locale): Promise<NowDto | undefined> {
+    if (!this.nowPublished) return undefined;
+    return { locale, body: "Placeholder.", publishedAt: "2026-11-03T10:12:00.000Z" };
   }
 
   /** {@inheritDoc ContentQueries.experience} */
@@ -74,7 +85,8 @@ export class FakeContentQueries extends ContentQueries {
   }
 
   /** {@inheritDoc ContentQueries.posts} */
-  async posts(_locale: Locale, after?: PostCursorPosition): Promise<PostPageDto> {
+  async posts(_locale: Locale, kind: PostKind, after?: PostCursorPosition): Promise<PostPageDto> {
+    this.lastKind = kind;
     this.lastCursor = after;
     return { items: [], nextCursor: null };
   }

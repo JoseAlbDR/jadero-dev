@@ -85,6 +85,24 @@ export class SlugInvalid extends Error {
 }
 
 /**
+ * A post's kind and work package disagree (WP-39 D1): a journal post needs the positive integer of
+ * its work package, a blog post has none. Maps to 422.
+ */
+export class JournalWorkPackageInvalid extends Error {
+  constructor(
+    readonly kind: "post" | "journal",
+    readonly attempted: number | null,
+  ) {
+    super(
+      kind === "journal"
+        ? "A journal post must name its work package, a positive integer."
+        : "A blog post cannot name a work package.",
+    );
+    this.name = "JournalWorkPackageInvalid";
+  }
+}
+
+/**
  * An approval named a revision that is not the entry's latest (D4, Trace 2a): someone saved a newer
  * one since the owner's preview, so the owner would approve text they never read. Maps to 409.
  */

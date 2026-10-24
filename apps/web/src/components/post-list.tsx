@@ -1,15 +1,21 @@
-import type { PostSummaryDto } from "@jadero/contracts";
+import type { PostKind, PostSummaryDto } from "@jadero/contracts";
 import { cn } from "@jadero/ui/cn";
 import { Card } from "@jadero/ui/components/card";
 import { type Locale, useTranslations } from "next-intl";
-import { formatPublishDate } from "@/content/posts";
+import { formatPublishDate, POST_ROUTES } from "@/content/posts";
 import { Link } from "@/i18n/navigation";
 import { contentLang } from "./project-sections";
 import { StackTags } from "./stack-tags";
 
-/** The link to one post page, with the post's localized slug. */
-export function postHref(slug: string) {
-  return { pathname: "/blog/[slug]", params: { slug } } as const;
+/**
+ * The link to one post page, with the post's localized slug, on its kind's route (`/blog/<slug>`
+ * or `/journal/<slug>`).
+ * @param slug the post's slug in the page locale.
+ * @param kind the post's kind.
+ * @returns the href for the locale-aware `Link`.
+ */
+export function postHref(slug: string, kind: PostKind) {
+  return { pathname: POST_ROUTES[kind].item, params: { slug } } as const;
 }
 
 /** Classes of a link that covers its whole card (the block-link pattern). */
@@ -37,24 +43,54 @@ export function PublishDate({
   );
 }
 
+/**
+ * The small "WP-<n>" label of a journal post (ADR-034), next to its title or its date. Renders
+ * nothing for a blog post (`wp: null`).
+ * @param props.wp the post's work package number, or `null`.
+ * @param props.className classes from the parent.
+ */
+export function WorkPackageLabel({
+  wp,
+  className,
+}: Readonly<{ wp: number | null; className?: string }>) {
+  const t = useTranslations("JournalPage");
+  if (wp === null) return null;
+  return (
+    <span
+      className={cn(
+        "inline-block whitespace-nowrap rounded-md border border-border px-2 py-0.5 font-mono text-signal text-xs",
+        className,
+      )}
+    >
+      {t("workPackage", { wp })}
+    </span>
+  );
+}
+
 type PostListProps = Readonly<{
   items: PostSummaryDto[];
   locale: Locale;
   /** True on the first page: its newest post is a wide tile. */
   firstPage: boolean;
+  /** The level of each card's title: `h2` on a list page, `h3` inside a section with its own `h2`. */
+  headingLevel?: "h2" | "h3";
 }>;
 
 /**
- * One page of post cards as bento tiles (ADR-045), newest first: date, title, excerpt and tags. On
+ * One page of post cards as bento tiles (ADR-045), newest first: date, title (with its "WP-<n>"
+ * label on a journal post), excerpt and tags. Each card links to its post on the post's own kind's
+ * route. On
  * the first page the newest post spans both columns. Each tile is one link (its title) stretched
  * over the card. A post the API returned in another language (the German fallback) has its texts
  * marked with that `lang`.
  * @param props.items the posts of the page in API order.
  * @param props.locale the page locale.
  * @param props.firstPage whether this is the first page of the list.
+ * @param props.headingLevel the level of each card's title, `h2` by default.
  */
-export function PostList({ items, locale, firstPage }: PostListProps) {
+export function PostList({ items, locale, firstPage, headingLevel = "h2" }: PostListProps) {
   const t = useTranslations("BlogPage");
+  const Heading = headingLevel;
   return (
     <ul className="mt-8 grid gap-4 md:grid-cols-2">
       {items.map((item, index) => {
@@ -65,14 +101,17 @@ export function PostList({ items, locale, firstPage }: PostListProps) {
             <Card asChild className="relative flex h-full flex-col">
               <article>
                 <PublishDate value={item.publishedAt} locale={locale} />
-                <h2
-                  lang={lang}
-                  className={cn("mt-3 font-semibold tracking-tight", wide ? "text-2xl" : "text-lg")}
-                >
-                  <Link href={postHref(item.slug)} className={STRETCHED_LINK}>
-                    {item.title}
-                  </Link>
-                </h2>
+                <div className="mt-3 flex items-baseline justify-between gap-3">
+                  <Heading
+                    lang={lang}
+                    className={cn("font-semibold tracking-tight", wide ? "text-2xl" : "text-lg")}
+                  >
+                    <Link href={postHref(item.slug, item.kind)} className={STRETCHED_LINK}>
+                      {item.title}
+                    </Link>
+                  </Heading>
+                  <WorkPackageLabel wp={item.wp} className="shrink-0" />
+                </div>
                 <p lang={lang} className="mt-3 flex-1 text-muted-foreground">
                   {item.excerpt}
                 </p>

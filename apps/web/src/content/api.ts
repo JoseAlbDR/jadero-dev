@@ -7,7 +7,10 @@ import {
   knowledgeEntryId,
   knowledgeEntryListDto,
   type Locale,
+  type NowDto,
+  nowDto,
   type PostDto,
+  type PostKind,
   type PostPageDto,
   type ProfileDto,
   type ProjectDto,
@@ -52,6 +55,7 @@ export const contentTags = {
   posts: "content:posts",
   skills: "content:skills",
   work: "content:work",
+  now: "content:now",
   /**
    * @param projectSlug the localized slug of the project.
    * @returns the tag of one project page.
@@ -300,17 +304,31 @@ export async function getProject(locale: Locale, projectSlug: string): Promise<P
 }
 
 /**
- * `GET /v1/content/:locale/posts?cursor=`: one page of published posts, newest first.
+ * `GET /v1/content/:locale/posts?kind=&cursor=`: one page of published posts of one kind, newest
+ * first. The kind is always sent, so the blog asks for `post` and the journal for `journal`
+ * explicitly instead of the blog leaning on the API's default. The items are filtered by kind here
+ * too (defense in depth for expand/contract): an `api` older than WP-39 ignores `?kind=` and its
+ * posts parse with the contract's default kind `post`, so if `web` deploys first the journal, the
+ * /now tiles and the sitemap list no blog post under `/journal`. The API's cursor is kept as it is,
+ * so the next page still follows on from this one; a filtered page may hold fewer items than the
+ * API's page size, or none while `nextCursor` still points further.
  * @param locale the page locale.
+ * @param kind `post` for the blog, `journal` for the journal (ADR-034).
  * @param cursor the `nextCursor` of the previous page, or a visitor's cursor already checked and
  *   rebuilt by `postCursorParam`; the first page when absent.
- * @returns the page and the cursor of the next one.
+ * @returns the page's posts of that kind and the cursor of the next page.
  */
-export async function getPosts(locale: Locale, cursor?: string): Promise<PostPageDto> {
-  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
-  return getContent("posts", `/v1/content/${locale}/posts${query}`, postPageDto, [
+export async function getPosts(
+  locale: Locale,
+  kind: PostKind,
+  cursor?: string,
+): Promise<PostPageDto> {
+  const query = new URLSearchParams({ kind });
+  if (cursor) query.set("cursor", cursor);
+  const page = await getContent("posts", `/v1/content/${locale}/posts?${query}`, postPageDto, [
     contentTags.posts,
   ]);
+  return { ...page, items: page.items.filter((item) => item.kind === kind) };
 }
 
 /**
@@ -337,6 +355,18 @@ export async function findPost(locale: Locale, postSlug: string): Promise<PostDt
     contentTags.posts,
     contentTags.post(postSlug),
   ]);
+}
+
+/**
+ * `GET /v1/content/:locale/now`: the owner's published /now text (WP-39 D2), a singleton.
+ * Unlike the other singletons, its 404 is not the page's 404: the /now page still shows the
+ * journal blocks and a short note when no text is published in the locale.
+ * @param locale the page locale.
+ * @returns the text; a German page may get the English one (German fallback); `null` when nothing
+ *   is published in the locale.
+ */
+export async function getNow(locale: Locale): Promise<NowDto | null> {
+  return fetchContent("now", `/v1/content/${locale}/now`, nowDto, [contentTags.now]);
 }
 
 /**

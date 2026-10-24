@@ -89,6 +89,30 @@ describe("public content reads over HTTP", () => {
     expect(res.headers["content-language"]).toBeUndefined();
   });
 
+  it("serves the /now page with its update time, 304 on a match, and a 404 when none is published", async () => {
+    const res = await http().get("/v1/content/de/now");
+    expect(res.status).toBe(200);
+    expect(res.headers["cache-control"]).toBe(PUBLIC_CACHE_CONTROL);
+    expect(res.body).toEqual({
+      locale: "de",
+      body: "Placeholder.",
+      publishedAt: "2026-11-03T10:12:00.000Z",
+    });
+    const again = await http()
+      .get("/v1/content/de/now")
+      .set("If-None-Match", String(res.headers.etag));
+    expect(again.status).toBe(304);
+    queries.nowPublished = false;
+    try {
+      const missing = await http().get("/v1/content/de/now");
+      expect(missing.status).toBe(404);
+      expect(missing.headers["content-type"]).toContain("application/problem+json");
+      expect(missing.headers["cache-control"]).toBe("no-store");
+    } finally {
+      queries.nowPublished = true;
+    }
+  });
+
   it("is a 400 problem for an unknown locale, before any query", async () => {
     const res = await http().get("/v1/content/fr/profile");
     expect(res.status).toBe(400);
@@ -106,6 +130,16 @@ describe("public content reads over HTTP", () => {
     const res = await http().get(`/v1/content/en/posts?cursor=${encodePostCursor(position)}`);
     expect(res.status).toBe(200);
     expect(queries.lastCursor).toEqual(position);
+  });
+
+  it("lists blog posts by default and journal posts on ?kind=journal; another kind is a 400", async () => {
+    expect((await http().get("/v1/content/en/posts")).status).toBe(200);
+    expect(queries.lastKind).toBe("post");
+    expect((await http().get("/v1/content/en/posts?kind=journal")).status).toBe(200);
+    expect(queries.lastKind).toBe("journal");
+    const res = await http().get("/v1/content/en/posts?kind=page");
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({ errors: [{ pointer: "#/kind" }] });
   });
 
   it("drops a private entry field a query returned by mistake (the response schema, D-67)", async () => {

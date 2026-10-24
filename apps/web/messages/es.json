@@ -45,7 +45,7 @@
     },
     "evidence": {
       "caseStudies": "Casos de estudio",
-      "workLog": "Registro de trabajo",
+      "workLog": "Trabajo profesional",
       "underTheHood": "Página Under the hood",
       "publicRepo": "Repositorio público",
       "changelogs": "Changelogs por servicio",
@@ -127,6 +127,30 @@
     "older": "Entradas anteriores",
     "back": "Todas las entradas"
   },
+  "JournalPage": {
+    "metaTitle": "Diario",
+    "metaDescription": "Una entrada por cada paquete de trabajo de este sitio: qué construí, qué aprendí, qué cambiaría.",
+    "eyebrow": "Diario",
+    "title": "Diario de construcción",
+    "lead": "Una entrada por paquete de trabajo: qué construí, qué aprendí, qué cambiaría.",
+    "empty": "Todavía no hay entradas del diario publicadas.",
+    "pagination": "Más entradas del diario",
+    "older": "Entradas anteriores del diario",
+    "back": "Todo el diario",
+    "workPackage": "WP-{wp}"
+  },
+  "NowPage": {
+    "metaTitle": "Ahora",
+    "metaDescription": "En qué estoy centrado ahora: el trabajo actual, lo que estoy aprendiendo y las últimas entradas del diario de construcción.",
+    "eyebrow": "Ahora",
+    "title": "Ahora",
+    "lead": "En qué estoy centrado ahora.",
+    "updated": "Actualizado el <date>{when}</date>",
+    "empty": "Todavía no hay ninguna actualización publicada en este idioma.",
+    "lastFinished": "Último paquete de trabajo terminado",
+    "latestJournal": "Últimas entradas del diario",
+    "allJournal": "Todo el diario"
+  },
   "StackPage": {
     "metaTitle": "Stack",
     "metaDescription": "Los lenguajes, herramientas y plataformas con los que trabajo, agrupados por área.",
@@ -136,9 +160,9 @@
     "empty": "Todavía no hay tecnologías publicadas."
   },
   "WorkPage": {
-    "metaTitle": "Registro de trabajo",
+    "metaTitle": "Trabajo profesional",
     "metaDescription": "Una entrada por cada trabajo: el problema, lo que construí, las alternativas y el resultado.",
-    "eyebrow": "Registro de trabajo",
+    "eyebrow": "Trabajo profesional",
     "title": "El trabajo detrás del CV",
     "lead": "Una entrada por cada trabajo: el problema, lo que construí, las alternativas y cómo salió.",
     "empty": "Aún no hay entradas publicadas.",
@@ -195,12 +219,14 @@
     "projects": "Proyectos",
     "stack": "Stack",
     "blog": "Blog",
-    "work": "Registro de trabajo"
+    "work": "Trabajo profesional"
   },
   "Footer": {
     "copyright": "© {year} jadero.dev",
     "note": "Construida versión a versión.",
-    "work": "Registro de trabajo"
+    "work": "Trabajo profesional",
+    "journal": "Diario",
+    "now": "Ahora"
   },
   "ThemeToggle": {
     "label": "Tema de color",

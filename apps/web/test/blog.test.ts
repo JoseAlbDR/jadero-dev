@@ -38,6 +38,8 @@ function post(slug: string, es?: string): PostSummaryDto {
   return {
     slug,
     locale: "en",
+    kind: "post",
+    wp: null,
     title: slug,
     excerpt: "",
     tags: [],

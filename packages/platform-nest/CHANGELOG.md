@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/JoseAlbDR/jadero-dev/compare/platform-nest-v0.1.0...platform-nest-v0.2.0) (2026-10-24)
+
+
+### Features
+
+* **infra:** deploy pipeline with a journaled deploy script and approval-gated CI ([#155](https://github.com/JoseAlbDR/jadero-dev/issues/155)) ([471574f](https://github.com/JoseAlbDR/jadero-dev/commit/471574f99604b762ea37321618542beb402cf251))
+
 ## 0.1.0 (2026-10-13)
 
 

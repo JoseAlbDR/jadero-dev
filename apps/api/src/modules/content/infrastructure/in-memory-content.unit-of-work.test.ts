@@ -10,6 +10,7 @@ import {
 import { InMemoryCvBulletRepository } from "./in-memory-cv-bullet.repository.js";
 import { InMemoryExperienceItemRepository } from "./in-memory-experience-item.repository.js";
 import { InMemoryKnowledgeEntryRepository } from "./in-memory-knowledge-entry.repository.js";
+import { InMemoryNowRepository } from "./in-memory-now.repository.js";
 import { InMemoryPostRepository } from "./in-memory-post.repository.js";
 import { InMemoryProfileRepository } from "./in-memory-profile.repository.js";
 import { InMemoryProjectRepository } from "./in-memory-project.repository.js";
@@ -21,6 +22,7 @@ function fixture() {
   return {
     unitOfWork: new InMemoryContentUnitOfWork(store),
     profile: new InMemoryProfileRepository(store.profile),
+    now: new InMemoryNowRepository(store.now),
     experienceItems: new InMemoryExperienceItemRepository(store.experienceItems),
     projects: new InMemoryProjectRepository(store.projects),
     posts: new InMemoryPostRepository(store.posts),

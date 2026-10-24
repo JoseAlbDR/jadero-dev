@@ -1,6 +1,6 @@
 {
   "name": "@jadero/api",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Content, auth, media and CV service (ADR-001), with its api-worker process type (outbox relay, heartbeat).",
   "type": "module",
@@ -20,7 +20,9 @@
     "start:worker": "node --env-file-if-exists=.env --import @jadero/platform-nest/instrumentation dist/worker.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env dist/migrate.js",
-    "db:seed": "node --env-file-if-exists=.env dist/seed.js"
+    "db:seed": "node --env-file-if-exists=.env dist/seed.js",
+    "journal:import": "node --env-file-if-exists=.env dist/journal.js import",
+    "journal:publish": "node --env-file-if-exists=.env dist/journal.js publish"
   },
   "dependencies": {
     "@jadero/contracts": "workspace:*",
@@ -33,6 +35,7 @@
     "pg": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
+    "yaml": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

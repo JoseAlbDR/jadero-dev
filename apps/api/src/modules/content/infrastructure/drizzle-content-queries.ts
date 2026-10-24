@@ -6,8 +6,10 @@ import type {
   KnowledgeEntryListDto,
   KnowledgeEntrySummaryDto,
   Locale,
+  NowDto,
   PostCursorPosition,
   PostDto,
+  PostKind,
   PostPageDto,
   PostSummaryDto,
   ProfileDto,
@@ -26,7 +28,9 @@ import {
   experienceItemDocumentSchema,
   knowledgeEntryDocumentSchema,
   localeSchema,
+  nowDocumentSchema,
   postDocumentSchema,
+  postKindSchema,
   profileDocumentSchema,
   projectDocumentSchema,
   projectKindSchema,
@@ -82,6 +86,13 @@ const alternatesRow = z.partialRecord(localeSchema, z.string());
 
 const profileRow = z.object({ id: z.string(), locale: localeSchema, document: z.unknown() });
 
+const nowRow = z.object({
+  id: z.string(),
+  locale: localeSchema,
+  published_at: z.iso.datetime(),
+  document: z.unknown(),
+});
+
 const experienceRow = z.object({
   id: z.string(),
   locale: localeSchema,
@@ -105,6 +116,8 @@ const postRow = z.object({
   id: z.string(),
   locale: localeSchema,
   slug: z.string(),
+  kind: postKindSchema,
+  wp: z.int().min(1).nullable(),
   first_published_at: z.iso.datetime(),
   document: z.unknown(),
   alternates: alternatesRow,
@@ -154,6 +167,25 @@ export class DrizzleContentQueries extends ContentQueries {
       summary: doc.summary,
       links: doc.links.map((link) => ({ kind: link.kind, url: link.url })),
     };
+  }
+
+  /** {@inheritDoc ContentQueries.now} */
+  async now(locale: Locale): Promise<NowDto | undefined> {
+    // `published_at` (when the pointer last moved), not `first_published_at`: a later edit is what
+    // the page's "updated on" date shows.
+    const [row] = await this.rows(
+      nowRow,
+      sql`SELECT t.now_id AS id, t.locale, r.document,
+          to_char(t.published_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+            AS published_at
+        FROM content.now_translations t
+        JOIN content.now_revisions r ON r.id = t.published_revision_id
+        WHERE ${chosenTranslation("content.now_translations", "now_id", locale)}
+        LIMIT 1`,
+    );
+    if (!row) return undefined;
+    const doc = readStored(nowDocumentSchema, row.document, row.id, "now document");
+    return { locale: row.locale, body: doc.body, publishedAt: row.published_at };
   }
 
   /** {@inheritDoc ContentQueries.experience} */
@@ -242,13 +274,15 @@ export class DrizzleContentQueries extends ContentQueries {
   }
 
   /** {@inheritDoc ContentQueries.posts} */
-  async posts(locale: Locale, after?: PostCursorPosition): Promise<PostPageDto> {
+  async posts(locale: Locale, kind: PostKind, after?: PostCursorPosition): Promise<PostPageDto> {
     // Keyset pagination on (first_published_at, id), newest first: a republish (a typo fix) moves
     // `published_at` but not `first_published_at`, so it never moves a post to the top. One extra
-    // row tells whether a next page exists.
+    // row tells whether a next page exists. The kind is a filter on the joined root row (WP-39
+    // implementation choice): the walk stays on `post_translations_feed_idx`, and each row's post
+    // is a primary key lookup that keeps it or drops it.
     const rows = await this.rows(
       postRow,
-      sql`${this.postSelect(locale)}
+      sql`${this.postSelect(locale)} AND p.kind = ${kind}
         ${
           after === undefined
             ? sql``
@@ -351,7 +385,7 @@ export class DrizzleContentQueries extends ContentQueries {
     // stores (epoch ms), which keeps the cursor exact. The rule this rests on: every write of
     // `first_published_at` comes from the domain clock, never SQL `now()` (microseconds), or a
     // row whose stored value is finer than its cursor would repeat on the next page.
-    return sql`SELECT t.post_id AS id, t.locale, t.published_slug AS slug,
+    return sql`SELECT t.post_id AS id, t.locale, t.published_slug AS slug, p.kind, p.wp,
         to_char(t.first_published_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
           AS first_published_at,
         r.document, ${alternatesOf("content.post_translations", "post_id")} AS alternates
@@ -392,6 +426,8 @@ export class DrizzleContentQueries extends ContentQueries {
     return {
       slug: row.slug,
       locale: row.locale,
+      kind: row.kind,
+      wp: row.wp,
       title: doc.title,
       excerpt: doc.excerpt,
       tags: [...doc.tags],

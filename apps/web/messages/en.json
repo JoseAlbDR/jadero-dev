@@ -45,7 +45,7 @@
     },
     "evidence": {
       "caseStudies": "Case studies",
-      "workLog": "Work log",
+      "workLog": "Professional work",
       "underTheHood": "Under the hood page",
       "publicRepo": "Public repo",
       "changelogs": "Changelogs per service",
@@ -127,6 +127,30 @@
     "older": "Older posts",
     "back": "All posts"
   },
+  "JournalPage": {
+    "metaTitle": "Journal",
+    "metaDescription": "One post per work package of this site: what I built, what I learned, what I would change.",
+    "eyebrow": "Journal",
+    "title": "Build journal",
+    "lead": "One post per work package: what I built, what I learned, what I would change.",
+    "empty": "No journal posts are published yet.",
+    "pagination": "More journal posts",
+    "older": "Older journal posts",
+    "back": "All journal posts",
+    "workPackage": "WP-{wp}"
+  },
+  "NowPage": {
+    "metaTitle": "Now",
+    "metaDescription": "What I am focused on now: the current work, what I am learning and the latest posts from the build journal.",
+    "eyebrow": "Now",
+    "title": "Now",
+    "lead": "What I am focused on now.",
+    "updated": "Updated <date>{when}</date>",
+    "empty": "No update is published in this language yet.",
+    "lastFinished": "Last finished work package",
+    "latestJournal": "Latest journal posts",
+    "allJournal": "All journal posts"
+  },
   "StackPage": {
     "metaTitle": "Stack",
     "metaDescription": "The languages, tools and platforms I work with, grouped by area.",
@@ -136,9 +160,9 @@
     "empty": "No skills are published yet."
   },
   "WorkPage": {
-    "metaTitle": "Work log",
+    "metaTitle": "Professional work",
     "metaDescription": "One entry per piece of work: the problem, what I built, the trade-offs and the outcome.",
-    "eyebrow": "Work log",
+    "eyebrow": "Professional work",
     "title": "The work behind the CV",
     "lead": "One entry per piece of work: the problem, what I built, the trade-offs and how it turned out.",
     "empty": "No entries are published yet.",
@@ -195,12 +219,14 @@
     "projects": "Projects",
     "stack": "Stack",
     "blog": "Blog",
-    "work": "Work log"
+    "work": "Professional work"
   },
   "Footer": {
     "copyright": "© {year} jadero.dev",
     "note": "Built one release at a time.",
-    "work": "Work log"
+    "work": "Professional work",
+    "journal": "Journal",
+    "now": "Now"
   },
   "ThemeToggle": {
     "label": "Color theme",

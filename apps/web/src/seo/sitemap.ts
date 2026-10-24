@@ -1,5 +1,6 @@
 import type {
   KnowledgeEntryListDto,
+  PostKind,
   PostPageDto,
   PostSummaryDto,
   ProjectListDto,
@@ -7,22 +8,33 @@ import type {
 } from "@jadero/contracts";
 import type { Metadata, MetadataRoute } from "next";
 import type { Locale } from "next-intl";
+import { POST_ROUTES } from "@/content/posts";
 import { contentAlternates, englishOnlyAlternates, localeAlternates } from "@/i18n/alternates";
 import { routing } from "@/i18n/routing";
 
 /** The pages that exist in every locale whatever the content, in sitemap order. */
-export const STATIC_PAGES = ["/", "/experience", "/projects", "/stack", "/blog", "/work"] as const;
+export const STATIC_PAGES = [
+  "/",
+  "/experience",
+  "/projects",
+  "/stack",
+  "/blog",
+  "/journal",
+  "/now",
+  "/work",
+] as const;
 
 /**
- * How many list pages of posts the sitemap reads per locale at most (20 posts each from the real
- * API): a bound on the requests one sitemap costs, far above what the blog holds.
+ * How many list pages of posts the sitemap reads per locale and kind at most (20 posts each from
+ * the real API): a bound on the requests one sitemap costs, far above what the blog or the journal
+ * holds.
  */
 export const SITEMAP_POSTS_MAX_PAGES = 50;
 
 /** Where the sitemap reads the content from: the content client in the app, fakes in tests. */
 export type SitemapSources = Readonly<{
   projects: (locale: Locale) => Promise<ProjectListDto>;
-  posts: (locale: Locale, cursor?: string) => Promise<PostPageDto>;
+  posts: (locale: Locale, kind: PostKind, cursor?: string) => Promise<PostPageDto>;
   workLog: () => Promise<KnowledgeEntryListDto>;
 }>;
 
@@ -31,14 +43,23 @@ export type SitemapFailureHandler = (resource: string) => void;
 
 type Entry = MetadataRoute.Sitemap[number];
 
+/** The post kinds the sitemap lists, each on its own route. */
+const POST_KINDS = ["post", "journal"] as const satisfies readonly PostKind[];
+
+/** The name of a post list in a failure report: `posts en`, `journal en`. */
+const POST_LIST_NAMES = { post: "posts", journal: "journal" } as const satisfies Record<
+  PostKind,
+  string
+>;
+
 /**
- * The sitemap of the site (ADR-022): every static page in every locale, then each project and
- * post in each locale it is published in (a German fallback to English is the English page, so it
+ * The sitemap of the site (ADR-022): every static page in every locale, then each project, blog
+ * post and journal post (ADR-034, under `/journal`) in each locale it is published in (a German fallback to English is the English page, so it
  * is not listed under `/de`), then each indexable work-log entry under `/en` only (D-50, D-52).
  * Each URL carries its hreflang alternates, the same ones the page's head links to, `x-default`
  * included. A content list that fails (API down, a refused payload) is left out and reported to
  * `onFailure`, so the sitemap degrades to fewer URLs instead of failing.
- * @param sources reads the projects, the post pages and the work log.
+ * @param sources reads the projects, the post pages of each kind and the work log.
  * @param siteUrl the public origin every URL is resolved on (`SITE_URL`).
  * @param onFailure told the name of each list left out.
  * @returns the sitemap entries, each URL once.
@@ -65,12 +86,14 @@ export async function buildSitemap(
       }),
     ),
     Promise.all(
-      routing.locales.map(async (locale) => {
-        const items = await allPosts(locale, sources, onFailure);
-        return ownLocale(items, locale).map((item) =>
-          entry(contentAlternates("/blog/[slug]", item), item.publishedAt),
-        );
-      }),
+      routing.locales.flatMap((locale) =>
+        POST_KINDS.map(async (kind) => {
+          const items = await allPosts(locale, kind, sources, onFailure);
+          return ownLocale(items, locale).map((item) =>
+            entry(contentAlternates(POST_ROUTES[kind].item, item), item.publishedAt),
+          );
+        }),
+      ),
     ),
     attempt(() => sources.workLog(), "work log", onFailure),
   ]);
@@ -116,18 +139,24 @@ function ownLocale<T extends ProjectSummaryDto | PostSummaryDto>(
 }
 
 /**
- * Every post of a locale, walking the list pages newest first up to `SITEMAP_POSTS_MAX_PAGES`. A
- * page that fails stops the walk; the posts read before it stay in the sitemap.
+ * Every post of one kind in a locale, walking the list pages newest first up to
+ * `SITEMAP_POSTS_MAX_PAGES`. A page that fails stops the walk; the posts read before it stay in the
+ * sitemap.
  */
 async function allPosts(
   locale: Locale,
+  kind: PostKind,
   sources: SitemapSources,
   onFailure: SitemapFailureHandler,
 ): Promise<PostSummaryDto[]> {
   const items: PostSummaryDto[] = [];
   let cursor: string | undefined;
   for (let read = 0; read < SITEMAP_POSTS_MAX_PAGES; read++) {
-    const page = await attempt(() => sources.posts(locale, cursor), `posts ${locale}`, onFailure);
+    const page = await attempt(
+      () => sources.posts(locale, kind, cursor),
+      `${POST_LIST_NAMES[kind]} ${locale}`,
+      onFailure,
+    );
     if (!page) break;
     items.push(...page.items);
     if (page.nextCursor === null) break;

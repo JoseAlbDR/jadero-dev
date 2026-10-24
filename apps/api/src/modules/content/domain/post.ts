@@ -1,4 +1,4 @@
-import { SlugInvalid } from "./content.errors.js";
+import { JournalWorkPackageInvalid, SlugInvalid } from "./content.errors.js";
 import { invalidEntries, isFilled, isSlug, isTag } from "./field-formats.js";
 import type { Locale } from "./locale.js";
 import {
@@ -35,11 +35,23 @@ export const postRules: DocumentRules<PostDocument> = {
   isComplete: (doc) => isSlug(doc.slug) && isFilled(doc.title) && isFilled(doc.body),
 };
 
+/**
+ * The kind of a post (WP-39 D1, ADR-034): a blog `post`, or the `journal` post of one work package.
+ * A discriminator column on the one posts table: a journal post shares every rule of a post.
+ */
+export type PostKind = "post" | "journal";
+
 /** The layout fields of a post, kept on the root (Q1 B). */
 export interface PostLayout {
   readonly id: string;
   /** The canonical slug: stable, for admin routes and events. */
   readonly slug: string;
+  readonly kind: PostKind;
+  /**
+   * The work package a journal post is about (a positive integer, one journal post per WP), null
+   * for a blog post. Set on create, never changed.
+   */
+  readonly wp: number | null;
 }
 
 /** A post as a repository reads it back. */
@@ -56,6 +68,8 @@ export interface StoredPost extends PostLayout {
 export class Post implements PostLayout {
   readonly id: string;
   readonly slug: string;
+  readonly kind: PostKind;
+  readonly wp: number | null;
 
   private constructor(
     layout: PostLayout,
@@ -64,15 +78,25 @@ export class Post implements PostLayout {
   ) {
     this.id = layout.id;
     this.slug = layout.slug;
+    this.kind = layout.kind;
+    this.wp = layout.wp;
   }
 
   /**
-   * Creates a post with no revision in any locale, at version 0 (never stored).
-   * @param layout the identity, chosen by the use case, and the canonical slug.
+   * Creates a post with no revision in any locale, at version 0 (never stored). The kind rule is
+   * also a CHECK on `content.posts` (defense in depth): a journal post names its work package, a
+   * blog post names none.
+   * @param layout the identity, chosen by the use case, the canonical slug, the kind and the WP.
    * @throws {SlugInvalid} when the canonical slug breaks the slug rule.
+   * @throws {JournalWorkPackageInvalid} when a journal post has no positive integer WP, or a blog
+   * post has one.
    */
   static create(layout: PostLayout): Post {
     if (!isSlug(layout.slug)) throw new SlugInvalid(layout.slug);
+    const journalWpValid = layout.wp !== null && Number.isInteger(layout.wp) && layout.wp >= 1;
+    if (layout.kind === "journal" ? !journalWpValid : layout.wp !== null) {
+      throw new JournalWorkPackageInvalid(layout.kind, layout.wp);
+    }
     return new Post(layout, 0, LocalizedRevisions.empty(layout.id, postRules));
   }
 
@@ -102,6 +126,8 @@ export class Post implements PostLayout {
     return {
       id: this.id,
       slug: this.slug,
+      kind: this.kind,
+      wp: this.wp,
       version: this.version,
       translations: this.machine.snapshot(),
     };

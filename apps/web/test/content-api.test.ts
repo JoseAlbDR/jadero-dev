@@ -1,3 +1,5 @@
+import now from "@jadero/contracts/fixtures/content/now.json" with { type: "json" };
+import posts from "@jadero/contracts/fixtures/content/posts.json" with { type: "json" };
 import profile from "@jadero/contracts/fixtures/content/profile.json" with { type: "json" };
 import project from "@jadero/contracts/fixtures/content/project.json" with { type: "json" };
 import workEntry from "@jadero/contracts/fixtures/content/work-entry.json" with { type: "json" };
@@ -6,6 +8,7 @@ import {
   CONTENT_REVALIDATE_SECONDS,
   ContentApiError,
   findPost,
+  getNow,
   getPost,
   getPosts,
   getProfile,
@@ -90,12 +93,33 @@ describe("content API client", () => {
     fetchMock.mockImplementation(async () => json({ items: [], nextCursor: null }));
 
     await getProjects("es", "case_study");
-    await getPosts("en", "abc_-1");
+    await getPosts("en", "post", "abc_-1");
+    await getPosts("de", "journal");
 
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
       `${BASE}/v1/content/es/projects?kind=case_study`,
-      `${BASE}/v1/content/en/posts?cursor=abc_-1`,
+      `${BASE}/v1/content/en/posts?kind=post&cursor=abc_-1`,
+      `${BASE}/v1/content/de/posts?kind=journal`,
     ]);
+  });
+
+  it("keeps only the asked kind, so an api that ignores ?kind= lists no blog post as journal", async () => {
+    // An api older than WP-39 ignores `?kind=` and sends no `kind`: the contract defaults it to
+    // `post`. The cursor stays the API's, so a filtered page may be shorter or empty.
+    const blogPost = posts.items[0];
+    if (!blogPost) throw new Error("the posts fixture holds no post");
+    const { kind: _kind, wp: _wp, ...legacy } = blogPost;
+    const journalPost = { ...blogPost, slug: "journal-wp-12", kind: "journal", wp: 12 };
+    fetchMock.mockImplementation(async () =>
+      json({ items: [legacy, journalPost], nextCursor: posts.nextCursor }),
+    );
+
+    const journal = await getPosts("en", "journal");
+    const blog = await getPosts("en", "post");
+
+    expect(journal.items.map((item) => item.slug)).toEqual(["journal-wp-12"]);
+    expect(blog.items.map((item) => item.slug)).toEqual([legacy.slug]);
+    expect(journal.nextCursor).toBe(posts.nextCursor);
   });
 
   it("maps a 404 problem to the page's 404", async () => {
@@ -112,6 +136,18 @@ describe("content API client", () => {
 
     await expect(findPost("en", "missing")).resolves.toBeNull();
     await expectNotFound(getPost("en", "missing"));
+  });
+
+  it("answers the Now text, or null for its 404 problem so the /now page still renders", async () => {
+    fetchMock.mockResolvedValueOnce(json(now));
+    fetchMock.mockResolvedValueOnce(json(NOT_FOUND_PROBLEM, 404, "application/problem+json"));
+
+    await expect(getNow("de")).resolves.toEqual(now);
+    await expect(getNow("es")).resolves.toBeNull();
+
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe(`${BASE}/v1/content/de/now`);
+    expect(init?.next?.tags).toEqual(["content:now"]);
   });
 
   it("treats a 404 without a problem body as an error, not a missing page", async () => {

@@ -7,9 +7,11 @@ import {
   newCvBullet,
   newEntry,
   newExperienceItem,
+  newNow,
   newPost,
   newProfile,
   newProject,
+  saveNowRevision,
   savePostRevision,
   saveProfileRevision,
   saveProjectRevision,
@@ -18,6 +20,7 @@ import { contentUnitOfWorkContract } from "../src/modules/content/application/co
 import { cvBulletRepositoryContract } from "../src/modules/content/application/cv-bullet.repository.contract.js";
 import { experienceItemRepositoryContract } from "../src/modules/content/application/experience-item.repository.contract.js";
 import { knowledgeEntryRepositoryContract } from "../src/modules/content/application/knowledge-entry.repository.contract.js";
+import { nowRepositoryContract } from "../src/modules/content/application/now.repository.contract.js";
 import { postRepositoryContract } from "../src/modules/content/application/post.repository.contract.js";
 import { profileRepositoryContract } from "../src/modules/content/application/profile.repository.contract.js";
 import { projectRepositoryContract } from "../src/modules/content/application/project.repository.contract.js";
@@ -33,6 +36,7 @@ import { DrizzleContentUnitOfWork } from "../src/modules/content/infrastructure/
 import { DrizzleCvBulletRepository } from "../src/modules/content/infrastructure/drizzle-cv-bullet.repository.js";
 import { DrizzleExperienceItemRepository } from "../src/modules/content/infrastructure/drizzle-experience-item.repository.js";
 import { DrizzleKnowledgeEntryRepository } from "../src/modules/content/infrastructure/drizzle-knowledge-entry.repository.js";
+import { DrizzleNowRepository } from "../src/modules/content/infrastructure/drizzle-now.repository.js";
 import { DrizzlePostRepository } from "../src/modules/content/infrastructure/drizzle-post.repository.js";
 import { DrizzleProfileRepository } from "../src/modules/content/infrastructure/drizzle-profile.repository.js";
 import { DrizzleProjectRepository } from "../src/modules/content/infrastructure/drizzle-project.repository.js";
@@ -44,7 +48,8 @@ import { createContentTestDatabase } from "./setup/content-database.js";
 // Postgres can show: the rolled-back revision row is really gone, the singleton index and the
 // parent foreign keys refuse what they must, an update leaves the parent columns alone, and a stored
 // row the domain cannot read back fails as StoredStateInvalid. Every test writes fresh ids, so the
-// tests share one database; the profile is a singleton, so its tests empty its tables first.
+// tests share one database; the profile and Now are singletons, so their tests empty their tables
+// first.
 let pool: pg.Pool;
 let drop: () => Promise<void>;
 
@@ -65,6 +70,7 @@ afterAll(async () => {
 });
 
 const profile = () => new DrizzleProfileRepository(drizzleOn(pool));
+const now = () => new DrizzleNowRepository(drizzleOn(pool));
 const experienceItems = () => new DrizzleExperienceItemRepository(drizzleOn(pool));
 const projects = () => new DrizzleProjectRepository(drizzleOn(pool));
 const posts = () => new DrizzlePostRepository(drizzleOn(pool));
@@ -79,9 +85,20 @@ async function emptyProfile(): Promise<void> {
   );
 }
 
+/** Deletes the Now page, so a test can create the singleton again (pointers first, then rows). */
+async function emptyNow(): Promise<void> {
+  await pool.query(
+    "DELETE FROM content.now_translations; DELETE FROM content.now_revisions; DELETE FROM content.now;",
+  );
+}
+
 profileRepositoryContract("Drizzle on Postgres", async () => {
   await emptyProfile();
   return profile();
+});
+nowRepositoryContract("Drizzle on Postgres", async () => {
+  await emptyNow();
+  return now();
 });
 experienceItemRepositoryContract("Drizzle on Postgres", experienceItems);
 projectRepositoryContract("Drizzle on Postgres", projects);
@@ -95,10 +112,12 @@ cvBulletRepositoryContract("Drizzle on Postgres", () => ({
 knowledgeEntryRepositoryContract("Drizzle on Postgres", knowledgeEntries);
 contentUnitOfWorkContract("Drizzle on Postgres", async () => {
   await emptyProfile();
+  await emptyNow();
   return {
     unitOfWork: new DrizzleContentUnitOfWork(pool),
     // Outside any transaction: they see only what `run` committed.
     profile: profile(),
+    now: now(),
     experienceItems: experienceItems(),
     projects: projects(),
     posts: posts(),
@@ -175,6 +194,38 @@ describe("the profile singleton on Postgres", () => {
     await a;
     await expect(b).rejects.toBeInstanceOf(ConcurrentModification);
     const { rows } = await pool.query<{ id: string }>("SELECT id FROM content.profile");
+    expect(rows).toEqual([{ id: first.id }]);
+  });
+});
+
+describe("the Now singleton on Postgres", () => {
+  it("keeps one row when two runs create a Now page at once: the loser is a conflict", async () => {
+    await emptyNow();
+    const first = newNow();
+    saveNowRevision(first, "es");
+    const second = newNow();
+    saveNowRevision(second, "es");
+    const unitOfWork = new DrizzleContentUnitOfWork(pool);
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let markSaved: () => void = () => {};
+    const saved = new Promise<void>((resolve) => {
+      markSaved = resolve;
+    });
+    const a = unitOfWork.run(async (scope) => {
+      await scope.now.save(first, 0);
+      markSaved();
+      await gate;
+    });
+    await saved;
+    // Its INSERT waits on the uncommitted row in `now_singleton`, then inserts nothing.
+    const b = unitOfWork.run((scope) => scope.now.save(second, 0));
+    release();
+    await a;
+    await expect(b).rejects.toBeInstanceOf(ConcurrentModification);
+    const { rows } = await pool.query<{ id: string }>("SELECT id FROM content.now");
     expect(rows).toEqual([{ id: first.id }]);
   });
 });

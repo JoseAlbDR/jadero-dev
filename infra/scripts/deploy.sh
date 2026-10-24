@@ -409,11 +409,14 @@ semver_compare() {
 # when the kernel OOM-kills the container under its mem_limit. Timeout's KILL comes 10 s after
 # the limit, so a 137 counts as a timeout only when the limit has passed (whole seconds from
 # `date`, a margin of 10 s); one before it is the command's own failure and stays 137.
+# The command runs with the lock's descriptor 9 closed: a child that outlives the deploy would
+# otherwise keep the flock, and every later deploy would exit 75. `op inject` did that: it
+# started a caching `op daemon` that stayed up after the render (WP-9 step 6b, staging).
 bounded() {
   local limit="$1" started status=0
   shift
   started="$(date -u +%s)"
-  timeout --kill-after=10 "$limit" "$@" || status=$?
+  timeout --kill-after=10 "$limit" "$@" 9>&- || status=$?
   if [[ $status -eq 137 ]] && (($(date -u +%s) - started >= limit)); then status=124; fi
   return "$status"
 }
@@ -714,7 +717,9 @@ render_env() {
   local template="$1/infra/env/$SERVICE.env.tpl" status=0
   [[ -r "$OP_TOKEN_FILE" ]] || abort op-token
   rm -f "$ENV_NEW"
-  JADERO_ENV="$ENV_NAME" OP_SERVICE_ACCOUNT_TOKEN="$(cat "$OP_TOKEN_FILE")" \
+  # OP_CACHE=false: no caching `op daemon`, which would stay up as root after the render holding
+  # the vault cache in memory (and, before bounded closed descriptor 9, the deploy lock).
+  JADERO_ENV="$ENV_NAME" OP_CACHE=false OP_SERVICE_ACCOUNT_TOKEN="$(cat "$OP_TOKEN_FILE")" \
     bounded "$RENDER_LIMIT" op inject --force -i "$template" -o "$ENV_NEW" >/dev/null 2>&1 ||
     status=$?
   if timed_out "$status"; then abort render-timeout; fi

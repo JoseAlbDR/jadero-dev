@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { FieldFormatInvalid, InvalidTransition, SlugInvalid } from "./content.errors.js";
+import {
+  FieldFormatInvalid,
+  InvalidTransition,
+  JournalWorkPackageInvalid,
+  SlugInvalid,
+} from "./content.errors.js";
 import { Post, type PostDocument, postRules } from "./post.js";
+
+/** A blog post's layout. */
+const BLOG = { id: "post-1", slug: "sample-post", kind: "post", wp: null } as const;
 
 const AT = new Date("2026-11-03T10:12:00.000Z");
 const LATER = new Date("2026-11-10T10:00:00.000Z");
@@ -18,12 +26,29 @@ function doc(over: Partial<PostDocument> = {}): PostDocument {
 
 describe("Post", () => {
   it("creates with its canonical slug and version 0", () => {
-    const post = Post.create({ id: "post-1", slug: "sample-post" });
-    expect(post).toMatchObject({ id: "post-1", slug: "sample-post", version: 0 });
+    const post = Post.create(BLOG);
+    expect(post).toMatchObject({ id: "post-1", slug: "sample-post", kind: "post", wp: null });
+    expect(post.version).toBe(0);
   });
 
   it("refuses an invalid canonical slug", () => {
-    expect(() => Post.create({ id: "post-1", slug: "Sample Post" })).toThrow(SlugInvalid);
+    expect(() => Post.create({ ...BLOG, slug: "Sample Post" })).toThrow(SlugInvalid);
+  });
+
+  it("creates a journal post linked to its work package, kept in the snapshot", () => {
+    const post = Post.create({ id: "post-2", slug: "wp-39-journal", kind: "journal", wp: 39 });
+    expect(post.snapshot()).toMatchObject({ kind: "journal", wp: 39 });
+  });
+
+  it.each`
+    kind         | wp
+    ${"journal"} | ${null}
+    ${"journal"} | ${0}
+    ${"journal"} | ${-3}
+    ${"journal"} | ${1.5}
+    ${"post"}    | ${39}
+  `("refuses kind $kind with wp $wp", ({ kind, wp }) => {
+    expect(() => Post.create({ ...BLOG, kind, wp })).toThrow(JournalWorkPackageInvalid);
   });
 
   it.each`
@@ -43,14 +68,14 @@ describe("Post", () => {
     ${{ tags: ["x".repeat(61)] }} | ${["tags[0]"]}
   `("refuses to save $over", ({ over, fields }) => {
     expect(postRules.invalidFields(doc(over))).toEqual(fields);
-    const post = Post.create({ id: "post-1", slug: "sample-post" });
+    const post = Post.create(BLOG);
     expect(() => post.saveRevision("es", doc(over), "owner", "r-es", AT)).toThrow(
       FieldFormatInvalid,
     );
   });
 
   it("keeps its feed date (first publish) when a fix is published later", () => {
-    const post = Post.create({ id: "post-1", slug: "sample-post" });
+    const post = Post.create(BLOG);
     for (const locale of ["es", "en", "de"] as const) {
       post.saveRevision(locale, doc(), "owner", `r-${locale}`, AT);
     }
@@ -66,8 +91,7 @@ describe("Post", () => {
 
   it("reconstitutes with its stored version", () => {
     const post = Post.reconstitute({
-      id: "post-1",
-      slug: "sample-post",
+      ...BLOG,
       version: 3,
       translations: { locales: {}, archivedAt: AT },
     });

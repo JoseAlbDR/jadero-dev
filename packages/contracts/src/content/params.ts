@@ -15,6 +15,12 @@ export const projectKind = z.enum(["case_study", "project", "early"]);
 /** `case_study`, `project` or `early`. */
 export type ProjectKind = z.infer<typeof projectKind>;
 
+/** The kind of a post (ADR-034): a blog post, or the journal post of one work package. */
+export const postKind = z.enum(["post", "journal"]);
+
+/** `post` or `journal`. */
+export type PostKind = z.infer<typeof postKind>;
+
 /**
  * A knowledge entry id, the front-matter `id` of the entry file (ADR-031 alignment): `kb-` and a
  * kebab-case name, never reused (`kb-outbox-relay`).
@@ -87,8 +93,14 @@ export const localizedSlugParams = z.object({ locale, slug });
 /** Query of the project list: `?kind=case_study` filters by kind; no kind lists them all. */
 export const projectListQuery = z.object({ kind: projectKind.optional() });
 
-/** Query of the post list: `?cursor=` continues after the page that returned it. */
-export const postListQuery = z.object({ cursor: postCursor.optional() });
+/**
+ * Query of the post list: `?kind=journal` lists the journal posts, no kind lists the blog posts
+ * (so the blog never shows a journal post); `?cursor=` continues after the page that returned it.
+ */
+export const postListQuery = z.object({
+  kind: postKind.default("post"),
+  cursor: postCursor.optional(),
+});
 
 /** Path parameters of one approved knowledge entry: `/content/work/:entryId` (English only). */
 export const knowledgeEntryParams = z.object({ entryId: knowledgeEntryId });

@@ -1,4 +1,5 @@
-import { postDocumentSchema } from "../application/content-documents.js";
+import { z } from "zod";
+import { postDocumentSchema, postKindSchema } from "../application/content-documents.js";
 import { Post } from "../domain/post.js";
 import {
   type LocalizedItemRows,
@@ -7,13 +8,20 @@ import {
   publishedSlugOf,
   publishedSlugRule,
   type RevisionRow,
+  readStored,
   type SlugTranslationRow,
 } from "./revision-rows.js";
 
-/** A `content.posts` row: identity, the canonical slug and the archive mark. */
+/** A stored work package number, a positive integer (`posts_wp_check`). */
+const wpSchema = z.int().min(1).nullable();
+
+/** A `content.posts` row: identity, the canonical slug, the kind and WP, and the archive mark. */
 export interface PostBaseRow {
   readonly id: string;
   readonly slug: string;
+  /** Read back through `postKindSchema`, like a project's kind. */
+  readonly kind: string;
+  readonly wp: number | null;
   readonly archivedAt: Date | null;
   readonly version: number;
 }
@@ -38,6 +46,8 @@ export function postToRows(
     base: {
       id: stored.id,
       slug: stored.slug,
+      kind: stored.kind,
+      wp: stored.wp,
       archivedAt: stored.translations.archivedAt,
       version,
     },
@@ -68,6 +78,8 @@ export function postFromRows(
   return Post.reconstitute({
     id: base.id,
     slug: base.slug,
+    kind: readStored(postKindSchema, base.kind, base.id, "kind"),
+    wp: readStored(wpSchema, base.wp, base.id, "wp"),
     version: base.version,
     translations: localizedSnapshot(
       base.id,

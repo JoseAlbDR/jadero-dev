@@ -432,6 +432,12 @@ jobs:
     # resolves `./` at the caller's commit, not from the runner's filesystem (a `uses:` job has no
     # steps or checkout), so `$/` adds nothing here, and actionlint 1.7.12 still rejects `$/`.
     uses: ./.github/workflows/deploy.yml # zizmor: ignore[self-repository]
+    # A called workflow gets no secret unless the caller passes them, environment secrets included,
+    # even though its job names the environment (WP-9 step 6b: DEPLOY_SSH_KEY arrived empty). The
+    # caller has no environment, so it cannot pass them one by one; `inherit` forwards the
+    # repository's secrets, and this repository keeps none: every deploy secret is an environment
+    # secret of `staging` or `production`. Keep it that way, or list the secrets instead.
+    secrets: inherit # zizmor: ignore[secrets-inherit]
     with:
       environment: staging
       service: ${{ matrix.service }}
@@ -459,6 +465,12 @@ jobs:
     # resolves `./` at the caller's commit, not from the runner's filesystem (a `uses:` job has no
     # steps or checkout), so `$/` adds nothing here, and actionlint 1.7.12 still rejects `$/`.
     uses: ./.github/workflows/deploy.yml # zizmor: ignore[self-repository]
+    # A called workflow gets no secret unless the caller passes them, environment secrets included,
+    # even though its job names the environment (WP-9 step 6b: DEPLOY_SSH_KEY arrived empty). The
+    # caller has no environment, so it cannot pass them one by one; `inherit` forwards the
+    # repository's secrets, and this repository keeps none: every deploy secret is an environment
+    # secret of `staging` or `production`. Keep it that way, or list the secrets instead.
+    secrets: inherit # zizmor: ignore[secrets-inherit]
     with:
       environment: production
       service: ${{ matrix.service }}

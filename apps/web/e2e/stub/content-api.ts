@@ -4,8 +4,12 @@
  * `GET /v1/content/:locale/profile` from `profile.json`, `GET /v1/content/:locale/experience` from
  * `experience.json`, `GET /v1/content/:locale/projects`
  * (with `?kind=`) and `GET /v1/content/:locale/projects/:slug` from `projects.json`,
- * `GET /v1/content/:locale/posts` (with `?cursor=`) and `GET /v1/content/:locale/posts/:slug` from
- * `posts.json`, `GET /v1/content/:locale/skills` from `skills.json`, `GET /v1/content/work` and
+ * `GET /v1/content/:locale/posts` (with `?kind=` and `?cursor=`) and
+ * `GET /v1/content/:locale/posts/:slug` from `posts.json` (kind `post`, the default) and
+ * `journal.json` (kind `journal`; the item route serves both kinds, as the API does), `GET /v1/content/:locale/skills` from `skills.json`,
+ * `GET /v1/content/:locale/now` from `now.json` (English and Spanish only: German answers the 404
+ * problem, which the real API sends only when neither German nor English is published; the stub
+ * skips that fallback on purpose so the suite covers the page's empty state), `GET /v1/content/work` and
  * `GET /v1/content/work/:entryId` from `work.json` (English only, no locale), and a 404 problem
  * for anything else. The fixtures hold each locale's answer as the API gives it, the German fallback to English
  * included; posts are listed newest first. Every fixture is parsed with its `@jadero/contracts`
@@ -21,8 +25,10 @@ import {
   knowledgeEntryListDto,
   type Locale,
   locale,
+  nowDto,
   postCursor,
   postDto,
+  postKind,
   postPageDto,
   profileDto,
   projectDto,
@@ -32,6 +38,8 @@ import {
 } from "@jadero/contracts";
 import { z } from "zod";
 import experience from "./experience.json" with { type: "json" };
+import journal from "./journal.json" with { type: "json" };
+import now from "./now.json" with { type: "json" };
 import posts from "./posts.json" with { type: "json" };
 import profile from "./profile.json" with { type: "json" };
 import projects from "./projects.json" with { type: "json" };
@@ -42,7 +50,10 @@ const profileFixtures = z.record(locale, profileDto).parse(profile);
 const experienceFixtures = z.record(locale, experienceListDto).parse(experience);
 const projectFixtures = z.record(locale, z.array(projectDto)).parse(projects);
 const postFixtures = z.record(locale, z.array(postDto)).parse(posts);
+const journalFixtures = z.record(locale, z.array(postDto)).parse(journal);
+const fixturesByKind = { post: postFixtures, journal: journalFixtures } as const;
 const skillFixtures = z.record(locale, skillListDto).parse(skills);
+const nowFixtures = z.partialRecord(locale, nowDto).parse(now);
 const workFixtures = z.array(knowledgeEntryDto).parse(work);
 
 /**
@@ -63,20 +74,26 @@ const PROJECT_PATH = /^\/v1\/content\/(es|en|de)\/projects\/([a-z0-9-]+)$/;
 const POSTS_PATH = /^\/v1\/content\/(es|en|de)\/posts$/;
 const POST_PATH = /^\/v1\/content\/(es|en|de)\/posts\/([a-z0-9-]+)$/;
 const SKILLS_PATH = /^\/v1\/content\/(es|en|de)\/skills$/;
+const NOW_PATH = /^\/v1\/content\/(es|en|de)\/now$/;
 const WORK_ENTRY_PATH = /^\/v1\/content\/work\/(kb-[a-z0-9-]+)$/;
 
 /** A stable post id for the cursor: the post's position in its locale's fixture list. */
 const postId = (index: number) => `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
 
 /**
- * One page of a locale's posts after the cursor's position (keyset pagination, as the API does).
- * A cursor the API would refuse with a 400 gets `undefined`, so a 404 here; the site checks every
- * cursor before it forwards one, so neither status reaches a test.
+ * One page of a locale's posts of one kind after the cursor's position (keyset pagination, as the
+ * API does). A cursor the API would refuse with a 400 gets `undefined`, so a 404 here; the site
+ * checks every cursor before it forwards one, so neither status reaches a test.
+ * @param fixtures the posts of one kind per locale.
  * @param postLocale the locale of the list.
  * @param cursor the raw `?cursor=` value, or `null` for the first page.
  */
-function postPage(postLocale: Locale, cursor: string | null): unknown {
-  const items = postFixtures[postLocale] ?? [];
+function postPage(
+  fixtures: Partial<Record<Locale, z.infer<typeof postDto>[]>>,
+  postLocale: Locale,
+  cursor: string | null,
+): unknown {
+  const items = fixtures[postLocale] ?? [];
   let start = 0;
   if (cursor !== null) {
     const position = postCursor.safeParse(cursor);
@@ -126,16 +143,25 @@ function answer(url: URL): unknown {
   }
 
   const postsMatch = POSTS_PATH.exec(path);
-  if (postsMatch) return postPage(locale.parse(postsMatch[1]), url.searchParams.get("cursor"));
+  if (postsMatch) {
+    const kind = postKind.default("post").safeParse(url.searchParams.get("kind") ?? undefined);
+    if (!kind.success) return undefined;
+    const postLocale = locale.parse(postsMatch[1]);
+    return postPage(fixturesByKind[kind.data], postLocale, url.searchParams.get("cursor"));
+  }
 
   const postMatch = POST_PATH.exec(path);
   if (postMatch) {
-    const items = postFixtures[locale.parse(postMatch[1])] ?? [];
+    const postLocale = locale.parse(postMatch[1]);
+    const items = [...(postFixtures[postLocale] ?? []), ...(journalFixtures[postLocale] ?? [])];
     return items.find((p) => p.slug === postMatch[2]);
   }
 
   const skillsMatch = SKILLS_PATH.exec(path);
   if (skillsMatch) return skillFixtures[locale.parse(skillsMatch[1])];
+
+  const nowMatch = NOW_PATH.exec(path);
+  if (nowMatch) return nowFixtures[locale.parse(nowMatch[1])];
 
   if (path === "/v1/content/work") {
     // The list carries each entry's metadata and its Summary, as the API's list does.

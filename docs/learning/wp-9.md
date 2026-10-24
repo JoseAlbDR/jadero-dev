@@ -468,6 +468,7 @@ Recorded 2026-10-18 in [ADR-053](../adr/0053-deploy-files-from-the-release-tag.m
 - Step 6d follow-ups: owner choices of 2026-10-24: Kuma monitors at 60 s with 2 retries and the backup email; three `site` monitors per locale through the public edge with the certificate expiry notification added now; the SSE monitor waits for the chat and the dead-letter alert is a follow-up (no native Kuma type).
 - Step 6d Kuma setup (2026-10-24): Kuma had no notification at all, so the backup heartbeat could never alert; `email jadero` (Gmail SMTP on 587 with STARTTLS, since Hetzner blocks outbound 465 and 25) now covers every monitor; the 13 monitors are up, 12 green and `prod web` paused (not deployed until #162); the site certificate shows 83 days left.
 - Step 6d external monitor (2026-10-24): UptimeRobot Free on the owner's account, `new.jadero.dev` (answers 307 to the locale, followed) and `jadero status page` every 5 minutes, email alerts tested (DOWN and UP test mails arrived); the onboarding's guessed pages (`/pricing`, `/cart`, ...) skipped.
+- Step 7 merge of `main` (2026-10-24): `main` gained the deploy fixes of #157 to #159 (`OP_CACHE`, the lock kept out of children, the smoke pages without a trailing slash), so the `deploy.sh` to install after this PR is sha256 b11737628becde38... (the fix of 6c plus those), not fe7b9813...; `docs/runbooks/deploy.md` names the new hash.
 
 ## Recap
 

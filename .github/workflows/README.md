@@ -82,7 +82,10 @@ After merging a Release PR:
 
 Triggers: `workflow_call` from `release.yml` (inputs `environment`, `service`, `version`,
 `digest`) and `workflow_dispatch` (choices `action` deploy or rollback, `environment` staging or
-production, `service` agent, api or web, and a `version` for a deploy). Not a gate.
+production, `service` agent, api or web, and a `version` for a deploy). Not a gate. The calls
+pass `secrets: inherit`: a called workflow receives no secret otherwise, not even the secrets of
+the environment its job names. That is safe only while the repository holds no secret of its own
+(`gh secret list` empty); a repository secret added later would reach every deploy job.
 
 One job, named `<action> <service> to <environment>`, on the GitHub environment of that name; at
 most one per environment and service at a time (`concurrency: deploy-<environment>-<service>`,

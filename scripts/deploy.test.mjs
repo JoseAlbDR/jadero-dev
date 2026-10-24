@@ -194,12 +194,14 @@ exit 0
 const OP_STUB = bash`
 rec="$STUB_REC"
 printf '%s\n' "$*" >> "$rec/op-calls"
-printf 'JADERO_ENV=%s TOKEN=%s\n' "@{JADERO_ENV-}" "@{OP_SERVICE_ACCOUNT_TOKEN-}" >> "$rec/op-env"
+printf 'JADERO_ENV=%s CACHE=%s TOKEN=%s\n' "@{JADERO_ENV-}" "@{OP_CACHE-}" "@{OP_SERVICE_ACCOUNT_TOKEN-}" >> "$rec/op-env"
 if [[ -t 0 ]]; then echo tty; else echo no-tty; fi > "$rec/op-stdin"
 in="" out=""
 while [[ $# -gt 0 ]]; do
   case "$1" in -i) in="$2"; shift 2 ;; -o) out="$2"; shift 2 ;; *) shift ;; esac
 done
+# Like the real op, which starts a caching \`op daemon\` that outlives the render.
+if [[ -n "@{STUB_OP_DAEMON-}" ]]; then sleep 30 & echo "$!" > "$rec/op-daemon"; fi
 if [[ " @{STUB_FAIL-} " == *" op "* ]]; then
   printf 'DATABASE_URL={{ op://jadero-ops/partial/password }}\n' > "$out"
   exit 1
@@ -518,7 +520,7 @@ describe("deploy.sh deploy, the happy path", () => {
     for (const tool of ["docker", "op", "git"]) {
       assert.ok(!calls(w, tool).some((c) => c.includes(SECRET)), `${tool} argv holds no secret`);
     }
-    assert.equal(read(join(w.rec, "op-env")), `JADERO_ENV=staging TOKEN=${OP_TOKEN}\n`);
+    assert.equal(read(join(w.rec, "op-env")), `JADERO_ENV=staging CACHE=false TOKEN=${OP_TOKEN}\n`);
   });
 
   it("migrates, then starts api and api-worker by digest on the staging project only", () => {
@@ -1224,6 +1226,31 @@ describe("deploy.sh, mutual exclusion and lost sessions", () => {
     const fresh = apiAt020();
     assert.equal(deploy(fresh, ["deploy", "staging", "api", "0.3.0"]).status, 0);
     assert.equal(statSync(join(fresh.envDir, "deploy.lock")).mode & 0o777, 0o600);
+  });
+
+  it("leaves no lock behind when a step's child outlives the deploy", () => {
+    const w = apiAt020();
+    const result = deploy(w, ["deploy", "staging", "api", "0.3.0"], {
+      env: { STUB_OP_DAEMON: "1" },
+    });
+    const daemon = Number(read(join(w.rec, "op-daemon")).trim());
+    try {
+      assert.equal(result.status, 0);
+      // The daemon still runs, and the lock is free: the next deploy would not exit 75.
+      assert.doesNotThrow(() => process.kill(daemon, 0));
+      const probe = spawnSync("perl", [
+        "-e",
+        'use Fcntl qw(:flock); open(my $f, ">>", $ARGV[0]) or exit 2; flock($f, LOCK_EX | LOCK_NB) or exit 1; exit 0',
+        join(w.envDir, "deploy.lock"),
+      ]);
+      assert.equal(probe.status, 0);
+    } finally {
+      try {
+        process.kill(daemon);
+      } catch {
+        // Already gone: nothing to clean up.
+      }
+    }
   });
 
   it("ignores SIGHUP and a closed stdout, and runs on to recorded", async () => {

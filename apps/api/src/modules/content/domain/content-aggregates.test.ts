@@ -6,6 +6,7 @@ import {
   type StoredExperienceItem,
 } from "./experience-item.js";
 import type { Locale } from "./locale.js";
+import { Now, type NowDocument, type StoredNow } from "./now.js";
 import { Post, type PostDocument, type StoredPost } from "./post.js";
 import { Profile, type ProfileDocument, type StoredProfile } from "./profile.js";
 import { Project, type ProjectDocument, type StoredProject } from "./project.js";
@@ -72,6 +73,13 @@ roundTrip<ProfileDocument, StoredProfile>({
   doc: (word) => ({ name: "Sample Person", headline: word, summary: "Summary.", links: [] }),
 });
 
+roundTrip<NowDocument, StoredNow>({
+  type: "Now",
+  create: () => Now.create("now"),
+  reconstitute: Now.reconstitute,
+  doc: (word) => ({ body: `Doing ${word}.` }),
+});
+
 roundTrip<ExperienceItemDocument, StoredExperienceItem>({
   type: "ExperienceItem",
   create: () => ExperienceItem.create({ id: "e-1", sortOrder: 2 }),
@@ -103,7 +111,7 @@ roundTrip<ProjectDocument, StoredProject>({
 
 roundTrip<PostDocument, StoredPost>({
   type: "Post",
-  create: () => Post.create({ id: "post-1", slug: "sample" }),
+  create: () => Post.create({ id: "post-1", slug: "sample", kind: "post", wp: null }),
   reconstitute: Post.reconstitute,
   doc: (word) => ({ slug: `post-${word}`, title: word, excerpt: "", body: "Body.", tags: [] }),
 });
