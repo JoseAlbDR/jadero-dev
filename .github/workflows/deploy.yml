@@ -184,8 +184,8 @@ jobs:
           fi
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
-      # Federation: GitHub's OIDC token (subject repo:JoseAlbDR/jadero-dev:environment:<name>) is
-      # exchanged for an ephemeral node through one federated identity per
+      # Federation: GitHub's OIDC token (immutable subject
+      # repo:JoseAlbDR@128265706/jadero-dev@1402255543:environment:<name>) is exchanged for an ephemeral node through one federated identity per
       # environment that trusts that exact subject, never a wildcard (GitHub creates an unprotected
       # environment for any name a branch's workflow names); TS_OAUTH_CLIENT_ID and TS_AUDIENCE are
       # environment variables. The node is tagged tag:ci, which the tailnet policy lets reach the
