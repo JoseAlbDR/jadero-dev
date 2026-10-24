@@ -1,6 +1,6 @@
 {
   "name": "@jadero/agent",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Knowledge, chat, guards and usage service (ADR-001). WP-5: the skeleton, with its consumer process type (agent-ingest from WP-20).",
   "type": "module",

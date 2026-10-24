@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/JoseAlbDR/jadero-dev/compare/api-v0.3.0...api-v0.3.1) (2026-10-24)
+
+
+### Bug Fixes
+
+* **infra:** check the pages without a trailing slash in the deploy smoke ([#159](https://github.com/JoseAlbDR/jadero-dev/issues/159)) ([78494dd](https://github.com/JoseAlbDR/jadero-dev/commit/78494dd6dfb29616d8672b99c8b0df0682b53c90))
+
 ## [0.3.0](https://github.com/JoseAlbDR/jadero-dev/compare/api-v0.2.0...api-v0.3.0) (2026-10-24)
 
 
