@@ -108,6 +108,9 @@ allowBuilds:
 # `esbuild serve`, but the lockfile should not carry it: core-utils only calls `transform`, which 0.25 keeps.
 overrides:
   "@esbuild-kit/core-utils>esbuild": ^0.25.0
+  # @nestjs/platform-express pins multer at exactly 2.4.0 (GHSA-q7qp-rjg7-q26m, a DoS); 2.5.0 is a
+  # patch release. No route uses FileInterceptor today. Drop once platform-express depends on >= 2.5.0.
+  "@nestjs/platform-express>multer": 2.5.0
 
 # Fail the install, instead of warning, when Node or pnpm is outside the root `engines` range.
 engineStrict: true
@@ -128,3 +131,7 @@ minimumReleaseAgeExclude:
   - next@16.4.1
   # Renovate security update: zod@4.6.6
   - zod@4.6.6
+  # GHSA-27r3-jxmh-p828, 2026-10-24: body-parser DoS in the api and agent runtime; drop after 2026-10-25.
+  - body-parser@2.4.0
+  # GHSA-q7qp-rjg7-q26m, 2026-10-24: multer DoS in the api and agent runtime; drop after 2026-10-25.
+  - multer@2.5.0
