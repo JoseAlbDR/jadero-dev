@@ -20,8 +20,8 @@ Triggers: every `pull_request`, `push` to `main`, weekly schedule (Monday 05:17 
 | `web` | `turbo run test:e2e --affected` (runs nothing when `web` is not affected) | `pnpm test:e2e` | `pnpm test:e2e`, forced | standalone build of `apps/web`, Playwright smoke, SEO, enforced CSP and axe per locale; uploads `playwright-results` on failure |
 | `images` | Docker build of the affected services (`image` task of `turbo.json`, `--affected`) | all three | all three | per service: amd64 build loaded into the runner, never pushed; smoke run (not root, `api` and `agent` stop on the config error naming `DATABASE_URL`, `web` reaches `healthy`); Trivy: a secret always fails, a fixable HIGH or CRITICAL OS finding fails only a PR that changes the image inputs (Dockerfile, `.dockerignore`, `.trivyignore.yaml`), otherwise it is reported in the job summary |
 | `workflows-lint` | zizmor, offline | same | same | the workflows themselves (injection, permissions, credentials, triggers); locally `pnpm lint:workflows` |
-| `nginx` | runs only when the PR changes `infra/nginx/`, `infra/scripts/nginx-check.sh`, `infra/scripts/smoke-edge.sh` or `ci.yml`; otherwise passes with nothing run | runs | runs | the nginx edge in `ubuntu:26.04` (pinned by digest) with the distro nginx: the repo's `nginx.conf`, snippets and sites installed, throwaway self-signed certificates, `nginx -t`, then `smoke-edge.sh` against it (headers, no version, no CORS, internal paths 404, TLS 1.1 refused, 1.2 and 1.3 accepted); locally `pnpm nginx:check`. Not a required check yet |
-| `backup` | runs only when the PR changes `infra/scripts/backup.sh`, `restore.sh` or `backup-check.sh`, `infra/env/backup.env.tpl`, `infra/compose/compose.ops.yml`, `infra/postgres/pg_hba.conf` or `ci.yml`; otherwise passes with nothing run | runs | runs | `infra/scripts/backup-check.sh` on the runner's Docker: the server's `backup.sh` and `restore.sh` against throwaway Postgres, RabbitMQ and Uptime Kuma containers (the images of `compose.ops.yml`) and a local restic 0.19.1 repository; every database found and saved, a failing dump saves no snapshot and sends no heartbeat, Kuma started again, the last complete night restored into a container with no network with matching row counts, no secret in the output; locally `pnpm backup:check`. Not a required check yet |
+| `nginx` | runs only when the PR changes `infra/nginx/`, `infra/scripts/nginx-check.sh`, `infra/scripts/smoke-edge.sh` or `ci.yml`; otherwise passes with nothing run | runs | runs | the nginx edge in `ubuntu:26.04` (pinned by digest) with the distro nginx: the repo's `nginx.conf`, snippets and sites installed, throwaway self-signed certificates, `nginx -t`, then `smoke-edge.sh` against it (headers, no version, no CORS, internal paths 404, TLS 1.1 refused, 1.2 and 1.3 accepted); locally `pnpm nginx:check`. Required since WP-9 step 6 |
+| `backup` | runs only when the PR changes `infra/scripts/backup.sh`, `restore.sh` or `backup-check.sh`, `infra/env/backup.env.tpl`, `infra/compose/compose.ops.yml`, `infra/postgres/pg_hba.conf` or `ci.yml`; otherwise passes with nothing run | runs | runs | `infra/scripts/backup-check.sh` on the runner's Docker: the server's `backup.sh` and `restore.sh` against throwaway Postgres, RabbitMQ and Uptime Kuma containers (the images of `compose.ops.yml`) and a local restic 0.19.1 repository; every database found and saved, a failing dump saves no snapshot and sends no heartbeat, Kuma started again, the last complete night restored into a container with no network with matching row counts, no secret in the output; locally `pnpm backup:check`. Required since WP-9 step 6 |
 | `backstop-issue` | skipped | skipped | schedule only, when `verify`, `integration`, `web`, `nginx` or `backup` failed | not a gate: opens or comments the issue "Weekly uncached CI run failed" |
 
 ### `security.yml`
@@ -146,9 +146,10 @@ writes and merges every change.
 ### Required checks
 
 The `protect-main` ruleset requires exactly these names (the owner sets them, ADR-048):
-`verify`, `integration`, `web`, `workflows-lint`, `pr-title`, `osv-scanner / osv-scan`, `dependency-review`, `secrets`, `images`.
-All nine match the `name:` of their job in the files above. `images` joined the list after it had
-reported on `main` (expand, see the last section).
+`verify`, `integration`, `web`, `workflows-lint`, `pr-title`, `osv-scanner / osv-scan`, `dependency-review`, `secrets`, `images`, `nginx`, `backup`.
+All eleven match the `name:` of their job in the files above. `images` joined the list after it had
+reported on `main` (expand, see the last section); `nginx` and `backup` joined in WP-9 step 6, both
+report on every pull request (they pass with nothing run when their paths are untouched).
 
 ## Security model
 
@@ -162,8 +163,9 @@ reported on `main` (expand, see the last section).
   `attestations` and `artifact-metadata: write` for `images`. The deploy jobs read only:
   `contents`, `packages` and `attestations: read`, plus `id-token: write` for Tailscale.
 - Deploys (WP-9 D2): the runner joins the tailnet as an ephemeral `tag:ci` node through workload
-  identity federation (GitHub's OIDC token, subject `repo:JoseAlbDR/jadero-dev:environment:<name>`,
-  trusted only for the exact names `staging` and `production`, one federated identity each; no
+  identity federation (GitHub's OIDC token, subject
+  `repo:JoseAlbDR@128265706/jadero-dev@1402255543:environment:<name>`, the immutable form with the
+  owner and repository IDs, trusted only for the exact names `staging` and `production`, one federated identity each; no
   Tailscale secret is stored), and the tailnet policy lets `tag:ci` reach the server's SSH port
   only. Each environment holds its own `DEPLOY_SSH_KEY`, and the server's key line forces
   `deploy-entry staging` or `deploy-entry prod`, so the staging key never reaches production.
@@ -217,7 +219,7 @@ digest update, or mute it in `.trivyignore.yaml` with a statement and an `expire
   smoke) and the previous one is healthy again. Fix forward with a new release; the same version
   can be retried, since a failed deploy never becomes current.
 - *failed* (exit 1): the rollback did not get healthy either. Leave it to the owner on the server:
-  read `/srv/jadero/<env>/deploy.log` and the containers' logs. No retry loop runs.
+  read `/srv/jadero/<env>/deploy.log` and the containers' logs (`docs/runbooks/deploy.md` sections 6 and 7). No retry loop runs.
 - *SSH failed* (exit 255): with no journal line, the tailnet, host key or key line refused the
   connection. With journal lines, the session dropped mid-deploy: the server ignores the hangup and
   runs to its end state, so read its journal before a rerun.
@@ -310,9 +312,13 @@ Agents never change these settings; each item is yours.
    only into the environment secret `DEPLOY_SSH_KEY` of `staging` and of `production`, then delete
    it locally. The public halves go into `/home/deploy/.ssh/authorized_keys` as the two lines of
    `docs/runbooks/server-access.md` section 8 (`deploy-entry staging`, `deploy-entry prod`), and the
-   WP-8 test key line is removed.
+   WP-8 test key line is removed. The same visit installs the release's `deploy-entry` and
+   `deploy.sh` into `/srv/jadero/bin/` (section 8, "Set it up"; check both with `sha256sum`
+   against the repo), and the `new.jadero.dev` site with its `www/maintenance/` files
+   (`infra/nginx/README.md`, "Install on the server"): the scripts never update themselves.
 3. **Server secrets** (environment secrets in both `staging` and `production`, not variables: a
-   variable's value is printed in the public log): `DEPLOY_HOST` (the server's tailnet name),
+   variable's value is printed in the public log): `DEPLOY_HOST` (the server's full MagicDNS name, `<machine>.<tailnet>.ts.net`: the
+   short name an SSH profile uses may not resolve on the runner),
    `DEPLOY_SSH_PORT`, `DEPLOY_KNOWN_HOSTS` (the output of
    `ssh-keyscan -p <ssh-port> -t ed25519 <tailnet-host>` run over the tailnet, checked against
    `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the server; several lines are fine, the
@@ -324,8 +330,13 @@ Agents never change these settings; each item is yours.
    (`docs/runbooks/server-access.md` section 1a). Two federated identities for GitHub Actions,
    one per environment, each with issuer `https://token.actions.githubusercontent.com`, tag
    `tag:ci` and the scope to create auth keys, and each with one exact subject:
-   `repo:JoseAlbDR/jadero-dev:environment:staging` and
-   `repo:JoseAlbDR/jadero-dev:environment:production`. Never a wildcard like `environment:*`:
+   `repo:JoseAlbDR@128265706/jadero-dev@1402255543:environment:staging` and
+   `repo:JoseAlbDR@128265706/jadero-dev@1402255543:environment:production`. The repository uses
+   GitHub's immutable subject (`gh api repos/JoseAlbDR/jadero-dev/actions/oidc/customization/sub`
+   shows `use_immutable_subject: true` and the prefix), so the subject carries the owner and
+   repository IDs: a repository deleted and re-created under the same name gets new IDs and no
+   access. A subject in the old `repo:JoseAlbDR/jadero-dev:...` form fails the exchange with 403
+   "Unauthorized" (WP-9 step 6b). Never a wildcard like `environment:*`:
    GitHub creates an unprotected environment for any name a workflow on any branch names, so a
    wildcard would let any branch mint a `tag:ci` node. Each identity has its own client ID and
    audience: set `TS_OAUTH_CLIENT_ID` and `TS_AUDIENCE` as **environment variables** of `staging`

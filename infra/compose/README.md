@@ -126,7 +126,16 @@ provision-users: WARN queue agent.retired on /prod is not in the definitions (3 
 That warning is the reminder. Retiring a consumer is a deliberate sequence, never a side effect of a deploy, and its order matters: the queue reaches 0 only once nothing feeds it. The producer does not know its consumers, so while the binding exists every new event still lands in the queue; stopping the consumer first and then waiting for a drain never reaches 0 with a live producer, because the copies keep arriving and nobody takes them.
 
 1. Remove the queue and its bindings from the topology in `packages/messaging/src/topology`, regenerate (`pnpm --filter @jadero/messaging topology`) and deploy. The additive import deletes nothing, but no later import re-creates them, and the warning above starts. The service user's read right is generated from its service's queues, so this deploy also drops its right on the retired queue: if the consumer can no longer read it, drain in step 3 with a shovel or as `ops_admin` instead.
-2. Remove the binding by hand, inside the broker's container (`rabbitmqctl` has no unbind command, so through the management API as `ops_admin`: `DELETE /api/bindings/<vhost>/e/jadero.events/q/<queue>/<routing key>`). From here no new copies arrive.
+2. Remove the binding by hand as `ops_admin` (`rabbitmqctl` has no unbind command). The image has no `curl`, but it ships `rabbitmqadmin` 2.35.0, which calls the management API from inside the container; the credentials go in through the environment, never in an argument list (`RABBITMQ_OPS_ADMIN_PASSWORD` is in the rendered `ops.env`, from `op://jadero-ops/rabbitmq-ops-admin/password` in `infra/env/ops.env.tpl`):
+
+   ```sh
+   RABBITMQADMIN_USERNAME=ops_admin RABBITMQADMIN_PASSWORD="$RABBITMQ_OPS_ADMIN_PASSWORD" \
+     docker exec -e RABBITMQADMIN_USERNAME -e RABBITMQADMIN_PASSWORD jadero-ops-rabbitmq-1 \
+     rabbitmqadmin --non-interactive --vhost /prod delete binding --source jadero.events \
+     --destination-type queue --destination <queue> --routing-key <routing key>
+   ```
+
+   The same call over HTTP (through the tunnel, `docs/runbooks/server-access.md` 2a) is `DELETE /api/bindings/%2Fprod/e/jadero.events/q/<queue>/<properties key>`: the vhost URL-encoded (`/prod` written as is answers 405), and the last segment is the binding's `properties_key`, which equals the routing key only when the binding has no arguments (with arguments it is `<routing key>~<hash>`, and the routing key answers 404). Read it first with `GET /api/bindings/%2Fprod/e/jadero.events/q/<queue>` or `rabbitmqadmin ... list bindings`. The generated bindings carry no arguments. From here no new copies arrive: an event with that routing key that no other queue binds goes to `jadero.unrouted` through the exchange's alternate exchange. Checked on the dev broker, same image, in WP-9 step 6d (`docs/runbooks/deploy.md`, section 9).
 3. Let the still running consumer drain the queue to 0 messages (watch the warning's count). Or move the messages to the consumer that takes over (a shovel), or purge them (`rabbitmqctl purge_queue -p /prod <queue>`) only if they are not needed, and write down why.
 4. Stop and remove the consumer (its process type) once the queue is empty.
 5. Delete the queue, its DLQ and its wait queues (their bindings go with them), its policies and, when the service has no queue left, its user with its permissions: `rabbitmqctl delete_queue -p /prod <queue>`, `rabbitmqctl clear_policy -p /prod <queue>`, `rabbitmqctl delete_user <user>`. The next run no longer warns.

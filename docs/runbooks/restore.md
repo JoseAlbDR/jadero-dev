@@ -160,6 +160,7 @@ Drill record:
 | Date | Where | Run | Databases | Restore time | Result |
 |---|---|---|---|---|---|
 | 2026-10-18 | server, then laptop (snapshots only) | `run-20261018T105626Z` | 7 (the service databases still without tables, before WP-9; `umami` with data) | 18 s restore, 24 s whole command | every count matched; `pg_restore --list` read the `umami` archive; RabbitMQ definitions and Kuma data (`kuma.db`) restored to files; the laptop listed the same 10 snapshots |
+| 2026-10-24 | server | `run-20261024T181918Z` (manual) | 7 (staging content seeded, `agent` heartbeat and inbox rows, production empty) | 22 s restore, 34 s whole command | every table matched except `messaging.inbox` and `messaging.outbox` (3 or 4 rows: pings written after the run, expected) |
 
 ## 4. Restore for real
 

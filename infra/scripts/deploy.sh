@@ -443,7 +443,10 @@ overlay_matches() {
 # Only the deployed service's profile is active; its image variable is the given digest, the
 # others come from versions.env or are the inert reference. Output discarded (a `config` would
 # print the rendered secrets; `up` errors are summarised by the journal's reason).
-# Under `compose_bounded`, the call runs under its time limit (`bounded`).
+# Under `compose_bounded`, the call runs under its time limit (`bounded`). Standard input is
+# /dev/null, never the caller's: timeout runs its command in its own process group, so from an
+# interactive shell that group is in the background, and a compose that touches the terminal
+# gets SIGTTOU, which stops timeout with it, so the limit never fires (the 2026-10-24 drill).
 # Arguments: the release folder, this service's image reference, then the compose arguments.
 compose_in() {
   local files="$1" image="$2" name value
@@ -466,9 +469,9 @@ compose_in() {
     -f "$files/infra/compose/compose.$ENV_NAME.yml"
     "$@")
   if [[ -n "${compose_limit-}" ]]; then
-    bounded "$compose_limit" "${command[@]}" >/dev/null 2>&1
+    bounded "$compose_limit" "${command[@]}" </dev/null >/dev/null 2>&1
   else
-    "${command[@]}" >/dev/null 2>&1
+    "${command[@]}" </dev/null >/dev/null 2>&1
   fi
 }
 
@@ -859,7 +862,8 @@ forward() {
   mv -f "$ENV_NEW" "$ENV_FILE"
   if [[ -n "$MIGRATE" ]]; then
     local status=0
-    compose_bounded "$MIGRATE_LIMIT" "$release" "$new_image" run --rm --no-deps "$MIGRATE" ||
+    # -T: no pseudo-TTY for the one-off container, whatever the caller's terminal.
+    compose_bounded "$MIGRATE_LIMIT" "$release" "$new_image" run --rm --no-deps -T "$MIGRATE" ||
       status=$?
     if timed_out "$status"; then
       remove_migrate_runs
