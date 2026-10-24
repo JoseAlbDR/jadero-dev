@@ -1,6 +1,6 @@
 {
   "name": "@jadero/contracts",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Message and HTTP contracts shared by the services (ADR-029): the CloudEvents envelope and every event type as Zod schemas, example fixtures, the AsyncAPI catalog. Schemas only, no domain logic. Compiled to dist/.",
   "type": "module",
