@@ -20,8 +20,8 @@ Triggers: every `pull_request`, `push` to `main`, weekly schedule (Monday 05:17 
 | `web` | `turbo run test:e2e --affected` (runs nothing when `web` is not affected) | `pnpm test:e2e` | `pnpm test:e2e`, forced | standalone build of `apps/web`, Playwright smoke, SEO, enforced CSP and axe per locale; uploads `playwright-results` on failure |
 | `images` | Docker build of the affected services (`image` task of `turbo.json`, `--affected`) | all three | all three | per service: amd64 build loaded into the runner, never pushed; smoke run (not root, `api` and `agent` stop on the config error naming `DATABASE_URL`, `web` reaches `healthy`); Trivy: a secret always fails, a fixable HIGH or CRITICAL OS finding fails only a PR that changes the image inputs (Dockerfile, `.dockerignore`, `.trivyignore.yaml`), otherwise it is reported in the job summary |
 | `workflows-lint` | zizmor, offline | same | same | the workflows themselves (injection, permissions, credentials, triggers); locally `pnpm lint:workflows` |
-| `nginx` | runs only when the PR changes `infra/nginx/`, `infra/scripts/nginx-check.sh`, `infra/scripts/smoke-edge.sh` or `ci.yml`; otherwise passes with nothing run | runs | runs | the nginx edge in `ubuntu:26.04` (pinned by digest) with the distro nginx: the repo's `nginx.conf`, snippets and sites installed, throwaway self-signed certificates, `nginx -t`, then `smoke-edge.sh` against it (headers, no version, no CORS, internal paths 404, TLS 1.1 refused, 1.2 and 1.3 accepted); locally `pnpm nginx:check`. Not a required check yet |
-| `backup` | runs only when the PR changes `infra/scripts/backup.sh`, `restore.sh` or `backup-check.sh`, `infra/env/backup.env.tpl`, `infra/compose/compose.ops.yml`, `infra/postgres/pg_hba.conf` or `ci.yml`; otherwise passes with nothing run | runs | runs | `infra/scripts/backup-check.sh` on the runner's Docker: the server's `backup.sh` and `restore.sh` against throwaway Postgres, RabbitMQ and Uptime Kuma containers (the images of `compose.ops.yml`) and a local restic 0.19.1 repository; every database found and saved, a failing dump saves no snapshot and sends no heartbeat, Kuma started again, the last complete night restored into a container with no network with matching row counts, no secret in the output; locally `pnpm backup:check`. Not a required check yet |
+| `nginx` | runs only when the PR changes `infra/nginx/`, `infra/scripts/nginx-check.sh`, `infra/scripts/smoke-edge.sh` or `ci.yml`; otherwise passes with nothing run | runs | runs | the nginx edge in `ubuntu:26.04` (pinned by digest) with the distro nginx: the repo's `nginx.conf`, snippets and sites installed, throwaway self-signed certificates, `nginx -t`, then `smoke-edge.sh` against it (headers, no version, no CORS, internal paths 404, TLS 1.1 refused, 1.2 and 1.3 accepted); locally `pnpm nginx:check`. Required since WP-9 step 6 |
+| `backup` | runs only when the PR changes `infra/scripts/backup.sh`, `restore.sh` or `backup-check.sh`, `infra/env/backup.env.tpl`, `infra/compose/compose.ops.yml`, `infra/postgres/pg_hba.conf` or `ci.yml`; otherwise passes with nothing run | runs | runs | `infra/scripts/backup-check.sh` on the runner's Docker: the server's `backup.sh` and `restore.sh` against throwaway Postgres, RabbitMQ and Uptime Kuma containers (the images of `compose.ops.yml`) and a local restic 0.19.1 repository; every database found and saved, a failing dump saves no snapshot and sends no heartbeat, Kuma started again, the last complete night restored into a container with no network with matching row counts, no secret in the output; locally `pnpm backup:check`. Required since WP-9 step 6 |
 | `backstop-issue` | skipped | skipped | schedule only, when `verify`, `integration`, `web`, `nginx` or `backup` failed | not a gate: opens or comments the issue "Weekly uncached CI run failed" |
 
 ### `security.yml`
@@ -143,9 +143,10 @@ writes and merges every change.
 ### Required checks
 
 The `protect-main` ruleset requires exactly these names (the owner sets them, ADR-048):
-`verify`, `integration`, `web`, `workflows-lint`, `pr-title`, `osv-scanner / osv-scan`, `dependency-review`, `secrets`, `images`.
-All nine match the `name:` of their job in the files above. `images` joined the list after it had
-reported on `main` (expand, see the last section).
+`verify`, `integration`, `web`, `workflows-lint`, `pr-title`, `osv-scanner / osv-scan`, `dependency-review`, `secrets`, `images`, `nginx`, `backup`.
+All eleven match the `name:` of their job in the files above. `images` joined the list after it had
+reported on `main` (expand, see the last section); `nginx` and `backup` joined in WP-9 step 6, both
+report on every pull request (they pass with nothing run when their paths are untouched).
 
 ## Security model
 
@@ -307,9 +308,13 @@ Agents never change these settings; each item is yours.
    only into the environment secret `DEPLOY_SSH_KEY` of `staging` and of `production`, then delete
    it locally. The public halves go into `/home/deploy/.ssh/authorized_keys` as the two lines of
    `docs/runbooks/server-access.md` section 8 (`deploy-entry staging`, `deploy-entry prod`), and the
-   WP-8 test key line is removed.
+   WP-8 test key line is removed. The same visit installs the release's `deploy-entry` and
+   `deploy.sh` into `/srv/jadero/bin/` (section 8, "Set it up"; check both with `sha256sum`
+   against the repo), and the `new.jadero.dev` site with its `www/maintenance/` files
+   (`infra/nginx/README.md`, "Install on the server"): the scripts never update themselves.
 3. **Server secrets** (environment secrets in both `staging` and `production`, not variables: a
-   variable's value is printed in the public log): `DEPLOY_HOST` (the server's tailnet name),
+   variable's value is printed in the public log): `DEPLOY_HOST` (the server's full MagicDNS name, `<machine>.<tailnet>.ts.net`: the
+   short name an SSH profile uses may not resolve on the runner),
    `DEPLOY_SSH_PORT`, `DEPLOY_KNOWN_HOSTS` (the output of
    `ssh-keyscan -p <ssh-port> -t ed25519 <tailnet-host>` run over the tailnet, checked against
    `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the server; several lines are fine, the
