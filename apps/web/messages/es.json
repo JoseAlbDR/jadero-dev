@@ -45,7 +45,7 @@
     },
     "evidence": {
       "caseStudies": "Casos de estudio",
-      "workLog": "Registro de trabajo",
+      "workLog": "Trabajo profesional",
       "underTheHood": "Página Under the hood",
       "publicRepo": "Repositorio público",
       "changelogs": "Changelogs por servicio",
@@ -160,9 +160,9 @@
     "empty": "Todavía no hay tecnologías publicadas."
   },
   "WorkPage": {
-    "metaTitle": "Casos",
+    "metaTitle": "Trabajo profesional",
     "metaDescription": "Una entrada por cada trabajo: el problema, lo que construí, las alternativas y el resultado.",
-    "eyebrow": "Casos",
+    "eyebrow": "Trabajo profesional",
     "title": "El trabajo detrás del CV",
     "lead": "Una entrada por cada trabajo: el problema, lo que construí, las alternativas y cómo salió.",
     "empty": "Aún no hay entradas publicadas.",
@@ -219,12 +219,12 @@
     "projects": "Proyectos",
     "stack": "Stack",
     "blog": "Blog",
-    "work": "Casos"
+    "work": "Trabajo profesional"
   },
   "Footer": {
     "copyright": "© {year} jadero.dev",
     "note": "Construida versión a versión.",
-    "work": "Casos",
+    "work": "Trabajo profesional",
     "journal": "Diario",
     "now": "Ahora"
   },

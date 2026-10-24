@@ -45,7 +45,7 @@
     },
     "evidence": {
       "caseStudies": "Fallstudien",
-      "workLog": "Arbeitsprotokoll",
+      "workLog": "Berufliche Arbeit",
       "underTheHood": "Under-the-hood-Seite",
       "publicRepo": "Öffentliches Repo",
       "changelogs": "Changelogs pro Service",
@@ -160,9 +160,9 @@
     "empty": "Noch keine Kenntnisse veröffentlicht."
   },
   "WorkPage": {
-    "metaTitle": "Fallstudien",
+    "metaTitle": "Berufliche Arbeit",
     "metaDescription": "Ein Eintrag pro Arbeit: das Problem, was ich gebaut habe, die Abwägungen und das Ergebnis.",
-    "eyebrow": "Fallstudien",
+    "eyebrow": "Berufliche Arbeit",
     "title": "Die Arbeit hinter dem Lebenslauf",
     "lead": "Ein Eintrag pro Arbeit: das Problem, was ich gebaut habe, die Abwägungen und wie es ausging.",
     "empty": "Noch keine Einträge veröffentlicht.",
@@ -219,12 +219,12 @@
     "projects": "Projekte",
     "stack": "Stack",
     "blog": "Blog",
-    "work": "Fallstudien"
+    "work": "Berufliche Arbeit"
   },
   "Footer": {
     "copyright": "© {year} jadero.dev",
     "note": "Gebaut, ein Release nach dem anderen.",
-    "work": "Fallstudien",
+    "work": "Berufliche Arbeit",
     "journal": "Tagebuch",
     "now": "Jetzt"
   },

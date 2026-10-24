@@ -45,7 +45,7 @@
     },
     "evidence": {
       "caseStudies": "Case studies",
-      "workLog": "Work log",
+      "workLog": "Professional work",
       "underTheHood": "Under the hood page",
       "publicRepo": "Public repo",
       "changelogs": "Changelogs per service",
@@ -160,9 +160,9 @@
     "empty": "No skills are published yet."
   },
   "WorkPage": {
-    "metaTitle": "Case studies",
+    "metaTitle": "Professional work",
     "metaDescription": "One entry per piece of work: the problem, what I built, the trade-offs and the outcome.",
-    "eyebrow": "Case studies",
+    "eyebrow": "Professional work",
     "title": "The work behind the CV",
     "lead": "One entry per piece of work: the problem, what I built, the trade-offs and how it turned out.",
     "empty": "No entries are published yet.",
@@ -219,12 +219,12 @@
     "projects": "Projects",
     "stack": "Stack",
     "blog": "Blog",
-    "work": "Case studies"
+    "work": "Professional work"
   },
   "Footer": {
     "copyright": "© {year} jadero.dev",
     "note": "Built one release at a time.",
-    "work": "Case studies",
+    "work": "Professional work",
     "journal": "Journal",
     "now": "Now"
   },
