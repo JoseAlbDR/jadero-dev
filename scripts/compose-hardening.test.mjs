@@ -3,11 +3,17 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   checkComposeHardening,
+  checkEnvironmentOverlay,
   checkOpsHardening,
   checkOpsRepository,
   checkRepository,
+  checkServicesHardening,
+  checkServicesRepository,
+  envTemplateProblems,
   imageParityProblems,
+  missingVariableProblems,
   parseComposeYaml,
+  parseEnvTemplate,
   parsePgHba,
   pgHbaProblems,
 } from "./compose-hardening.mjs";
@@ -435,5 +441,313 @@ host content_prod content_prod samenet scram-sha-256
       "pg_hba.conf:10 uses md5: use scram-sha-256",
       "pg_hba.conf:11 accepts samenet: name a CIDR subnet",
     ]);
+  });
+});
+
+// Compose and env file interpolation, written as plain strings on purpose: not JS placeholders.
+// biome-ignore lint/suspicious/noTemplateCurlyInString: a Compose variable
+const ENV_VAR = "${JADERO_ENV}";
+// biome-ignore lint/suspicious/noTemplateCurlyInString: a Compose variable
+const HOST_VAR = "${HOST}";
+// biome-ignore lint/suspicious/noTemplateCurlyInString: a Compose variable
+const IMAGE_VAR = "${API_IMAGE:?from versions.env}";
+// biome-ignore lint/suspicious/noTemplateCurlyInString: a Compose variable
+const IMAGE_HINT = "${API_IMAGE:?...}";
+// biome-ignore lint/suspicious/noTemplateCurlyInString: a Compose variable
+const ENV_DIR = "/srv/jadero/${JADERO_ENV:?staging or prod}";
+// biome-ignore lint/suspicious/noTemplateCurlyInString: a Compose variable
+const ENV_DIR_HINT = "/srv/jadero/${JADERO_ENV:?...}";
+
+/** The ops template's items for api, both environments, as ops.env.tpl lists them. */
+const OPS_TEMPLATE = ["prod", "staging"]
+  .map(
+    (env) =>
+      `X_${env}={{ op://jadero-ops/postgres-content-${env}/password }}\nY_${env}={{ op://jadero-ops/rabbitmq-api-${env}/password }}`,
+  )
+  .join("\n");
+
+/** A small api template: two secrets from the environment's items, the server values. */
+const API_TEMPLATE = `# api on the servers
+NODE_ENV=production
+LOG_LEVEL=info
+OTEL_TRACES_EXPORTER=none
+HEARTBEAT_INTERVAL_MS=60000
+DATABASE_URL=postgres://content_\${JADERO_ENV}:{{ op://jadero-ops/postgres-content-$JADERO_ENV/password }}@postgres:5432/content_\${JADERO_ENV}
+RABBITMQ_URL=amqp://api_\${JADERO_ENV}:{{ op://jadero-ops/rabbitmq-api-$JADERO_ENV/password }}@rabbitmq:5672/%2F\${JADERO_ENV}
+`;
+
+const checkTemplate = (source) =>
+  envTemplateProblems(parseEnvTemplate(source), "api", OPS_TEMPLATE, "api.env.tpl");
+
+const SERVICES_HEADER = `
+x-hardened: &hardened
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: ["/tmp:size=16m"]
+  logging:
+    driver: local
+    options:
+      max-size: "10m"
+      max-file: "3"
+x-migrate: &migrate
+  restart: "no"
+  healthcheck:
+    disable: true
+`;
+
+/** A small services file: api's migrate step and the worker, on the rendered env file. */
+const services = (worker = "", migrate = "") => `${SERVICES_HEADER}
+services:
+  api-migrate:
+    <<: [*hardened, *migrate]
+    profiles: [api]
+    image: \${API_IMAGE:?from versions.env}
+    env_file:
+      - path: /srv/jadero/\${JADERO_ENV:?staging or prod}/api.env
+        required: true
+    environment:
+      RABBITMQ_URL: ""
+    mem_limit: 300m${migrate}
+  api-worker:
+    <<: *hardened
+    profiles: [api]
+    image: \${API_IMAGE:?from versions.env}
+    restart: unless-stopped
+    env_file:
+      - path: /srv/jadero/\${JADERO_ENV:?staging or prod}/api.env
+        required: true
+    environment:
+      PORT: "3011"
+      OTEL_SERVICE_NAME: api-worker
+      NODE_OPTIONS: --max-old-space-size=224
+    mem_limit: 300m
+    depends_on:
+      api-migrate:
+        condition: service_completed_successfully${worker}
+`;
+
+const API_TEMPLATES = { api: parseEnvTemplate(API_TEMPLATE) };
+const checkServices = (source) =>
+  checkServicesHardening(parseComposeYaml(source), API_TEMPLATES, "services.yml");
+
+describe("the repository's compose.services.yml with both overlays and the env templates", () => {
+  it("hardens every process type, blanks unused credentials and publishes only api and web", () => {
+    const { services, problems } = checkServicesRepository();
+    assert.deepEqual(services, [
+      "agent",
+      "agent-consumer",
+      "agent-migrate",
+      "api",
+      "api-migrate",
+      "api-worker",
+      "web",
+    ]);
+    assert.deepEqual(problems, []);
+  });
+});
+
+describe("envTemplateProblems", () => {
+  it("accepts references to the environment's items and the server values", () => {
+    assert.deepEqual(checkTemplate(API_TEMPLATE), []);
+  });
+
+  it("fails on a credential in clear, a secret-like name without a reference, another variable", () => {
+    const source = API_TEMPLATE.replace(
+      "{{ op://jadero-ops/postgres-content-$JADERO_ENV/password }}",
+      "hunter2",
+    )
+      .concat("UMAMI_APP_SECRET=plain\n")
+      .concat(`SITE_URL=https://${HOST_VAR}\n`);
+    assert.deepEqual(checkTemplate(source), [
+      "api.env.tpl:6 DATABASE_URL carries a credential in clear: use a 1Password reference",
+      "api.env.tpl:8 UMAMI_APP_SECRET looks like a secret: use a 1Password reference",
+      `api.env.tpl:9 SITE_URL: only ${ENV_VAR} may be interpolated outside a reference`,
+    ]);
+  });
+
+  it("fails on a reference in a comment, a fixed environment and an item ops.env.tpl lacks", () => {
+    const source = API_TEMPLATE.replace(
+      "# api on the servers",
+      "# from {{ op://jadero-ops/postgres-content-prod/password }}",
+    )
+      .replace("rabbitmq-api-$JADERO_ENV", "rabbitmq-api-prod")
+      .concat("X={{ op://jadero-ops/postgres-other-$JADERO_ENV/password }}\n");
+    assert.deepEqual(checkTemplate(source), [
+      "api.env.tpl:1 holds a secret reference in a comment: op inject resolves it",
+      "api.env.tpl:7 RABBITMQ_URL: every reference must read {{ op://jadero-ops/<item>-$JADERO_ENV/password }}",
+      "api.env.tpl:8 X: item postgres-other-staging is not in infra/env/ops.env.tpl",
+      "api.env.tpl:8 X: item postgres-other-prod is not in infra/env/ops.env.tpl",
+    ]);
+  });
+
+  it("fails when a server value is missing or wrong", () => {
+    const source = API_TEMPLATE.replace("LOG_LEVEL=info", "LOG_LEVEL=debug").replace(
+      "OTEL_TRACES_EXPORTER=none\n",
+      "",
+    );
+    assert.deepEqual(checkTemplate(source), [
+      "api.env.tpl: LOG_LEVEL must be info on the servers",
+      "api.env.tpl: OTEL_TRACES_EXPORTER must be none on the servers",
+    ]);
+  });
+});
+
+describe("checkServicesHardening", () => {
+  it("accepts process types on their image variable, their env file and blanked credentials", () => {
+    assert.deepEqual(checkServices(services()), []);
+  });
+
+  it("fails on an image by tag, a build and a published port", () => {
+    const source = services('\n    build: .\n    ports: ["127.0.0.1:3011:3011"]').replace(
+      `image: ${IMAGE_VAR}\n    restart`,
+      "image: ghcr.io/josealbdr/jadero-dev-api:0.2.0\n    restart",
+    );
+    assert.deepEqual(checkServices(source), [
+      `services.yml: api-worker must run ${IMAGE_HINT} from versions.env (a digest reference)`,
+      "services.yml: api-worker must not build: servers pull by digest",
+      "services.yml: api-worker must not publish ports here: the environment overlays do",
+    ]);
+  });
+
+  it("fails when a process type keeps a credential it does not read, or overrides its own", () => {
+    const keeps = services().replace('      RABBITMQ_URL: ""\n', "");
+    assert.deepEqual(checkServices(keeps), [
+      'services.yml: api-migrate must blank RABBITMQ_URL (environment: RABBITMQ_URL: ""): it does not read it',
+    ]);
+    const overrides = services().replace(
+      'PORT: "3011"',
+      'PORT: "3011"\n      RABBITMQ_URL: amqp://elsewhere',
+    );
+    assert.deepEqual(checkServices(overrides), [
+      "services.yml: api-worker must take RABBITMQ_URL from its env file, not override it",
+    ]);
+  });
+
+  it("fails on another service's env file, an optional one, or a fixed environment folder", () => {
+    for (const path of [`${ENV_DIR}/agent.env`, "/srv/jadero/staging/api.env"]) {
+      const source = services().replace(
+        `${ENV_DIR}/api.env\n        required: true\n    environment:\n      PORT`,
+        `${path}\n        required: true\n    environment:\n      PORT`,
+      );
+      assert.deepEqual(checkServices(source), [
+        `services.yml: api-worker must read only ${ENV_DIR_HINT}/api.env, required (env_file)`,
+      ]);
+    }
+    const optional = services().replace(
+      "required: true\n    environment:\n      PORT",
+      "required: false\n    environment:\n      PORT",
+    );
+    assert.equal(checkServices(optional).length, 1);
+  });
+
+  it("fails when a process type joins no profile, another service's, or more than one", () => {
+    const hint = "must join only its service's profile (profiles: [api]): deploy.sh activates one";
+    const none = services().replace(
+      `    profiles: [api]\n    image: ${IMAGE_VAR}\n    restart`,
+      `    image: ${IMAGE_VAR}\n    restart`,
+    );
+    assert.deepEqual(checkServices(none), [`services.yml: api-worker ${hint}`]);
+    for (const profiles of ["[agent]", "[api, agent]"]) {
+      const source = services().replace(
+        "    profiles: [api]\n    image",
+        `    profiles: ${profiles}\n    image`,
+      );
+      assert.deepEqual(checkServices(source), [`services.yml: api-migrate ${hint}`]);
+    }
+  });
+
+  it("fails on a network, unrotated logs, a peer dependency and an unlisted process type", () => {
+    const source = services(
+      "\n      postgres:\n        condition: service_healthy\n    networks: [jadero_prod]\n    logging:\n      driver: json-file",
+    ).replace("  api-worker:", "  api-relay:");
+    assert.deepEqual(checkServices(source), [
+      "services.yml: api-relay must stay on the default network, which each overlay names",
+      "services.yml: api-relay must rotate its logs (logging: driver local, max-size and max-file)",
+      "services.yml: api-relay must not depend on postgres: only on its own migrate step",
+      "services.yml: api-relay is a process type with no credential list: add it to PROCESS_SECRETS",
+    ]);
+  });
+});
+
+describe("checkEnvironmentOverlay", () => {
+  const base = parseComposeYaml(`
+services:
+  api: {}
+  api-worker: {}
+  web: {}
+`);
+  const ops = parseComposeYaml(`
+networks:
+  jadero_staging:
+    name: jadero_staging
+`);
+  const overlay = (extra = "", network = "jadero_staging") => `
+name: jadero-staging
+services:
+  api:
+    ports: ["127.0.0.1:3121:3001"]
+  web:
+    ports: ["127.0.0.1:3120:3000"]
+    environment:
+      SITE_URL: https://new.jadero.dev${extra}
+networks:
+  default:
+    name: ${network}
+    external: true
+`;
+  const checkOverlay = (source) =>
+    checkEnvironmentOverlay(parseComposeYaml(source), "staging", base, ops);
+
+  it("accepts the project name, api and web on 127.0.0.1 and the external network", () => {
+    assert.deepEqual(checkOverlay(overlay()), []);
+  });
+
+  it("fails when a worker publishes, a port leaves 127.0.0.1 or moves", () => {
+    const source = overlay('\n  api-worker:\n    ports: ["127.0.0.1:3011:3011"]')
+      .replace("127.0.0.1:3121:3001", "3121:3001")
+      .replace("3120:3000", "3130:3000");
+    assert.deepEqual(checkOverlay(source), [
+      "infra/compose/compose.staging.yml: api publishes 3121:3001: bind it to 127.0.0.1 (ADR-027)",
+      "infra/compose/compose.staging.yml: api must publish exactly 127.0.0.1:3121:3001",
+      "infra/compose/compose.staging.yml: web must publish exactly 127.0.0.1:3120:3000",
+      "infra/compose/compose.staging.yml: api-worker publishes a port: only api and web do",
+    ]);
+  });
+
+  it("fails on another project, network or a network the project would create", () => {
+    const named = overlay("", "jadero_prod").replace("name: jadero-staging", "name: jadero-prod");
+    assert.deepEqual(checkOverlay(named), [
+      "infra/compose/compose.staging.yml must name the project jadero-staging",
+      "infra/compose/compose.staging.yml must join only jadero_staging, as the external default network",
+    ]);
+    assert.deepEqual(checkOverlay(overlay().replace("    external: true\n", "")), [
+      "infra/compose/compose.staging.yml must join only jadero_staging, as the external default network",
+    ]);
+  });
+
+  it("fails when an overlay sets more than ports and the allowed variables", () => {
+    const source = overlay("\n      DATABASE_URL: postgres://x\n    mem_limit: 2g").concat(
+      "volumes:\n  data: {}\n",
+    );
+    assert.deepEqual(checkOverlay(source), [
+      "infra/compose/compose.staging.yml must hold only name, services and networks (found volumes)",
+      "infra/compose/compose.staging.yml: web must set only ports and environment (found mem_limit)",
+      "infra/compose/compose.staging.yml: web must not set DATABASE_URL: it belongs in the env template",
+    ]);
+  });
+});
+
+describe("missingVariableProblems", () => {
+  it("fails when a blanked credential is one the process type requires", () => {
+    const source = services().replace('PORT: "3011"', 'PORT: "3011"\n      DATABASE_URL: ""');
+    assert.deepEqual(
+      missingVariableProblems(parseComposeYaml(source), {}, API_TEMPLATES, "overlay.yml"),
+      ["overlay.yml: api-worker gets no DATABASE_URL, which its config requires"],
+    );
+    assert.deepEqual(
+      missingVariableProblems(parseComposeYaml(services()), {}, API_TEMPLATES, "overlay.yml"),
+      [],
+    );
   });
 });

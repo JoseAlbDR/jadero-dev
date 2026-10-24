@@ -60,7 +60,7 @@ The reasons behind each choice are the ADRs in [`docs/adr/`](docs/adr/README.md)
 | `packages/ui` | Design tokens and shadcn base components |
 | `packages/config` | Shared TypeScript and Vitest config |
 | `templates/nest-module` | The layered and hexagonal module shapes to copy from |
-| `infra/` | Docker Compose files (dev, images, the server's ops stack), Postgres provisioning, RabbitMQ config and definitions, secrets templates, the nginx edge (`infra/nginx/`), server scripts (deploy, backup and restore) and their systemd units (`infra/systemd/`) |
+| `infra/` | Docker Compose files (dev, images, the server's ops stack and its staging and production services), Postgres provisioning, RabbitMQ config and definitions, secrets templates, the nginx edge (`infra/nginx/`), server scripts (deploy, backup and restore) and their systemd units (`infra/systemd/`) |
 | `scripts/` | Repo scripts (ADR tooling, migration checks, release inputs) and their tests |
 | `docs/` | ADRs, plan, learning explainers, journal, process pages, architecture map |
 
@@ -172,6 +172,15 @@ same. The containers run hardened: read-only filesystem, no Linux capabilities, 
 a small memory-backed `/tmp`, a memory limit, non-root user. The values live in
 [`infra/compose/compose.images.yml`](infra/compose/compose.images.yml).
 
+On the server the same hardening runs from
+[`infra/compose/compose.services.yml`](infra/compose/compose.services.yml), one file for both
+environments, with an overlay each for the project name, the published ports and the network:
+`compose.staging.yml` (`jadero-staging`, `web` on `127.0.0.1:3120`, `api` on `127.0.0.1:3121`) and
+`compose.prod.yml` (`jadero-prod`, `web` on `127.0.0.1:3110`, `api` on `127.0.0.1:3111`); workers and
+`agent` publish nothing. Images run by digest from the environment's `versions.env`, and each
+service's environment is rendered from `infra/env/<service>.env.tpl` (1Password references only) by
+the deploy. Details in [`infra/compose/README.md`](infra/compose/README.md).
+
 ## Environment variables
 
 Each app validates its environment with Zod at boot and refuses to start on a missing or malformed
@@ -204,7 +213,7 @@ Root scripts (`pnpm <script>`):
 | `test:int` | Integration tests (`*.int.test.ts`) against real containers; needs Docker |
 | `test:e2e` | Builds `web` and runs its Playwright smoke and axe checks per locale; needs Chrome |
 | `check:migrations` | Fails when a branch edits a migration `main` already has, or adds one the migrator would skip |
-| `release-inputs` | Regenerates each service's `release-inputs.txt` (its production dependency closure, type packages `@types/*` left out) |
+| `release-inputs` | Regenerates each service's `release-inputs.txt` (its production dependency closure, type packages `@types/*` left out, and a hash of its deploy files) |
 | `lint:workflows` | zizmor over `.github/workflows/`, in Docker |
 | `scan:secrets` | gitleaks over the git history, in Docker |
 | `nginx:check` | Installs `infra/nginx/` into Ubuntu 26.04 with the distro nginx, runs `nginx -t` and the edge smoke checks, in Docker |

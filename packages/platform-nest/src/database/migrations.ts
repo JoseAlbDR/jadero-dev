@@ -8,6 +8,20 @@ import { z } from "zod";
 /** How long the one-off migrate step waits for the database before it gives up. */
 export const MIGRATION_CONNECT_TIMEOUT_MS = 5000;
 
+/**
+ * How long a migration statement waits for a lock before Postgres cancels it (55P03), set on the
+ * migrate session only, never on a service's runtime pool. An expand-only migration that queues
+ * behind a long transaction would otherwise hold the deploy (and, through the lock queue, every
+ * later query on that table) until the deploy's own time limit kills it (WP-9 step 5 review).
+ */
+export const MIGRATION_LOCK_TIMEOUT_MS = 10_000;
+
+/**
+ * The longest one migration statement may run before Postgres cancels it (57014), on the migrate
+ * session only; below the deploy's 120 s limit on the whole migrate step (infra/scripts/deploy.sh).
+ */
+export const MIGRATION_STATEMENT_TIMEOUT_MS = 60_000;
+
 /** The journal drizzle-kit writes to `drizzle/meta/_journal.json`, validated before it is trusted. */
 export const migrationJournal = z.object({
   version: z.string(),
@@ -121,6 +135,9 @@ function rootMessage(error: unknown): string {
  * The one-off migrate step (WP-10 D2): checks the folder, opens a short-lived pool of one
  * connection, fails fast when the database does not answer, then applies every pending migration
  * with Drizzle's `migrate()` (all of them in one transaction) and closes the pool. Never run at boot.
+ * The session runs with `lock_timeout` and `statement_timeout` set (MIGRATION_LOCK_TIMEOUT_MS,
+ * MIGRATION_STATEMENT_TIMEOUT_MS), so a migration stuck on a lock fails with its code and rolls
+ * back instead of hanging the deploy.
  * @param options the service, its database URL and its migration folder.
  * @throws {MigrationError} when the folder is inconsistent, the database is unreachable or a
  * migration fails; the message carries an error code, never the URL, a host or a Postgres detail.
@@ -139,6 +156,9 @@ export async function runMigrations(options: RunMigrationsOptions): Promise<void
     connectionString: options.url,
     max: 1,
     connectionTimeoutMillis: MIGRATION_CONNECT_TIMEOUT_MS,
+    // Startup parameters of the migrate session: they hold for every statement it runs.
+    lock_timeout: MIGRATION_LOCK_TIMEOUT_MS,
+    statement_timeout: MIGRATION_STATEMENT_TIMEOUT_MS,
   });
   try {
     try {

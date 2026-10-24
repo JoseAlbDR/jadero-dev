@@ -3,14 +3,20 @@
 # deploy-entry: the forced command of the deploy user's only SSH key (WP-8 D3, ADR-049 restating
 # ADR-048's deploy mechanics). Installed root-owned, mode 755, as /srv/jadero/bin/deploy-entry.
 #
-# sshd runs this file whatever the client asks for. The client's words arrive only as the
-# SSH_ORIGINAL_COMMAND variable, and this script accepts exactly one shape:
+# sshd runs this file whatever the client asks for. Each key line binds it to one environment
+# (WP-9 D2): `command="/srv/jadero/bin/deploy-entry staging"` for the staging key,
+# `... deploy-entry prod` for production's, so a leaked staging key never reaches production. The
+# client's words arrive only as the SSH_ORIGINAL_COMMAND variable, and this script accepts exactly
+# two shapes, whose environment word must equal the key line's:
 #
 #   deploy <env> <service> <version>
+#   rollback <env> <service>
 #
-# Each word is checked against an allowlist, then the three values are passed as separate
-# arguments to the one script the sudoers rule allows. The client's input is never evaluated,
-# never handed to a shell and never written to the log.
+# `redeploy` is not one of them: it runs from the owner's root shell only (D3). Each word is
+# checked against an allowlist, then the values are passed as separate arguments to the one
+# script the sudoers rule allows, with standard input (the registry user and token, for prod the
+# expected digest) passed through untouched. The client's input is never evaluated, never handed
+# to a shell and never written to the log.
 #
 # Environment: sshd's PermitUserEnvironment is off by default, but the client can still send the
 # variables AcceptEnv lists, and Ubuntu's sshd_config accepts LANG and every LC_* (`restrict` on
@@ -31,7 +37,7 @@ readonly LOGGER=/usr/bin/logger
 
 # The services release-please publishes today. `contact` joins when it ships.
 readonly SERVICES="api agent web"
-readonly USAGE='refused: expected "deploy <env> <service> <version>"'
+readonly USAGE='refused: expected "deploy <env> <service> <version>" or "rollback <env> <service>"'
 readonly MAX_LENGTH=128
 
 # Characters allowed anywhere in the command, checked before splitting: letters, digits, space,
@@ -57,6 +63,13 @@ refuse() {
   exit 1
 }
 
+# The environment this key may act on, from the key line itself (not from the client).
+[[ $# -eq 1 ]] || refuse no-binding
+case "$1" in
+  staging | prod) bound_env="$1" ;;
+  *) refuse no-binding ;;
+esac
+
 command_line="${SSH_ORIGINAL_COMMAND-}"
 
 [[ -n "$command_line" ]] || refuse empty
@@ -64,24 +77,34 @@ command_line="${SSH_ORIGINAL_COMMAND-}"
 [[ "$command_line" =~ $ALLOWED_CHARS ]] || refuse bad-characters
 
 IFS=' ' read -r -a words <<<"$command_line"
-[[ ${#words[@]} -eq 4 ]] || refuse word-count
-[[ "${words[0]}" == "deploy" ]] || refuse not-deploy
+[[ ${#words[@]} -eq 3 || ${#words[@]} -eq 4 ]] || refuse word-count
+verb="${words[0]}"
+case "$verb" in
+  deploy) [[ ${#words[@]} -eq 4 ]] || refuse word-count ;;
+  rollback) [[ ${#words[@]} -eq 3 ]] || refuse word-count ;;
+  *) refuse bad-verb ;;
+esac
 
 env_name="${words[1]}"
 service="${words[2]}"
-version="${words[3]}"
 
 case "$env_name" in
   staging | prod) ;;
   *) refuse bad-env ;;
 esac
+[[ "$env_name" == "$bound_env" ]] || refuse env-mismatch
 
 case " $SERVICES " in
   *" $service "*) ;;
   *) refuse bad-service ;;
 esac
 
-[[ "$version" =~ $VERSION_RE ]] || refuse bad-version
+if [[ "$verb" == deploy ]]; then
+  version="${words[3]}"
+  [[ "$version" =~ $VERSION_RE ]] || refuse bad-version
+  log_line "accepted verb=deploy env=$env_name service=$service version=$version"
+  exec "$SUDO" -n "$DEPLOY_SH" deploy "$env_name" "$service" "$version"
+fi
 
-log_line "accepted env=$env_name service=$service version=$version"
-exec "$SUDO" -n "$DEPLOY_SH" "$env_name" "$service" "$version"
+log_line "accepted verb=rollback env=$env_name service=$service"
+exec "$SUDO" -n "$DEPLOY_SH" rollback "$env_name" "$service"

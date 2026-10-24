@@ -1,11 +1,13 @@
 // Runs with the Node test runner (`node --test`), like the other scripts: no dependencies.
 //
-// Tests the deploy user's forced command (`infra/scripts/deploy-entry`) and the stub it calls
-// through sudo (`infra/scripts/deploy.sh`), WP-8 D3. The production scripts read no path from the
-// environment, so each test run copies deploy-entry into a temporary folder and rewrites its three
-// path constants to fakes: a sudo that records its arguments and runs the real deploy.sh stub, and
-// a logger that appends to a file. The rewrite fails loudly if a constant is renamed, so a test can
-// never reach the real sudo.
+// Tests the deploy user's forced command (`infra/scripts/deploy-entry`), WP-8 D3 and WP-9 D2: each
+// key line binds it to one environment, and it accepts `deploy <env> <service> <version>` and
+// `rollback <env> <service>` for that environment only. The production script reads no path from
+// the environment, so each test run copies deploy-entry into a temporary folder and rewrites its
+// three path constants to fakes: a sudo that records its arguments and runs a fake deploy.sh, which
+// records its own arguments and standard input, and a logger that appends to a file. The rewrite
+// fails loudly if a constant is renamed, so a test can never reach the real sudo. deploy.sh itself
+// is tested in deploy.test.mjs.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -17,11 +19,14 @@ import { fileURLToPath } from "node:url";
 const SCRIPTS = fileURLToPath(new URL("../infra/scripts/", import.meta.url));
 const ENTRY = join(SCRIPTS, "deploy-entry");
 const DEPLOY_SH = join(SCRIPTS, "deploy.sh");
-const USAGE = 'refused: expected "deploy <env> <service> <version>"';
+const USAGE = 'refused: expected "deploy <env> <service> <version>" or "rollback <env> <service>"';
 
 let dir;
 let entry;
+let fakeDeploySh;
 let sudoCalls;
+let deployCalls;
+let deployInput;
 let logFile;
 
 /**
@@ -52,21 +57,25 @@ function writeScript(name, body) {
 }
 
 /**
- * Runs the rewritten deploy-entry as sshd would, with the client's words in SSH_ORIGINAL_COMMAND.
+ * Runs the rewritten deploy-entry as sshd would: the key line's arguments, the client's words in
+ * SSH_ORIGINAL_COMMAND and the client's standard input.
  * @param {string | undefined} command the client's command, or undefined to leave it unset
- * @param {Record<string, string>} clientEnv variables the client sends (sshd's AcceptEnv)
+ * @param {{ binding?: string[], clientEnv?: Record<string, string>, input?: string }} [options]
+ *   the key line's arguments (default `staging`), the variables the client sends (sshd's
+ *   AcceptEnv) and the client's standard input
  * @returns {{ status: number | null, stdout: string, stderr: string }} the result
  */
-function runEntry(command, clientEnv = {}) {
-  for (const file of [sudoCalls, logFile]) rmSync(file, { force: true });
+function runEntry(command, { binding = ["staging"], clientEnv = {}, input = "" } = {}) {
+  for (const file of [sudoCalls, deployCalls, deployInput, logFile]) rmSync(file, { force: true });
   const env = { PATH: process.env.PATH, ...clientEnv };
   if (command !== undefined) env.SSH_ORIGINAL_COMMAND = command;
-  const result = spawnSync(entry, [], { env, encoding: "utf8" });
+  const result = spawnSync(entry, binding, { env, input, encoding: "utf8" });
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
 /**
- * Runs the deploy.sh stub directly with the given arguments.
+ * Runs the real deploy.sh directly with the given arguments: only its word checks, which refuse
+ * before it takes a lock or reads a file.
  * @param {string[]} args the arguments
  * @param {Record<string, string>} callerEnv variables the caller passes through sudo
  * @returns {{ status: number | null, stdout: string, stderr: string }} the result
@@ -82,14 +91,20 @@ const readIfExists = (path) => (existsSync(path) ? readFileSync(path, "utf8") : 
 before(() => {
   dir = mkdtempSync(join(tmpdir(), "deploy-entry-"));
   sudoCalls = join(dir, "sudo-calls");
+  deployCalls = join(dir, "deploy-calls");
+  deployInput = join(dir, "deploy-input");
   logFile = join(dir, "log");
+  fakeDeploySh = writeScript(
+    "fake-deploy.sh",
+    `printf '%s\\n' "$*" >> '${deployCalls}'\ncat > '${deployInput}'`,
+  );
   const sudo = writeScript(
     "fake-sudo",
     `printf '%s\\n' "$*" >> '${sudoCalls}'\n[ "$1" = "-n" ] && shift\nexec "$@"`,
   );
   const logger = writeScript("fake-logger", `printf '%s\\n' "$*" >> '${logFile}'`);
   let source = readFileSync(ENTRY, "utf8");
-  source = rewriteConstant(source, "DEPLOY_SH", DEPLOY_SH);
+  source = rewriteConstant(source, "DEPLOY_SH", fakeDeploySh);
   source = rewriteConstant(source, "SUDO", sudo);
   source = rewriteConstant(source, "LOGGER", logger);
   entry = writeScript("deploy-entry", source.replace(/^#!.*\n/, ""));
@@ -99,24 +114,32 @@ after(() => rmSync(dir, { recursive: true, force: true }));
 
 describe("deploy-entry, accepted commands", () => {
   const cases = [
-    ["deploy staging api 0.4.1", "would deploy api 0.4.1 to staging"],
-    ["deploy prod agent 1.12.0", "would deploy agent 1.12.0 to prod"],
-    ["deploy prod web 2.0.0-rc.1", "would deploy web 2.0.0-rc.1 to prod"],
-    ["  deploy   staging  api  0.4.1  ", "would deploy api 0.4.1 to staging"],
+    ["staging", "deploy staging api 0.4.1", "deploy staging api 0.4.1", "version=0.4.1"],
+    ["prod", "deploy prod agent 1.12.0", "deploy prod agent 1.12.0", "version=1.12.0"],
+    ["prod", "deploy prod web 2.0.0-rc.1", "deploy prod web 2.0.0-rc.1", "version=2.0.0-rc.1"],
+    ["staging", "  deploy   staging  api  0.4.1  ", "deploy staging api 0.4.1", "version=0.4.1"],
+    ["staging", "rollback staging api", "rollback staging api", ""],
+    ["prod", "rollback prod web", "rollback prod web", ""],
   ];
-  for (const [command, expected] of cases) {
-    it(`runs deploy.sh through sudo -n for "${command}"`, () => {
-      const result = runEntry(command);
+  for (const [binding, command, args, version] of cases) {
+    it(`runs deploy.sh through sudo -n for "${command}" on the ${binding} key`, () => {
+      const result = runEntry(command, { binding: [binding] });
       assert.equal(result.status, 0, result.stderr);
-      assert.equal(result.stdout, `${expected}\n`);
-      const [, service, version, env] = expected.match(/^would deploy (\S+) (\S+) to (\S+)$/);
-      assert.equal(readIfExists(sudoCalls), `-n ${DEPLOY_SH} ${env} ${service} ${version}\n`);
-      assert.equal(
-        readIfExists(logFile),
-        `-t jadero-deploy -- accepted env=${env} service=${service} version=${version}\n`,
-      );
+      assert.equal(readIfExists(sudoCalls), `-n ${fakeDeploySh} ${args}\n`);
+      assert.equal(readIfExists(deployCalls), `${args}\n`);
+      const [verb, env, service] = args.split(" ");
+      const logged = `verb=${verb} env=${env} service=${service}${version ? ` ${version}` : ""}`;
+      assert.equal(readIfExists(logFile), `-t jadero-deploy -- accepted ${logged}\n`);
     });
   }
+
+  it("passes the client's standard input through to deploy.sh untouched, and never logs it", () => {
+    const input = `octocat\nghs_notARealToken123\nsha256:${"a".repeat(64)}\n`;
+    const result = runEntry("deploy staging api 0.4.1", { input });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(readIfExists(deployInput), input);
+    assert.doesNotMatch(readIfExists(logFile), /octocat|ghs_|sha256/);
+  });
 });
 
 describe("deploy-entry, refused commands", () => {
@@ -127,6 +150,8 @@ describe("deploy-entry, refused commands", () => {
     ["a shell", "bash", "word-count"],
     ["bad env", "deploy dev api 0.4.1", "bad-env"],
     ["env in capitals", "deploy STAGING api 0.4.1", "bad-env"],
+    ["the other environment", "deploy prod api 0.4.1", "env-mismatch"],
+    ["a rollback on the other environment", "rollback prod api", "env-mismatch"],
     ["unknown service", "deploy staging contact 0.4.1", "bad-service"],
     ["service not yet released", "deploy staging mcp 0.4.1", "bad-service"],
     ["leading v", "deploy staging api v1.2.3", "bad-version"],
@@ -137,7 +162,9 @@ describe("deploy-entry, refused commands", () => {
     ["semicolon in version", "deploy staging api 1.2.3;id", "bad-characters"],
     ["extra word", "deploy staging api 0.4.1 now", "word-count"],
     ["missing word", "deploy staging api", "word-count"],
-    ["wrong verb", "remove staging api 0.4.1", "not-deploy"],
+    ["a rollback with a version", "rollback staging api 0.4.1", "word-count"],
+    ["redeploy, the owner's verb", "redeploy staging api", "bad-verb"],
+    ["wrong verb", "remove staging api 0.4.1", "bad-verb"],
     ["semicolon", "deploy staging api 0.4.1; id", "bad-characters"],
     ["command substitution", "deploy staging api $(id)", "bad-characters"],
     ["backticks", "deploy staging api `id`", "bad-characters"],
@@ -162,40 +189,32 @@ describe("deploy-entry, refused commands", () => {
     });
   }
 
+  // The key line, never the client, names the environment: a leaked staging key reaches staging.
+  for (const [name, binding] of [
+    ["no binding", []],
+    ["two bindings", ["staging", "prod"]],
+    ["an unknown binding", ["dev"]],
+  ]) {
+    it(`refuses every command with ${name} on the key line`, () => {
+      const result = runEntry("deploy staging api 0.4.1", { binding });
+      assert.equal(result.status, 1);
+      assert.equal(readIfExists(sudoCalls), "", "sudo was not called");
+      assert.equal(readIfExists(logFile), "-t jadero-deploy -- refused reason=no-binding\n");
+    });
+  }
+
+  it("refuses a staging command on the production key", () => {
+    const result = runEntry("deploy staging api 0.4.1", { binding: ["prod"] });
+    assert.equal(result.status, 1);
+    assert.equal(readIfExists(sudoCalls), "");
+    assert.equal(readIfExists(logFile), "-t jadero-deploy -- refused reason=env-mismatch\n");
+  });
+
   it("never writes the client's input to the log", () => {
     runEntry("deploy staging api $(touch /tmp/pwned)");
     const log = readIfExists(logFile);
     assert.doesNotMatch(log, /touch|pwned|\$\(/);
   });
-});
-
-describe("deploy.sh stub", () => {
-  it("prints the plan for valid arguments", () => {
-    const result = runDeploySh(["staging", "api", "0.4.1"]);
-    assert.equal(result.status, 0, result.stderr);
-    assert.equal(result.stdout, "would deploy api 0.4.1 to staging\n");
-  });
-
-  const bad = [
-    ["no arguments", []],
-    ["two arguments", ["staging", "api"]],
-    ["four arguments", ["staging", "api", "0.4.1", "extra"]],
-    ["bad env", ["dev", "api", "0.4.1"]],
-    ["unknown service", ["staging", "contact", "0.4.1"]],
-    ["two services in one argument", ["staging", "api agent", "0.4.1"]],
-    ["empty service", ["staging", "", "0.4.1"]],
-    ["leading v", ["staging", "api", "v0.4.1"]],
-    ["shell text in the version", ["staging", "api", "0.4.1;id"]],
-    ["newline in the version", ["staging", "api", "0.4.1\nid"]],
-  ];
-  for (const [name, args] of bad) {
-    it(`refuses ${name}`, () => {
-      const result = runDeploySh(args);
-      assert.equal(result.status, 1);
-      assert.equal(result.stdout, "");
-      assert.equal(result.stderr, 'refused: expected "deploy.sh <env> <service> <version>"\n');
-    });
-  }
 });
 
 // sshd passes the client's LANG and LC_* (Ubuntu's AcceptEnv) and sudo keeps them; under a UTF-8
@@ -206,12 +225,12 @@ describe("a client's UTF-8 locale", () => {
     ["LC_ALL", { LC_ALL: "en_US.UTF-8" }],
   ];
   // A pre-release with a-umlaut, and one with a fullwidth r: both letters to a UTF-8 glibc.
-  const NON_ASCII = ["1.0.0-rc\u00e4", "1.0.0-\uff52c"];
+  const NON_ASCII = ["1.0.0-rcä", "1.0.0-ｒc"];
 
   for (const [name, clientEnv] of LOCALES) {
     for (const version of NON_ASCII) {
       it(`deploy-entry refuses ${JSON.stringify(version)} with ${name} set`, () => {
-        const result = runEntry(`deploy staging api ${version}`, clientEnv);
+        const result = runEntry(`deploy staging api ${version}`, { clientEnv });
         assert.equal(result.status, 1);
         assert.equal(result.stderr, `${USAGE}\n`);
         assert.equal(readIfExists(sudoCalls), "", "sudo was not called");
@@ -219,7 +238,7 @@ describe("a client's UTF-8 locale", () => {
       });
 
       it(`deploy.sh refuses ${JSON.stringify(version)} with ${name} set`, () => {
-        const result = runDeploySh(["staging", "api", version], clientEnv);
+        const result = runDeploySh(["deploy", "staging", "api", version], clientEnv);
         assert.equal(result.status, 1);
         assert.equal(result.stdout, "");
       });

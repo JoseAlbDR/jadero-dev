@@ -20,6 +20,9 @@
  *   value); no Access-Control-* header anywhere, and the proxy snippet hides the upstream copies.
  * - Allowlist routing: every HTTPS server ends `/api/` (or `/`) in a 404, and every API location
  *   that proxies carries the rate limit and the 64k body limit; upstreams only on 127.0.0.1.
+ * - An `error_page` (at the server level or in a location) is served by an exact, `internal`
+ *   location with a static root in /srv/jadero/www/ (the maintenance page of WP-9 step 4 and the
+ *   content API's problem details body).
  * - Every plain HTTP server of a host redirects to https with a 301, from a location (so certbot's
  *   challenge location still wins).
  * - No IPv4 address other than 127.0.0.1 in any file of `infra/nginx/` (a public repo).
@@ -444,6 +447,12 @@ function siteProblems(directives, file) {
     }
     const locations = body.filter((d) => d.name === "location");
     for (const location of locations) problems.push(...locationProblems(location, file));
+    // At the server level and inside a location (the content API's own maintenance answer).
+    const pages = [
+      ...body.filter((d) => d.name === "error_page"),
+      ...locations.flatMap((l) => (l.block ?? []).filter((d) => d.name === "error_page")),
+    ];
+    for (const page of pages) problems.push(...errorPageProblems(page, locations, file));
     if (https && !isDefault) {
       if (!includes(body, HEADERS_SNIPPET)) {
         problems.push(`${at}: an HTTPS server must include ${HEADERS_SNIPPET} at the server level`);
@@ -472,6 +481,26 @@ function siteProblems(directives, file) {
   }
   return problems;
 }
+
+/**
+ * The rule of an `error_page` (WP-9 step 4): its page is an exact location marked `internal` that
+ * serves a static file from /srv/jadero/www/, so a client can never ask for it directly and an
+ * error never reaches an upstream again.
+ */
+function errorPageProblems(directive, locations, file) {
+  const uri = directive.args.at(-1) ?? "";
+  const target = locations.find((l) => l.args[0] === "=" && l.args[1] === uri);
+  const body = target?.block ?? [];
+  const root = body.find((d) => d.name === "root")?.args[0] ?? "";
+  const internal = body.some((d) => d.name === "internal");
+  if (target && internal && root.startsWith("/srv/jadero/www/") && !body.some(isProxy)) return [];
+  return [
+    `${file}:${directive.line}: error_page ${uri} must be served by an exact, internal location with a root in /srv/jadero/www/`,
+  ];
+}
+
+/** Whether a directive hands the request to an upstream. */
+const isProxy = (d) => d.name === "proxy_pass";
 
 /** The rules of one location: no header directives, limits on proxied API paths. */
 function locationProblems(location, file) {

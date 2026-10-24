@@ -4675,6 +4675,124 @@
       "decidedAt": "2026-10-18"
     },
     {
+      "id": "D-83",
+      "area": "hosting",
+      "title": "Where the deploy files come from",
+      "question": "Where does the server get the Compose files, env templates, topology and scripts a deploy runs besides the image?",
+      "context": "WP-9: root runs these files; infra/ is no release component, so a hand-synced checkout can drift from the image.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Owner checkout synced by hand",
+          "description": "The server git checkout, pulled before a deploy.",
+          "pros": [
+            "Nothing new"
+          ],
+          "cons": [
+            "Drift between image and files",
+            "A rollback runs current files with an old image"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Fetched at the release tag",
+          "description": "deploy.sh fetches infra/ at the tag and checks it against the image revision label.",
+          "pros": [
+            "Image and files from one reviewed commit",
+            "Rollback uses its own files"
+          ],
+          "cons": [
+            "Trust anchor is main plus immutable tags",
+            "infra-only changes wait for a release"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Sent by CI with the deploy",
+          "description": "A tarball on the SSH input.",
+          "pros": [
+            "No fetch on the server"
+          ],
+          "cons": [
+            "A stolen key supplies what root runs"
+          ]
+        },
+        {
+          "id": "d",
+          "label": "Baked into each image",
+          "description": "The image carries its Compose fragment.",
+          "pros": [
+            "One artifact"
+          ],
+          "cons": [
+            "Files span several images",
+            "Circular privileges"
+          ]
+        }
+      ],
+      "status": "decided",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-18",
+      "adr": "ADR-053",
+      "decidedOption": "b",
+      "recommendation": "b",
+      "why": "One commit for the image and its files removes drift and gives a rollback the right files; a tag ruleset anchors trust.",
+      "learn": "Configuration versioned with the artifact, trust anchor, root of trust, environment drift.",
+      "ownerNote": "Answered in the WP-9 explainer dialogue (2026-10-18): B, with the tag ruleset."
+    },
+    {
+      "id": "D-84",
+      "area": "messaging",
+      "title": "Who applies the RabbitMQ topology",
+      "question": "Who imports the topology before a service needs a new queue?",
+      "context": "WP-9: services have no configure right; ADR-048 named a separate infra deploy job.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Its own deploy target",
+          "description": "deploy <env> topology <version>, first in the run.",
+          "pros": [
+            "Matches ADR-048 wording"
+          ],
+          "cons": [
+            "A manual service deploy can skip it"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "Each api and agent deploy imports its release definitions",
+          "description": "In the provisioned state, before migrate, with a monotonic guard on the messaging version.",
+          "pros": [
+            "Order by construction"
+          ],
+          "cons": [
+            "Departs from ADR-048 wording",
+            "Needs a guard so an old release does not revert policies"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Services declare their queues",
+          "description": "Give services the configure right.",
+          "pros": [
+            "No step"
+          ],
+          "cons": [
+            "Undoes WP-5 T4"
+          ]
+        }
+      ],
+      "status": "decided",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-18",
+      "adr": "ADR-053",
+      "decidedOption": "b",
+      "recommendation": "b",
+      "why": "Ordering by construction beats ordering a manual run can skip; the guard keeps shared topology moving forward only.",
+      "learn": "Ordering by construction, additive infrastructure change, monotonic counter.",
+      "ownerNote": "Answered in the WP-9 explainer dialogue (2026-10-18): B; the anti-rollback guard on the topology version was added by the main session after reading the generator (import overwrites policies)."
+    },
+    {
       "id": "D-85",
       "area": "messaging",
       "title": "Prefetch and dead-letter exchange as built",

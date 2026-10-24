@@ -25,6 +25,8 @@ export { type Database, DRIZZLE, PG_POOL } from "./database/database.tokens.js";
 export {
   journalOrderProblems,
   MIGRATION_CONNECT_TIMEOUT_MS,
+  MIGRATION_LOCK_TIMEOUT_MS,
+  MIGRATION_STATEMENT_TIMEOUT_MS,
   MigrationError,
   type MigrationJournal,
   migrationFolderProblems,

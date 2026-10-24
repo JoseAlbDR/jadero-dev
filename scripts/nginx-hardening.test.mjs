@@ -166,6 +166,121 @@ describe("the first-party analytics paths on new.jadero.dev (ADR-051)", () => {
   });
 });
 
+describe("the maintenance page on new.jadero.dev (WP-9 step 4, ADR-049 Downtime)", () => {
+  const server = readHttpsServer("sites/new.jadero.dev.conf");
+  const all = parseNginx(
+    readFileSync(join(REPO_ROOT, "infra/nginx/sites/new.jadero.dev.conf"), "utf8"),
+  );
+  const page = readFileSync(
+    join(REPO_ROOT, "infra/nginx/www/maintenance/maintenance.html"),
+    "utf8",
+  );
+  const arg = (block, name) => block.find((d) => d.name === name)?.args.join(" ");
+  /** The value a map gives a key, read from the site file's top level. */
+  const mapped = (variable, key) => {
+    const map = all.find((d) => d.name === "map" && d.args[1] === variable);
+    const entry =
+      map?.block.find((d) => d.name === key) ?? map?.block.find((d) => d.name === "default");
+    return entry?.args[0];
+  };
+
+  it("answers 502, 503 and 504 with the page, from an internal location with a static root", () => {
+    const pages = server.block.filter((d) => d.name === "error_page").map((d) => d.args);
+    assert.deepEqual(pages, [["502", "503", "504", "/maintenance.html"]]);
+    const block = selectLocation(server, "/maintenance.html")?.block ?? [];
+    assert.ok(
+      block.some((d) => d.name === "internal"),
+      "a client never asks for it directly",
+    );
+    assert.equal(arg(block, "root"), "/srv/jadero/www/maintenance");
+    assert.equal(arg(block, "proxy_pass"), undefined);
+  });
+
+  it("adds its headers at the server level, with a value only for the page", () => {
+    const added = server.block.filter((d) => d.name === "add_header").map((d) => d.args.join(" "));
+    for (const line of [
+      "Cache-Control $jadero_maintenance_cache_control always",
+      "Content-Security-Policy $jadero_maintenance_csp always",
+      "Retry-After $jadero_maintenance_retry_after always",
+    ]) {
+      assert.ok(added.includes(line), line);
+    }
+    assert.equal(mapped("$jadero_maintenance_cache_control", "/maintenance.html"), "no-store");
+    assert.match(mapped("$jadero_maintenance_csp", "/maintenance.html"), /^default-src 'none';/);
+    assert.equal(mapped("$jadero_maintenance_retry_after", "/maintenance.html:503"), "10");
+    // Empty elsewhere: add_header skips an empty value, so the site keeps web's nonce CSP and the
+    // API keeps its own Cache-Control.
+    for (const variable of [
+      "$jadero_maintenance_cache_control",
+      "$jadero_maintenance_csp",
+      "$jadero_maintenance_retry_after",
+    ]) {
+      assert.equal(mapped(variable, "/"), "", variable);
+    }
+  });
+
+  it("is a static page in plain words, in the three locales, that loads nothing", () => {
+    assert.match(page, /<meta name="robots" content="noindex">/);
+    assert.match(page, /<html lang="en">/);
+    assert.match(page, /<p lang="es">/);
+    assert.match(page, /<p lang="de">/);
+    assert.doesNotMatch(page, /<(script|style|link|img|iframe)\b|\b(src|href)=/i);
+    assert.doesNotMatch(page, /—/, "no em dash");
+  });
+
+  it("answers the content API with problem details, always 503, never the HTML page", () => {
+    const api = selectLocation(server, "/api/v1/content/pages")?.block ?? [];
+    assert.deepEqual(
+      api.filter((d) => d.name === "error_page").map((d) => d.args),
+      [["502", "503", "504", "=503", "/maintenance.problem.json"]],
+    );
+    const block = selectLocation(server, "/maintenance.problem.json")?.block ?? [];
+    assert.ok(block.some((d) => d.name === "internal"));
+    assert.equal(arg(block, "root"), "/srv/jadero/www/maintenance");
+    assert.equal(arg(block, "default_type"), "application/problem+json");
+    // An empty types table, so the .json extension never maps to application/json.
+    assert.deepEqual(block.find((d) => d.name === "types")?.block, []);
+    assert.equal(
+      mapped("$jadero_maintenance_cache_control", "/maintenance.problem.json"),
+      "no-store",
+    );
+    assert.equal(
+      mapped("$jadero_maintenance_csp", "/maintenance.problem.json"),
+      mapped("$jadero_maintenance_csp", "/maintenance.html"),
+    );
+    assert.equal(mapped("$jadero_maintenance_retry_after", "/maintenance.problem.json:503"), "10");
+    const problem = JSON.parse(
+      readFileSync(join(REPO_ROOT, "infra/nginx/www/maintenance/maintenance.problem.json"), "utf8"),
+    );
+    assert.deepEqual(Object.keys(problem), ["type", "title", "status", "detail"]);
+    assert.equal(problem.type, "about:blank");
+    assert.equal(problem.title, "Service Unavailable");
+    assert.equal(problem.status, 503);
+  });
+
+  it("refuses an error_page served by a location that is not internal", () => {
+    const extra = `
+  error_page 502 /oops.html;
+  location = /oops.html { root /srv/jadero/www/oops; }`;
+    assert.deepEqual(check({ sites: { "sites/a.conf": site(extra) } }), [
+      "sites/a.conf:20: error_page /oops.html must be served by an exact, internal location with a root in /srv/jadero/www/",
+    ]);
+    const fine = `
+  error_page 502 /oops.html;
+  location = /oops.html { internal; root /srv/jadero/www/oops; }`;
+    assert.deepEqual(check({ sites: { "sites/a.conf": site(fine) } }), []);
+  });
+
+  it("applies the same rule to an error_page inside a location", () => {
+    const extra = `
+  location = /x/ { error_page 502 /oops.json; return 404; }
+  location = /oops.json { root /srv/jadero/www/oops; }`;
+    assert.deepEqual(check({ sites: { "sites/a.conf": site(extra) } }), [
+      "sites/a.conf:20: error_page /oops.json must be served by an exact, internal location with a root in /srv/jadero/www/",
+    ]);
+  });
+});
+
 describe("selectLocation", () => {
   const [server] = parseNginx(`server {
     location / { a; }

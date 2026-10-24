@@ -8,7 +8,13 @@
 # certificate valid for minutes).
 # A manual run is the dry run: it builds, smoke-tests and scans one service, and never logs in,
 # pushes or attests. Images stay private (ADR-049, registry B): the first push creates each
-# package private and nothing here changes that. The staging deploy arrives with WP-9.
+# package private and nothing here changes that.
+# Then the deploy (WP-9 D8, ADR-049 restating ADR-048's pipeline): deploy-staging runs deploy.yml
+# for each released service, in the order agent, api, web (consumers before producers, the HTTP
+# provider before web), one at a time, a failure stopping the later ones; deploy-production runs
+# the same services with the same versions and digests once every staging deploy succeeded and the
+# owner approved the production environment. If any images leg fails, nothing deploys. A manual
+# dry run never deploys.
 name: release
 
 on:
@@ -25,14 +31,17 @@ on:
 # Nothing by default; each job lists what it needs.
 permissions: {}
 
-# One run at a time per branch and event, never cancelled: a release half done (a tag without its
-# image) is worse than a queued run. A newer pending push run replaces an older pending one, which
-# is safe: release-please reads every commit and every merged Release PR still marked pending, and
-# the images job builds the commit it tagged. The event is in the group so a manual dry run never
-# replaces a pending push run, which would skip release-please for that push.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: false
+# Concurrency is set per job, not for the whole run (WP-9, owner decision of 2026-10-24): a
+# workflow-level group would stay held while deploy-production waits for its approval, and every
+# later release (Release PR update, tags, images, staging) would wait behind it.
+# - release-please: one at a time per branch, never cancelled in progress. A newer pending job
+#   replaces an older pending one, which is safe: release-please reads every commit and every
+#   merged Release PR still marked pending, so the newer run tags what the replaced one would have.
+# - images: no group. Each leg builds and pushes the version its tag names, so legs of two runs
+#   never touch the same tag and can run side by side; nothing ever cancels one, so no tag is left
+#   without its image (a group would let a newer pending leg replace an older one). A manual dry
+#   run pushes nothing.
+# - deploys: deploy.yml's group `deploy-<environment>-<service>` (see there).
 
 jobs:
   # The job's GITHUB_TOKEN opens the Release PR (D11; needs the repository setting "Allow GitHub
@@ -43,6 +52,9 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-release-please
+      cancel-in-progress: false
     permissions:
       contents: write # release branch, tags and GitHub releases
       pull-requests: write # open and update the Release PR
@@ -68,8 +80,9 @@ jobs:
           API_SHA: ${{ steps.release.outputs['apps/api--sha'] }}
           WEB_SHA: ${{ steps.release.outputs['apps/web--sha'] }}
         run: |
-          services="$(jq -c '[.[] | select(IN("apps/agent", "apps/api", "apps/web"))
-            | ltrimstr("apps/")] | sort' <<<"${PATHS_RELEASED:-[]}")"
+          # In deploy order (WP-9 D6): agent consumes what api produces, web reads api's HTTP.
+          services="$(jq -c '. as $released | ["agent", "api", "web"]
+            | map(select(. as $s | $released | index("apps/" + $s)))' <<<"${PATHS_RELEASED:-[]}")"
           shas="$(jq -nc --arg agent "$AGENT_SHA" --arg api "$API_SHA" --arg web "$WEB_SHA" \
             '{agent: $agent, api: $api, web: $web} | with_entries(select(.value != ""))')"
           echo "services=$services" >> "$GITHUB_OUTPUT"
@@ -323,3 +336,131 @@ jobs:
           subject-name: ${{ steps.meta.outputs.image }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
+
+      # The deploy jobs need each leg's version and pushed digest. Outputs of a matrix job overwrite
+      # each other across legs, so each leg uploads its own artifact (`image-<service>`) and the
+      # digests job joins them. The digest is the pushed index, the one attested above and the one
+      # the server reads from RepoDigests after its pull by tag.
+      - name: Record the version and digest
+        if: github.event_name == 'push'
+        env:
+          SERVICE: ${{ matrix.service }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          if ! [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::$SERVICE: the push gave no digest"; exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/image"
+          jq -nc --arg version "$VERSION" --arg digest "$DIGEST" '{version: $version, digest: $digest}' \
+            > "$RUNNER_TEMP/image/$SERVICE.json"
+          echo "$SERVICE: $VERSION is $DIGEST"
+
+      - name: Upload the version and digest
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: image-${{ matrix.service }}
+          path: ${{ runner.temp }}/image/${{ matrix.service }}.json
+          if-no-files-found: error
+          retention-days: 7
+
+  # Joins the legs' artifacts into one output for both deploy jobs: {"api": {"version": "0.3.0",
+  # "digest": "sha256:..."}}. Runs only when every images leg succeeded, so a failed leg deploys
+  # nothing, not even the services whose images were pushed.
+  digests:
+    name: digests
+    needs: [release-please, images]
+    if: github.event_name == 'push' && needs.release-please.outputs.services != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      images: ${{ steps.join.outputs.images }}
+    steps:
+      - name: Download the versions and digests
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: image-*
+          path: ${{ runner.temp }}/images
+          merge-multiple: true
+
+      - name: Join them
+        id: join
+        env:
+          SERVICES: ${{ needs.release-please.outputs.services }}
+        run: |
+          images='{}'
+          for service in $(jq -r '.[]' <<<"$SERVICES"); do
+            case "$service" in agent|api|web) ;; *) echo "::error::unknown service"; exit 1 ;; esac
+            file="$RUNNER_TEMP/images/$service.json"
+            if [ ! -f "$file" ]; then echo "::error::$service: no recorded digest"; exit 1; fi
+            version="$(jq -r .version "$file")"
+            digest="$(jq -r .digest "$file")"
+            if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ && "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "::error::$service: bad version or digest in the artifact"; exit 1
+            fi
+            images="$(jq -c --arg s "$service" --arg v "$version" --arg d "$digest" \
+              '.[$s] = {version: $v, digest: $d}' <<<"$images")"
+          done
+          echo "images=$images" >> "$GITHUB_OUTPUT"
+          echo "To deploy: $images"
+
+  # Staging deploys by itself (D8). max-parallel 1 runs the legs one at a time in the matrix order
+  # (agent, api, web); fail-fast cancels the legs not started yet when one fails, so a producer
+  # never ships after its consumer failed. deploy.yml serializes per environment and service
+  # (each leg's group takes its own service from `with`) and validates every input again. Across
+  # two runs the order is not kept: the group's pending job is replaced by the one queued later,
+  # not by the higher version, so a newer run's leg can get there first. The server then refuses
+  # the older one as not newer, and deploy.yml reports that as green with a notice, so it never
+  # trips fail-fast.
+  deploy-staging:
+    name: deploy-staging (${{ matrix.service }})
+    needs: [release-please, digests]
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: read # the job's token, handed to the server for one pull
+      id-token: write # Tailscale workload identity federation
+      attestations: read # used by a manual deploy only; a called job gets at most the caller's
+    strategy:
+      fail-fast: true
+      max-parallel: 1
+      matrix:
+        service: ${{ fromJSON(needs.release-please.outputs.services) }}
+    # zizmor's self-repository rule is ignored on purpose: for a reusable workflow call GitHub
+    # resolves `./` at the caller's commit, not from the runner's filesystem (a `uses:` job has no
+    # steps or checkout), so `$/` adds nothing here, and actionlint 1.7.12 still rejects `$/`.
+    uses: ./.github/workflows/deploy.yml # zizmor: ignore[self-repository]
+    with:
+      environment: staging
+      service: ${{ matrix.service }}
+      version: ${{ fromJSON(needs.digests.outputs.images)[matrix.service].version }}
+      digest: ${{ fromJSON(needs.digests.outputs.images)[matrix.service].digest }}
+
+  # Production waits for the owner's approval on the production environment, and runs only when
+  # every staging leg succeeded: the same services, versions and digests, so production runs the
+  # bytes staging tested (promotion by digest). The server refuses another digest.
+  deploy-production:
+    name: deploy-production (${{ matrix.service }})
+    needs: [release-please, digests, deploy-staging]
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+      attestations: read
+    strategy:
+      fail-fast: true
+      max-parallel: 1
+      matrix:
+        service: ${{ fromJSON(needs.release-please.outputs.services) }}
+    # zizmor's self-repository rule is ignored on purpose: for a reusable workflow call GitHub
+    # resolves `./` at the caller's commit, not from the runner's filesystem (a `uses:` job has no
+    # steps or checkout), so `$/` adds nothing here, and actionlint 1.7.12 still rejects `$/`.
+    uses: ./.github/workflows/deploy.yml # zizmor: ignore[self-repository]
+    with:
+      environment: production
+      service: ${{ matrix.service }}
+      version: ${{ fromJSON(needs.digests.outputs.images)[matrix.service].version }}
+      digest: ${{ fromJSON(needs.digests.outputs.images)[matrix.service].digest }}

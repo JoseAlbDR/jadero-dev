@@ -20,6 +20,16 @@
  * accepted only from its environment's subnet, and every subnet the file names is a network
  * Postgres joins (the WP-8 mid-WP review).
  *
+ * The servers' service projects, `infra/compose/compose.services.yml` with `compose.staging.yml`
+ * and `compose.prod.yml` (WP-9 step 2; ADR-053, ADR-051 restating ADR-027), keep the runtime rules
+ * above and add their own (`checkServicesHardening`, `checkEnvironmentOverlay`): every image is a
+ * required variable from `versions.env` (a digest reference, never a tag, never a build), every
+ * process type reads its service's rendered env file and blanks the credentials it does not use,
+ * nothing is published by the shared file, an overlay holds only its project name, the ports of
+ * `api` and `web` on 127.0.0.1 and its environment's network as external, and each process type
+ * gets every variable its config requires. `envTemplateProblems` holds `infra/env/<service>.env.tpl`
+ * to 1Password references for every secret, each an item `ops.env.tpl` also provisions.
+ *
  * Run by `scripts/compose-hardening.test.mjs` through `pnpm test:scripts`, so `pnpm verify`. The
  * files are read with the `yaml` package, merge keys on (`<<: *hardened`), as Compose reads them.
  */
@@ -42,6 +52,101 @@ export const COMPOSE_DEV = "infra/compose/compose.dev.yml";
 
 /** Postgres's client authentication file on the servers, relative to the root. */
 export const PG_HBA = "infra/postgres/pg_hba.conf";
+
+/** The services of both server environments, relative to the root. */
+export const COMPOSE_SERVICES = "infra/compose/compose.services.yml";
+
+/** The template of the ops stack's secrets, whose items the service templates reuse. */
+export const OPS_ENV_TEMPLATE = "infra/env/ops.env.tpl";
+
+/** The env template of a service, relative to the root. */
+export const envTemplatePath = (service) => `infra/env/${service}.env.tpl`;
+
+/**
+ * The two server environments (ADR-051 restating ADR-027 "Layout"; WP-9 implementation choices):
+ * the overlay file, the Compose project, the ops network it joins as external, and the only ports
+ * it publishes (staging's are what nginx proxies for new.jadero.dev today).
+ */
+export const ENVIRONMENTS = {
+  staging: {
+    file: "infra/compose/compose.staging.yml",
+    project: "jadero-staging",
+    network: "jadero_staging",
+    ports: { api: "127.0.0.1:3121:3001", web: "127.0.0.1:3120:3000" },
+  },
+  prod: {
+    file: "infra/compose/compose.prod.yml",
+    project: "jadero-prod",
+    network: "jadero_prod",
+    ports: { api: "127.0.0.1:3111:3001", web: "127.0.0.1:3110:3000" },
+  },
+};
+
+/**
+ * The credentials each process type reads (its config schema in `apps/<service>/src/config`); every
+ * other secret of its service's template must be blanked in its `environment`. A process type
+ * missing here is a problem, so a new one states what it may hold.
+ */
+const PROCESS_SECRETS = {
+  api: ["DATABASE_URL", "DATABASE_READ_URL"],
+  "api-worker": ["DATABASE_URL", "RABBITMQ_URL"],
+  "api-migrate": ["DATABASE_URL"],
+  agent: ["DATABASE_URL"],
+  "agent-consumer": ["DATABASE_URL", "RABBITMQ_URL"],
+  "agent-migrate": ["DATABASE_URL"],
+  web: [],
+};
+
+/**
+ * The variables each process type needs with no default in its config schema (`apiEnv`,
+ * `apiWorkerEnv`, `agentEnv`, `agentConsumerEnv`, `telemetryEnv`, the migrate entries' `pick`,
+ * web's `contentApiUrl`), plus the ones whose default is wrong on a server (`SITE_URL`).
+ */
+const REQUIRED_VARIABLES = {
+  api: ["PORT", "DATABASE_URL", "DATABASE_READ_URL", "OTEL_SERVICE_NAME"],
+  "api-worker": ["PORT", "DATABASE_URL", "RABBITMQ_URL", "OTEL_SERVICE_NAME"],
+  "api-migrate": ["DATABASE_URL"],
+  agent: ["PORT", "DATABASE_URL", "OTEL_SERVICE_NAME"],
+  "agent-consumer": ["PORT", "DATABASE_URL", "RABBITMQ_URL", "OTEL_SERVICE_NAME"],
+  "agent-migrate": ["DATABASE_URL"],
+  web: ["CONTENT_API_URL", "SITE_URL"],
+};
+
+/**
+ * Plain values each template must hold on the servers (WP-9 implementation choices): production
+ * mode, info logs, no span exporter until a collector runs there, a one-minute heartbeat, fake AI
+ * providers (AGENTS.md section 7), the enforced CSP (ADR-047).
+ */
+const TEMPLATE_VALUES = {
+  api: {
+    NODE_ENV: "production",
+    LOG_LEVEL: "info",
+    OTEL_TRACES_EXPORTER: "none",
+    HEARTBEAT_INTERVAL_MS: "60000",
+  },
+  agent: {
+    NODE_ENV: "production",
+    LOG_LEVEL: "info",
+    OTEL_TRACES_EXPORTER: "none",
+    AI_CHAT_PROVIDER: "fake",
+    AI_GUARD_PROVIDER: "fake",
+    AI_EMBEDDINGS_PROVIDER: "fake",
+    AI_RERANK_PROVIDER: "fake",
+  },
+  web: { NODE_ENV: "production", CSP_MODE: "enforce" },
+};
+
+/** The only variables an overlay may set in a service's `environment`: never a secret. */
+const OVERLAY_ENVIRONMENT = ["SITE_URL"];
+
+/** A 1Password reference in a service template: an item of the environment, its password field. */
+const SERVICE_REFERENCE = /\{\{ op:\/\/jadero-ops\/([a-z0-9-]+)-\$JADERO_ENV\/password \}\}/g;
+
+/** The required image variable of a service (`${API_IMAGE:?...}`), filled from versions.env. */
+const IMAGE_VARIABLE = /^\$\{([A-Z]+)_IMAGE:\?[^}]+\}$/;
+
+/** The rendered env file of a service, in the environment's folder (`JADERO_ENV` required). */
+const ENV_FILE_PATH = /^\/srv\/jadero\/\$\{JADERO_ENV:\?[^}]+\}\/([a-z]+)\.env$/;
 
 /** The services of the ops stack that must run the same image as in dev. */
 const DEV_PARITY_SERVICES = ["postgres", "rabbitmq"];
@@ -336,6 +441,302 @@ export function checkOpsRepository(root = REPO_ROOT) {
       ...pgHbaProblems(hba, ops),
     ],
   };
+}
+
+/**
+ * Parses an env template (`KEY=value` lines, `#` comments) the way Compose reads an env file.
+ * @param source the template's text.
+ * @returns the comment lines and the entries, each with its line number.
+ */
+export function parseEnvTemplate(source) {
+  const comments = [];
+  const entries = [];
+  source.split("\n").forEach((text, index) => {
+    const line = index + 1;
+    if (/^\s*(#|$)/.test(text)) {
+      if (text.trim() !== "") comments.push({ line, text });
+      return;
+    }
+    const match = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(text);
+    entries.push(
+      match ? { line, name: match[1], value: match[2] } : { line, name: null, value: text },
+    );
+  });
+  return { comments, entries };
+}
+
+/**
+ * The names of the template's variables whose value holds a 1Password reference.
+ * @param template the parsed template (`parseEnvTemplate`).
+ * @returns the secret variables' names.
+ */
+export function secretVariables(template) {
+  return template.entries.filter((e) => e.value.includes("{{")).map((e) => e.name);
+}
+
+/**
+ * Checks a service's env template (ADR-043, WP-9 step 2): every secret is a 1Password reference to
+ * the environment's item (`<item>-$JADERO_ENV`, its `password` field) that `ops.env.tpl` also
+ * provisions for both environments, so a rotation changes one item; no comment holds a reference
+ * (`op inject` resolves those too); no value carries a literal credential; the only interpolation
+ * outside a reference is `${JADERO_ENV}` (Compose resolves any other `$` from the deploy's shell);
+ * and the plain server values are set.
+ * @param template the parsed template (`parseEnvTemplate`).
+ * @param service the service it belongs to (`api`, `agent`, `web`).
+ * @param opsTemplate the text of `ops.env.tpl`.
+ * @param path the template's path, for the messages.
+ * @returns the problems found; empty when the template follows the rules.
+ */
+export function envTemplateProblems(
+  template,
+  service,
+  opsTemplate,
+  path = envTemplatePath(service),
+) {
+  const problems = [];
+  for (const { line, text } of template.comments) {
+    if (/op:\/\/|\{\{/.test(text)) {
+      problems.push(`${path}:${line} holds a secret reference in a comment: op inject resolves it`);
+    }
+  }
+  const values = new Map();
+  for (const { line, name, value } of template.entries) {
+    const at = `${path}:${line}`;
+    if (name === null) {
+      problems.push(`${at} is not a KEY=value line`);
+      continue;
+    }
+    values.set(name, value);
+    const references = [...value.matchAll(SERVICE_REFERENCE)];
+    const rest = value.replace(SERVICE_REFERENCE, "");
+    if (/op:\/\/|\{\{|\}\}/.test(rest)) {
+      problems.push(
+        `${at} ${name}: every reference must read {{ op://jadero-ops/<item>-$JADERO_ENV/password }}`,
+      );
+    }
+    for (const [, item] of references) {
+      for (const env of Object.keys(ENVIRONMENTS)) {
+        if (!opsTemplate.includes(`op://jadero-ops/${item}-${env}/password`)) {
+          problems.push(`${at} ${name}: item ${item}-${env} is not in ${OPS_ENV_TEMPLATE}`);
+        }
+      }
+    }
+    if (/\$(?!\{JADERO_ENV\})/.test(rest)) {
+      problems.push(`${at} ${name}: only \${JADERO_ENV} may be interpolated outside a reference`);
+    }
+    if (/:\/\/[^/@\s]*:[^/@\s]+@/.test(rest)) {
+      problems.push(`${at} ${name} carries a credential in clear: use a 1Password reference`);
+    }
+    if (/(PASSWORD|SECRET|TOKEN|_KEY)$/.test(name) && references.length === 0) {
+      problems.push(`${at} ${name} looks like a secret: use a 1Password reference`);
+    }
+  }
+  for (const [name, expected] of Object.entries(TEMPLATE_VALUES[service] ?? {})) {
+    if (values.get(name) !== expected) {
+      problems.push(`${path}: ${name} must be ${expected} on the servers`);
+    }
+  }
+  return problems;
+}
+
+/**
+ * Checks the servers' shared services file (WP-9 step 2) on top of the runtime rules of
+ * `checkComposeHardening`: each image is its service's required variable, never a build; each
+ * process type reads its service's rendered env file, blanks every secret it does not read and
+ * keeps the ones it does; each joins only its service's profile, so a deploy loads only that
+ * service's env file; nothing is published here (the overlays do) and no network is named;
+ * logs rotate; a long-running process restarts and depends only on its own migrate step.
+ * @param document the parsed `compose.services.yml`.
+ * @param templates the parsed env template of each service, by service name.
+ * @param path the file's path, for the messages.
+ * @returns the problems found; empty when every process type follows the rules.
+ */
+export function checkServicesHardening(document, templates, path = COMPOSE_SERVICES) {
+  const problems = checkComposeHardening(document, path);
+  for (const [name, service] of Object.entries(document?.services ?? {})) {
+    const at = `${path}: ${name}`;
+    const owner = name.split("-")[0];
+    const image = IMAGE_VARIABLE.exec(String(service.image ?? ""));
+    if (!image || image[1] !== owner.toUpperCase()) {
+      problems.push(
+        `${at} must run \${${owner.toUpperCase()}_IMAGE:?...} from versions.env (a digest reference)`,
+      );
+    }
+    if (service.build !== undefined) problems.push(`${at} must not build: servers pull by digest`);
+    const profiles = service.profiles;
+    if (!Array.isArray(profiles) || profiles.length !== 1 || profiles[0] !== owner) {
+      problems.push(
+        `${at} must join only its service's profile (profiles: [${owner}]): deploy.sh activates one`,
+      );
+    }
+    if (service.ports !== undefined) {
+      problems.push(`${at} must not publish ports here: the environment overlays do`);
+    }
+    if (service.networks !== undefined || service.network_mode !== undefined) {
+      problems.push(`${at} must stay on the default network, which each overlay names`);
+    }
+    if (
+      service.logging?.driver !== "local" ||
+      !service.logging?.options?.["max-size"] ||
+      !service.logging?.options?.["max-file"]
+    ) {
+      problems.push(`${at} must rotate its logs (logging: driver local, max-size and max-file)`);
+    }
+    const envFiles = Array.isArray(service.env_file) ? service.env_file : [service.env_file];
+    const envFile = envFiles.length === 1 ? envFiles[0] : undefined;
+    const envPath = typeof envFile === "string" ? envFile : envFile?.path;
+    const file = ENV_FILE_PATH.exec(String(envPath ?? ""));
+    if (!file || file[1] !== owner || envFile?.required === false) {
+      problems.push(
+        `${at} must read only /srv/jadero/\${JADERO_ENV:?...}/${owner}.env, required (env_file)`,
+      );
+    }
+    if (!isOneOff(service)) {
+      if (service.restart !== "unless-stopped") {
+        problems.push(`${at} must set restart: unless-stopped`);
+      }
+      for (const dependency of Object.keys(service.depends_on ?? {})) {
+        if (dependency !== `${owner}-migrate`) {
+          problems.push(`${at} must not depend on ${dependency}: only on its own migrate step`);
+        }
+      }
+    }
+    const allowed = PROCESS_SECRETS[name];
+    if (allowed === undefined) {
+      problems.push(`${at} is a process type with no credential list: add it to PROCESS_SECRETS`);
+      continue;
+    }
+    const environment = service.environment ?? {};
+    for (const secret of secretVariables(templates[owner] ?? { entries: [] })) {
+      const blanked = Object.hasOwn(environment, secret) && environment[secret] === "";
+      if (!allowed.includes(secret) && !blanked) {
+        problems.push(
+          `${at} must blank ${secret} (environment: ${secret}: ""): it does not read it`,
+        );
+      } else if (allowed.includes(secret) && Object.hasOwn(environment, secret)) {
+        problems.push(`${at} must take ${secret} from its env file, not override it`);
+      }
+    }
+  }
+  return problems;
+}
+
+/**
+ * Checks one environment's overlay (WP-9 step 2, ADR-051): its project name; only `api` and `web`
+ * publish, each exactly its port on 127.0.0.1; a service sets nothing but `ports` and the allowed
+ * non-secret variables; the only network is the default one, as the external ops network of the
+ * environment.
+ * @param document the parsed overlay.
+ * @param env the environment (`staging`, `prod`).
+ * @param services the parsed `compose.services.yml`.
+ * @param ops the parsed `compose.ops.yml`.
+ * @returns the problems found; empty when the overlay follows the rules.
+ */
+export function checkEnvironmentOverlay(document, env, services, ops) {
+  const { file, project, network, ports } = ENVIRONMENTS[env];
+  const problems = [];
+  if (document?.name !== project) problems.push(`${file} must name the project ${project}`);
+  for (const key of Object.keys(document ?? {})) {
+    if (!["name", "services", "networks"].includes(key) && !key.startsWith("x-")) {
+      problems.push(`${file} must hold only name, services and networks (found ${key})`);
+    }
+  }
+  const networks = document?.networks ?? {};
+  const opsNetwork = Object.values(ops?.networks ?? {}).some((n) => n?.name === network);
+  if (
+    Object.keys(networks).join() !== "default" ||
+    networks.default?.name !== network ||
+    networks.default?.external !== true
+  ) {
+    problems.push(`${file} must join only ${network}, as the external default network`);
+  } else if (!opsNetwork) {
+    problems.push(`${file} joins ${network}, which ${COMPOSE_OPS} does not create`);
+  }
+  for (const [name, service] of Object.entries(document?.services ?? {})) {
+    const at = `${file}: ${name}`;
+    if (!services?.services?.[name]) problems.push(`${at} is not a service of ${COMPOSE_SERVICES}`);
+    for (const key of Object.keys(service ?? {})) {
+      if (!["ports", "environment"].includes(key)) {
+        problems.push(`${at} must set only ports and environment (found ${key})`);
+      }
+    }
+    for (const variable of Object.keys(service?.environment ?? {})) {
+      if (!OVERLAY_ENVIRONMENT.includes(variable)) {
+        problems.push(`${at} must not set ${variable}: it belongs in the env template`);
+      }
+    }
+    const published = (service?.ports ?? []).map((port) => parsePort(port));
+    const expected = ports[name];
+    if (published.length > 0 && expected === undefined) {
+      problems.push(`${at} publishes a port: only ${Object.keys(ports).join(" and ")} do`);
+    }
+    for (const port of published) {
+      if (port.hostIp !== "127.0.0.1") {
+        problems.push(`${at} publishes ${port.text}: bind it to 127.0.0.1 (ADR-027)`);
+      }
+    }
+    if (expected !== undefined && published.map((p) => p.text).join() !== expected) {
+      problems.push(`${at} must publish exactly ${expected}`);
+    }
+  }
+  for (const [name, port] of Object.entries(ports)) {
+    if (!document?.services?.[name]?.ports) problems.push(`${file}: ${name} must publish ${port}`);
+  }
+  return problems;
+}
+
+/**
+ * Checks that every process type of one environment gets each variable its config requires, from
+ * its env template (unless blanked), its own `environment` or the overlay's.
+ * @param services the parsed `compose.services.yml`.
+ * @param overlay the parsed overlay of the environment.
+ * @param templates the parsed env template of each service, by service name.
+ * @param file the overlay's path, for the messages.
+ * @returns the problems found; empty when nothing is missing.
+ */
+export function missingVariableProblems(services, overlay, templates, file) {
+  const problems = [];
+  for (const [name, service] of Object.entries(services?.services ?? {})) {
+    const owner = name.split("-")[0];
+    const environment = {
+      ...Object.fromEntries((templates[owner]?.entries ?? []).map((e) => [e.name, e.value])),
+      ...(service.environment ?? {}),
+      ...(overlay?.services?.[name]?.environment ?? {}),
+    };
+    for (const variable of REQUIRED_VARIABLES[name] ?? []) {
+      if (!environment[variable]) {
+        problems.push(`${file}: ${name} gets no ${variable}, which its config requires`);
+      }
+    }
+  }
+  return problems;
+}
+
+/**
+ * Reads the servers' services file, both overlays, the env templates and the ops stack, and checks
+ * them together.
+ * @param root the repository root.
+ * @returns the process types checked and the problems found.
+ */
+export function checkServicesRepository(root = REPO_ROOT) {
+  const read = (path) => readFileSync(join(root, path), "utf8");
+  const services = parseComposeYaml(read(COMPOSE_SERVICES));
+  const ops = parseComposeYaml(read(COMPOSE_OPS));
+  const opsTemplate = read(OPS_ENV_TEMPLATE);
+  const owners = [...new Set(Object.keys(services.services ?? {}).map((n) => n.split("-")[0]))];
+  const templates = Object.fromEntries(
+    owners.map((owner) => [owner, parseEnvTemplate(read(envTemplatePath(owner)))]),
+  );
+  const problems = [
+    ...owners.flatMap((owner) => envTemplateProblems(templates[owner], owner, opsTemplate)),
+    ...checkServicesHardening(services, templates),
+  ];
+  for (const [env, { file }] of Object.entries(ENVIRONMENTS)) {
+    const overlay = parseComposeYaml(read(file));
+    problems.push(...checkEnvironmentOverlay(overlay, env, services, ops));
+    problems.push(...missingVariableProblems(services, overlay, templates, file));
+  }
+  return { services: Object.keys(services.services ?? {}).sort(), problems };
 }
 
 /**

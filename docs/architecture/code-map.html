@@ -285,7 +285,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 <script type="application/json" id="map-data">
 {
   "meta": {
-    "lastUpdated": "wp/8-server-preparation · section 12: the server (perimeter, edge, ops stack, convergent provisioning, nightly backups and the restore drill), edge error logs kept three days (ADR-052), 2026-10-18",
+    "lastUpdated": "wp/9-deploy-pipeline · section 13: the deploy (deploy.yml, the deploy.sh state machine, files at the release tag, the guarded topology import, the smoke checks, the maintenance answers), 2026-10-24",
     "kinds": {
       "app": "deployable app", "pkg": "library package", "module": "Nest module", "provider": "provider",
       "token": "DI token", "ext": "external library", "global": "app-level wiring", "env": "environment",
@@ -621,8 +621,8 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
         },
         {
           "type": "cards", "title": "What runs on GitHub (ADR-048, WP-6)",
-          "caption": "Nine required checks guard main: verify, integration, web, workflows-lint, pr-title, osv-scanner / osv-scan, dependency-review, secrets and images (WP-7, required since it first reported on main, ADR-049). Only pull_request triggers, permissions empty by default, actions pinned by SHA, caches saved only on a push to main.",
-          "cards": ["ci-ci", "ci-security", "ci-prtitle", "ci-supply"]
+          "caption": "Nine required checks guard main: verify, integration, web, workflows-lint, pr-title, osv-scanner / osv-scan, dependency-review, secrets and images (WP-7, required since it first reported on main, ADR-049). Only pull_request triggers, permissions empty by default, actions pinned by SHA, caches saved only on a push to main. Since WP-9 deploy.yml runs only when release.yml calls it or the owner starts it by hand, from main (section 13).",
+          "cards": ["ci-ci", "ci-security", "ci-prtitle", "ci-supply", "dp-deploy-yml"]
         }
       ]
     },
@@ -1144,7 +1144,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             { "id": "ex-mig-down", "label": "Database down at deploy", "path": ["db-mig-build", "db-mig-run"],
               "request": "node dist/migrate.js while Postgres does not answer",
               "response": "api: cannot reach its database (DATABASE_URL): ECONNREFUSED\nexit code 1",
-              "note": "The deploy stops; the old version keeps serving. The message names a code, never the URL. Source: packages/platform-nest/src/database/migrations.ts." },
+              "note": "On a server the deploy rolls back to the previous release, which runs on the unchanged schema (section 13). The message names a code, never the URL. Source: packages/platform-nest/src/database/migrations.ts." },
             { "id": "ex-mig-super", "label": "Needs a superuser", "path": ["db-mig-run"],
               "request": "a migration runs CREATE EXTENSION for an untrusted extension, as the service's ordinary role",
               "response": "api: migration failed, nothing applied: permission denied ... (42501)\nthe whole batch rolls back; exit code 1",
@@ -1205,7 +1205,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "id": "ship",
       "eyebrow": "11 · Images and releases",
       "title": "From a merge to a released image",
-      "intro": "Since WP-7 each service ships as one image, and the command picks the process type. The same image runs hardened on a laptop with `pnpm images:up`, is built and scanned on every pull request that affects it, and is released by release-please: one Release PR for every component, then per released service a build, a smoke run, a Trivy scan, a push to GHCR as a private package and a signed build provenance (ADR-049, which supersedes ADR-025 and ADR-048). The staging deploy arrives with WP-9, onto the server of section 12.",
+      "intro": "Since WP-7 each service ships as one image, and the command picks the process type. The same image runs hardened on a laptop with `pnpm images:up`, is built and scanned on every pull request that affects it, and is released by release-please: one Release PR for every component, then per released service a build, a smoke run, a Trivy scan, a push to GHCR as a private package and a signed build provenance (ADR-049, which supersedes ADR-025 and ADR-048). Since WP-9 the same run deploys what it released: staging at once, production after the owner's approval, with the same digests (section 13).",
       "figures": [
         {
           "type": "graph",
@@ -1453,7 +1453,10 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             "r-build",
             "r-smoke-scan",
             "r-push",
-            "r-attest"
+            "r-attest",
+            "r-digests",
+            "r-deploy-staging",
+            "r-deploy-prod"
           ]
         },
         {
@@ -1479,7 +1482,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "id": "server",
       "eyebrow": "12 · Server",
       "title": "The server: perimeter, edge, ops stack and backups",
-      "intro": "Since WP-8 there is one server for staging and production (ADR-050 restating ADR-027): Ubuntu 26.04 on Hetzner, behind a cloud firewall that lets in only 80 and 443, with SSH only over Tailscale. A host nginx is the one way in from the internet; three Compose projects run behind it, `jadero-prod`, `jadero-staging` and `jadero-ops`, and every published port binds to 127.0.0.1. Postgres and RabbitMQ live once, in the ops stack, split per environment by database, role, vhost and user, and are provisioned by convergent scripts that run as often as you like. Every night the server backs itself up off-site and only reports success when every item was saved. The services themselves arrive with the WP-9 deploy, so their boxes are dashed.",
+      "intro": "Since WP-8 there is one server for staging and production (ADR-050 restating ADR-027): Ubuntu 26.04 on Hetzner, behind a cloud firewall that lets in only 80 and 443, with SSH only over Tailscale. A host nginx is the one way in from the internet; three Compose projects run behind it, `jadero-prod`, `jadero-staging` and `jadero-ops`, and every published port binds to 127.0.0.1. Postgres and RabbitMQ live once, in the ops stack, split per environment by database, role, vhost and user, and are provisioned by convergent scripts that run as often as you like. Every night the server backs itself up off-site and only reports success when every item was saved. The service projects are defined since WP-9 and deployed by `deploy.sh` (section 13); their boxes stay dashed until the first real deploy, WP-9 step 6.",
       "figures": [
         {
           "type": "graph",
@@ -1918,6 +1921,568 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
             "sv-backup-check",
             "sv-backup-ci",
             "sv-nginx-ci"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "deploy",
+      "eyebrow": "13 · Deploy",
+      "title": "From a released image to a running environment",
+      "intro": "Since WP-9 a release deploys itself: release.yml calls deploy.yml for each released service, staging at once and production after the owner's approval, with the same digest. The runner reaches the server only over the tailnet, as an ephemeral node, and can run one command there; `deploy.sh` then walks a journaled state machine as root, from files fetched at the release tag (ADR-053). Read the graph as a design review: every arrow crosses a boundary and its label says what travels; the states below say what happens when a piece fails. The code is complete through WP-9 step 5; the first real deploy is step 6, which is why the service boxes of section 12 are still dashed.",
+      "figures": [
+        {
+          "type": "graph",
+          "title": "The deploy path: what crosses each boundary",
+          "viewBox": [
+            1000,
+            560
+          ],
+          "caption": "Click a box to see its arrows. Secrets travel three ways only: the deploy key and host from the GitHub environment to the runner, the job's registry token on SSH standard input, and the service's passwords from 1Password into a root-only env file on the host; none is in a command line, a log or the repo. Everything root runs comes from the hand-installed scripts or from the release tag's commit. The dashed red arrow is the compensating path after the point of no return.",
+          "lanes": [
+            {
+              "x": 8,
+              "y": 10,
+              "w": 984,
+              "h": 200,
+              "label": "outside the host"
+            },
+            {
+              "x": 8,
+              "y": 222,
+              "w": 984,
+              "h": 186,
+              "label": "host · root side, installed by hand"
+            },
+            {
+              "x": 8,
+              "y": 420,
+              "w": 480,
+              "h": 132,
+              "label": "jadero-ops · shared, moves forward only"
+            },
+            {
+              "x": 496,
+              "y": 420,
+              "w": 496,
+              "h": 132,
+              "label": "jadero-<env> · this release"
+            }
+          ],
+          "place": {
+            "dp-release-yml": [
+              24,
+              44,
+              190,
+              56
+            ],
+            "dp-deploy-yml": [
+              270,
+              44,
+              210,
+              56
+            ],
+            "dp-gh-env": [
+              560,
+              44,
+              210,
+              56
+            ],
+            "srv-tailscale": [
+              24,
+              140,
+              190,
+              56
+            ],
+            "dp-ghcr": [
+              450,
+              140,
+              150,
+              56
+            ],
+            "dp-repo": [
+              626,
+              140,
+              160,
+              56
+            ],
+            "srv-op": [
+              806,
+              140,
+              176,
+              56
+            ],
+            "srv-sshd": [
+              24,
+              256,
+              190,
+              56
+            ],
+            "dp-entry": [
+              244,
+              256,
+              170,
+              56
+            ],
+            "dp-sh": [
+              446,
+              256,
+              236,
+              56
+            ],
+            "dp-state": [
+              716,
+              256,
+              260,
+              56
+            ],
+            "srv-nginx": [
+              24,
+              336,
+              190,
+              56
+            ],
+            "dp-smoke": [
+              716,
+              336,
+              260,
+              56
+            ],
+            "srv-postgres": [
+              24,
+              466,
+              200,
+              56
+            ],
+            "srv-rabbit": [
+              256,
+              466,
+              200,
+              56
+            ],
+            "dp-migrate": [
+              512,
+              466,
+              190,
+              56
+            ],
+            "dp-procs": [
+              760,
+              466,
+              216,
+              56
+            ]
+          },
+          "edges": [
+            {
+              "from": "dp-release-yml",
+              "to": "dp-deploy-yml",
+              "label": "env, service, version, digest",
+              "kind": "flow",
+              "labelAt": [
+                242,
+                34
+              ]
+            },
+            {
+              "from": "dp-gh-env",
+              "to": "dp-deploy-yml",
+              "label": "key, host · after approval",
+              "kind": "dep",
+              "labelAt": [
+                520,
+                34
+              ]
+            },
+            {
+              "from": "dp-release-yml",
+              "to": "dp-ghcr",
+              "label": "push · attest",
+              "kind": "flow",
+              "via": [
+                [
+                  119,
+                  120
+                ],
+                [
+                  500,
+                  120
+                ]
+              ],
+              "labelAt": [
+                190,
+                120
+              ]
+            },
+            {
+              "from": "dp-deploy-yml",
+              "to": "dp-ghcr",
+              "label": "manual: verify provenance",
+              "kind": "flow",
+              "labelAt": [
+                565,
+                120
+              ]
+            },
+            {
+              "from": "dp-deploy-yml",
+              "to": "srv-tailscale",
+              "label": "OIDC token",
+              "kind": "flow",
+              "labelAt": [
+                262,
+                156
+              ]
+            },
+            {
+              "from": "srv-tailscale",
+              "to": "srv-sshd",
+              "label": "SSH: words out, journal back",
+              "kind": "flow",
+              "labelAt": [
+                250,
+                216
+              ]
+            },
+            {
+              "from": "srv-sshd",
+              "to": "dp-entry",
+              "label": "forced command",
+              "kind": "flow",
+              "hideLabel": true
+            },
+            {
+              "from": "dp-entry",
+              "to": "dp-sh",
+              "label": "sudo -n · checked words · stdin",
+              "kind": "flow",
+              "hideLabel": true
+            },
+            {
+              "from": "dp-sh",
+              "to": "dp-ghcr",
+              "label": "pull by tag",
+              "kind": "flow",
+              "labelAt": [
+                520,
+                230
+              ]
+            },
+            {
+              "from": "dp-sh",
+              "to": "dp-repo",
+              "label": "fetch tag",
+              "kind": "flow",
+              "labelAt": [
+                660,
+                216
+              ]
+            },
+            {
+              "from": "dp-sh",
+              "to": "srv-op",
+              "label": "op inject",
+              "kind": "flow",
+              "labelAt": [
+                820,
+                216
+              ]
+            },
+            {
+              "from": "dp-sh",
+              "to": "dp-state",
+              "label": "journal · manifests · lock",
+              "kind": "flow",
+              "hideLabel": true
+            },
+            {
+              "from": "dp-sh",
+              "to": "srv-rabbit",
+              "label": "import · user",
+              "kind": "flow",
+              "labelAt": [
+                445,
+                398
+              ]
+            },
+            {
+              "from": "dp-sh",
+              "to": "srv-postgres",
+              "label": "roles",
+              "kind": "flow",
+              "labelAt": [
+                318,
+                398
+              ]
+            },
+            {
+              "from": "dp-sh",
+              "to": "dp-migrate",
+              "label": "run --rm",
+              "kind": "flow",
+              "labelAt": [
+                589,
+                404
+              ]
+            },
+            {
+              "from": "dp-migrate",
+              "to": "srv-postgres",
+              "label": "expand-only · lock_timeout 10 s",
+              "kind": "flow",
+              "via": [
+                [
+                  607,
+                  538
+                ],
+                [
+                  124,
+                  538
+                ]
+              ],
+              "labelAt": [
+                380,
+                538
+              ]
+            },
+            {
+              "from": "dp-sh",
+              "to": "dp-procs",
+              "label": "up --wait",
+              "kind": "flow",
+              "via": [
+                [
+                  700,
+                  420
+                ]
+              ],
+              "labelAt": [
+                732,
+                404
+              ]
+            },
+            {
+              "from": "dp-sh",
+              "to": "dp-smoke",
+              "label": "after healthy",
+              "kind": "flow",
+              "via": [
+                [
+                  700,
+                  324
+                ]
+              ],
+              "hideLabel": true
+            },
+            {
+              "from": "dp-smoke",
+              "to": "dp-procs",
+              "label": "ready · pages · content · ping",
+              "kind": "flow",
+              "labelAt": [
+                880,
+                424
+              ]
+            },
+            {
+              "from": "srv-nginx",
+              "to": "dp-procs",
+              "label": "proxy · maintenance while down",
+              "kind": "flow",
+              "via": [
+                [
+                  119,
+                  412
+                ],
+                [
+                  736,
+                  412
+                ],
+                [
+                  736,
+                  494
+                ]
+              ],
+              "labelAt": [
+                400,
+                412
+              ]
+            },
+            {
+              "from": "dp-smoke",
+              "to": "dp-sh",
+              "label": "fails: roll back",
+              "kind": "throws",
+              "via": [
+                [
+                  700,
+                  350
+                ]
+              ],
+              "labelAt": [
+                600,
+                324
+              ]
+            }
+          ]
+        },
+        {
+          "type": "steps",
+          "title": "One deploy on the server: the states of deploy.sh",
+          "steps": [
+            "dp-st-checked",
+            "dp-st-fetched",
+            "dp-st-rendered",
+            "dp-st-pulled",
+            "dp-st-provisioned",
+            "dp-st-migrated",
+            "dp-st-started",
+            "dp-st-verified",
+            "dp-st-recorded",
+            "dp-st-aborted",
+            "dp-st-rollback"
+          ],
+          "examples": [
+            {
+              "id": "ex-dp-happy",
+              "label": "Deploy api to staging",
+              "path": [
+                "dp-st-checked",
+                "dp-st-fetched",
+                "dp-st-rendered",
+                "dp-st-pulled",
+                "dp-st-provisioned",
+                "dp-st-migrated",
+                "dp-st-started",
+                "dp-st-verified",
+                "dp-st-recorded"
+              ],
+              "request": "ssh deploy@<tailnet-host> deploy staging api 0.3.0\nstdin: <registry user>, <job token>, sha256:<d>",
+              "response": "2026-10-21T09:00:01Z staging api 0.3.0 checked reason=newer\n2026-10-21T09:00:02Z staging api 0.3.0 fetched reason=tag-commit\n2026-10-21T09:00:04Z staging api 0.3.0 rendered reason=ok\n2026-10-21T09:00:31Z staging api 0.3.0 pulled reason=digest-and-revision\n2026-10-21T09:00:35Z staging api 0.3.0 provisioned reason=topology-imported\n2026-10-21T09:00:41Z staging api 0.3.0 migrated reason=ok\n2026-10-21T09:00:52Z staging api 0.3.0 started reason=healthy\n2026-10-21T09:01:20Z staging api 0.3.0 verified reason=smoke-passed\n2026-10-21T09:01:21Z staging api 0.3.0 recorded reason=current\nexit 0",
+              "note": "The same lines appear in `/srv/jadero/staging/deploy.log` and in the job summary. Times are illustrative. Source: docs/learning/wp-9.md, Trace 1."
+            },
+            {
+              "id": "ex-dp-op",
+              "label": "1Password down",
+              "path": [
+                "dp-st-checked",
+                "dp-st-fetched",
+                "dp-st-rendered",
+                "dp-st-aborted"
+              ],
+              "request": "deploy staging api 0.3.0, op cannot reach 1Password",
+              "response": "2026-10-21T09:00:01Z staging api 0.3.0 checked reason=newer\n2026-10-21T09:00:02Z staging api 0.3.0 fetched reason=tag-commit\n2026-10-21T09:00:05Z staging api 0.3.0 aborted reason=op-exit-1\nexit 1",
+              "note": "Nothing shared moved and `api.env.new` is gone; 0.2.0 keeps serving. Rerun later."
+            },
+            {
+              "id": "ex-dp-digest",
+              "label": "Tag moved",
+              "path": [
+                "dp-st-checked",
+                "dp-st-fetched",
+                "dp-st-rendered",
+                "dp-st-pulled",
+                "dp-st-aborted"
+              ],
+              "request": "deploy prod api 0.3.0 with stdin digest sha256:<d>, but the tag now points at another image",
+              "response": "2026-10-21T09:10:01Z prod api 0.3.0 checked reason=newer\n2026-10-21T09:10:02Z prod api 0.3.0 fetched reason=tag-commit\n2026-10-21T09:10:04Z prod api 0.3.0 rendered reason=ok\n2026-10-21T09:10:30Z prod api 0.3.0 aborted reason=digest-mismatch\nexit 1",
+              "note": "Production only runs the digest staging tested. Before the point of no return, so production keeps its version."
+            },
+            {
+              "id": "ex-dp-unhealthy",
+              "label": "New release unhealthy",
+              "path": [
+                "dp-st-checked",
+                "dp-st-fetched",
+                "dp-st-rendered",
+                "dp-st-pulled",
+                "dp-st-provisioned",
+                "dp-st-migrated",
+                "dp-st-started",
+                "dp-st-rollback"
+              ],
+              "request": "deploy staging api 0.3.0, the new api exits on a config error",
+              "response": "2026-10-21T09:00:01Z staging api 0.3.0 checked reason=newer\n2026-10-21T09:00:35Z staging api 0.3.0 provisioned reason=topology-imported\n2026-10-21T09:00:41Z staging api 0.3.0 migrated reason=ok\n2026-10-21T09:02:41Z staging api 0.3.0 rolling_back reason=unhealthy\n2026-10-21T09:02:50Z staging api 0.3.0 rolled_back reason=previous-healthy\nexit 1",
+              "note": "Lines between checked and provisioned left out. The migration stays applied and 0.2.0 runs on it, because it was expand-only; the topology and the rendered env stay too (shared state moves forward)."
+            },
+            {
+              "id": "ex-dp-topology",
+              "label": "Older topology",
+              "path": [
+                "dp-st-checked",
+                "dp-st-fetched",
+                "dp-st-rendered",
+                "dp-st-pulled",
+                "dp-st-provisioned",
+                "dp-st-migrated",
+                "dp-st-started",
+                "dp-st-verified",
+                "dp-st-recorded"
+              ],
+              "request": "deploy staging api 0.3.1 (messaging 0.3.0) after an agent deploy imported messaging 0.3.1",
+              "response": "2026-10-21T09:00:01Z staging api 0.3.1 checked reason=newer\n2026-10-21T09:00:35Z staging api 0.3.1 provisioned reason=topology-skipped-older\n2026-10-21T09:01:21Z staging api 0.3.1 recorded reason=current\nexit 0",
+              "note": "Lines in between left out. The broker keeps the newer policies; `MESSAGING_VERSION` stays 0.3.1. Source: packages/messaging/test/topology-import.int.test.ts."
+            },
+            {
+              "id": "ex-dp-older",
+              "label": "Older version",
+              "path": [
+                "dp-st-checked"
+              ],
+              "request": "deploy staging api 0.2.0 while 0.3.0 runs",
+              "response": "2026-10-21T09:00:01Z staging api 0.2.0 refused reason=not-newer\nexit 1",
+              "note": "A manual run shows it as an error (going back is `rollback`); a call from release.yml ends green with a notice, because a newer release got there first."
+            },
+            {
+              "id": "ex-dp-rollback",
+              "label": "Rollback by hand",
+              "path": [
+                "dp-st-checked",
+                "dp-st-started",
+                "dp-st-verified",
+                "dp-st-recorded"
+              ],
+              "request": "deploy.yml workflow_dispatch: rollback, production, api\nssh deploy@<tailnet-host> rollback prod api",
+              "response": "2026-10-21T09:30:01Z prod api 0.2.0 checked reason=previous-recorded\n2026-10-21T09:30:12Z prod api 0.2.0 started reason=healthy\n2026-10-21T09:30:15Z prod api 0.2.0 verified reason=smoke-passed\n2026-10-21T09:30:15Z prod api 0.2.0 recorded reason=rolled-back-once\nexit 0",
+              "note": "No fetch, no render, no pull: the previous release's files, image and env are on disk (static stability). `previous.env` is cleared, so a second rollback is `refused reason=no-previous`."
+            },
+            {
+              "id": "ex-dp-busy",
+              "label": "Another deploy runs",
+              "path": [
+                "dp-st-checked"
+              ],
+              "request": "deploy staging web 0.4.0 while api's deploy holds the staging lock",
+              "response": "busy: another deploy runs on staging   (stderr, no journal line)\nexit 75",
+              "note": "Nothing was touched. deploy.yml says so; rerun the job once the other one ends."
+            }
+          ]
+        },
+        {
+          "type": "steps",
+          "title": "One deploy job (deploy.yml)",
+          "steps": [
+            "dj-inputs",
+            "dj-resolve",
+            "dj-tailnet",
+            "dj-ssh",
+            "dj-result"
+          ]
+        },
+        {
+          "type": "cards",
+          "title": "What the deploy rests on (WP-9, ADR-053)",
+          "caption": "The files the server fetches at the release tag, the rules that keep a rollback safe, and the tests that hold them.",
+          "cards": [
+            "dc-compose",
+            "dc-env-tpl",
+            "dc-topology",
+            "dc-forward",
+            "dc-timeouts",
+            "dc-maintenance",
+            "dc-concurrency",
+            "sh-release-inputs",
+            "dc-tests"
           ]
         }
       ]
@@ -2466,7 +3031,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "c-verify": {
       "label": "pnpm verify", "sub": "turbo run lint:check depcruise typecheck test test:scripts --affected && pnpm check:migrations", "kind": "check", "status": "real", "wp": "WP-1, WP-6, WP-7, WP-8",
       "what": "The single \"am I done\" command, run before every commit and again after merging main.",
-      "how": "Turborepo runs Biome, dependency-cruiser, typecheck, unit tests with coverage and the script tests for affected packages only, cached; then `pnpm check:migrations` runs outside Turborepo, because its input is git history, which no cache key sees. `pnpm verify:all` runs everything (on main and in CI on a push to main and weekly). The lefthook `pre-push` hook fetches main and runs `pnpm verify`, so a red verify never reaches the remote; CI's `verify` job runs it again on the pull request. Since WP-7 `test:scripts` also runs the image checks of section 11: the Compose hardening, the base image pin and the staleness of each `release-inputs.txt`. Since WP-8 it also runs the server checks of section 12: the ops stack and `pg_hba.conf` rules, the nginx hardening, the deploy forced command and the backup scripts' static rules. The Biome task is `lint:check`, not `lint`: pnpm 11 runs a built-in command when you type `pnpm lint`, so the script by that name never ran.",
+      "how": "Turborepo runs Biome, dependency-cruiser, typecheck, unit tests with coverage and the script tests for affected packages only, cached; then `pnpm check:migrations` runs outside Turborepo, because its input is git history, which no cache key sees. `pnpm verify:all` runs everything (on main and in CI on a push to main and weekly). The lefthook `pre-push` hook fetches main and runs `pnpm verify`, so a red verify never reaches the remote; CI's `verify` job runs it again on the pull request. Since WP-7 `test:scripts` also runs the image checks of section 11: the Compose hardening, the base image pin and the staleness of each `release-inputs.txt`. Since WP-8 it also runs the server checks of section 12: the ops stack and `pg_hba.conf` rules, the nginx hardening, the deploy forced command and the backup scripts' static rules. Since WP-9 also the deploy itself (section 13): `deploy.sh` through every state against stubs, the smoke and topology import scripts, and the services' server Compose files. The Biome task is `lint:check`, not `lint`: pnpm 11 runs a built-in command when you type `pnpm lint`, so the script by that name never ran.",
       "why": "One command, one answer (AGENTS.md section 3).",
       "files": ["package.json", "turbo.json", "scripts/check-migrations.mjs"]
     },
@@ -3292,8 +3857,8 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "db-mig-run": {
       "label": "pnpm db:migrate", "sub": "node dist/migrate.js · runMigrations", "kind": "step", "status": "real", "wp": "WP-10 step 3",
       "what": "The one-off migrate step: applies every pending migration to the service's own database, then exits.",
-      "how": "Reads only `DATABASE_URL`. `runMigrations` checks the folder (journal shape and order, every SQL file listed), opens a pool of one connection, fails fast when `SELECT 1` does not answer within 5 s, then runs Drizzle's `migrate()`, all pending migrations in one transaction, and closes the pool. Any failure is a `MigrationError` whose message carries an error code, never the URL, and exit code 1.",
-      "why": "WP-10 D2: never at boot. The deploy (WP-9) runs it once and starts the new version only on exit 0, so a failed migration leaves the old version serving. Runs as an ordinary role, never a superuser.",
+      "how": "Reads only `DATABASE_URL`. `runMigrations` checks the folder (journal shape and order, every SQL file listed), opens a pool of one connection, fails fast when `SELECT 1` does not answer within 5 s, then runs Drizzle's `migrate()`, all pending migrations in one transaction, and closes the pool. Since WP-9 the migrate session, and only it, starts with `lock_timeout` 10 s and `statement_timeout` 60 s (`MIGRATION_LOCK_TIMEOUT_MS`, `MIGRATION_STATEMENT_TIMEOUT_MS`): a migration queued behind a long transaction fails with 55P03 and rolls back instead of holding the deploy, and every query queued behind its lock. Any failure is a `MigrationError` whose message carries an error code, never the URL, and exit code 1.",
+      "why": "WP-10 D2: never at boot. The deploy (section 13) runs it once, under its own 120 s limit, and starts the new version only on exit 0; a failure rolls back to the previous release, which runs on the unchanged schema. Runs as an ordinary role, never a superuser. The service's runtime pool never gets these timeouts.",
       "files": ["apps/api/src/migrate.ts", "apps/agent/src/migrate.ts", "packages/platform-nest/src/database/migrations.ts", "apps/api/test/migrations.int.test.ts"]
     },
     "db-mig-boot": {
@@ -3320,7 +3885,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "db-d-d2": {
       "label": "D2 · one-off migrate step", "sub": "per service, never at boot", "kind": "rule", "status": "real", "wp": "WP-10",
       "what": "Each service owns its `drizzle/` folder and applies it only to its own database, in a step that runs before the new version starts.",
-      "how": "`node dist/migrate.js` in the deploy, `pnpm db:migrate` in development; a failure exits 1 and stops the deploy.",
+      "how": "`node dist/migrate.js` in the deploy, `pnpm db:migrate` in development; a failure exits 1, and on a server the deploy rolls back to the previous release (section 13).",
       "why": "Migrations at boot race between replicas and turn a bad migration into a crash loop; one shared set would break database per service.",
       "files": ["apps/api/src/migrate.ts", "packages/platform-nest/src/database/migrations.ts"]
     },
@@ -3699,15 +4264,15 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "label": "Release PR", "sub": "release-please · one PR for all", "kind": "step", "status": "real", "wp": "WP-7",
       "what": "release-please opens or updates one combined Release PR with each component's next version and changelog.",
       "how": "Runs with the job's `GITHUB_TOKEN` (`contents`, `pull-requests` and `issues: write` on that job only), which needs the repository setting that lets Actions create pull requests. A pull request opened by that token starts no workflow, so its checks may need one approval click; a GitHub App replaces the token if that does not work.",
-      "why": "ADR-049 release token A, B as the fallback; never a classic token. The concurrency group never cancels a release run: a tag without its image is worse than a queued run.",
+      "why": "ADR-049 release token A, B as the fallback; never a classic token. Since WP-9 concurrency is set per job: release-please runs one at a time per branch and is never cancelled in progress (a newer pending run replaces an older pending one, which is safe: it reads every commit), the images legs have no group (each pushes its own tag) and the deploys use deploy.yml's group. A run-wide group would stay held while production waits for its approval.",
       "files": [".github/workflows/release.yml"]
     },
     "r-tags": {
       "label": "Merge: tags and versions", "sub": "<component>-v<version>", "kind": "step", "status": "real", "wp": "WP-7",
       "what": "Merging the Release PR tags each released component and sets its `package.json` version.",
-      "how": "release-please's `paths_released` output is filtered to the apps that ship an image (`apps/agent`, `apps/api`, `apps/web`); the `images` job runs once per released service in a matrix. The manifest starts at 0.0.0 with `initial-version` 0.1.0.",
+      "how": "release-please's `paths_released` output is filtered to the apps that ship an image and put in deploy order, agent, api, web (WP-9 D6: consumers before producers, the HTTP provider before web); the `images` job runs once per released service in a matrix. The manifest starts at 0.0.0 with `initial-version` 0.1.0.",
       "why": "Tags `<component>-v<version>` and one version per service (ADR-025, restated by ADR-049). Its tags start no workflow either, so the image job lives in the same workflow, after release-please.",
-      "files": [".github/workflows/release.yml",".release-please-manifest.json"]
+      "files": [".github/workflows/release.yml", ".release-please-manifest.json"]
     },
     "r-build": {
       "label": "Build once", "sub": "loaded into the runner's Docker", "kind": "step", "status": "real", "wp": "WP-7",
@@ -3734,7 +4299,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "label": "Attest the provenance", "sub": "SLSA · keyless Sigstore", "kind": "step", "status": "real", "wp": "WP-7",
       "what": "A signed SLSA build provenance for the pushed digest, stored with the image.",
       "how": "`actions/attest` turns the job's OIDC token (`id-token: write`) into a Sigstore certificate valid for minutes and signs the provenance; anyone with access verifies it with `gh attestation verify oci://<image>:<version> --owner JoseAlbDR`. A manual run is the dry run: build, smoke and scan one service, never log in, push or attest.",
-      "why": "ADR-049 provenance: proof of which workflow and commit built the image, with no long-lived signing key to store. The staging deploy after this step arrives with WP-9.",
+      "why": "ADR-049 provenance: proof of which workflow and commit built the image, with no long-lived signing key to store. A manual deploy checks it before it sends a digest (section 13).",
       "files": [".github/workflows/release.yml"]
     },
     "sh-ci-images": {
@@ -3755,8 +4320,8 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "label": "Compose hardening test", "sub": "scripts/compose-hardening.mjs", "kind": "check", "status": "real", "wp": "WP-7",
       "what": "Fails when a service of `compose.images.yml` loses its hardening or gains a privilege.",
       "how": "Reads the file with the `yaml` package, merge keys on, as Compose does. Every service: read-only, all capabilities dropped, no new privileges, a size-capped `/tmp`, a memory limit, ports on 127.0.0.1. None: `privileged`, `cap_add`, root, host network, PID or IPC, the Docker socket. A long-running service: heap plus every tmpfs at most 80% of `mem_limit`, and it depends on its own migrate step; a migrate never restarts and has no healthcheck. Runs in `pnpm test:scripts`, so in `pnpm verify`.",
-      "why": "A fitness function, like dependency-cruiser for imports: the rules hold by test, not by review. Since WP-8 the same file checks the server's ops stack too (section 12).",
-      "files": ["scripts/compose-hardening.mjs","scripts/compose-hardening.test.mjs"]
+      "why": "A fitness function, like dependency-cruiser for imports: the rules hold by test, not by review. Since WP-8 the same file checks the server's ops stack (section 12), and since WP-9 the services' server files too (section 13): image variables as digests, env files, blanked credentials, 127.0.0.1 binds on the agreed ports, no published worker port, only the environment's external network.",
+      "files": ["scripts/compose-hardening.mjs", "scripts/compose-hardening.test.mjs"]
     },
     "sh-baseimage": {
       "label": "Base image pin test", "sub": "scripts/docker-base-image.mjs", "kind": "check", "status": "real", "wp": "WP-7",
@@ -3773,11 +4338,11 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
       "files": ["release-please-config.json",".release-please-manifest.json","docs/adr/0049-images-release-and-image-scanning.md"]
     },
     "sh-release-inputs": {
-      "label": "release-inputs.txt", "sub": "pnpm release-inputs · staleness test", "kind": "check", "status": "real", "wp": "WP-7",
-      "what": "Each service's production dependency closure, one `name@version` per line, type packages left out, so a dependency-only change releases the services it reaches.",
-      "how": "`scripts/release-inputs.mjs` reads only `pnpm-lock.yaml` (offline, deterministic), follows `dependencies` and `optionalDependencies` from each app and leaves workspace packages out (the plugin covers them). `pnpm release-inputs` rewrites `apps/{api,agent,web}/release-inputs.txt`; a stale file fails `pnpm verify`.",
-      "why": "ADR-049 dependency-only releases B: release-please attributes a commit only by the files it touches, and a catalog or lockfile change touches none of a service's. A generated file with a staleness test. The hosted Renovate runs no repository commands, so a dependency pull request runs the command by hand.",
-      "files": ["scripts/release-inputs.mjs","scripts/release-inputs.test.mjs","apps/api/release-inputs.txt","apps/agent/release-inputs.txt","apps/web/release-inputs.txt"]
+      "label": "release-inputs.txt", "sub": "pnpm release-inputs · dependencies and deploy files", "kind": "check", "status": "real", "wp": "WP-7",
+      "what": "Each service's production dependency closure, one `name@version` per line, type packages left out, plus since WP-9 a hash of its deploy files, so a dependency-only change or a deploy-file change releases exactly the services it reaches.",
+      "how": "`scripts/release-inputs.mjs` reads only `pnpm-lock.yaml` and the deploy files (offline, deterministic), follows `dependencies` and `optionalDependencies` from each app and leaves workspace packages out (the plugin covers them). The deploy files (ADR-053) are the service's own entries in the servers' Compose files, hashed after YAML parsing so a comment or another service's entry changes nothing, its env template, `smoke-deploy.sh`, and for api and agent `provision.sql`, `provision-users.sh`, `import-definitions.sh`, `permissions.tsv` and every topology definition. `pnpm release-inputs` rewrites `apps/{api,agent,web}/release-inputs.txt`; a stale file fails `pnpm verify`.",
+      "why": "ADR-049 dependency-only releases B, and ADR-053: release-please attributes a commit only by the files it touches, and neither a lockfile change nor `infra/` belongs to a service's component, yet the server fetches `infra/` at the service's release tag. A generated file with a staleness test. The hosted Renovate runs no repository commands, so a dependency pull request runs the command by hand.",
+      "files": ["scripts/release-inputs.mjs", "scripts/release-inputs.test.mjs", "apps/api/release-inputs.txt", "apps/agent/release-inputs.txt", "apps/web/release-inputs.txt"]
     },
     "sh-image-scan": {
       "label": "Weekly image scan", "sub": "security.yml · released images", "kind": "check", "status": "real", "wp": "WP-7",
@@ -3824,16 +4389,16 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "srv-tailscale": {
       "label": "Tailscale", "sub": "SSH only · policy with tests", "kind": "ext", "status": "real", "wp": "WP-8 step 2",
       "what": "The only way to SSH into the server, and to reach the admin screens of Umami, Uptime Kuma and RabbitMQ through a tunnel.",
-      "how": "The server node carries `tag:server`; the policy grants tailnet members the SSH port on it and nothing else, and its tests make Tailscale refuse a policy change that opens another port or cuts the owner's SSH. Tailscale needs no inbound port. Tailscale SSH stays off, because the deploy key's forced command lives in `authorized_keys`. WP-9 adds a grant for the CI runner's tag.",
+      "how": "The server node carries `tag:server`; the policy grants tailnet members the SSH port on it and nothing else, and its tests make Tailscale refuse a policy change that opens another port or cuts the owner's SSH. Tailscale needs no inbound port. Tailscale SSH stays off, because the deploy key's forced command lives in `authorized_keys`. WP-9 adds a grant from `tag:ci`, the ephemeral node a deploy job joins as through workload identity federation (section 13), to the SSH port only.",
       "why": "No SSH on the public interface at all. Policy as code with tests, applied make before break.",
       "files": ["docs/runbooks/server-access.md"]
     },
     "srv-nginx": {
       "label": "host nginx 1.28", "sub": "certbot · one vhost per name", "kind": "file", "status": "real", "wp": "WP-8 step 5",
       "what": "The edge: TLS, security headers, rate limits and allowlist routing for every jadero.dev host on the server.",
-      "how": "The repo owns `nginx.conf` (TLS 1.2 and 1.3, no version, a 1 MiB body limit, the `jadero_api` rate limit zone answering 429), three snippets (security headers, proxy headers, API limits) and one file per host. Each host proxies only its public paths to a port on 127.0.0.1 and answers 404 to everything else: the staging host serves web and the public content API, the status host only the public status page, the admin host a placeholder. A catch-all default server refuses a TLS handshake for any other name. The `jadero` log format keeps only the client's network (a /24 or /48), never the address in clear or the query string. The error log cannot be shaped that way (it writes the client address and the request line), so each jadero site writes its own under `/var/log/nginx/jadero/`, kept three days by its own logrotate rule (ADR-052). Certificates come from certbot, one per host, with a deploy hook that reloads nginx.",
+      "how": "The repo owns `nginx.conf` (TLS 1.2 and 1.3, no version, a 1 MiB body limit, the `jadero_api` rate limit zone answering 429), three snippets (security headers, proxy headers, API limits) and one file per host. Each host proxies only its public paths to a port on 127.0.0.1 and answers 404 to everything else: the staging host serves web and the public content API, the status host only the public status page, the admin host a placeholder. A catch-all default server refuses a TLS handshake for any other name. The `jadero` log format keeps only the client's network (a /24 or /48), never the address in clear or the query string. The error log cannot be shaped that way (it writes the client address and the request line), so each jadero site writes its own under `/var/log/nginx/jadero/`, kept three days by its own logrotate rule (ADR-052). Certificates come from certbot, one per host, with a deploy hook that reloads nginx. Since WP-9, while a deploy recreates a service, the staging host answers the 502, 503 and 504 nginx generates with a static maintenance page, and the content API with a 503 problem details body (section 13).",
       "why": "ADR-002, ADR-047's edge part, ADR-050 and ADR-052. Allowlist routing means a new internal route is unreachable from outside until someone adds it on purpose.",
-      "files": ["infra/nginx/nginx.conf", "infra/nginx/snippets/", "infra/nginx/sites/", "infra/logrotate/jadero-nginx", "infra/nginx/README.md"]
+      "files": ["infra/nginx/nginx.conf", "infra/nginx/snippets/", "infra/nginx/sites/", "infra/nginx/www/maintenance/", "infra/logrotate/jadero-nginx", "infra/nginx/README.md"]
     },
     "srv-backup": {
       "label": "backup.sh", "sub": "systemd timer · nightly · restic", "kind": "step", "status": "real", "wp": "WP-8 step 6",
@@ -3851,24 +4416,24 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     },
     "srv-deploy": {
       "label": "deploy user", "sub": "forced command", "kind": "step", "status": "real", "wp": "WP-8 step 3",
-      "what": "The user WP-9's deploy job logs in as. It can do one thing: run `deploy.sh` with a checked environment, service and version.",
-      "how": "One key in `authorized_keys` with `restrict`, a `from=` limited to tailnet addresses and `command=` set to `/srv/jadero/bin/deploy-entry`. sshd runs that wrapper whatever the client asks; it accepts exactly `deploy <env> <service> <version>` (allowlists, `LC_ALL=C` so the checks are ASCII bytes), never hands the input to a shell and logs only accepted or refused with a reason. One sudoers rule names `deploy.sh`, which checks the arguments again and, in WP-8, only prints what it would do. The user is in neither `docker` nor `sudo`.",
-      "why": "WP-8 D3 and ADR-049: the deploy key sits in GitHub's secrets, so a leaked key must not mean a leaked server. Defense in depth: two copies of the checks, no shared file both trust.",
+      "what": "The user the deploy job logs in as. It can do one thing: run `deploy.sh` with a checked verb, environment, service and version.",
+      "how": "One key per environment in `authorized_keys`, each with `restrict`, a `from=` limited to tailnet addresses and `command=\"/srv/jadero/bin/deploy-entry <env>\"`, so the key line binds its environment (WP-9 D2). sshd runs that wrapper whatever the client asks; it accepts exactly `deploy <env> <service> <version>` or `rollback <env> <service>` (allowlists, `LC_ALL=C` so the checks are ASCII bytes), never hands the input to a shell and logs only accepted or refused with a reason. One sudoers rule names `deploy.sh`, which checks the words again and runs the deploy (section 13). The user is in neither `docker` nor `sudo`.",
+      "why": "WP-8 D3 and ADR-049: the deploy keys sit in GitHub's secrets, so a leaked key must not mean a leaked server, and a leaked staging key must not reach production. Defense in depth: two copies of the checks, no shared file both trust.",
       "files": ["infra/scripts/deploy-entry", "infra/scripts/deploy.sh", "scripts/deploy-entry.test.mjs", "docs/runbooks/server-access.md"]
     },
     "srv-staging": {
       "label": "staging services", "sub": "web · api · agent · workers", "kind": "app", "status": "planned", "wp": "WP-9",
       "what": "The images of section 11 running as `jadero-staging`, on the network `jadero_staging` only.",
-      "how": "Arrives with the WP-9 deploy. Each process reaches Postgres as its `<service>_staging` role and RabbitMQ as its `<service>_staging` user on vhost `/staging`; web and api publish their ports on 127.0.0.1 for nginx.",
+      "how": "Defined by `infra/compose/compose.services.yml` under `compose.staging.yml` and deployed by `deploy.sh` (section 13); the first real deploy is WP-9 step 6. Each process reaches Postgres as its `<service>_staging` role and RabbitMQ as its `<service>_staging` user on vhost `/staging`; web and api publish their ports on 127.0.0.1 (3120 and 3121) for nginx.",
       "why": "ADR-029 and ADR-050: one network per environment, so staging cannot reach production's roles even with a wrong URL.",
-      "files": ["docs/adr/0050-server-internal-traffic-and-backup-destination.md"]
+      "files": ["infra/compose/compose.services.yml", "infra/compose/compose.staging.yml", "docs/adr/0050-server-internal-traffic-and-backup-destination.md"]
     },
     "srv-prod": {
       "label": "prod services", "sub": "web · api · agent · workers", "kind": "app", "status": "planned", "wp": "WP-9, WP-29",
       "what": "The same images as `jadero-prod`, on the network `jadero_prod` only.",
-      "how": "Deployed by WP-9; the public `jadero.dev` host file and its routes arrive with the cutover (WP-29). Roles and users named `<service>_prod`, vhost `/prod`.",
+      "how": "The same `compose.services.yml` under `compose.prod.yml`, deployed by `deploy.sh` after the owner's approval (section 13), web and api on 127.0.0.1 3110 and 3111; the public `jadero.dev` host file and its routes arrive with the cutover (WP-29). Roles and users named `<service>_prod`, vhost `/prod`.",
       "why": "Staging and production share one Postgres and one broker, split by name and network, within ADR-027's memory budget.",
-      "files": ["docs/adr/0027-hosting-layout.md"]
+      "files": ["infra/compose/compose.services.yml", "infra/compose/compose.prod.yml", "docs/adr/0027-hosting-layout.md"]
     },
     "srv-postgres": {
       "label": "Postgres 18 + pgvector", "sub": "a database and role per service", "kind": "ext", "status": "real", "wp": "WP-8 step 4",
@@ -3880,7 +4445,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "srv-rabbit": {
       "label": "RabbitMQ 4", "sub": "vhosts /prod and /staging", "kind": "ext", "status": "real", "wp": "WP-8 step 4",
       "what": "The one broker of the server, with the same topology on `/prod` and `/staging` and a user per service and environment.",
-      "how": "Boots with `infra/rabbitmq/server/rabbitmq.conf`, which loads the per-vhost definitions generated from `packages/messaging/src/topology` (exchanges, queues, policies, no users). `provision-users.sh` then converges the users from `permissions.tsv` (card below). Its management UI binds to 127.0.0.1 and is reached over the tunnel as `ops_admin`. Joins only the prod and staging networks: nothing on the ops network speaks AMQP.",
+      "how": "Boots with `infra/rabbitmq/server/rabbitmq.conf`, which loads the per-vhost definitions generated from `packages/messaging/src/topology` (exchanges, queues, policies, no users). Since WP-9 each api and agent deploy also imports its release's definitions into the running broker (section 13). `provision-users.sh` converges the users from `permissions.tsv` (card below). Its management UI binds to 127.0.0.1 and is reached over the tunnel as `ops_admin`. Joins only the prod and staging networks: nothing on the ops network speaks AMQP.",
       "why": "ADR-029 and WP-5 T4: the topology lives in code, services cannot declare or delete anything.",
       "files": ["infra/compose/compose.ops.yml", "infra/rabbitmq/server/rabbitmq.conf", "infra/rabbitmq/server/definitions/"]
     },
@@ -3978,14 +4543,14 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "sv-pg-provision": {
       "label": "provision.sql", "sub": "convergent Postgres provisioning", "kind": "check", "status": "real", "wp": "WP-8 step 4a",
       "what": "One psql script that creates and sets every role, database, grant and extension for `env=dev`, `staging`, `prod` or `ops`.",
-      "how": "Run as the superuser over the socket. A role or database is created only when missing; attributes, passwords, owners, grants, the read-only default and `vector` in `agent_<env>` are set again on every run. Names carry the environment (`content_prod`), because roles are cluster-wide. Passwords come from psql's environment, never its argv; a missing one stops the run before any change, naming the variable. Statement logging is off for the session, so no password reaches the server log. The dev container runs it on first boot and `@jadero/testing` runs it in every integration test container.",
+      "how": "Run as the superuser over the socket. A role or database is created only when missing; attributes, passwords, owners, grants, the read-only default and `vector` in `agent_<env>` are set again on every run. Names carry the environment (`content_prod`), because roles are cluster-wide. Passwords come from psql's environment, never its argv; a missing one stops the run before any change, naming the variable. Statement logging is off for the session, so no password reaches the server log. The dev container runs it on first boot and `@jadero/testing` runs it in every integration test container. Since WP-9 `-v service=<api|agent|contact>` narrows a run to one service's roles and database, needing only that service's passwords; a deploy passes its own, so it never re-passwords another service's role behind its back.",
       "why": "WP-8 D4: one script for dev, tests and servers, so the tests prove what the server gets. Convergent, so a rotation or a half-finished run is fixed by running it again.",
       "files": ["infra/postgres/provision.sql", "infra/compose/init/01-provision.sh", "packages/testing/test/provision.int.test.ts"]
     },
     "sv-rabbit-provision": {
       "label": "provision-users.sh", "sub": "convergent broker users", "kind": "check", "status": "real", "wp": "WP-8 step 4b",
       "what": "Converges the broker's users and permissions from the generated `permissions.tsv`, per environment.",
-      "how": "Creates a missing user, sets its password on every run (read from stdin, never argv), sets its tags and permissions, clears its rights on vhosts the file does not list, deletes `guest`, and reports by name a user that is not in the file. It also warns about an orphan queue (declared on the broker but not in the definitions) with its message and consumer counts, and leaves it in place: removing a queue is a deliberate step.",
+      "how": "Creates a missing user, sets its password on every run (read from stdin, never argv), sets its tags and permissions, clears its rights on vhosts the file does not list, deletes `guest`, and reports by name a user that is not in the file. It also warns about an orphan queue (declared on the broker but not in the definitions) with its message and consumer counts, and leaves it in place: removing a queue is a deliberate step. Since WP-9 a user argument (`provision-users.sh staging api_staging`) converges that one user only, which is what a deploy runs.",
       "why": "WP-8 D4 and WP-5 T4: users are the one thing the boot definitions leave out, so passwords never live in a file.",
       "files": ["infra/rabbitmq/provision-users.sh", "infra/rabbitmq/server/permissions.tsv", "packages/messaging/test/server-provisioning.int.test.ts"]
     },
@@ -4006,7 +4571,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "sv-nginx-rules": {
       "label": "nginx hardening test", "sub": "scripts/nginx-hardening.mjs", "kind": "check", "status": "real", "wp": "WP-8 step 5",
       "what": "Static rules on the edge config, in `pnpm verify`.",
-      "how": "Every HTTPS server includes the security headers snippet and logs in the `jadero` format; no `add_header` or `proxy_set_header` inside a location (it would drop the inherited ones); every API location has the limits; every host ends with a 404 catch-all; TLS settings live only in `nginx.conf`.",
+      "how": "Every HTTPS server includes the security headers snippet and logs in the `jadero` format; no `add_header` or `proxy_set_header` inside a location (it would drop the inherited ones); every API location has the limits; every host ends with a 404 catch-all; TLS settings live only in `nginx.conf`. Since WP-9 every `error_page` must be served by an exact, `internal` location with a root in `/srv/jadero/www/` and no proxy, so a client never asks for the page directly and an error never goes back to an upstream.",
       "why": "The rules that keep an added host safe hold without a reviewer remembering them.",
       "files": ["scripts/nginx-hardening.mjs", "scripts/nginx-hardening.test.mjs"]
     },
@@ -4020,7 +4585,7 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "sv-deploy-user": {
       "label": "deploy-entry test", "sub": "scripts/deploy-entry.test.mjs", "kind": "check", "status": "real", "wp": "WP-8 step 3",
       "what": "Runs copies of `deploy-entry` and `deploy.sh` against accepted and refused commands.",
-      "how": "Shell metacharacters, extra words, unknown services, bad versions and non-ASCII letters under a UTF-8 locale are all refused, and the client's input never reaches the log.",
+      "how": "Shell metacharacters, extra words, unknown verbs and services, bad versions, `redeploy` (the owner's root shell only) and non-ASCII letters under a UTF-8 locale are all refused, an environment word that differs from the key line's is `refused env-mismatch`, and the client's input never reaches the log. The deploy itself is tested by `scripts/deploy.test.mjs` (section 13).",
       "why": "The forced command is the whole security of the deploy key, so it is tested like code.",
       "files": ["scripts/deploy-entry.test.mjs", "infra/scripts/deploy-entry", "infra/scripts/deploy.sh"]
     },
@@ -4048,9 +4613,275 @@ footer.foot ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
     "sv-nginx-ci": {
       "label": "nginx (ci.yml)", "sub": "pnpm nginx:check", "kind": "check", "status": "real", "wp": "WP-8 step 5",
       "what": "Installs the edge into Ubuntu 26.04 with the distro nginx, the server's release, then runs `nginx -t` and the smoke test.",
-      "how": "Throwaway self-signed certificates at certbot's paths. `smoke-edge.sh` checks the headers, no version, no CORS, internal paths answering 404, TLS 1.1 refused and where each `/s/` path lands (a stub Umami echoes it). On a PR it runs only when the PR changes the edge. Not a required check yet.",
+      "how": "Throwaway self-signed certificates at certbot's paths. `smoke-edge.sh` checks the headers, no version, no CORS, internal paths answering 404, TLS 1.1 refused and where each `/s/` path lands (a stub Umami echoes it). On a PR it runs only when the PR changes the edge. Not a required check yet. Since WP-9 it installs the maintenance files too and checks that the site's upstream errors are the maintenance page with `no-store` and its CSP, that the content API answers 503 `application/problem+json` with the problem details file, and that a proxied answer gets none of the page's headers.",
       "why": "A config that fails `nginx -t` never reaches the server.",
       "files": ["infra/scripts/nginx-check.sh", "infra/scripts/smoke-edge.sh", ".github/workflows/ci.yml"]
+    },
+    "r-digests": {
+      "label": "Join the digests", "sub": "one artifact per leg · digests job", "kind": "step", "status": "real", "wp": "WP-9 step 5",
+      "what": "Each images leg records its version and pushed digest; one job joins them for both deploy jobs.",
+      "how": "A matrix job's outputs overwrite each other across legs, so each leg uploads `image-<service>` (`{version, digest}`, the pushed index, the one it attested) and the `digests` job downloads them all and emits `{\"api\": {\"version\": \"0.3.0\", \"digest\": \"sha256:...\"}}`, checking every version and digest. It runs only when every images leg succeeded, so a failed leg deploys nothing, not even the services whose images were pushed.",
+      "why": "Promotion by digest (WP-9 D8): both environments get the bytes the images job scanned and attested, not whatever a tag points at later.",
+      "files": [".github/workflows/release.yml"]
+    },
+    "r-deploy-staging": {
+      "label": "Deploy to staging", "sub": "deploy.yml · agent, api, web, one at a time", "kind": "step", "status": "real", "wp": "WP-9 step 5",
+      "what": "Each released service goes to staging by itself, in deploy order.",
+      "how": "A matrix over the released services calls `deploy.yml` with `environment: staging`, the version and the digest; `max-parallel: 1` keeps the order agent, api, web, and `fail-fast` cancels the legs not started yet when one fails. Across two runs the order is not kept (a pending concurrency job is replaced by the one queued later), so an older leg can reach a newer server: it is refused as not newer and ends green. The steps on the server are in section 13.",
+      "why": "WP-9 D6 and D8: consumers first, so a new event never reaches a broker without its queue, and staging needs no person.",
+      "files": [".github/workflows/release.yml", ".github/workflows/deploy.yml"]
+    },
+    "r-deploy-prod": {
+      "label": "Deploy to production", "sub": "same digests · after the owner's approval", "kind": "step", "status": "real", "wp": "WP-9 step 5",
+      "what": "The same services with the same versions and digests, once every staging leg succeeded and the owner approved.",
+      "how": "The `production` GitHub environment has the owner as required reviewer, so the job, and its key, wait for the approval. The server requires the digest in production (`refused reason=no-digest` without one) and compares it with what it pulled.",
+      "why": "WP-9 D8: production runs exactly what staging tested; the approval is the one human gate in the path.",
+      "files": [".github/workflows/release.yml", ".github/workflows/deploy.yml"]
+    },
+    "dp-release-yml": {
+      "label": "release.yml", "sub": "images · digests · deploy jobs", "kind": "file", "status": "real", "wp": "WP-7, WP-9 step 5",
+      "what": "The release run after a merge to main: release-please, the images, then each released service to staging and, after the owner's approval, to production (section 11 has its steps).",
+      "how": "`digests` joins every images leg's version and pushed digest; `deploy-staging` calls `deploy.yml` per service in the order agent, api, web, one at a time, a failure stopping the later ones; `deploy-production` calls it with the same versions and digests once every staging leg succeeded. A failed images leg deploys nothing. A manual dry run never deploys.",
+      "why": "WP-9 D6 and D8 (ADR-049's pipeline, restated by ADR-053). Events made with the job's token start no workflow, so the deploy is a reusable workflow called from the same run.",
+      "files": [".github/workflows/release.yml", ".github/workflows/README.md"]
+    },
+    "dp-deploy-yml": {
+      "label": "deploy.yml", "sub": "one service · one environment", "kind": "file", "status": "real", "wp": "WP-9 step 5",
+      "what": "Deploys one service to one environment, or rolls it back: called by release.yml with a digest (`workflow_call`), or run by hand (`workflow_dispatch`, deploy or rollback).",
+      "how": "The steps are in the figure below. `concurrency: deploy-<environment>-<service>`, never cancelled in progress, so one job runs and one waits per environment and service; `timeout-minutes: 20`. Permissions: `contents: read`, `packages: read` (the job's token, handed to the server for one pull), `id-token: write` (the OIDC token Tailscale exchanges), `attestations: read` (a manual deploy's provenance check). The server's exit code and last journal line decide the job's result.",
+      "why": "WP-9 D2 and D8, ADR-049 deploy mechanics B. The registry credential is the job's own token, alive for the job only, so the server stores none. A cancelled deploy is the worst case of D1 (the server finishes, the job loses the journal's tail), so nothing cancels one.",
+      "files": [".github/workflows/deploy.yml", ".github/workflows/README.md"]
+    },
+    "dp-gh-env": {
+      "label": "GitHub environments", "sub": "staging · production with approval", "kind": "env", "status": "real", "wp": "WP-9 step 5",
+      "what": "Where each environment's deploy secrets and protection rules live.",
+      "how": "Each holds `DEPLOY_SSH_KEY`, `DEPLOY_HOST`, `DEPLOY_SSH_PORT` and `DEPLOY_KNOWN_HOSTS` as secrets (a variable's value is printed in the public log's env block, a secret's is masked) and `TS_OAUTH_CLIENT_ID` and `TS_AUDIENCE` as variables. Both allow `main` only, and the job refuses any other ref too; `production` has the owner as required reviewer, so its key is readable only after the approval. The key and known_hosts go to mode 600 files in the runner's temp folder, removed on exit.",
+      "why": "WP-9 D2 and D8: one key per environment, bound to its environment on the server, so a leaked staging key never reaches production. Staging deploys by itself, production waits for a person.",
+      "files": [".github/workflows/deploy.yml", ".github/workflows/README.md"]
+    },
+    "dp-ghcr": {
+      "label": "GHCR", "sub": "private · provenance", "kind": "ext", "status": "real", "wp": "WP-7, WP-9",
+      "what": "The registry the images job pushes to and the server pulls from, `ghcr.io/josealbdr/jadero-dev-<service>`, private, with each image's signed build provenance.",
+      "how": "The server pulls by tag with the job's token, through a temporary `DOCKER_CONFIG` removed right after the pull, then compares the pulled index digest with the one release.yml recorded and the image's `org.opencontainers.image.revision` label with the release tag's commit. A tag moved in the registry between staging and the production approval ends `aborted reason=digest-mismatch`, before anything shared changes.",
+      "why": "ADR-049 registry B and provenance. Like for like: the digest the images job attested, the one deploy.yml sends and the one the server reads from RepoDigests are all the top-level index.",
+      "files": [".github/workflows/release.yml", ".github/workflows/deploy.yml", "infra/scripts/deploy.sh"]
+    },
+    "dp-repo": {
+      "label": "GitHub repository", "sub": "public · release tag", "kind": "ext", "status": "real", "wp": "WP-9 step 3",
+      "what": "Where the server gets every file a deploy runs besides the image: `infra/` and `packages/messaging/package.json` at the release tag.",
+      "how": "`git fetch --depth 1` of `refs/tags/<service>-v<version>` over HTTPS with no credential, under a 30 s limit, then `git archive` of that commit into `releases/<service>-<version>/`. The tag's commit must equal the image's revision label, and the release's overlay must name this environment's project (`aborted reason=env-mismatch` otherwise). A tag ruleset on `*-v*` blocks moving or deleting a release tag (an owner setting in GitHub).",
+      "why": "ADR-053 deploy files B: the image and its files come from one reviewed commit, and a rollback uses its own release's files. The trust anchor is main's protection plus tags that cannot move; `deploy.sh` and `deploy-entry` stay installed by hand, so the code that checks never updates itself from what it checks.",
+      "files": ["infra/scripts/deploy.sh", "docs/adr/0053-deploy-files-from-the-release-tag.md"]
+    },
+    "dp-entry": {
+      "label": "deploy-entry <env>", "sub": "forced command · allowlists", "kind": "step", "status": "real", "wp": "WP-8 step 3, WP-9 step 3",
+      "what": "The only thing a deploy key can run. Each key line binds it to one environment.",
+      "how": "`command=\"/srv/jadero/bin/deploy-entry staging\"` on the staging key, `... prod` on production's. It reads the client's words from `SSH_ORIGINAL_COMMAND`, accepts exactly `deploy <env> <service> <version>` or `rollback <env> <service>` with the environment word equal to the key line's (`refused env-mismatch` otherwise), checks every word against an allowlist under `LC_ALL=C`, logs only accepted or refused with a reason, and execs `sudo -n /srv/jadero/bin/deploy.sh` with the words as separate arguments and standard input untouched. `redeploy` is not accepted here.",
+      "why": "WP-8 D3 and WP-9 D2: the deploy keys sit in GitHub, so a stolen key may do only what CI does, in its own environment, forward or one step back.",
+      "files": ["infra/scripts/deploy-entry", "scripts/deploy-entry.test.mjs"]
+    },
+    "dp-sh": {
+      "label": "deploy.sh", "sub": "state machine · journal · lock", "kind": "step", "status": "real", "wp": "WP-9 steps 3 to 5",
+      "what": "The one script the deploy user may run as root. It moves a service from its current release to a new one, or back one, through recorded states, and always ends in one of them.",
+      "how": "Verbs: `deploy <env> <service> <version>`, `rollback <env> <service>` and `redeploy <env> <service>` (the owner's root shell only: the current version again with freshly rendered secrets, for a rotation). It takes `flock -n` on `/srv/jadero/<env>/deploy.lock` or exits 75, checks the words again, refuses a version that is not strictly newer than `versions.env`, then walks the states of the figure below, writing each to the journal before the next transition starts. SIGHUP and SIGPIPE are ignored, so a dropped SSH session never stops it half way. The fetch, `op inject` and the login (30 s each), the pull (180 s) and the migrate run (120 s) run under `timeout --kill-after=10`, so a hung step ends as `<step>-timeout` instead of holding the lock; the worst case still ends in a state in about 14 minutes, inside the job's 20. The output of docker, op, git, psql and rabbitmqctl is discarded: the journal holds a time, the words, a state and a fixed reason token, never a secret.",
+      "why": "WP-9 D1 (ADR-053 restating ADR-048's deploy script steps): a deploy touches five systems and can lose its runner half way, so it is a finite state machine with a write-ahead journal, and the zone it failed in decides the recovery. The checks are a copy of deploy-entry's on purpose: no shared file is trusted by both (defense in depth).",
+      "files": ["infra/scripts/deploy.sh", "scripts/deploy.test.mjs"]
+    },
+    "dp-state": {
+      "label": "/srv/jadero/<env>/", "sub": "manifests · journal · releases/", "kind": "file", "status": "real", "wp": "WP-9 step 3",
+      "what": "The environment's deploy state, root only, one folder per environment.",
+      "how": "`versions.env`: the release manifest, `<SERVICE>_VERSION` and `<SERVICE>_IMAGE` as a digest reference per service, plus `MESSAGING_VERSION`, the newest topology imported here. `previous.env`: the release each service was on before, the target of `rollback`, cleared after one use (a second rollback is `refused reason=no-previous`). `deploy.log`: the journal, one line per state. `releases/<service>-<version>/`: the fetched files of the current and the previous release; older folders and images are pruned at `recorded`. `<service>.env`: the rendered secrets (mode 600), with `<service>.env.new` while a run renders. `deploy.lock`: the flock, here and not in the world-writable `/run/lock`.",
+      "why": "Files, not a database: Compose reads the manifest directly, the journal already keeps the history, and a rollback needs nothing remote (static stability).",
+      "files": ["infra/scripts/deploy.sh", "infra/compose/README.md"]
+    },
+    "dp-smoke": {
+      "label": "smoke-deploy.sh", "sub": "ready · pages · content · ping", "kind": "step", "status": "real", "wp": "WP-9 step 4",
+      "what": "The smoke checks that decide `verified`, run from the release's own files after `up --wait` returned healthy. Read-only: GET requests, a container's own probe, one read-only SELECT.",
+      "how": "`ready`: each process type's health (api and web from the host on 127.0.0.1, the others with the image's own probe inside the container). `pages`: GET `/es/`, `/en/`, `/de/`, on staging through the edge (`https://new.jadero.dev`, so TLS and nginx's routing are checked too), in production on 127.0.0.1. `content`: the public content API, the same way. `ping`: api's last heartbeat in agent's database is newer than the moment `up --wait` returned, polled up to 90 s, only the timestamp. A check whose path is not whole yet (the first round of an environment: agent before api, api before web) is skipped and named in the journal (`verified smoke-passed-partial-<checks>`). Output: one `check=<name> result=ok|skipped|failed` line per check, no body, no query string.",
+      "why": "WP-9 D7 (ADR-049 restating ADR-026): health says a process runs, the smoke says the path works, the broker included. The ping window opens after `up --wait`, when only the new containers exist, so no old worker can write the heartbeat that passes it.",
+      "files": ["infra/scripts/smoke-deploy.sh", "scripts/smoke-deploy.test.mjs"]
+    },
+    "dp-migrate": {
+      "label": "<service>-migrate", "sub": "compose run --rm · one-off", "kind": "step", "status": "real", "wp": "WP-9 steps 2 and 5",
+      "what": "The one-off migrate step of api or agent, from the new image, before any new process starts.",
+      "how": "`docker compose run --rm --no-deps <service>-migrate` under a 120 s limit, after the rendered env is moved into place. The session runs with `lock_timeout` 10 s and `statement_timeout` 60 s (section 9), so a migration stuck on a lock fails and rolls back inside Postgres first. A timeout removes the leftover one-off container and rolls back (`rolling_back reason=migrate-timeout`). web has none (`migrated reason=no-migrations`).",
+      "why": "WP-9 D5 and WP-10 D2: migrations are expand-only, so the previous release runs on the new schema and a rollback never needs a down migration.",
+      "files": ["infra/compose/compose.services.yml", "packages/platform-nest/src/database/migrations.ts", "apps/api/test/migrations.int.test.ts"]
+    },
+    "dp-procs": {
+      "label": "process types", "sub": "up -d --wait --no-deps", "kind": "app", "status": "real", "wp": "WP-9 step 2",
+      "what": "The new release's containers, started only after migrate exited 0: `api` and `api-worker`, `agent` and `agent-consumer`, or `web`.",
+      "how": "`compose.services.yml` over `compose.<env>.yml`, project `jadero-<env>`, only the deployed service's profile active, every image a digest reference. `up --wait --wait-timeout 120` is the health gate: a release that is not healthy in time is rolled back. Recreating the containers costs a few seconds in which nginx gets no answer from the upstream and serves the maintenance answers.",
+      "why": "ADR-049 restating ADR-026 Downtime: a few seconds of maintenance per deploy on one box, instead of a blue-green pair the memory budget has no room for.",
+      "files": ["infra/compose/compose.services.yml", "infra/compose/compose.staging.yml", "infra/compose/compose.prod.yml"]
+    },
+    "dp-st-checked": {
+      "label": "checked", "sub": "lock · words · strictly newer", "kind": "step", "status": "real", "wp": "WP-9 step 3",
+      "what": "The lock is held, the words are valid and the version is newer than the one `versions.env` records.",
+      "how": "`flock -n` or exit 75, with nothing touched and no journal line. A version equal to or older than the current one is `refused reason=not-newer`: going back is `rollback`, which only goes to the release recorded as previous. Standard input is read here, 10 s per line: the registry user, the token and the digest, which production requires (`refused reason=no-digest`). Reasons: `newer`, `first-deploy`, `same-version` (redeploy).",
+      "why": "WP-9 D3: anti-rollback, decided on the trusted side, so a stolen key cannot reinstall an old release with a known hole.",
+      "files": ["infra/scripts/deploy.sh", "scripts/deploy.test.mjs"]
+    },
+    "dp-st-fetched": {
+      "label": "fetched", "sub": "infra/ at the release tag", "kind": "step", "status": "real", "wp": "WP-9 steps 3 and 4",
+      "what": "The release's files are on disk in `releases/<service>-<version>/`.",
+      "how": "The tag fetched (30 s), its commit taken, `infra/` and `packages/messaging/package.json` unpacked from it; the overlay must name this environment's project and the env template must exist, and for api and agent the env's definitions, `import-definitions.sh` and a semver messaging version (`aborted reason=no-topology-files` otherwise). Reasons: `tag-commit`, or `on-disk` for a redeploy.",
+      "why": "ADR-053: everything root will run comes from the reviewed commit the image was built from.",
+      "files": ["infra/scripts/deploy.sh", "scripts/deploy.test.mjs"]
+    },
+    "dp-st-rendered": {
+      "label": "rendered", "sub": "op inject · a new env file", "kind": "step", "status": "real", "wp": "WP-9 step 3",
+      "what": "The release's env template rendered with this environment's secrets into a new file; the running file is untouched.",
+      "how": "`JADERO_ENV=<env> op inject` with the service account token read from `/etc/jadero/op-token` (30 s). It passes only on exit 0, no `{{` left and every credential of the service parsed as letters and digits; otherwise `aborted` (`op-exit-<n>`, `unresolved-reference`, `bad-credential`, `render-timeout`) and the .new file is removed. The passwords provisioning sets are read from this file, so Postgres and RabbitMQ get exactly what the service will use.",
+      "why": "WP-9 D4: secrets rendered right before use, into a new file, so a 1Password outage aborts the deploy and never touches the running services.",
+      "files": ["infra/scripts/deploy.sh", "scripts/deploy.test.mjs", "infra/env/api.env.tpl", "infra/env/agent.env.tpl", "infra/env/web.env.tpl"]
+    },
+    "dp-st-pulled": {
+      "label": "pulled", "sub": "digest and revision checked", "kind": "step", "status": "real", "wp": "WP-9 step 3",
+      "what": "The image is on the host, and it is the one release.yml built from the tag's commit.",
+      "how": "Login with the job's token into a temporary `DOCKER_CONFIG` (30 s), pull by tag (180 s), the config removed. The pulled index digest must equal the digest from standard input when one was sent (`digest-mismatch`), and the revision label the tag's commit (`revision-mismatch`). Reason: `digest-and-revision`, or `on-disk` for a redeploy.",
+      "why": "Promotion by digest, and the image and its files from one commit (ADR-053).",
+      "files": ["infra/scripts/deploy.sh", "scripts/deploy.test.mjs"]
+    },
+    "dp-st-provisioned": {
+      "label": "provisioned", "sub": "point of no return", "kind": "step", "status": "real", "wp": "WP-9 steps 3 and 4",
+      "what": "The first transition that writes shared state: the broker's topology, this service's Postgres roles and its broker user.",
+      "how": "For api and agent, the monotonic guard first: a release whose messaging version is older than `MESSAGING_VERSION` skips the import (`provisioned reason=topology-skipped-older`); an equal or newer one is recorded before the import (write-ahead), and the release's `import-definitions.sh` imports `definitions/<env>.json` live, refusing a file that touches another vhost or holds users, and waits up to 60 s until every queue is listed with its declared type. Then `provision.sql -v service=<service>` converges only this service's roles and `provision-users.sh <env> <service>_<env>` only its broker user, passwords through the environment, never argv. web provisions nothing (`this-service`).",
+      "why": "ADR-053 topology B with a monotonic guard: the service that needs a queue brings it, so it exists before its consumer starts, and a rollback never reverts a policy. Scoped provisioning (WP-9 D4) never re-passwords another service behind its back.",
+      "files": ["infra/scripts/deploy.sh", "scripts/deploy.test.mjs", "infra/rabbitmq/import-definitions.sh", "infra/postgres/provision.sql", "infra/rabbitmq/provision-users.sh"]
+    },
+    "dp-st-migrated": {
+      "label": "migrated", "sub": "env in place · migrate exit 0", "kind": "step", "status": "real", "wp": "WP-9 steps 3 and 5",
+      "what": "The rendered env is the service's env, and the schema is at the new release's version.",
+      "how": "`<service>.env.new` is renamed into place first, because Compose reads the env file on every command, then the migrate one-off runs (120 s). Reasons `ok` or `no-migrations`; a failure rolls back (`migrate-failed`, `migrate-timeout`).",
+      "why": "WP-9 D5: expand-only migrations before the new code.",
+      "files": ["infra/scripts/deploy.sh", "scripts/deploy.test.mjs"]
+    },
+    "dp-st-started": {
+      "label": "started", "sub": "up --wait · the health gate", "kind": "step", "status": "real", "wp": "WP-9 step 3",
+      "what": "The new release's process types are healthy.",
+      "how": "`up -d --wait --wait-timeout 120 --no-deps` on the service's process types with the new digest; the other services keep the images `versions.env` holds, or the inert `jadero.invalid/not-deployed` while they are not deployed yet. Not healthy in time: `rolling_back reason=unhealthy`.",
+      "why": "WP-9 D7: the health gate is the first of the two checks that decide.",
+      "files": ["infra/scripts/deploy.sh", "scripts/deploy.test.mjs", "infra/compose/compose.services.yml"]
+    },
+    "dp-st-verified": {
+      "label": "verified", "sub": "smoke-deploy.sh from the release", "kind": "step", "status": "real", "wp": "WP-9 step 4",
+      "what": "The release's smoke checks passed.",
+      "how": "The release's own `smoke-deploy.sh` with the environment, the service, the time `up --wait` returned and the services deployed. A release without the script fails closed. Reasons `smoke-passed` or `smoke-passed-partial-<checks>`; a failure is `rolling_back reason=smoke-failed`.",
+      "why": "WP-9 D7: the path works, not only the process.",
+      "files": ["infra/scripts/deploy.sh", "scripts/deploy.test.mjs", "infra/scripts/smoke-deploy.sh"]
+    },
+    "dp-st-recorded": {
+      "label": "recorded", "sub": "manifests written · older images pruned", "kind": "step", "status": "real", "wp": "WP-9 step 3",
+      "what": "The new release is the current one. Exit 0.",
+      "how": "`previous.env` gets the release that was current, `versions.env` the new version and digest; images and release folders other than the current and the previous one are removed, best effort (a failed prune never undoes a recorded deploy). Reason `current`, `unchanged` for a redeploy, `rolled-back-once` for a rollback.",
+      "why": "WP-9 D3: one step back is always on disk.",
+      "files": ["infra/scripts/deploy.sh", "scripts/deploy.test.mjs"]
+    },
+    "dp-st-aborted": {
+      "label": "aborted", "sub": "before provisioned · nothing shared moved", "kind": "step", "status": "real", "wp": "WP-9 step 3", "branch": true,
+      "what": "A failure from `checked` to `pulled`. The running release never noticed.",
+      "how": "The files this run wrote are removed: the release folder, the .new env file (it holds secrets), the temporary docker config. Exit 1, with the reason in the last journal line. Rerun once the cause is fixed.",
+      "why": "WP-9 D1: the safe zone. Everything before the first shared write can be thrown away.",
+      "files": ["infra/scripts/deploy.sh", "scripts/deploy.test.mjs"]
+    },
+    "dp-st-rollback": {
+      "label": "rolling_back", "sub": "after the point of no return", "kind": "step", "status": "real", "wp": "WP-9 steps 3 and 4", "branch": true,
+      "what": "The compensating action for a failure after the first shared write: back to the release that was current.",
+      "how": "That release's own files and its image by digest, then the health gate and the smoke again: `rolled_back reason=previous-healthy`, or `failed` (exit 1 either way, no retry loop; `failed` needs the owner on the server). The env file follows the first provisioning write: once Postgres may hold this run's passwords the new file goes into place, so Compose recreates the previous release with matching passwords; before that write the old file stays and the .new one is removed. On a first deploy there is nothing to go back to: the new containers are stopped, not removed, so their logs stay readable (`failed reason=nothing-to-roll-back-to`). Shared state stays forward: the schema, the topology and the rendered env.",
+      "why": "WP-9 D1 and the amendment of 2026-10-23. Every release must work on the next release's shared state (N-1 compatibility, ADR-053).",
+      "files": ["infra/scripts/deploy.sh", "scripts/deploy.test.mjs"]
+    },
+    "dj-inputs": {
+      "label": "Check the inputs", "sub": "main only · semver · digest", "kind": "step", "status": "real", "wp": "WP-9 step 5",
+      "what": "Every input checked in the shell before anything else runs.",
+      "how": "Inputs reach the script as environment variables, never as expressions inside it. Refused: a run off `refs/heads/main`, an unknown action, environment or service, a version that is not semver without `v`, a call from release.yml without a `sha256:` digest, a rollback with a version. `production` becomes the server's word `prod`.",
+      "why": "The server checks everything again; checking here gives the clear error in the job.",
+      "files": [".github/workflows/deploy.yml"]
+    },
+    "dj-resolve": {
+      "label": "Resolve and verify", "sub": "manual deploy only · gh attestation verify", "kind": "step", "status": "real", "wp": "WP-9 step 5", "branch": true,
+      "what": "A manual deploy has no digest from an images job, so it finds one and proves where it came from.",
+      "how": "Login to GHCR with the job's token, `docker buildx imagetools inspect` for the tag's top-level index digest, then `gh attestation verify oci://<image>@<digest> --signer-workflow .../release.yml --source-ref refs/heads/main --deny-self-hosted-runners`. Only then is the digest sent.",
+      "why": "Even by hand, only an image release.yml built on main reaches a server.",
+      "files": [".github/workflows/deploy.yml"]
+    },
+    "dj-tailnet": {
+      "label": "Join the tailnet", "sub": "OIDC · ephemeral tag:ci node", "kind": "step", "status": "real", "wp": "WP-9 step 5",
+      "what": "The runner becomes a short-lived tailnet node that can reach the server's SSH port and nothing else.",
+      "how": "`tailscale/github-action` exchanges the job's OIDC token (subject `repo:JoseAlbDR/jadero-dev:environment:<name>`) for an ephemeral node tagged `tag:ci`, through one federated identity per environment that trusts that exact subject, never a wildcard. No Tailscale secret is stored in GitHub. The client tarball is checked against a pinned checksum and the actions cache is off (a cache hit would skip the check). No `ping:` on the join: it would print the server's tailnet address in the public log.",
+      "why": "Workload identity federation: a credential minted per job instead of a stored key. The exact subject matters because GitHub creates an unprotected environment for any name a branch's workflow names.",
+      "files": [".github/workflows/deploy.yml"]
+    },
+    "dj-ssh": {
+      "label": "One SSH command", "sub": "words in argv · secrets on stdin", "kind": "step", "status": "real", "wp": "WP-9 step 5",
+      "what": "The deploy runs on the server as one SSH command, and its journal comes back on stdout.",
+      "how": "Up to 6 tries of a TCP connect to the SSH port, 5 s apart, printing nothing about the host. Then `ssh -T` with the environment's key, `StrictHostKeyChecking=yes` against the pinned known_hosts, `BatchMode`, keepalives, and `deploy <env> <service> <version>` (or `rollback <env> <service>`). Standard input: the registry user, the job's token (`printf` is a builtin, so the token is in no argv) and the digest; a rollback sends nothing. The server's lines are shown between `::stop-commands::` markers, so nothing it prints can act on the job, and copied to the job summary.",
+      "why": "The server logs the command line, so a secret only ever travels on standard input.",
+      "files": [".github/workflows/deploy.yml", "infra/scripts/deploy-entry"]
+    },
+    "dj-result": {
+      "label": "Read the exit", "sub": "0 · 1 · 75 · 255", "kind": "step", "status": "real", "wp": "WP-9 step 5",
+      "what": "The server's exit code and last journal line become the job's result and its message.",
+      "how": "0 recorded. 75 busy: another deploy holds the environment's lock, nothing was touched, rerun. 1: the last line says refused, aborted (nothing shared changed), rolled_back (the previous release is healthy again) or failed (the owner on the server). Exactly `refused reason=not-newer` for this environment, service and version, on a call from release.yml, ends green with a notice: two release runs met in the queue and the newer one got there first. 255: the session dropped; the server runs to its end state anyway, so read the journal before a rerun.",
+      "why": "The job reports the state machine's end state; it never guesses.",
+      "files": [".github/workflows/deploy.yml"]
+    },
+    "dc-compose": {
+      "label": "compose.services.yml", "sub": "one file · two thin overlays", "kind": "file", "status": "real", "wp": "WP-9 step 2",
+      "what": "Every process type of api, agent and web for the servers. `compose.staging.yml` and `compose.prod.yml` add only the project name, the published ports, the network and `SITE_URL`, so the environments cannot drift apart.",
+      "how": "WP-7's hardening plus rotated logs (the `local` driver, 3 files of 10 MB). Each image a required digest variable (`${API_IMAGE:?}`); each service reads `/srv/jadero/${JADERO_ENV}/<service>.env` and blanks the credentials a process type does not use (`api` holds no broker user, `api-worker` no read-only role). Ports on 127.0.0.1: staging web 3120 and api 3121, production web 3110 and api 3111; workers publish nothing. Each process type joins its service's profile, so a deploy loads only that service's env file, and a service not in `versions.env` yet gets the inert image `jadero.invalid/not-deployed`. The project joins only its environment's external network (`jadero_staging` or `jadero_prod`).",
+      "why": "ADR-051 restating ADR-027 Layout and the memory budget, ADR-053. Held by `scripts/compose-hardening.test.mjs`.",
+      "files": ["infra/compose/compose.services.yml", "infra/compose/compose.staging.yml", "infra/compose/compose.prod.yml", "infra/compose/README.md", "scripts/compose-hardening.mjs"]
+    },
+    "dc-env-tpl": {
+      "label": "Service env templates", "sub": "api · agent · web .env.tpl", "kind": "file", "status": "real", "wp": "WP-9 step 2",
+      "what": "The environment of each service on the servers: 1Password references for every secret, `${JADERO_ENV}` in role, user and vhost names.",
+      "how": "api: `DATABASE_URL` (content_<env>), `DATABASE_READ_URL` (content_reader_<env>), `RABBITMQ_URL` (api_<env> on /<env>). agent: `DATABASE_URL` and `RABBITMQ_URL`, every AI provider `fake`. web: `CONTENT_API_URL=http://api:3001` and `CSP_MODE=enforce`, no secret. The same 1Password items feed `ops.env.tpl`, so a rotation changes one item, and `deploy.sh redeploy` renders it into the running release.",
+      "why": "ADR-043: no secret in the repo, in an image or in a process list. Only the names are public.",
+      "files": ["infra/env/api.env.tpl", "infra/env/agent.env.tpl", "infra/env/web.env.tpl"]
+    },
+    "dc-topology": {
+      "label": "Topology per deploy", "sub": "import-definitions.sh · monotonic guard", "kind": "check", "status": "real", "wp": "WP-9 step 4",
+      "what": "Each api and agent deploy imports its release's RabbitMQ definitions before migrate; the server's record decides whether it may.",
+      "how": "`rabbitmqctl import_definitions` adds and updates, never deletes, and overwrites a policy of the same name, so `deploy.sh` imports only a messaging version equal to or newer than `MESSAGING_VERSION` and writes the record before the import. RabbitMQ 4.3.6 accepts an import that changes a queue's type with exit 0 and keeps the old type, so the script fails when a listed queue's type differs: a queue that needs another type is a new name, and every generated queue is quorum with its type as its only argument. Removing a queue stays a manual contract sequence (`infra/compose/README.md`).",
+      "why": "ADR-053 topology B: ordering by construction, however the deploy starts, and a monotonic counter so shared state moves forward only.",
+      "files": ["infra/rabbitmq/import-definitions.sh", "packages/messaging/test/topology-import.int.test.ts", "packages/messaging/test/topology.test.ts", "scripts/import-definitions.test.mjs"]
+    },
+    "dc-forward": {
+      "label": "Shared state moves forward", "sub": "schema · topology · rendered env", "kind": "rule", "status": "real", "wp": "WP-9, ADR-053",
+      "what": "What travels with a release is swapped whole; what is shared only moves forward.",
+      "how": "Swapped whole, and returned to the previous copy by a rollback: the image, the Compose files, the env template, the smoke script. Forward only, still at the newest version after a rollback: the database schema (expand migrations), the topology (guarded import) and the rendered env (the passwords Postgres and RabbitMQ hold).",
+      "why": "ADR-053 consequences: every release must work on the next release's shared state (N-1 compatibility). A down migration or a topology rollback would be a second, untested deploy.",
+      "files": ["docs/adr/0053-deploy-files-from-the-release-tag.md", "docs/learning/wp-9.md"]
+    },
+    "dc-timeouts": {
+      "label": "Bounded steps", "sub": "timeout · lock_timeout · statement_timeout", "kind": "check", "status": "real", "wp": "WP-9 step 5",
+      "what": "No step that waits on something remote or on a lock can hold the environment's lock forever.",
+      "how": "On the server: fetch, render and login 30 s, pull 180 s, migrate 120 s, each under `timeout --kill-after=10` in its own process group (a hangup still does not reach it); the topology wait 60 s, `up --wait` 120 s, the smoke's ping 90 s. In Postgres: the migrate session's `lock_timeout` 10 s and `statement_timeout` 60 s. In GitHub: the job's 20 minutes, the SSH keepalives. A timeout before the point of no return is `aborted reason=<step>-timeout`, after it `rolling_back reason=migrate-timeout`.",
+      "why": "Without a bound a hung pull outlives the job, keeps the lock, and every later deploy exits 75.",
+      "files": ["infra/scripts/deploy.sh", "packages/platform-nest/src/database/migrations.ts"]
+    },
+    "dc-maintenance": {
+      "label": "Maintenance answers", "sub": "HTML page · API 503 problem+json", "kind": "file", "status": "real", "wp": "WP-9 steps 4 and 5",
+      "what": "What a visitor and an API client get during the few seconds a deploy recreates a service.",
+      "how": "On `new.jadero.dev`, `error_page 502 503 504 /maintenance.html` serves a static page in es, en and de with the original status, `no-store`, a static CSP and on 503 `Retry-After: 10`; the headers come from maps that have a value only for the page, so every proxied answer keeps its own. `/api/v1/content/` answers `maintenance.problem.json` instead, always 503, as `application/problem+json`. Both are exact `internal` locations (404 when asked for directly). Only errors nginx generates itself: api's own 503 problem details pass through.",
+      "why": "ADR-049 restating ADR-026 Downtime, and RFC 9457 for every API error: a client of the API never parses an HTML page.",
+      "files": ["infra/nginx/sites/new.jadero.dev.conf", "infra/nginx/www/maintenance/maintenance.html", "infra/nginx/www/maintenance/maintenance.problem.json", "infra/scripts/smoke-edge.sh"]
+    },
+    "dc-concurrency": {
+      "label": "Deploy concurrency", "sub": "deploy-<env>-<service> · never cancelled", "kind": "rule", "status": "real", "wp": "WP-9 step 5",
+      "what": "One deploy job runs and one waits per environment and service; two deploys of one environment meet on the server's lock.",
+      "how": "GitHub keeps one running and one pending job per group and lets a later queued job replace the pending one whatever its version, so an older release can arrive after a newer one: the server refuses it as not newer and deploy.yml ends green. Two services of one environment deploy in separate groups and meet on `deploy.lock` instead (exit 75, nothing touched, rerun). release.yml has no run-wide group, so a production approval never holds later releases.",
+      "why": "The version order lives on the server (the anti-rollback guard), where it is trusted, not in a queue that knows nothing of versions.",
+      "files": [".github/workflows/deploy.yml", ".github/workflows/release.yml"]
+    },
+    "dc-tests": {
+      "label": "Deploy tests", "sub": "scripts/*.test.mjs · integration tests", "kind": "check", "status": "real", "wp": "WP-9 steps 2 to 5",
+      "what": "The deploy is tested like code, in `pnpm verify` and against real containers.",
+      "how": "`deploy.test.mjs` runs a copy of `deploy.sh` with stub docker, op and git on its PATH (the git stub serves this repository's own `infra/` as the release tag) through every state, failure, timeout, the lock and the rollbacks; `deploy-entry.test.mjs` the environment-bound key; `smoke-deploy.test.mjs` the checks and their skips; `import-definitions.test.mjs` the file checks; `compose-hardening.test.mjs` and `nginx-hardening.test.mjs` the server files. With `pnpm test:int`: the live import and its type check (`topology-import.int.test.ts`), the scoped provisioning (`provision.int.test.ts`, `server-provisioning.int.test.ts`) and the migrate timeouts (`migrations.int.test.ts`).",
+      "why": "A deploy script that only runs in production is tested in production. The stubs make every failure path reachable on a laptop.",
+      "files": ["scripts/deploy.test.mjs", "scripts/deploy-entry.test.mjs", "scripts/smoke-deploy.test.mjs", "scripts/import-definitions.test.mjs", "packages/messaging/test/topology-import.int.test.ts", "packages/testing/test/provision.int.test.ts"]
     }
   }
 }

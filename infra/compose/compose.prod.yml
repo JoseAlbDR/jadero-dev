@@ -1,0 +1,30 @@
+# Production: the Compose project jadero-prod on top of compose.services.yml (WP-9 step 2; ADR-051
+# restating ADR-027 "Layout"). Only what differs between the environments lives here: the project
+# name, the published ports, the network and the site's public origin. Everything else is the
+# shared file, so staging and production cannot drift apart.
+#
+#   JADERO_ENV=prod docker compose --env-file /srv/jadero/prod/versions.env \
+#     -f infra/compose/compose.services.yml -f infra/compose/compose.prod.yml ...
+#
+# No public host routes here until the cutover (WP-29); the ports are for nginx then, and for the
+# deploy's health checks on 127.0.0.1 now.
+# scripts/compose-hardening.test.mjs fails when a port leaves 127.0.0.1 or moves, when a worker or
+# agent publishes one, or when the project joins anything but its own network.
+name: jadero-prod
+
+services:
+  api:
+    ports: ["127.0.0.1:3111:3001"]
+  web:
+    ports: ["127.0.0.1:3110:3000"]
+    environment:
+      # Canonical and hreflang links: the site's final origin, served from the cutover on.
+      SITE_URL: https://jadero.dev
+
+networks:
+  # The environment's network from the ops stack (compose.ops.yml), joined as external: Postgres
+  # and RabbitMQ answer on it by name, and pg_hba.conf accepts the production roles only from its
+  # subnet. The project creates no network of its own.
+  default:
+    name: jadero_prod
+    external: true
