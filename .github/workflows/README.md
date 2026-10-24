@@ -160,8 +160,9 @@ report on every pull request (they pass with nothing run when their paths are un
   `attestations` and `artifact-metadata: write` for `images`. The deploy jobs read only:
   `contents`, `packages` and `attestations: read`, plus `id-token: write` for Tailscale.
 - Deploys (WP-9 D2): the runner joins the tailnet as an ephemeral `tag:ci` node through workload
-  identity federation (GitHub's OIDC token, subject `repo:JoseAlbDR/jadero-dev:environment:<name>`,
-  trusted only for the exact names `staging` and `production`, one federated identity each; no
+  identity federation (GitHub's OIDC token, subject
+  `repo:JoseAlbDR@128265706/jadero-dev@1402255543:environment:<name>`, the immutable form with the
+  owner and repository IDs, trusted only for the exact names `staging` and `production`, one federated identity each; no
   Tailscale secret is stored), and the tailnet policy lets `tag:ci` reach the server's SSH port
   only. Each environment holds its own `DEPLOY_SSH_KEY`, and the server's key line forces
   `deploy-entry staging` or `deploy-entry prod`, so the staging key never reaches production.
@@ -326,8 +327,13 @@ Agents never change these settings; each item is yours.
    (`docs/runbooks/server-access.md` section 1a). Two federated identities for GitHub Actions,
    one per environment, each with issuer `https://token.actions.githubusercontent.com`, tag
    `tag:ci` and the scope to create auth keys, and each with one exact subject:
-   `repo:JoseAlbDR/jadero-dev:environment:staging` and
-   `repo:JoseAlbDR/jadero-dev:environment:production`. Never a wildcard like `environment:*`:
+   `repo:JoseAlbDR@128265706/jadero-dev@1402255543:environment:staging` and
+   `repo:JoseAlbDR@128265706/jadero-dev@1402255543:environment:production`. The repository uses
+   GitHub's immutable subject (`gh api repos/JoseAlbDR/jadero-dev/actions/oidc/customization/sub`
+   shows `use_immutable_subject: true` and the prefix), so the subject carries the owner and
+   repository IDs: a repository deleted and re-created under the same name gets new IDs and no
+   access. A subject in the old `repo:JoseAlbDR/jadero-dev:...` form fails the exchange with 403
+   "Unauthorized" (WP-9 step 6b). Never a wildcard like `environment:*`:
    GitHub creates an unprotected environment for any name a workflow on any branch names, so a
    wildcard would let any branch mint a `tag:ci` node. Each identity has its own client ID and
    audience: set `TS_OAUTH_CLIENT_ID` and `TS_AUDIENCE` as **environment variables** of `staging`
