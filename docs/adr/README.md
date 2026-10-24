@@ -46,7 +46,7 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-031 | Two-layer content and the approval gate | accepted | D-11, D-16, D-50, D-51, D-52, D-53, D-65, D-66, D-67 | [0031-two-layer-content-and-the-approval-gate.md](0031-two-layer-content-and-the-approval-gate.md) |
 | ADR-032 | Recruiter mode | accepted | D-54, D-55 | [0032-recruiter-mode.md](0032-recruiter-mode.md) |
 | ADR-033 | "Under the hood" page | accepted | D-56 | [0033-under-the-hood-page.md](0033-under-the-hood-page.md) |
-| ADR-034 | Build journal and the /now page | accepted | D-57 | [0034-build-journal-and-the-now-page.md](0034-build-journal-and-the-now-page.md) |
+| ADR-034 | Build journal and the /now page | superseded by ADR-056 | D-57 | [0034-build-journal-and-the-now-page.md](0034-build-journal-and-the-now-page.md) |
 | ADR-035 | MCP servers | accepted | D-58, D-59, D-60, D-61, D-62, D-63 | [0035-mcp-servers.md](0035-mcp-servers.md) |
 | ADR-036 | Eval battery v1 | accepted | D-64 | [0036-eval-battery-v1.md](0036-eval-battery-v1.md) |
 | ADR-037 | Answer feedback loop | rejected | D-68 | [0037-answer-feedback-loop.md](0037-answer-feedback-loop.md) |
@@ -68,6 +68,7 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-053 | Deploy files from the release tag | accepted | D-83, D-84 | [0053-deploy-files-from-the-release-tag.md](0053-deploy-files-from-the-release-tag.md) |
 | ADR-054 | Messaging topology as built | accepted | D-85 | [0054-messaging-topology-as-built.md](0054-messaging-topology-as-built.md) |
 | ADR-055 | Type packages out of the release inputs | accepted | D-86 | [0055-type-packages-out-of-the-release-inputs.md](0055-type-packages-out-of-the-release-inputs.md) |
+| ADR-056 | The /now page shows the last finished work package | proposed | D-87 | [0056-now-page-shows-the-last-finished-work-package.md](0056-now-page-shows-the-last-finished-work-package.md) |
 <!-- adr-index:end -->
 
 Read in this order for a first pass: 029 (service boundaries), 002 (topology and edge), 003 (inside a service), 012 (async work), 031 (content layers), 013 to 016 (AI layer and RAG), 020 and 021 (security), 025 to 027 (delivery and hosting), 041 (work tracking).

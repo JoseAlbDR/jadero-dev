@@ -4886,6 +4886,58 @@
       "decidedOption": "b",
       "decidedBy": "owner",
       "decidedAt": "2026-10-23"
+    },
+    {
+      "id": "D-87",
+      "area": "product",
+      "title": "Which work package /now shows",
+      "question": "ADR-034 says /now shows the current WP, but the content model only knows finished WPs through their journal posts. What should the page show?",
+      "context": "A WP gets its journal post when it closes, so the newest journal post names the last finished WP. Nothing stores the WP in progress.",
+      "options": [
+        {
+          "id": "a",
+          "label": "Last finished WP, derived",
+          "description": "Derive it from the newest published journal post and label it as the last finished WP; the WP in progress goes in the Now text.",
+          "pros": [
+            "No extra field",
+            "Never stale"
+          ],
+          "cons": [
+            "The WP in progress is named only if the owner writes it"
+          ]
+        },
+        {
+          "id": "b",
+          "label": "A hand-edited current WP field",
+          "description": "A currentWp field on the Now singleton.",
+          "pros": [
+            "Matches ADR-034 as written"
+          ],
+          "cons": [
+            "Goes stale silently",
+            "One more step at every WP start"
+          ]
+        },
+        {
+          "id": "c",
+          "label": "Read the open WP issue from GitHub",
+          "description": "Ask GitHub for the open WP issue.",
+          "pros": [
+            "Always right"
+          ],
+          "cons": [
+            "An external call on a public read path for one label"
+          ]
+        }
+      ],
+      "recommendation": "a",
+      "why": "Derived state cannot go stale, and the label says what the data is.",
+      "adr": "ADR-056",
+      "learn": "Derived state over stored state.",
+      "status": "decided",
+      "decidedOption": "a",
+      "decidedBy": "owner",
+      "decidedAt": "2026-10-24"
     }
   ],
   "workPackages": [

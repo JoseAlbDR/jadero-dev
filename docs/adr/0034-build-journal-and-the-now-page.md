@@ -1,18 +1,18 @@
 ---
 id: ADR-034
 title: "Build journal and the /now page"
-status: accepted
+status: superseded
 date: 2026-10-03
 deciders: [owner]
 decisions: [D-57]
 supersedes: []
-superseded_by: null
+superseded_by: ADR-056
 source: docs/plan/report.md ("ADR-034: Build journal and the /now page (new 2026-10-02)")
 ---
 
 # ADR-034: Build journal and the /now page
 
-**Status:** Accepted (owner review 2026-10-03, D-57).
+**Status:** Superseded by ADR-056 (accepted in the owner review of 2026-10-03, D-57).
 
 Decided by the owner in the plan review of 2026-10-02 and 2026-10-03 (decisions D-57). This record was extracted verbatim from `docs/plan/report.md`; the narrative, traces and sources stay there. From now on this file is the canonical record: a new decision is a new ADR that supersedes this one, never an edit.
 
