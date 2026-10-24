@@ -38,7 +38,6 @@ stateDiagram-v2
   checked --> aborted
   fetched --> aborted
   rendered --> aborted
-  pulled --> aborted
   pulled --> rolling_back: topology or provisioning failed
   provisioned --> rolling_back
   migrated --> rolling_back
@@ -59,7 +58,7 @@ stateDiagram-v2
 | `verified` | the release's smoke script passed: `smoke-passed`, or `smoke-passed-partial-<checks>` when a check was skipped because a service on its path is not deployed yet |
 | `recorded` | `versions.env` and `previous.env` written, older images and release folders pruned (`current`, `unchanged` for a redeploy) |
 
-Two zones. Before `provisioned` nothing shared has changed: a failure is `aborted`, the files the run wrote are removed and the running release never noticed. From the topology import on (the point of no return) a failure is `rolling_back`, then the release that was current starts again with its files and its image by digest: `rolled_back reason=previous-healthy`, or `failed` when that does not get healthy either. A first deploy has nothing to go back to: its containers are stopped (not removed, so their logs stay readable) and the run ends `failed reason=nothing-to-roll-back-to`.
+Two zones. Before the topology import nothing shared has changed: a failure is `aborted`, the files the run wrote are removed and the running release never noticed. From the topology import on (the point of no return) a failure is `rolling_back`, then the release that was current starts again with its files and its image by digest: `rolled_back reason=previous-healthy`, or `failed` when that does not get healthy either. A first deploy has nothing to go back to: its containers are stopped (not removed, so their logs stay readable) and the run ends `failed reason=nothing-to-roll-back-to`.
 
 A refusal touches nothing and has its own line, `refused reason=<token>` (`not-newer`, `no-digest`, `bad-input`, `bad-manifest`, ...). A downgrade is never a deploy: it is a rollback.
 
@@ -162,7 +161,7 @@ The last line of a run tells where it ended. A run with no final line after `che
 1. **Read the reason** (section 6):
    - `previous-unhealthy`: the previous release started but did not pass the health gate.
    - `unhealthy` or `smoke-failed` after `checked previous-recorded`: a rollback command failed the same way.
-   - `nothing-to-roll-back-to`: a first deploy failed after `up`; its containers are stopped. `stop-failed`: stopping them failed too, so they may still run.
+   - `nothing-to-roll-back-to`: a first deploy failed past the point of no return (topology, provisioning, migrate, `up` or smoke); its containers are stopped. `stop-failed`: stopping them failed too, so they may still run.
    - `unexpected-error`: a command failed past the point of no return outside the handled paths.
 2. **Find the shared cause.** When the previous release fails too, the cause is rarely the release: check that `jadero-ops-postgres-1` and `jadero-ops-rabbitmq-1` are healthy (a RabbitMQ memory alarm blocks publishers), the memory (`free -m`, `sudo journalctl -k --since today | grep -i oom`), and the containers' logs for authentication errors. The env file in place always matches what provisioning wrote: past the first provisioning write the run moves `<service>.env.new` into place before it starts anything (step 4b), and removes it otherwise.
 3. **Fix it, then bring the recorded release back:** `sudo /srv/jadero/bin/deploy.sh redeploy <env> <service> </dev/null` starts the version `versions.env` names, with a fresh render and the full checks. After a failed first deploy there is nothing to redeploy: fix the cause and deploy the version again (`checked reason=first-deploy`). After `stop-failed`, stop the project's containers by hand first (`docker stop` on the names `docker ps` lists for the project).
@@ -197,10 +196,10 @@ Create them over the tunnel (`docs/runbooks/server-access.md` 2a, `http://localh
 | `jadero backup` | already there: type Push, interval 90000 s (`docs/runbooks/restore.md` 2e) |
 
 - Ready means the process can reach what a request needs (Postgres, and RabbitMQ for the workers and `agent`), so a broker or database outage turns these red too.
-- A deploy recreates the containers in seconds of downtime (ADR-049 "Downtime"): with 2 retries before an alert, a normal deploy does not page.
+- A deploy recreates the containers in seconds of downtime (ADR-048 "Downtime"): with 2 retries before an alert, a normal deploy does not page.
 - The three `site` monitors go through the public edge (nginx, TLS), so they also catch a broken certificate renewal; the expiry notification warns days before the certificate runs out. They move to `https://jadero.dev/` at the cutover.
 - `prod web` stays red until web's first production deploy (#162: the home page answers 404 on an empty content database, so web is not deployed to production yet and Kuma reports `getaddrinfo EAI_AGAIN jadero-prod-web-1`); it is paused until then.
-- Not in this table yet, from ADR-027 "Monitoring": the SSE endpoint (arrives with the chat) and an alert when a dead-letter queue is not empty (Kuma has no native monitor type for it; a follow-up).
+- Not in this table yet, from ADR-027 "Monitoring": the SSE endpoint (arrives with the chat) and an alert when a dead-letter queue is not empty (a follow-up, #165: a Kuma HTTP(s) JSON Query monitor on the management API's queue `messages` count).
 
 ### The external monitor (D-31)
 
