@@ -216,7 +216,7 @@ digest update, or mute it in `.trivyignore.yaml` with a statement and an `expire
   smoke) and the previous one is healthy again. Fix forward with a new release; the same version
   can be retried, since a failed deploy never becomes current.
 - *failed* (exit 1): the rollback did not get healthy either. Leave it to the owner on the server:
-  read `/srv/jadero/<env>/deploy.log` and the containers' logs. No retry loop runs.
+  read `/srv/jadero/<env>/deploy.log` and the containers' logs (`docs/runbooks/deploy.md` sections 6 and 7). No retry loop runs.
 - *SSH failed* (exit 255): with no journal line, the tailnet, host key or key line refused the
   connection. With journal lines, the session dropped mid-deploy: the server ignores the hangup and
   runs to its end state, so read its journal before a rerun.
