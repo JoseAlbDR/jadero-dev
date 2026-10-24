@@ -409,11 +409,14 @@ semver_compare() {
 # when the kernel OOM-kills the container under its mem_limit. Timeout's KILL comes 10 s after
 # the limit, so a 137 counts as a timeout only when the limit has passed (whole seconds from
 # `date`, a margin of 10 s); one before it is the command's own failure and stays 137.
+# The command runs with the lock's descriptor 9 closed: a child that outlives the deploy would
+# otherwise keep the flock, and every later deploy would exit 75. `op inject` does that, it
+# starts a caching `op daemon` that stays up after the render (WP-9 step 6b, staging).
 bounded() {
   local limit="$1" started status=0
   shift
   started="$(date -u +%s)"
-  timeout --kill-after=10 "$limit" "$@" || status=$?
+  timeout --kill-after=10 "$limit" "$@" 9>&- || status=$?
   if [[ $status -eq 137 ]] && (($(date -u +%s) - started >= limit)); then status=124; fi
   return "$status"
 }
