@@ -2,10 +2,10 @@
 # On every push to main, release-please opens or updates the one combined Release PR from the
 # conventional commits, attributed to components by path (release-please-config.json). Merging
 # that PR tags each released component `<component>-v<version>`; for each released service the
-# images job builds the image once from the commit the tag points at, smoke-tests it hardened,
-# scans it with Trivy, pushes it to GHCR as `:<version>` and `:sha-<short>` with a BuildKit SBOM,
-# and signs a SLSA build provenance for its digest (keyless: the job's OIDC token, a Sigstore
-# certificate valid for minutes).
+# images job builds the image once from the commit the tag points at into an OCI archive with a
+# BuildKit SBOM, smoke-tests it hardened, scans it with Trivy, pushes that archive unchanged to
+# GHCR as `:<version>` and `:sha-<short>`, and signs a SLSA build provenance for its digest
+# (keyless: the job's OIDC token, a Sigstore certificate valid for minutes).
 # A manual run is the dry run: it builds, smoke-tests and scans one service, and never logs in,
 # pushes or attests. Images stay private (ADR-049, registry B): the first push creates each
 # package private and nothing here changes that.
@@ -112,6 +112,8 @@ jobs:
       DOCKER_BUILD_RECORD_UPLOAD: false
       IMAGE_PREFIX: ghcr.io/josealbdr/jadero-dev
       TRIVY_IMAGE: aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa
+      # regclient (Apache-2.0) reads and pushes the OCI archive without changing a digest.
+      REGCTL_IMAGE: ghcr.io/regclient/regctl:v0.11.6@sha256:db2e5f3a5de80b24d53fea5af9edf7021a53f2689f1e166ef2f0e200dad4fb3a
     steps:
       # A release builds the commit release-please tagged for this service, so the image holds
       # exactly the code of its version even when a newer push reached main before this run. A
@@ -163,9 +165,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      # Built once into the runner's Docker for the smoke run and the scan. The push below runs the
-      # same build again on this builder: every layer comes from its local cache, so the pushed
-      # image holds the bytes that were tested and scanned. Reads main's build cache, never writes.
+      # Built once, before anything is pushed (ADR-049: release.yml scans before the push), into an
+      # OCI layout on the runner with BuildKit's SBOM: the smoke run, the scan and the push all read
+      # these bytes. Building a second time for the push and trusting the cache to give the same
+      # bytes failed on release #166 (run 40126554215, the agent's config digest differed). Its own
+      # unsigned provenance stays off: the signed one comes from the attest step below. Reads
+      # main's build cache, never writes.
       - name: Build the image
         id: build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -173,16 +178,53 @@ jobs:
           context: .
           file: apps/${{ matrix.service }}/Dockerfile
           platforms: linux/amd64
-          load: true
-          push: false
+          outputs: type=oci,dest=${{ runner.temp }}/image-oci,tar=false
           provenance: false
-          sbom: false
+          sbom: true
           tags: jadero-${{ matrix.service }}:release
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ steps.commit.outputs.sha }}
             org.opencontainers.image.version=${{ steps.meta.outputs.version }}
           cache-from: type=gha,scope=image-${{ matrix.service }}
+
+      # The archive holds one image index: the linux/amd64 image manifest and the SBOM attestation
+      # manifest. Its digest is what gets pushed, attested and deployed. The runner's Docker (classic
+      # image store) cannot load an OCI index, so regctl exports the archive's linux/amd64 image as
+      # a tar Docker can load; the loaded image must carry the archive's config digest (the image ID
+      # under the classic store, the manifest digest under the containerd store).
+      - name: Load the image
+        id: archive
+        env:
+          SERVICE: ${{ matrix.service }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          layout="$RUNNER_TEMP/image-oci"
+          if ! [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::$SERVICE: the build gave no index digest"; exit 1
+          fi
+          listed="$(jq -r '.manifests | if length == 1 then .[0].digest else error("not one entry") end' \
+            "$layout/index.json")"
+          if [ "$listed" != "$DIGEST" ]; then
+            echo "::error::$SERVICE: the archive lists $listed, the build reported $DIGEST"; exit 1
+          fi
+          manifest="$(jq -r '[.manifests[] | select(.platform.os == "linux" and .platform.architecture == "amd64")]
+            | if length == 1 then .[0].digest else error("not one linux/amd64 manifest") end' \
+            "$layout/blobs/sha256/${DIGEST#sha256:}")"
+          config="$(jq -r .config.digest "$layout/blobs/sha256/${manifest#sha256:}")"
+          tar="$RUNNER_TEMP/$SERVICE.tar"
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
+            -v "$layout:/oci:ro" -v "$RUNNER_TEMP:/out" "$REGCTL_IMAGE" \
+            image export --platform linux/amd64 --name "jadero-$SERVICE:release" \
+            "ocidir:///oci@$DIGEST" "/out/$SERVICE.tar"
+          docker load -i "$tar"
+          rm -f "$tar"
+          loaded="$(docker image inspect --format '{{.Id}}' "jadero-$SERVICE:release")"
+          if [ "$loaded" != "$config" ] && [ "$loaded" != "$manifest" ]; then
+            echo "::error::$SERVICE: the loaded image ($loaded) is not the archive's ($config)"; exit 1
+          fi
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "$SERVICE: archive $DIGEST, linux/amd64 config $config, loaded for the smoke run"
 
       # The same smoke run as the images job of ci.yml: hardened as in Compose, never root; the
       # Nest services stop on their config error with every import resolved, web becomes healthy.
@@ -236,21 +278,20 @@ jobs:
           restore-keys: trivy-${{ runner.os }}-
 
       # D10: a secret in the image always fails. OS findings are reported, never blocking: a
-      # release may be the one that carries the fix; the weekly scan is the second channel.
+      # release may be the one that carries the fix; the weekly scan is the second channel. Trivy
+      # reads the archive itself and picks its linux/amd64 image.
       - name: Scan the image
         env:
           SERVICE: ${{ matrix.service }}
         run: |
           cache="$RUNNER_TEMP/trivy-cache"
           report="$RUNNER_TEMP/trivy-report"
-          tar="$RUNNER_TEMP/$SERVICE.tar"
           mkdir -p "$cache" "$report"
-          docker save "jadero-$SERVICE:release" -o "$tar"
           trivy() {
             docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
-              -v "$tar:/image.tar:ro" -v "$cache:/cache" -v "$report:/report" \
+              -v "$RUNNER_TEMP/image-oci:/image:ro" -v "$cache:/cache" -v "$report:/report" \
               -v "$GITHUB_WORKSPACE/.trivyignore.yaml:/trivyignore.yaml:ro" \
-              "$TRIVY_IMAGE" image --input /image.tar --cache-dir /cache \
+              "$TRIVY_IMAGE" image --input /image --cache-dir /cache \
               --ignorefile /trivyignore.yaml --skip-version-check --disable-telemetry --quiet "$@"
           }
           # The secret table has a row per scanned file, so it is printed only on a finding.
@@ -268,7 +309,6 @@ jobs:
             echo "${table:-none}"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          rm -f "$tar"
 
       - name: Log in to GHCR
         if: github.event_name == 'push'
@@ -278,55 +318,41 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # BuildKit attaches the SBOM to the pushed image. Its own unsigned provenance stays off: the
-      # signed one comes from the attest step below.
+      # Pushes the scanned archive unchanged under each tag: regctl copies the index and the
+      # manifests it names byte for byte, so the registry stores the archive's digest, SBOM
+      # included. regctl reads the job token from the Docker config the login step wrote.
       - name: Push the image
-        id: push
         if: github.event_name == 'push'
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          file: apps/${{ matrix.service }}/Dockerfile
-          platforms: linux/amd64
-          push: true
-          provenance: false
-          sbom: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: |
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ steps.commit.outputs.sha }}
-            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
-          cache-from: type=gha,scope=image-${{ matrix.service }}
+        env:
+          DIGEST: ${{ steps.archive.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          docker_config="${DOCKER_CONFIG:-$HOME/.docker}/config.json"
+          if [ ! -f "$docker_config" ]; then echo "::error::no Docker config from the login"; exit 1; fi
+          while read -r ref; do
+            [ -n "$ref" ] || continue
+            docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
+              -v "$docker_config:/tmp/.docker/config.json:ro" -v "$RUNNER_TEMP/image-oci:/oci:ro" \
+              "$REGCTL_IMAGE" image copy "ocidir:///oci@$DIGEST" "$ref" < /dev/null
+          done <<<"$TAGS"
 
-      # The pushed image must be the one smoke-tested and scanned, before it is signed: same config
-      # digest. The scanned one is BuildKit's containerimage.config.digest from the loaded build's
-      # metadata, not the local image ID: under Docker's containerd image store (Docker 29) the ID
-      # is the manifest or index digest. With the SBOM the push is an index holding one linux/amd64
-      # image manifest and one attestation manifest; the image manifest names the config.
+      # The pushed image must be the one smoke-tested and scanned, before it is signed: every tag
+      # names the archive's index digest. Read back with buildx, not with the tool that pushed.
       - name: Check the pushed image is the scanned one
         if: github.event_name == 'push'
         env:
           SERVICE: ${{ matrix.service }}
-          IMAGE: ${{ steps.meta.outputs.image }}
-          DIGEST: ${{ steps.push.outputs.digest }}
-          BUILD_METADATA: ${{ steps.build.outputs.metadata }}
+          DIGEST: ${{ steps.archive.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
         run: |
-          manifest="$(docker buildx imagetools inspect --raw "$IMAGE@$DIGEST" \
-            | jq -r --arg digest "$DIGEST" 'if has("manifests") then
-                [.manifests[] | select(.platform.os == "linux" and .platform.architecture == "amd64")]
-                | if length == 1 then .[0].digest else error("not one linux/amd64 manifest") end
-              else $digest end')"
-          pushed="$(docker buildx imagetools inspect --raw "$IMAGE@$manifest" | jq -r .config.digest)"
-          scanned="$(jq -r '."containerimage.config.digest" // empty' <<<"$BUILD_METADATA")"
-          if [ -z "$scanned" ]; then
-            echo "::error::$SERVICE: the build metadata has no config digest for the scanned image"
-            exit 1
-          fi
-          if [ "$pushed" != "$scanned" ]; then
-            echo "::error::$SERVICE: the pushed image ($pushed) is not the scanned one ($scanned)"
-            exit 1
-          fi
-          echo "$SERVICE: the pushed image is the scanned one ($pushed)"
+          while read -r ref; do
+            [ -n "$ref" ] || continue
+            pushed="$(docker buildx imagetools inspect "$ref" --format '{{json .Manifest}}' | jq -r .digest)"
+            if [ "$pushed" != "$DIGEST" ]; then
+              echo "::error::$SERVICE: $ref is $pushed, not the scanned archive $DIGEST"; exit 1
+            fi
+            echo "$SERVICE: $ref is the scanned archive ($pushed)"
+          done <<<"$TAGS"
 
       # Verify from anywhere: gh attestation verify oci://<image>:<version> --owner JoseAlbDR
       - name: Attest the build provenance
@@ -334,7 +360,7 @@ jobs:
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-name: ${{ steps.meta.outputs.image }}
-          subject-digest: ${{ steps.push.outputs.digest }}
+          subject-digest: ${{ steps.archive.outputs.digest }}
           push-to-registry: true
 
       # The deploy jobs need each leg's version and pushed digest. Outputs of a matrix job overwrite
@@ -346,7 +372,7 @@ jobs:
         env:
           SERVICE: ${{ matrix.service }}
           VERSION: ${{ steps.meta.outputs.version }}
-          DIGEST: ${{ steps.push.outputs.digest }}
+          DIGEST: ${{ steps.archive.outputs.digest }}
         run: |
           if ! [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
             echo "::error::$SERVICE: the push gave no digest"; exit 1
