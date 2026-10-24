@@ -55,7 +55,7 @@
       "mcp": "Öffentlicher MCP-Server",
       "langChainAssistant": "LangChainAssistant",
       "frameworkCase": "Fallstudie zum Framework",
-      "journal": "Bau-Journal"
+      "journal": "Entwicklungstagebuch"
     },
     "stackTitle": "Stack",
     "stackLink": "Den ganzen Stack ansehen",
@@ -128,28 +128,28 @@
     "back": "Alle Beiträge"
   },
   "JournalPage": {
-    "metaTitle": "Journal",
+    "metaTitle": "Tagebuch",
     "metaDescription": "Ein Beitrag pro Arbeitspaket dieser Website: was ich gebaut habe, was ich gelernt habe, was ich ändern würde.",
-    "eyebrow": "Journal",
-    "title": "Bau-Journal",
+    "eyebrow": "Tagebuch",
+    "title": "Entwicklungstagebuch",
     "lead": "Ein Beitrag pro Arbeitspaket: was ich gebaut habe, was ich gelernt habe, was ich ändern würde.",
-    "empty": "Noch keine Journal-Beiträge veröffentlicht.",
-    "pagination": "Weitere Journal-Beiträge",
-    "older": "Ältere Journal-Beiträge",
-    "back": "Alle Journal-Beiträge",
+    "empty": "Noch keine Tagebucheinträge veröffentlicht.",
+    "pagination": "Weitere Tagebucheinträge",
+    "older": "Ältere Tagebucheinträge",
+    "back": "Alle Tagebucheinträge",
     "workPackage": "WP-{wp}"
   },
   "NowPage": {
     "metaTitle": "Jetzt",
-    "metaDescription": "Worauf ich mich gerade konzentriere: die aktuelle Arbeit, was ich lerne und die neuesten Beiträge aus dem Bau-Journal.",
+    "metaDescription": "Worauf ich mich gerade konzentriere: die aktuelle Arbeit, was ich lerne und die neuesten Einträge aus dem Entwicklungstagebuch.",
     "eyebrow": "Jetzt",
     "title": "Jetzt",
     "lead": "Worauf ich mich gerade konzentriere.",
     "updated": "Aktualisiert am <date>{when}</date>",
     "empty": "In dieser Sprache ist noch kein Update veröffentlicht.",
     "lastFinished": "Zuletzt abgeschlossenes Arbeitspaket",
-    "latestJournal": "Neueste Journal-Beiträge",
-    "allJournal": "Alle Journal-Beiträge"
+    "latestJournal": "Neueste Tagebucheinträge",
+    "allJournal": "Alle Tagebucheinträge"
   },
   "StackPage": {
     "metaTitle": "Stack",
@@ -160,9 +160,9 @@
     "empty": "Noch keine Kenntnisse veröffentlicht."
   },
   "WorkPage": {
-    "metaTitle": "Arbeitsprotokoll",
+    "metaTitle": "Fallstudien",
     "metaDescription": "Ein Eintrag pro Arbeit: das Problem, was ich gebaut habe, die Abwägungen und das Ergebnis.",
-    "eyebrow": "Arbeitsprotokoll",
+    "eyebrow": "Fallstudien",
     "title": "Die Arbeit hinter dem Lebenslauf",
     "lead": "Ein Eintrag pro Arbeit: das Problem, was ich gebaut habe, die Abwägungen und wie es ausging.",
     "empty": "Noch keine Einträge veröffentlicht.",
@@ -219,13 +219,13 @@
     "projects": "Projekte",
     "stack": "Stack",
     "blog": "Blog",
-    "work": "Arbeitsprotokoll"
+    "work": "Fallstudien"
   },
   "Footer": {
     "copyright": "© {year} jadero.dev",
     "note": "Gebaut, ein Release nach dem anderen.",
-    "work": "Arbeitsprotokoll",
-    "journal": "Journal",
+    "work": "Fallstudien",
+    "journal": "Tagebuch",
     "now": "Jetzt"
   },
   "ThemeToggle": {

@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: NowPageProps): Promise<Metada
  * `content:now`) is rendered through the safe Markdown pipeline with its "updated" date; when no
  * text is published in the locale, a short note takes its place and the page still answers 200.
  * The journal feed (`?kind=journal`, under `content:posts`) gives the last finished work package,
- * derived from the latest journal post (never a hand-edited field), and the latest three posts;
+ * derived from the latest journal post (never a hand-edited field), and the next three posts after it;
  * with no journal post, or when the feed read fails, both blocks are hidden and the page still
  * renders. A failed Now text read (other than its 404) lands in the locale's error boundary.
  * @param props.params the route params with the locale segment.

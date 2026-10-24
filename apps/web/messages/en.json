@@ -160,9 +160,9 @@
     "empty": "No skills are published yet."
   },
   "WorkPage": {
-    "metaTitle": "Work log",
+    "metaTitle": "Case studies",
     "metaDescription": "One entry per piece of work: the problem, what I built, the trade-offs and the outcome.",
-    "eyebrow": "Work log",
+    "eyebrow": "Case studies",
     "title": "The work behind the CV",
     "lead": "One entry per piece of work: the problem, what I built, the trade-offs and how it turned out.",
     "empty": "No entries are published yet.",
@@ -219,12 +219,12 @@
     "projects": "Projects",
     "stack": "Stack",
     "blog": "Blog",
-    "work": "Work log"
+    "work": "Case studies"
   },
   "Footer": {
     "copyright": "© {year} jadero.dev",
     "note": "Built one release at a time.",
-    "work": "Work log",
+    "work": "Case studies",
     "journal": "Journal",
     "now": "Now"
   },

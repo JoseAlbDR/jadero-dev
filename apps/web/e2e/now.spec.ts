@@ -73,10 +73,11 @@ for (const [key, messages] of Object.entries(MESSAGES)) {
       );
     });
 
-    test("lists the latest journal posts and links the journal", async ({ page }) => {
+    test("lists the journal posts after the tile's one and links the journal", async ({ page }) => {
       await page.goto(path);
       const section = page.getByRole("region", { name: t.latestJournal });
-      await expect(section.locator("article h3")).toHaveText(posts.slice(0, 3).map((p) => p.title));
+      // The newest post is in the "last finished" tile, so the list starts with the next one.
+      await expect(section.locator("article h3")).toHaveText(posts.slice(1, 4).map((p) => p.title));
       await expect(section.getByRole("link", { name: t.allJournal })).toHaveAttribute(
         "href",
         `/${locale}/journal`,

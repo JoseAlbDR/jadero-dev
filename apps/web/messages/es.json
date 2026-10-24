@@ -160,9 +160,9 @@
     "empty": "Todavía no hay tecnologías publicadas."
   },
   "WorkPage": {
-    "metaTitle": "Registro de trabajo",
+    "metaTitle": "Casos",
     "metaDescription": "Una entrada por cada trabajo: el problema, lo que construí, las alternativas y el resultado.",
-    "eyebrow": "Registro de trabajo",
+    "eyebrow": "Casos",
     "title": "El trabajo detrás del CV",
     "lead": "Una entrada por cada trabajo: el problema, lo que construí, las alternativas y cómo salió.",
     "empty": "Aún no hay entradas publicadas.",
@@ -219,12 +219,12 @@
     "projects": "Proyectos",
     "stack": "Stack",
     "blog": "Blog",
-    "work": "Registro de trabajo"
+    "work": "Casos"
   },
   "Footer": {
     "copyright": "© {year} jadero.dev",
     "note": "Construida versión a versión.",
-    "work": "Registro de trabajo",
+    "work": "Casos",
     "journal": "Diario",
     "now": "Ahora"
   },

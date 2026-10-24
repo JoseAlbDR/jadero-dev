@@ -21,20 +21,34 @@ function journal(wp: number): PostSummaryDto {
 describe("nowJournal", () => {
   it("takes the latest journal post as the last finished work package", () => {
     // The feed is newest first: WP-39 was published last, whatever its number.
-    const page = { items: [journal(39), journal(12), journal(10), journal(5)], nextCursor: "c" };
+    const page = {
+      items: [journal(39), journal(12), journal(10), journal(5), journal(4)],
+      nextCursor: "c",
+    };
 
     const { lastFinished, latest } = nowJournal(page);
 
     expect(lastFinished?.wp).toBe(39);
-    expect(latest.map((p) => p.wp)).toEqual([39, 12, 10]);
+    // The list starts after the tile's post, so WP-39 is not repeated, and stops at three.
+    expect(latest.map((p) => p.wp)).toEqual([12, 10, 5]);
     expect(latest).toHaveLength(NOW_JOURNAL_POSTS);
   });
 
-  it("lists fewer posts when the journal holds fewer than three", () => {
+  it("lists fewer posts when the journal holds fewer than four", () => {
+    const { lastFinished, latest } = nowJournal({
+      items: [journal(12), journal(10)],
+      nextCursor: null,
+    });
+
+    expect(lastFinished?.wp).toBe(12);
+    expect(latest.map((p) => p.wp)).toEqual([10]);
+  });
+
+  it("hides the list when the only journal post is already in the tile", () => {
     const { lastFinished, latest } = nowJournal({ items: [journal(12)], nextCursor: null });
 
     expect(lastFinished?.wp).toBe(12);
-    expect(latest.map((p) => p.wp)).toEqual([12]);
+    expect(latest).toEqual([]);
   });
 
   it("has nothing to show when no journal post is published, so the page hides both blocks", () => {
@@ -49,7 +63,7 @@ describe("readNowJournal", () => {
     const { lastFinished, latest } = await readNowJournal(async () => page);
 
     expect(lastFinished?.wp).toBe(39);
-    expect(latest.map((p) => p.wp)).toEqual([39, 12]);
+    expect(latest.map((p) => p.wp)).toEqual([12]);
   });
 
   it("hides the journal blocks instead of failing the page when the feed read fails", async () => {
