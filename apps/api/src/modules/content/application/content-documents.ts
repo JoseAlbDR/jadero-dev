@@ -11,7 +11,7 @@ import {
   type KnowledgeEntryType,
 } from "../domain/knowledge-entry.js";
 import { LOCALES, type Locale } from "../domain/locale.js";
-import type { PostDocument } from "../domain/post.js";
+import type { PostDocument, PostKind } from "../domain/post.js";
 import type { ProfileDocument, ProfileLinkKind } from "../domain/profile.js";
 import type { ProjectDocument, ProjectKind } from "../domain/project.js";
 import type { SkillDocument } from "../domain/skill.js";
@@ -85,6 +85,11 @@ const projectKinds = {
 
 /** A project's kind, a layout field on the root. */
 export const projectKindSchema: z.ZodType<ProjectKind> = z.enum(keysOf(projectKinds));
+
+const postKinds = { post: true, journal: true } as const satisfies Record<PostKind, true>;
+
+/** A post's kind (WP-39 D1), a layout field on the root. */
+export const postKindSchema: z.ZodType<PostKind> = z.enum(keysOf(postKinds));
 
 /** One locale of a post. */
 export const postDocumentSchema: z.ZodType<PostDocument> = z.object({

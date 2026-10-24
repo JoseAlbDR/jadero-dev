@@ -7,6 +7,7 @@ import {
   experienceItemDocumentSchema,
   localeSchema,
   postDocumentSchema,
+  postKindSchema,
   profileDocumentSchema,
   projectDocumentSchema,
   projectKindSchema,
@@ -100,7 +101,8 @@ const layoutFields = {
     featured: z.boolean(),
     sortOrder,
   },
-  post: { slug: z.string() },
+  // The kind rule (a journal post names its WP, a blog post none) is the domain's, like the slug's.
+  post: { slug: z.string(), kind: postKindSchema.optional(), wp: z.int().nullable().optional() },
   skill: { sortOrder },
   "cv-bullet": { parent: cvBulletParentSchema, sortOrder, importance: cvBulletImportanceSchema },
 } as const;

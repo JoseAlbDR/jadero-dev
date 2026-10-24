@@ -108,6 +108,16 @@ describe("public content reads over HTTP", () => {
     expect(queries.lastCursor).toEqual(position);
   });
 
+  it("lists blog posts by default and journal posts on ?kind=journal; another kind is a 400", async () => {
+    expect((await http().get("/v1/content/en/posts")).status).toBe(200);
+    expect(queries.lastKind).toBe("post");
+    expect((await http().get("/v1/content/en/posts?kind=journal")).status).toBe(200);
+    expect(queries.lastKind).toBe("journal");
+    const res = await http().get("/v1/content/en/posts?kind=page");
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({ errors: [{ pointer: "#/kind" }] });
+  });
+
   it("drops a private entry field a query returned by mistake (the response schema, D-67)", async () => {
     const res = await http().get("/v1/content/work/kb-sample-entry");
     expect(res.status).toBe(200);

@@ -5,6 +5,7 @@ import type {
   Locale,
   PostCursorPosition,
   PostDto,
+  PostKind,
   PostPageDto,
   ProfileDto,
   ProjectDto,
@@ -40,8 +41,9 @@ const germanProject: ProjectDto = {
   alternates: { ...englishProject.alternates, de: "beispielprojekt" },
 };
 
-/** Canned content; records the last post cursor it was given. */
+/** Canned content; records the last post kind and cursor it was given. */
 export class FakeContentQueries extends ContentQueries {
+  lastKind: PostKind | undefined;
   lastCursor: PostCursorPosition | undefined;
 
   /** {@inheritDoc ContentQueries.profile} */
@@ -74,7 +76,8 @@ export class FakeContentQueries extends ContentQueries {
   }
 
   /** {@inheritDoc ContentQueries.posts} */
-  async posts(_locale: Locale, after?: PostCursorPosition): Promise<PostPageDto> {
+  async posts(_locale: Locale, kind: PostKind, after?: PostCursorPosition): Promise<PostPageDto> {
+    this.lastKind = kind;
     this.lastCursor = after;
     return { items: [], nextCursor: null };
   }

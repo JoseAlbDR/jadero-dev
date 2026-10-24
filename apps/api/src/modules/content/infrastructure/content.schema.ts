@@ -19,6 +19,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { LOCALES } from "../domain/locale.js";
+import type { PostKind } from "../domain/post.js";
 import type { ProjectKind } from "../domain/project.js";
 import type { RevisionOrigin } from "../domain/revision.js";
 
@@ -40,6 +41,9 @@ export const REVISION_ORIGINS = ["owner", "machine"] as const satisfies readonly
 
 /** The project kinds (ADR-011), as stored in `projects.kind`. */
 const PROJECT_KINDS = ["case_study", "project", "early"] as const satisfies readonly ProjectKind[];
+
+/** The post kinds (WP-39 D1), as stored in `posts.kind`. */
+const POST_KINDS = ["post", "journal"] as const satisfies readonly PostKind[];
 
 /**
  * A CHECK that a text column holds one of a closed list of code constants (never user input, so
@@ -279,16 +283,29 @@ export const projectTranslations = translationTable(
   publishedSlug.constraints("project_translations"),
 );
 
-/** One row per post; `slug` is the canonical slug. */
+/**
+ * One row per post; `slug` is the canonical slug. `kind` is the discriminator of WP-39 D1 (a blog
+ * post or a journal post, one table): a journal post names its work package in `wp`, a blog post
+ * has none, the same rule `Post.create` enforces (defense in depth), and the partial unique index
+ * allows one journal post per WP.
+ */
 export const posts = content.table(
   "posts",
   {
     id: uuid().primaryKey(),
     slug: text().notNull(),
+    kind: text().notNull().default("post"),
+    wp: integer(),
     archivedAt: archivedAt(),
     version: version(),
   },
-  (t) => [unique("posts_slug_unique").on(t.slug)],
+  (t) => [
+    unique("posts_slug_unique").on(t.slug),
+    check("posts_kind_check", oneOf(t.kind, POST_KINDS)),
+    check("posts_journal_wp_check", sql`(${t.kind} = 'journal') = (${t.wp} IS NOT NULL)`),
+    check("posts_wp_check", sql`${t.wp} >= 1`),
+    uniqueIndex("posts_journal_wp_unique").on(t.wp).where(sql`${t.kind} = 'journal'`),
+  ],
 );
 
 export const postRevisions = revisionTable("post_revisions", uuid("post_id").notNull(), posts.id);

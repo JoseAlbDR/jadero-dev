@@ -253,3 +253,52 @@ describe("profile", () => {
     ).rejects.toEqual(rejection("23505", "profile_singleton"));
   });
 });
+
+describe("post kind (WP-39 D1: a journal post names its WP, one journal post per WP)", () => {
+  /** Inserts a post with this kind and WP; `kind` undefined leaves the column default. */
+  function post(kind: string | undefined, wp: number | null): Promise<void> {
+    const id = randomUUID();
+    const slug = `post-${id.slice(0, 8)}`;
+    return kind === undefined
+      ? run("INSERT INTO content.posts (id, slug, wp, version) VALUES ($1, $2, $3, 1)", [
+          id,
+          slug,
+          wp,
+        ])
+      : run("INSERT INTO content.posts (id, slug, kind, wp, version) VALUES ($1, $2, $3, $4, 1)", [
+          id,
+          slug,
+          kind,
+          wp,
+        ]);
+  }
+
+  it("default to a blog post with no WP, and accept a journal post with one", async () => {
+    await expect(post(undefined, null)).resolves.toBeUndefined();
+    await expect(post("journal", 900_001)).resolves.toBeUndefined();
+  });
+
+  it("refuse a kind outside the list", async () => {
+    await expect(post("page", null)).rejects.toEqual(rejection("23514", "posts_kind_check"));
+  });
+
+  it("refuse a journal post without a WP, and a blog post with one", async () => {
+    await expect(post("journal", null)).rejects.toEqual(
+      rejection("23514", "posts_journal_wp_check"),
+    );
+    await expect(post("post", 900_002)).rejects.toEqual(
+      rejection("23514", "posts_journal_wp_check"),
+    );
+  });
+
+  it("refuse a WP below 1", async () => {
+    await expect(post("journal", 0)).rejects.toEqual(rejection("23514", "posts_wp_check"));
+  });
+
+  it("refuse a second journal post for the same WP", async () => {
+    await post("journal", 900_003);
+    await expect(post("journal", 900_003)).rejects.toEqual(
+      rejection("23505", "posts_journal_wp_unique"),
+    );
+  });
+});

@@ -150,6 +150,8 @@ function post(slug: string, locale: Locale, alternates: PostSummaryDto["alternat
   return {
     slug,
     locale,
+    kind: "post",
+    wp: null,
     title: slug,
     excerpt: "",
     tags: [],

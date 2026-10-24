@@ -41,6 +41,19 @@ export class InMemoryPostRepository extends PostRepository {
   }
 
   /**
+   * Scans the records for the journal post of `wp` (the Drizzle adapter's partial unique index).
+   * @param wp the work package number.
+   * @returns the journal post, or undefined.
+   */
+  async findJournal(wp: number): Promise<Post | undefined> {
+    const record = this.records
+      .list()
+      .find(({ base }) => base.kind === "journal" && base.wp === wp);
+    if (!record) return undefined;
+    return postFromRows(record.base, record.translations, pointedRevisions(record));
+  }
+
+  /**
    * Stores the post's rows when it is still at `expectedVersion`, appending its new revisions.
    * @param post the aggregate after the use case changed it.
    * @param expectedVersion the version the caller loaded, 0 for a new post.

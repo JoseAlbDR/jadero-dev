@@ -8,7 +8,7 @@ import {
 import { ExperienceItem, type ExperienceItemDocument } from "../../domain/experience-item.js";
 import type { Locale } from "../../domain/locale.js";
 import type { PublishResult, PublishTarget } from "../../domain/localized-revisions.js";
-import { Post, type PostDocument } from "../../domain/post.js";
+import { Post, type PostDocument, type PostKind } from "../../domain/post.js";
 import { Profile, type ProfileDocument } from "../../domain/profile.js";
 import { Project, type ProjectDocument, type ProjectKind } from "../../domain/project.js";
 import type { Revision, RevisionOrigin } from "../../domain/revision.js";
@@ -61,7 +61,13 @@ export interface NewItemOf {
     readonly featured: boolean;
     readonly sortOrder: number;
   };
-  readonly post: { readonly id?: string | undefined; readonly slug: string };
+  /** An omitted kind is a blog post; a journal post names its work package (WP-39 D1). */
+  readonly post: {
+    readonly id?: string | undefined;
+    readonly slug: string;
+    readonly kind?: PostKind | undefined;
+    readonly wp?: number | null | undefined;
+  };
   readonly skill: { readonly id?: string | undefined; readonly sortOrder: number };
   readonly "cv-bullet": {
     readonly id: string;
@@ -181,8 +187,14 @@ export const LOCALIZED: { readonly [K in LocalizedType]: LocalizedTypeEntry<K> }
   },
   post: {
     create: (scope, fields, ids) =>
-      tracked(Post.create({ id: fields.id ?? ids.next(), slug: fields.slug }), (post, v) =>
-        scope.posts.save(post, v),
+      tracked(
+        Post.create({
+          id: fields.id ?? ids.next(),
+          slug: fields.slug,
+          kind: fields.kind ?? "post",
+          wp: fields.wp ?? null,
+        }),
+        (post, v) => scope.posts.save(post, v),
       ),
     load: async (scope, id) => {
       const post = await scope.posts.get(id);

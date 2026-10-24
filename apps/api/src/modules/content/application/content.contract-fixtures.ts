@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import type { ApprovalChecklist } from "../domain/approval-checklist.js";
 import { CvBullet, type CvBulletParent } from "../domain/cv-bullet.js";
 import { ExperienceItem } from "../domain/experience-item.js";
@@ -215,7 +215,18 @@ export function saveExperienceItemRevision(
  */
 export function newPost(): Post {
   const id = randomUUID();
-  return Post.create({ id, slug: `placeholder-${id.slice(0, 8)}` });
+  return Post.create({ id, slug: `placeholder-${id.slice(0, 8)}`, kind: "post", wp: null });
+}
+
+/**
+ * A new journal post with no revision, never stored.
+ * @param wp its work package; a random one by default, because one journal post per WP is unique
+ * and the tests of one file share a database.
+ * @returns the journal post at version 0.
+ */
+export function newJournalPost(wp = randomInt(1, 2_000_000_000)): Post {
+  const id = randomUUID();
+  return Post.create({ id, slug: `journal-${id.slice(0, 8)}`, kind: "journal", wp });
 }
 
 /**

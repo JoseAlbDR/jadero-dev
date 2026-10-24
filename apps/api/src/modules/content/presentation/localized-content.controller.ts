@@ -101,9 +101,11 @@ export class LocalizedContentController {
   }
 
   /**
-   * `GET /v1/content/:locale/posts?cursor=`: 20 posts per page, newest first.
+   * `GET /v1/content/:locale/posts?kind=&cursor=`: 20 posts per page, newest first; blog posts
+   * unless `kind=journal`.
    * @param params the locale.
-   * @param query the opaque cursor of the previous page's `nextCursor`, decoded by its schema.
+   * @param query the kind (`post` by default) and the opaque cursor of the previous page's
+   * `nextCursor`, decoded by its schema.
    * @returns one page and the next page's cursor.
    */
   @Get("posts")
@@ -112,7 +114,7 @@ export class LocalizedContentController {
     @Param({ schema: localeParams }) params: LocaleParams,
     @Query({ schema: postListQuery }) query: z.output<typeof postListQuery>,
   ): Promise<PostPageDto> {
-    return this.queries.posts(params.locale, query.cursor);
+    return this.queries.posts(params.locale, query.kind, query.cursor);
   }
 
   /**

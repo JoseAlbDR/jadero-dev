@@ -103,7 +103,7 @@ roundTrip<ProjectDocument, StoredProject>({
 
 roundTrip<PostDocument, StoredPost>({
   type: "Post",
-  create: () => Post.create({ id: "post-1", slug: "sample" }),
+  create: () => Post.create({ id: "post-1", slug: "sample", kind: "post", wp: null }),
   reconstitute: Post.reconstitute,
   doc: (word) => ({ slug: `post-${word}`, title: word, excerpt: "", body: "Body.", tags: [] }),
 });

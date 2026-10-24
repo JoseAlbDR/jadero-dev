@@ -25,11 +25,12 @@ import { CONTENT_READER, createContentTestDatabase } from "./setup/content-datab
 
 // WP-12 step 7a on Postgres: the query service (CQRS read side) and the /v1 routes, reading as the
 // read-only role `content_reader` while the seed writes as the owner. Placeholder content only
-// (ADR-031): the db:seed data plus an archived project, 22 more posts (a second page) and two
-// entries that were approved, then withdrawn or deleted.
+// (ADR-031): the db:seed data plus an archived project, 22 more posts (a second page), one journal
+// post (WP-39 D1) and two entries that were approved, then withdrawn or deleted.
 
 const ARCHIVED_PROJECT = "01990000-0000-7000-8000-000000000299";
 const EXTRA_POSTS = 22;
+const JOURNAL_POST = "01990000-0000-7000-8000-000000000639";
 
 const entry = (id: string): ContentSeedItem => ({
   type: "knowledge-entry",
@@ -77,6 +78,14 @@ const extraItems: ContentSeedItem[] = [
       documents: { es: postDocument(`entrada-${n}`), en: postDocument(`sample-post-${n}`) },
     };
   }),
+  {
+    type: "post",
+    id: JOURNAL_POST,
+    slug: "journal-wp-39",
+    kind: "journal",
+    wp: 39,
+    documents: { es: postDocument("diario-wp-39"), en: postDocument("journal-wp-39") },
+  },
   entry("kb-sample-withdrawn"),
   entry("kb-sample-deleted"),
 ];
@@ -197,16 +206,30 @@ describe("DrizzleContentQueries on Postgres, as content_reader", () => {
   });
 
   it("pages posts newest first by first publication, 20 per page, without gaps or repeats", async () => {
-    const first = await queries.posts("en");
+    const first = await queries.posts("en", "post");
     expect(first.items).toHaveLength(20);
     expect(first.nextCursor).not.toBeNull();
     const after = postCursor.parse(first.nextCursor);
-    const second = await queries.posts("en", after);
+    const second = await queries.posts("en", "post", after);
     expect(second.nextCursor).toBeNull();
     const all = [...first.items, ...second.items];
     expect(new Set(all.map((post) => post.slug)).size).toBe(EXTRA_POSTS + 1);
     const dates = all.map((post) => post.publishedAt);
     expect(dates).toEqual([...dates].sort().reverse());
+  });
+
+  it("lists the journal post only under its kind, and reads it by slug with its WP", async () => {
+    const first = await queries.posts("en", "post");
+    const second = await queries.posts("en", "post", postCursor.parse(first.nextCursor));
+    const blog = [...first.items, ...second.items];
+    expect(blog.map((post) => post.slug)).not.toContain("journal-wp-39");
+    expect(blog.every((post) => post.kind === "post" && post.wp === null)).toBe(true);
+    const journal = await queries.posts("en", "journal");
+    expect(journal.items.map((post) => [post.slug, post.kind, post.wp])).toEqual([
+      ["journal-wp-39", "journal", 39],
+    ]);
+    expect(journal.nextCursor).toBeNull();
+    expect(await queries.post("es", "diario-wp-39")).toMatchObject({ kind: "journal", wp: 39 });
   });
 
   it("stores first_published_at at millisecond precision, the precision of the feed cursor", async () => {
@@ -302,6 +325,12 @@ describe("GET /v1/content over HTTP, against Postgres", () => {
     expect(first.body.items).toHaveLength(20);
     expect(second.body.items).toHaveLength(EXTRA_POSTS + 1 - 20);
     expect(second.body.nextCursor).toBeNull();
+  });
+
+  it("lists the journal posts on ?kind=journal", async () => {
+    const { res, body } = await getJson<PostPageDto>("/v1/content/en/posts?kind=journal");
+    expect(res.status).toBe(200);
+    expect(body.items).toMatchObject([{ slug: "journal-wp-39", kind: "journal", wp: 39 }]);
   });
 
   it("never sends an entry's private provenance, nor a hidden entry", async () => {

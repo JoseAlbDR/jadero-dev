@@ -88,16 +88,16 @@ describe("post cursor", () => {
   it("round-trips: the cursor a page returns decodes into the same position", () => {
     const cursor = encodePostCursor(position);
     expect(cursor).toMatch(/^[A-Za-z0-9_-]+$/);
-    expect(postListQuery.parse({ cursor })).toEqual({ cursor: position });
+    expect(postListQuery.parse({ cursor })).toEqual({ kind: "post", cursor: position });
   });
 
   it("decodes the fixture's nextCursor", () => {
     const { nextCursor } = postPageDto.parse(fixture("posts"));
-    expect(postListQuery.parse({ cursor: nextCursor })).toEqual({ cursor: position });
+    expect(postListQuery.parse({ cursor: nextCursor })).toEqual({ kind: "post", cursor: position });
   });
 
   it("allows the first page without a cursor", () => {
-    expect(postListQuery.parse({})).toEqual({});
+    expect(postListQuery.parse({})).toEqual({ kind: "post" });
   });
 
   it.each([
@@ -109,6 +109,28 @@ describe("post cursor", () => {
     ["an empty string", ""],
   ])("rejects %s", (_label, cursor) => {
     expect(postListQuery.safeParse({ cursor }).success).toBe(false);
+  });
+});
+
+describe("post kind (ADR-034)", () => {
+  it("lists blog posts when no kind is given, and journal posts on ?kind=journal", () => {
+    expect(postListQuery.parse({}).kind).toBe("post");
+    expect(postListQuery.parse({ kind: "journal" }).kind).toBe("journal");
+  });
+
+  it.each(["Journal", "page", ""])("rejects the kind %j, so the list is a 400", (kind) => {
+    expect(postListQuery.safeParse({ kind }).success).toBe(false);
+  });
+
+  it("reads a post from an api that predates kind and wp as a blog post", () => {
+    const { kind: _kind, wp: _wp, ...older } = fixture("post");
+    expect(postDto.parse(older)).toMatchObject({ kind: "post", wp: null });
+  });
+
+  it("carries a journal post's work package", () => {
+    const journal = { ...fixture("post"), kind: "journal", wp: 39 };
+    expect(postDto.parse(journal)).toMatchObject({ kind: "journal", wp: 39 });
+    expect(postDto.safeParse({ ...journal, wp: 0 }).success).toBe(false);
   });
 });
 

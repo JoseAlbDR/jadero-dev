@@ -8,6 +8,7 @@ import type {
   Locale,
   PostCursorPosition,
   PostDto,
+  PostKind,
   PostPageDto,
   PostSummaryDto,
   ProfileDto,
@@ -27,6 +28,7 @@ import {
   knowledgeEntryDocumentSchema,
   localeSchema,
   postDocumentSchema,
+  postKindSchema,
   profileDocumentSchema,
   projectDocumentSchema,
   projectKindSchema,
@@ -105,6 +107,8 @@ const postRow = z.object({
   id: z.string(),
   locale: localeSchema,
   slug: z.string(),
+  kind: postKindSchema,
+  wp: z.int().min(1).nullable(),
   first_published_at: z.iso.datetime(),
   document: z.unknown(),
   alternates: alternatesRow,
@@ -242,13 +246,15 @@ export class DrizzleContentQueries extends ContentQueries {
   }
 
   /** {@inheritDoc ContentQueries.posts} */
-  async posts(locale: Locale, after?: PostCursorPosition): Promise<PostPageDto> {
+  async posts(locale: Locale, kind: PostKind, after?: PostCursorPosition): Promise<PostPageDto> {
     // Keyset pagination on (first_published_at, id), newest first: a republish (a typo fix) moves
     // `published_at` but not `first_published_at`, so it never moves a post to the top. One extra
-    // row tells whether a next page exists.
+    // row tells whether a next page exists. The kind is a filter on the joined root row (WP-39
+    // implementation choice): the walk stays on `post_translations_feed_idx`, and each row's post
+    // is a primary key lookup that keeps it or drops it.
     const rows = await this.rows(
       postRow,
-      sql`${this.postSelect(locale)}
+      sql`${this.postSelect(locale)} AND p.kind = ${kind}
         ${
           after === undefined
             ? sql``
@@ -351,7 +357,7 @@ export class DrizzleContentQueries extends ContentQueries {
     // stores (epoch ms), which keeps the cursor exact. The rule this rests on: every write of
     // `first_published_at` comes from the domain clock, never SQL `now()` (microseconds), or a
     // row whose stored value is finer than its cursor would repeat on the next page.
-    return sql`SELECT t.post_id AS id, t.locale, t.published_slug AS slug,
+    return sql`SELECT t.post_id AS id, t.locale, t.published_slug AS slug, p.kind, p.wp,
         to_char(t.first_published_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
           AS first_published_at,
         r.document, ${alternatesOf("content.post_translations", "post_id")} AS alternates
@@ -392,6 +398,8 @@ export class DrizzleContentQueries extends ContentQueries {
     return {
       slug: row.slug,
       locale: row.locale,
+      kind: row.kind,
+      wp: row.wp,
       title: doc.title,
       excerpt: doc.excerpt,
       tags: [...doc.tags],
