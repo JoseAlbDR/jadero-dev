@@ -22,7 +22,8 @@
 #            127.0.0.1 (the edge answers 404 on /api/health/*); the others (api-worker, agent,
 #            agent-consumer publish nothing) with the image's own probe inside the container,
 #            also on 127.0.0.1. web has no /health/ready: its probe is /robots.txt.
-#   pages    path: web, api. GET /<locale>/ for es, en, de: staging through the edge
+#   pages    path: web, api. GET /<locale> for es, en, de (no trailing slash: Next.js answers /es/
+#            with a 308 to /es, and curl follows no redirect): staging through the edge
 #            (https://new.jadero.dev, TLS and nginx's routing, connected to 127.0.0.1), production
 #            on 127.0.0.1 (no public host until the cutover, WP-29).
 #   content  path: api. GET the public content API, /api/v1/content/en/projects through the edge on
@@ -137,7 +138,7 @@ check_ready() {
 check_pages() {
   local locale ok=1
   for locale in $LOCALES; do
-    answers_200 "/$locale/" "$WEB_PORT" || ok=0
+    answers_200 "/$locale" "$WEB_PORT" || ok=0
   done
   [[ $ok -eq 1 ]] && report pages ok || report pages failed
 }
