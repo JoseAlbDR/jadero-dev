@@ -1,5 +1,6 @@
 import type {
   KnowledgeEntryListDto,
+  PostKind,
   PostPageDto,
   PostSummaryDto,
   ProjectListDto,
@@ -175,8 +176,27 @@ const PROJECTS: Record<Locale, ProjectListDto> = {
 const OUTBOX = { en: "why-an-outbox", es: "por-que-un-outbox" };
 const NOTES = { en: "first-notes" };
 
-/** Two pages of posts per locale, so the walk follows `nextCursor`. */
-function posts(locale: Locale, cursor?: string): PostPageDto {
+/** A journal post card: published in English and Spanish, not in German (the German fallback). */
+function journal(slug: string, locale: Locale): PostSummaryDto {
+  return {
+    ...post(slug, locale, { en: "journal-wp-12", es: "diario-wp-12" }),
+    kind: "journal",
+    wp: 12,
+  };
+}
+
+/**
+ * Two pages of blog posts per locale, so the walk follows `nextCursor`; one page of journal posts.
+ */
+function posts(locale: Locale, kind: PostKind, cursor?: string): PostPageDto {
+  if (kind === "journal") {
+    const items = {
+      en: [journal("journal-wp-12", "en")],
+      es: [journal("diario-wp-12", "es")],
+      de: [journal("journal-wp-12", "en")],
+    }[locale];
+    return { items, nextCursor: null };
+  }
   const items = {
     en: [post("why-an-outbox", "en", OUTBOX), post("first-notes", "en", NOTES)],
     es: [post("por-que-un-outbox", "es", OUTBOX), post("first-notes", "en", NOTES)],
@@ -196,7 +216,7 @@ const WORK: KnowledgeEntryListDto = {
 
 const SOURCES: SitemapSources = {
   projects: async (locale) => PROJECTS[locale],
-  posts: async (locale, cursor) => posts(locale, cursor),
+  posts: async (locale, kind, cursor) => posts(locale, kind, cursor),
   workLog: async () => WORK,
 };
 
@@ -254,6 +274,32 @@ describe("buildSitemap", () => {
     });
   });
 
+  it("lists the journal and each journal post under /journal, never under /blog", async () => {
+    const entries = await buildSitemap(SOURCES, SITE);
+    const urls = entries.map((e) => e.url);
+    expect(urls).toEqual(
+      expect.arrayContaining([
+        "https://jadero.dev/en/journal",
+        "https://jadero.dev/de/journal",
+        "https://jadero.dev/en/journal/journal-wp-12",
+        "https://jadero.dev/es/journal/diario-wp-12",
+      ]),
+    );
+    expect(urls).not.toContain("https://jadero.dev/de/journal/journal-wp-12");
+    expect(urls.some((u) => u.includes("/blog/journal-wp-12"))).toBe(false);
+    expect(entries.find((e) => e.url === "https://jadero.dev/en/journal/journal-wp-12")).toEqual({
+      url: "https://jadero.dev/en/journal/journal-wp-12",
+      lastModified: "2026-10-01T09:00:00.000Z",
+      alternates: {
+        languages: {
+          en: "https://jadero.dev/en/journal/journal-wp-12",
+          es: "https://jadero.dev/es/journal/diario-wp-12",
+          "x-default": "https://jadero.dev/en/journal/journal-wp-12",
+        },
+      },
+    });
+  });
+
   it("lists only indexable work-log entries, under /en only (D-50, D-52)", async () => {
     const urls = (await buildSitemap(SOURCES, SITE)).map((e) => e.url);
     expect(urls).toContain("https://jadero.dev/en/work/kb-outbox-relay");
@@ -273,6 +319,9 @@ describe("buildSitemap", () => {
     );
     expect(entries).toHaveLength(STATIC_URLS);
     expect(failures.sort()).toEqual([
+      "journal de",
+      "journal en",
+      "journal es",
       "posts de",
       "posts en",
       "posts es",
@@ -287,9 +336,9 @@ describe("buildSitemap", () => {
     const entries = await buildSitemap(
       {
         ...SOURCES,
-        posts: async (locale, cursor) => {
+        posts: async (locale, kind, cursor) => {
           if (cursor !== undefined) throw new Error("fetch failed");
-          return posts(locale);
+          return posts(locale, kind);
         },
       },
       SITE,

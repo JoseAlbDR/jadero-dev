@@ -90,11 +90,13 @@ describe("content API client", () => {
     fetchMock.mockImplementation(async () => json({ items: [], nextCursor: null }));
 
     await getProjects("es", "case_study");
-    await getPosts("en", "abc_-1");
+    await getPosts("en", "post", "abc_-1");
+    await getPosts("de", "journal");
 
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
       `${BASE}/v1/content/es/projects?kind=case_study`,
-      `${BASE}/v1/content/en/posts?cursor=abc_-1`,
+      `${BASE}/v1/content/en/posts?kind=post&cursor=abc_-1`,
+      `${BASE}/v1/content/de/posts?kind=journal`,
     ]);
   });
 

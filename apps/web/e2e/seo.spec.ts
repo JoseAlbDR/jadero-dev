@@ -93,6 +93,10 @@ test.describe("sitemap and robots", () => {
     // Posts from every list page (the stub pages by two).
     expect(locs).toContain(`${SITE}/en/blog/first-notes`);
     expect(locs).not.toContain(`${SITE}/de/blog/first-notes`);
+    // The journal and its posts under /journal, never under /blog (ADR-034).
+    expect(locs).toContain(`${SITE}/de/journal`);
+    expect(locs).toContain(`${SITE}/es/journal/el-dominio-de-contenido`);
+    expect(locs).not.toContain(`${SITE}/en/blog/the-content-domain`);
     // Work-log entries under /en only, and only the indexable ones (D-50, D-52).
     expect(locs).toContain(`${SITE}/en/work/kb-outbox-relay`);
     expect(locs).not.toContain(`${SITE}/en/work/kb-inbox-dedup`);

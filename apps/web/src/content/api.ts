@@ -8,6 +8,7 @@ import {
   knowledgeEntryListDto,
   type Locale,
   type PostDto,
+  type PostKind,
   type PostPageDto,
   type ProfileDto,
   type ProjectDto,
@@ -300,15 +301,23 @@ export async function getProject(locale: Locale, projectSlug: string): Promise<P
 }
 
 /**
- * `GET /v1/content/:locale/posts?cursor=`: one page of published posts, newest first.
+ * `GET /v1/content/:locale/posts?kind=&cursor=`: one page of published posts of one kind, newest
+ * first. The kind is always sent, so the blog asks for `post` and the journal for `journal`
+ * explicitly instead of the blog leaning on the API's default.
  * @param locale the page locale.
+ * @param kind `post` for the blog, `journal` for the journal (ADR-034).
  * @param cursor the `nextCursor` of the previous page, or a visitor's cursor already checked and
  *   rebuilt by `postCursorParam`; the first page when absent.
  * @returns the page and the cursor of the next one.
  */
-export async function getPosts(locale: Locale, cursor?: string): Promise<PostPageDto> {
-  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
-  return getContent("posts", `/v1/content/${locale}/posts${query}`, postPageDto, [
+export async function getPosts(
+  locale: Locale,
+  kind: PostKind,
+  cursor?: string,
+): Promise<PostPageDto> {
+  const query = new URLSearchParams({ kind });
+  if (cursor) query.set("cursor", cursor);
+  return getContent("posts", `/v1/content/${locale}/posts?${query}`, postPageDto, [
     contentTags.posts,
   ]);
 }

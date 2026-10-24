@@ -1,15 +1,9 @@
-import { Card } from "@jadero/ui/components/card";
-import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { PublishDate } from "@/components/post-list";
-import { contentLang } from "@/components/project-sections";
-import { StackTags } from "@/components/stack-tags";
+import { PostArticle } from "@/components/post-article";
 import { loadPostPage } from "@/content/post-page";
 import { contentAlternates } from "@/i18n/alternates";
 import { requireLocale } from "@/i18n/locale";
-import { Link } from "@/i18n/navigation";
-import { Markdown } from "@/markdown/markdown";
 import { pageMetadata } from "@/seo/page-metadata";
 
 type PostPageProps = Readonly<{ params: Promise<{ locale: string; slug: string }> }>;
@@ -23,7 +17,7 @@ type PostPageProps = Readonly<{ params: Promise<{ locale: string; slug: string }
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
   const { locale: segment, slug } = await params;
   const locale = requireLocale(segment);
-  const post = await loadPostPage(locale, slug);
+  const post = await loadPostPage(locale, slug, "post");
   return pageMetadata({
     locale,
     title: post.title,
@@ -35,11 +29,10 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 }
 
 /**
- * One post (`/<locale>/blog/<slug>`) from `GET /v1/content/:locale/posts/:slug` (cached 60 s under
- * `content:posts` and its own tag). Another locale's slug of the same post redirects to this
- * locale's slug; a slug no post has is the page's 404 (`loadPostPage`). On the German fallback the
- * post's texts are marked `lang="en"`; the labels around them stay German. The body is Markdown,
- * rendered on the server through the safe pipeline of ADR-011 in one wide card (ADR-045).
+ * One blog post (`/<locale>/blog/<slug>`) from `GET /v1/content/:locale/posts/:slug` (cached 60 s
+ * under `content:posts` and its own tag). Another locale's slug of the same post redirects to this
+ * locale's slug; a slug no blog post has, a journal post's slug included, is the page's 404
+ * (`loadPostPage`). The page body is `PostArticle`: safe Markdown (ADR-011) in one wide card.
  * @param props.params the route params with the locale and the localized slug.
  */
 export default async function PostPage({ params }: PostPageProps) {
@@ -48,41 +41,8 @@ export default async function PostPage({ params }: PostPageProps) {
   setRequestLocale(locale);
   const [t, post] = await Promise.all([
     getTranslations({ locale, namespace: "BlogPage" }),
-    loadPostPage(locale, slug),
+    loadPostPage(locale, slug, "post"),
   ]);
-  const lang = contentLang(post.locale, locale);
 
-  return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-6 pt-10 pb-24">
-      <Link
-        href="/blog"
-        className="inline-flex items-center gap-1.5 rounded-md text-muted-foreground text-sm outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
-      >
-        <ArrowLeft aria-hidden className="size-4" />
-        {t("back")}
-      </Link>
-      <article className="mt-4">
-        <Card asChild className="md:p-10">
-          <header>
-            <PublishDate value={post.publishedAt} locale={locale} className="text-signal" />
-            <h1
-              lang={lang}
-              className="mt-4 text-balance font-semibold text-4xl tracking-tight md:text-5xl"
-            >
-              {post.title}
-            </h1>
-            <p lang={lang} className="mt-5 max-w-2xl text-lg text-muted-foreground">
-              {post.excerpt}
-            </p>
-            <StackTags tags={post.tags} label={t("tags")} className="mt-6" />
-          </header>
-        </Card>
-        <Card variant="wide" className="mt-6">
-          <div lang={lang}>
-            <Markdown source={post.body} />
-          </div>
-        </Card>
-      </article>
-    </main>
-  );
+  return <PostArticle post={post} locale={locale} back={t("back")} tagsLabel={t("tags")} />;
 }

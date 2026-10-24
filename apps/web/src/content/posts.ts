@@ -1,8 +1,18 @@
-import { encodePostCursor, type PostPageDto, postCursor } from "@jadero/contracts";
+import { encodePostCursor, type PostKind, type PostPageDto, postCursor } from "@jadero/contracts";
 import type { Locale } from "next-intl";
 
 /**
- * Reads the `?cursor=` of the blog list from the visitor's URL. The value is checked against the
+ * Where each kind of post lives on the site, as `routing.pathnames` keys: blog posts under `/blog`,
+ * journal posts (ADR-034) under `/journal`. A post is served only on its own kind's route; the
+ * other route answers 404 for it (`loadPostPage`).
+ */
+export const POST_ROUTES = {
+  post: { list: "/blog", item: "/blog/[slug]" },
+  journal: { list: "/journal", item: "/journal/[slug]" },
+} as const satisfies Record<PostKind, { list: string; item: string }>;
+
+/**
+ * Reads the `?cursor=` of a post list (the blog or the journal) from the visitor's URL. The value is checked against the
  * contract (`postCursor`: base64url of a publish time and a post id) and rebuilt from the decoded
  * position with `encodePostCursor`, so what reaches the API and the page's links is a cursor this
  * site built, never the raw input.

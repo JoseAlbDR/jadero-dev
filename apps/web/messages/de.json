@@ -127,6 +127,18 @@
     "older": "Ältere Beiträge",
     "back": "Alle Beiträge"
   },
+  "JournalPage": {
+    "metaTitle": "Journal",
+    "metaDescription": "Ein Beitrag pro Arbeitspaket dieser Website: was ich gebaut habe, was ich gelernt habe, was ich ändern würde.",
+    "eyebrow": "Journal",
+    "title": "Bau-Journal",
+    "lead": "Ein Beitrag pro Arbeitspaket: was ich gebaut habe, was ich gelernt habe, was ich ändern würde.",
+    "empty": "Noch keine Journal-Beiträge veröffentlicht.",
+    "pagination": "Weitere Journal-Beiträge",
+    "older": "Ältere Journal-Beiträge",
+    "back": "Alle Journal-Beiträge",
+    "workPackage": "WP-{wp}"
+  },
   "StackPage": {
     "metaTitle": "Stack",
     "metaDescription": "Die Sprachen, Werkzeuge und Plattformen, mit denen ich arbeite, nach Bereich gruppiert.",
@@ -200,7 +212,8 @@
   "Footer": {
     "copyright": "© {year} jadero.dev",
     "note": "Gebaut, ein Release nach dem anderen.",
-    "work": "Arbeitsprotokoll"
+    "work": "Arbeitsprotokoll",
+    "journal": "Journal"
   },
   "ThemeToggle": {
     "label": "Farbschema",
