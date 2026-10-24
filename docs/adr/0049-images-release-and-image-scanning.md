@@ -1,18 +1,18 @@
 ---
 id: ADR-049
 title: "Images, release and image scanning"
-status: accepted
+status: superseded
 date: 2026-10-12
 deciders: [owner]
 decisions: [D-29, D-32, D-36, D-78, D-79]
 supersedes: [ADR-048, ADR-025]
-superseded_by: null
+superseded_by: ADR-055
 source: docs/learning/wp-7.md (Decisions explained, Open questions, Decision)
 ---
 
 # ADR-049: Images, release and image scanning
 
-**Status:** Accepted (owner, WP-7, 2026-10-12). Supersedes ADR-048 and ADR-025 as a whole. It changes how built images are scanned and what blocks a pull request, which token opens the Release PR, how the server pulls images, which shared packages are release components, how a dependency-only change becomes a release, and it adds a signed build provenance. Everything else in ADR-048 and ADR-025 is restated unchanged by reference (section "Unchanged").
+**Status:** Superseded by ADR-055 for the "Dependency-only releases" line on what `release-inputs.txt` lists only (type packages `@types/*` left out); everything else here stands, restated in ADR-055. Accepted (owner, WP-7, 2026-10-12). Supersedes ADR-048 and ADR-025 as a whole. It changes how built images are scanned and what blocks a pull request, which token opens the Release PR, how the server pulls images, which shared packages are release components, how a dependency-only change becomes a release, and it adds a signed build provenance. Everything else in ADR-048 and ADR-025 is restated unchanged by reference (section "Unchanged").
 
 ## Context
 
