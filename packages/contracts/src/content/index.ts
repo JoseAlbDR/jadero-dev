@@ -1,4 +1,10 @@
 export {
+  type ArchivableAggregate,
+  archivableAggregate,
+  type ContentAggregate,
+  contentAggregate,
+} from "./aggregates.js";
+export {
   type CvBulletDto,
   cvBulletDto,
   type ExperienceItemDto,
@@ -58,6 +64,13 @@ export {
   projectListDto,
   projectSummaryDto,
 } from "./projects.js";
+export {
+  MAX_REVALIDATE_CHANGES,
+  type RevalidateChange,
+  type RevalidateRequest,
+  revalidateChange,
+  revalidateRequest,
+} from "./revalidate.js";
 export {
   type Alternates,
   alternates,

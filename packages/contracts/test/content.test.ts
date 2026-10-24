@@ -17,6 +17,7 @@ import {
   projectDto,
   projectListDto,
   projectListQuery,
+  revalidateRequest,
   skillListDto,
 } from "../src/index.js";
 
@@ -40,6 +41,7 @@ describe("content fixtures", () => {
     ["skills", skillListDto],
     ["work", knowledgeEntryListDto],
     ["work-entry", knowledgeEntryDto],
+    ["revalidate", revalidateRequest],
   ];
 
   it.each(cases)("%s parses unchanged", (name, schema) => {

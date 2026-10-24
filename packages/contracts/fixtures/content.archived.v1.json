@@ -1,0 +1,15 @@
+{
+  "specversion": "1.0",
+  "id": "01a1a0f2-3c4d-7a5e-8b6f-7a8b9c0d1e2f",
+  "source": "jadero/api",
+  "type": "dev.jadero.content.archived.v1",
+  "time": "2026-11-03T11:40:05.310Z",
+  "datacontenttype": "application/json",
+  "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+  "data": {
+    "aggregate": "project",
+    "id": "0199f3a2-5d6e-7f80-9a1b-2c3d4e5f6a7b",
+    "archivedAt": "2026-11-03T11:40:05.300Z",
+    "slugs": { "es": "app-de-tareas", "en": "todo-app" }
+  }
+}

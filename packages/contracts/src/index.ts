@@ -9,4 +9,14 @@ export {
   ROUTING_KEY,
   TRACEPARENT,
 } from "./envelope.js";
-export { eventContracts, systemPingV1 } from "./events/index.js";
+export {
+  contentArchivedV1,
+  contentPublishedV1,
+  eventContracts,
+  knowledgeEntryApprovedV1,
+  knowledgeEntryConfidence,
+  knowledgeEntryWithdrawnV1,
+  knowledgeSnapshotV1,
+  revisionRef,
+  systemPingV1,
+} from "./events/index.js";

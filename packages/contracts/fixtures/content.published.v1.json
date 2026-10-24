@@ -1,0 +1,26 @@
+{
+  "specversion": "1.0",
+  "id": "01a1a0e4-edfb-7c41-9b2e-3f6a1d8c5e07",
+  "source": "jadero/api",
+  "type": "dev.jadero.content.published.v1",
+  "time": "2026-11-03T10:12:00.123Z",
+  "datacontenttype": "application/json",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "data": {
+    "aggregate": "project",
+    "id": "0199f3a2-1b7c-7e10-8d4f-2a6b9c0d1e3f",
+    "locale": "de",
+    "revision": { "id": "01a1a0e4-7850-7d22-a6b1-0c1d2e3f4a5b", "number": 7 },
+    "publishedAt": "2026-11-03T10:12:00.120Z",
+    "item": { "slug": "jobs-hub", "kind": "project", "featured": true, "sortOrder": 2 },
+    "document": {
+      "slug": "jobportal",
+      "title": "Jobportal",
+      "summary": "Eine Jobbörse mit Volltextsuche und Filtern.",
+      "body": "## Problem\n\nEine Beispielseite.",
+      "stackTags": ["NestJS", "PostgreSQL"],
+      "repoUrl": "https://github.com/example/jobs-hub",
+      "demoUrl": null
+    }
+  }
+}

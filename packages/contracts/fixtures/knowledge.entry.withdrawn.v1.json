@@ -1,0 +1,15 @@
+{
+  "specversion": "1.0",
+  "id": "01a1a2c6-4b5a-7e9d-9c8b-1a2b3c4d5e6f",
+  "source": "jadero/api",
+  "type": "dev.jadero.knowledge.entry.withdrawn.v1",
+  "time": "2026-11-09T08:05:41.772Z",
+  "datacontenttype": "application/json",
+  "traceparent": "00-7e1d2c3b4a5f6e7d8c9b0a1f2e3d4c5b-2b3c4d5e6f7a8b9c-01",
+  "data": {
+    "entryId": "kb-outbox-relay",
+    "locale": "en",
+    "reason": "withdrawn",
+    "at": "2026-11-09T08:05:41.770Z"
+  }
+}
