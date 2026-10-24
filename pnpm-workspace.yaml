@@ -82,7 +82,7 @@ catalog:
   typescript: 6.0.3
   vitest: 5.0.5
   yaml: 2.9.1
-  zod: 4.6.5
+  zod: 4.6.6
 
 # Dependency install scripts stay off (pnpm 11 fails the install on an undecided one).
 # lefthook's postinstall only runs `lefthook install`, which the root `prepare` script already does.
@@ -123,3 +123,6 @@ engineStrict: true
 #   # GHSA-xxxx-xxxx-xxxx, 2026-10-11: fixes a remote code execution we ship; drop after 2026-10-14.
 #   - some-package@1.2.3
 minimumReleaseAge: 4320
+minimumReleaseAgeExclude:
+  # Renovate security update: zod@4.6.6
+  - zod@4.6.6
