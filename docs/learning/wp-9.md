@@ -466,6 +466,7 @@ Recorded 2026-10-18 in [ADR-053](../adr/0053-deploy-files-from-the-release-tag.m
 - Step 6d why: a runbook is read during an incident, so it is written from the script's real states and reasons, not from memory, and each procedure says what it touches and how it can fail; the monitors are split by failure domain, because Kuma on the box sees the private health endpoints but dies with it, and the external check sees only the public edge but survives it. Kuma reaches the services by container name because both projects use the same service names on two networks it joins. The drill on the real image found what a reading of the API docs missed: no `curl` in the container, the vhost encoding, the properties key, and that unbound events fall into `jadero.unrouted` instead of vanishing.
 
 - Step 6d follow-ups: owner choices of 2026-10-24: Kuma monitors at 60 s with 2 retries and the backup email; three `site` monitors per locale through the public edge with the certificate expiry notification added now; the SSE monitor waits for the chat and the dead-letter alert is a follow-up (no native Kuma type).
+- Step 6d Kuma setup (2026-10-24): Kuma had no notification at all, so the backup heartbeat could never alert; `email jadero` (Gmail SMTP on 587 with STARTTLS, since Hetzner blocks outbound 465 and 25) now covers every monitor; the 13 monitors are up, 12 green and `prod web` paused (not deployed until #162); the site certificate shows 83 days left.
 
 ## Recap
 
