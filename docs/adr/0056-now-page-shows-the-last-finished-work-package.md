@@ -1,7 +1,7 @@
 ---
 id: ADR-056
 title: "The /now page shows the last finished work package"
-status: proposed
+status: accepted
 date: 2026-10-24
 deciders: [owner]
 decisions: [D-87]
@@ -12,7 +12,7 @@ source: null
 
 # ADR-056: The /now page shows the last finished work package
 
-**Status:** proposed
+**Status:** Accepted (owner, 2026-10-24, D-87).
 
 ## Context
 

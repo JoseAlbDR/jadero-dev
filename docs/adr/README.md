@@ -68,7 +68,7 @@ Rules (ADR-028, section 12.1 of the plan):
 | ADR-053 | Deploy files from the release tag | accepted | D-83, D-84 | [0053-deploy-files-from-the-release-tag.md](0053-deploy-files-from-the-release-tag.md) |
 | ADR-054 | Messaging topology as built | accepted | D-85 | [0054-messaging-topology-as-built.md](0054-messaging-topology-as-built.md) |
 | ADR-055 | Type packages out of the release inputs | accepted | D-86 | [0055-type-packages-out-of-the-release-inputs.md](0055-type-packages-out-of-the-release-inputs.md) |
-| ADR-056 | The /now page shows the last finished work package | proposed | D-87 | [0056-now-page-shows-the-last-finished-work-package.md](0056-now-page-shows-the-last-finished-work-package.md) |
+| ADR-056 | The /now page shows the last finished work package | accepted | D-87 | [0056-now-page-shows-the-last-finished-work-package.md](0056-now-page-shows-the-last-finished-work-package.md) |
 <!-- adr-index:end -->
 
 Read in this order for a first pass: 029 (service boundaries), 002 (topology and edge), 003 (inside a service), 012 (async work), 031 (content layers), 013 to 016 (AI layer and RAG), 020 and 021 (security), 025 to 027 (delivery and hosting), 041 (work tracking).
