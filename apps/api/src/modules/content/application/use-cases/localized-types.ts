@@ -8,7 +8,8 @@ import {
 import { ExperienceItem, type ExperienceItemDocument } from "../../domain/experience-item.js";
 import type { Locale } from "../../domain/locale.js";
 import type { PublishResult, PublishTarget } from "../../domain/localized-revisions.js";
-import { Post, type PostDocument } from "../../domain/post.js";
+import { Now, type NowDocument } from "../../domain/now.js";
+import { Post, type PostDocument, type PostKind } from "../../domain/post.js";
 import { Profile, type ProfileDocument } from "../../domain/profile.js";
 import { Project, type ProjectDocument, type ProjectKind } from "../../domain/project.js";
 import type { Revision, RevisionOrigin } from "../../domain/revision.js";
@@ -24,6 +25,7 @@ import type { IdGenerator } from "../id-generator.js";
 /** The content types that publish per locale through `LocalizedRevisions` (D4). */
 export const LOCALIZED_TYPES = [
   "profile",
+  "now",
   "experience-item",
   "project",
   "post",
@@ -34,12 +36,13 @@ export const LOCALIZED_TYPES = [
 /** One localized content type, the `type` of every command. */
 export type LocalizedType = (typeof LOCALIZED_TYPES)[number];
 
-/** The localized types that can be archived: every one but the profile, a singleton. */
-export type ArchivableType = Exclude<LocalizedType, "profile">;
+/** The localized types that can be archived: every one but the singletons, the profile and Now. */
+export type ArchivableType = Exclude<LocalizedType, "profile" | "now">;
 
 /** The document (one locale's content, Q1 B) of each localized type. */
 export interface DocumentOf {
   readonly profile: ProfileDocument;
+  readonly now: NowDocument;
   readonly "experience-item": ExperienceItemDocument;
   readonly project: ProjectDocument;
   readonly post: PostDocument;
@@ -53,6 +56,7 @@ export interface DocumentOf {
  */
 export interface NewItemOf {
   readonly profile: { readonly id?: string | undefined };
+  readonly now: { readonly id?: string | undefined };
   readonly "experience-item": { readonly id?: string | undefined; readonly sortOrder: number };
   readonly project: {
     readonly id?: string | undefined;
@@ -61,7 +65,13 @@ export interface NewItemOf {
     readonly featured: boolean;
     readonly sortOrder: number;
   };
-  readonly post: { readonly id?: string | undefined; readonly slug: string };
+  /** An omitted kind is a blog post; a journal post names its work package (WP-39 D1). */
+  readonly post: {
+    readonly id?: string | undefined;
+    readonly slug: string;
+    readonly kind?: PostKind | undefined;
+    readonly wp?: number | null | undefined;
+  };
   readonly skill: { readonly id?: string | undefined; readonly sortOrder: number };
   readonly "cv-bullet": {
     readonly id: string;
@@ -73,7 +83,7 @@ export interface NewItemOf {
 
 /**
  * What the generic use cases need from an aggregate of any localized type; every aggregate class
- * has it structurally. `archive` is absent on the profile.
+ * has it structurally. `archive` is absent on the singletons (the profile and Now).
  */
 export interface LocalizedItem<TDoc extends object> {
   readonly id: string;
@@ -115,13 +125,13 @@ export interface LocalizedTypeEntry<K extends LocalizedType> {
   /**
    * Loads a stored aggregate.
    * @param scope the unit of work's repositories.
-   * @param id the item's id; for the profile, the id of the stored singleton.
+   * @param id the item's id; for a singleton (the profile, Now), the id of the stored one.
    * @returns the aggregate with its save bound, or undefined when not stored.
    */
   load(scope: ContentScope, id: string): Promise<Tracked<DocumentOf[K]> | undefined>;
   /**
-   * Whether creating an item with this id would find one already stored. For the profile, any
-   * stored profile counts, whatever its id: the singleton slot is taken.
+   * Whether creating an item with this id would find one already stored. For a singleton (the
+   * profile, Now), any stored one counts, whatever its id: the singleton slot is taken.
    * @param scope the unit of work's repositories.
    * @param id the id a create would use.
    * @returns true when the item (or the profile) exists.
@@ -148,6 +158,16 @@ export const LOCALIZED: { readonly [K in LocalizedType]: LocalizedTypeEntry<K> }
       return tracked(profile, (p, v) => scope.profile.save(p, v));
     },
     exists: async (scope) => (await scope.profile.find()) !== undefined,
+  },
+  now: {
+    create: (scope, fields, ids) =>
+      tracked(Now.create(fields.id ?? ids.next()), (n, v) => scope.now.save(n, v)),
+    load: async (scope, id) => {
+      const now = await scope.now.find();
+      if (!now || now.id !== id) return undefined;
+      return tracked(now, (n, v) => scope.now.save(n, v));
+    },
+    exists: async (scope) => (await scope.now.find()) !== undefined,
   },
   "experience-item": {
     create: (scope, fields, ids) =>
@@ -181,8 +201,14 @@ export const LOCALIZED: { readonly [K in LocalizedType]: LocalizedTypeEntry<K> }
   },
   post: {
     create: (scope, fields, ids) =>
-      tracked(Post.create({ id: fields.id ?? ids.next(), slug: fields.slug }), (post, v) =>
-        scope.posts.save(post, v),
+      tracked(
+        Post.create({
+          id: fields.id ?? ids.next(),
+          slug: fields.slug,
+          kind: fields.kind ?? "post",
+          wp: fields.wp ?? null,
+        }),
+        (post, v) => scope.posts.save(post, v),
       ),
     load: async (scope, id) => {
       const post = await scope.posts.get(id);

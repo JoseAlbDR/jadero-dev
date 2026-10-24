@@ -4,6 +4,7 @@ import { type ContentScope, ContentUnitOfWork } from "../application/content.uni
 import { DrizzleCvBulletRepository } from "./drizzle-cv-bullet.repository.js";
 import { DrizzleExperienceItemRepository } from "./drizzle-experience-item.repository.js";
 import { DrizzleKnowledgeEntryRepository } from "./drizzle-knowledge-entry.repository.js";
+import { DrizzleNowRepository } from "./drizzle-now.repository.js";
 import { DrizzlePostRepository } from "./drizzle-post.repository.js";
 import { DrizzleProfileRepository } from "./drizzle-profile.repository.js";
 import { DrizzleProjectRepository } from "./drizzle-project.repository.js";
@@ -31,6 +32,7 @@ export class DrizzleContentUnitOfWork extends ContentUnitOfWork {
     return withTransaction(this.pool, ({ db }) =>
       work({
         profile: new DrizzleProfileRepository(db),
+        now: new DrizzleNowRepository(db),
         experienceItems: new DrizzleExperienceItemRepository(db),
         projects: new DrizzleProjectRepository(db),
         posts: new DrizzlePostRepository(db),

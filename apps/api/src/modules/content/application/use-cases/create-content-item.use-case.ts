@@ -16,10 +16,11 @@ export interface CreatedContentItem {
 }
 
 /**
- * Creates a profile, experience item, project, post, skill or CV bullet with no revision (D1): its
- * layout only, every locale `missing`. One class for every localized type (owner decision,
- * granularity B): the command's `type` picks the entry of `LOCALIZED`, which builds the aggregate
- * and binds its repository. The profile is a singleton: a create when one exists is a conflict.
+ * Creates a profile, Now page, experience item, project, post, skill or CV bullet with no revision
+ * (D1): its layout only, every locale `missing`. One class for every localized type (owner
+ * decision, granularity B): the command's `type` picks the entry of `LOCALIZED`, which builds the
+ * aggregate and binds its repository. The profile and Now are singletons: a create when one exists is a
+ * conflict.
  */
 @Injectable()
 export class CreateContentItem {
@@ -34,7 +35,7 @@ export class CreateContentItem {
    * @returns the stored item's type, id and version (1).
    * @throws {ZodError} when the command breaks its schema; nothing runs.
    * @throws {SlugInvalid} or {IdInvalid} from the domain; nothing is stored.
-   * @throws {ConcurrentModification} when the id is taken, or a profile already exists.
+   * @throws {ConcurrentModification} when the id is taken, or the singleton already exists.
    */
   async execute(command: CreateContentItemCommand): Promise<CreatedContentItem> {
     const parsed = createContentItemCommand.parse(command);

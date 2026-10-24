@@ -1,0 +1,80 @@
+{
+  "en": [
+    {
+      "slug": "the-content-domain",
+      "locale": "en",
+      "kind": "journal",
+      "wp": 12,
+      "title": "The content domain",
+      "excerpt": "Revisions, a published pointer per locale and a read side that cannot write.",
+      "tags": [],
+      "publishedAt": "2026-10-10T08:00:00.000Z",
+      "alternates": { "en": "the-content-domain", "es": "el-dominio-de-contenido" },
+      "body": "## What I built\n\nEvery edit is a revision; publishing moves a pointer.\n\n## What I learned\n\nA read-only database role makes the public API unable to write.\n\n<script>window.__xss = true</script>\n"
+    },
+    {
+      "slug": "the-data-layer",
+      "locale": "en",
+      "kind": "journal",
+      "wp": 10,
+      "title": "The data layer",
+      "excerpt": "One schema per service and migrations generated from it.",
+      "tags": [],
+      "publishedAt": "2026-10-06T08:00:00.000Z",
+      "alternates": { "en": "the-data-layer" },
+      "body": "## What I built\n\nGenerated SQL migrations, reviewed before they run."
+    }
+  ],
+  "es": [
+    {
+      "slug": "el-dominio-de-contenido",
+      "locale": "es",
+      "kind": "journal",
+      "wp": 12,
+      "title": "El dominio de contenido",
+      "excerpt": "Revisiones, un puntero publicado por idioma y una lectura que no puede escribir.",
+      "tags": [],
+      "publishedAt": "2026-10-10T08:00:00.000Z",
+      "alternates": { "en": "the-content-domain", "es": "el-dominio-de-contenido" },
+      "body": "## Qué construí\n\nCada cambio es una revisión; publicar mueve un puntero."
+    },
+    {
+      "slug": "the-data-layer",
+      "locale": "en",
+      "kind": "journal",
+      "wp": 10,
+      "title": "The data layer",
+      "excerpt": "One schema per service and migrations generated from it.",
+      "tags": [],
+      "publishedAt": "2026-10-06T08:00:00.000Z",
+      "alternates": { "en": "the-data-layer" },
+      "body": "## What I built\n\nGenerated SQL migrations, reviewed before they run."
+    }
+  ],
+  "de": [
+    {
+      "slug": "the-content-domain",
+      "locale": "en",
+      "kind": "journal",
+      "wp": 12,
+      "title": "The content domain",
+      "excerpt": "Revisions, a published pointer per locale and a read side that cannot write.",
+      "tags": [],
+      "publishedAt": "2026-10-10T08:00:00.000Z",
+      "alternates": { "en": "the-content-domain", "es": "el-dominio-de-contenido" },
+      "body": "## What I built\n\nEvery edit is a revision; publishing moves a pointer."
+    },
+    {
+      "slug": "the-data-layer",
+      "locale": "en",
+      "kind": "journal",
+      "wp": 10,
+      "title": "The data layer",
+      "excerpt": "One schema per service and migrations generated from it.",
+      "tags": [],
+      "publishedAt": "2026-10-06T08:00:00.000Z",
+      "alternates": { "en": "the-data-layer" },
+      "body": "## What I built\n\nGenerated SQL migrations, reviewed before they run."
+    }
+  ]
+}

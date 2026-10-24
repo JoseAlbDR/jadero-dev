@@ -7,11 +7,13 @@ import type { ContentSeedItem } from "../modules/content/index.js";
 // before their CV bullets, the bullet before the entry that names it.
 
 const PROFILE = "01990000-0000-7000-8000-000000000001";
+const NOW = "01990000-0000-7000-8000-000000000002";
 const EXPERIENCE_CURRENT = "01990000-0000-7000-8000-000000000101";
 const EXPERIENCE_FIRST = "01990000-0000-7000-8000-000000000102";
 const PROJECT_CASE_STUDY = "01990000-0000-7000-8000-000000000201";
 const PROJECT_SMALL = "01990000-0000-7000-8000-000000000202";
 const POST_FIRST = "01990000-0000-7000-8000-000000000301";
+const JOURNAL_WP_12 = "01990000-0000-7000-8000-000000000302";
 const SKILL_BACKEND = "01990000-0000-7000-8000-000000000401";
 const SKILL_TESTING = "01990000-0000-7000-8000-000000000402";
 
@@ -47,6 +49,21 @@ export const contentSeed: readonly ContentSeedItem[] = [
           { kind: "website", url: "https://example.com" },
           { kind: "email", url: "mailto:hello@example.com" },
         ],
+      },
+    },
+  },
+  {
+    type: "now",
+    id: NOW,
+    documents: {
+      es: {
+        body: "Ahora mismo estoy construyendo el diario y esta página. Por las tardes leo sobre colas de mensajes.\n\nTexto de ejemplo: se sustituye con el contenido real.",
+      },
+      en: {
+        body: "Right now I am building the journal and this page. In the evenings I read about message queues.\n\nPlaceholder text: real content replaces it.",
+      },
+      de: {
+        body: "Gerade baue ich das Journal und diese Seite. Abends lese ich über Nachrichtenwarteschlangen.\n\nPlatzhaltertext: echte Inhalte ersetzen ihn.",
       },
     },
   },
@@ -182,6 +199,29 @@ export const contentSeed: readonly ContentSeedItem[] = [
         excerpt: "A placeholder post.",
         body: "Placeholder text.",
         tags: ["example"],
+      },
+    },
+  },
+  {
+    type: "post",
+    id: JOURNAL_WP_12,
+    slug: "journal-wp-12",
+    kind: "journal",
+    wp: 12,
+    documents: {
+      es: {
+        slug: "diario-wp-12",
+        title: "Diario: el dominio de contenido",
+        excerpt: "Una entrada de diario de ejemplo.",
+        body: "Texto de ejemplo para el diario de un paquete de trabajo.",
+        tags: ["diario"],
+      },
+      en: {
+        slug: "journal-wp-12",
+        title: "Journal: the content domain",
+        excerpt: "A placeholder journal entry.",
+        body: "Placeholder text for the journal of one work package.",
+        tags: ["journal"],
       },
     },
   },

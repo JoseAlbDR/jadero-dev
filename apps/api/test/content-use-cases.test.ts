@@ -35,6 +35,7 @@ const PROJECT = "01990000-0000-7000-8000-00000000a002";
 const POST = "01990000-0000-7000-8000-00000000a003";
 const SKILL = "01990000-0000-7000-8000-00000000a004";
 const PROFILE = "01990000-0000-7000-8000-00000000a005";
+const NOW = "01990000-0000-7000-8000-00000000a006";
 const MISSING = "01990000-0000-7000-8000-00000000afff";
 
 /** A complete project document, its title naming the locale and a marker. */
@@ -69,6 +70,11 @@ const TYPES: {
       summary: "Placeholder.",
       links: [{ kind: "website", url: "https://example.com" }],
     }),
+  },
+  now: {
+    create: { type: "now", id: NOW },
+    id: NOW,
+    document: (locale) => ({ body: `Building the journal (${locale}).` }),
   },
   "experience-item": {
     create: { type: "experience-item", id: EXPERIENCE, sortOrder: 1 },
@@ -409,9 +415,12 @@ describe("ArchiveContentItem", () => {
     expect((await stored("skill", SKILL))?.version).toBe(2);
   });
 
-  it("refuses the profile, which has no archive, before anything runs", async () => {
-    await create.execute(TYPES.profile.create);
-    const command = { type: "profile", id: PROFILE, expectedVersion: 1 } as unknown as Parameters<
+  it.each([
+    ["profile", PROFILE],
+    ["now", NOW],
+  ] as const)("refuses the %s, which has no archive, before anything runs", async (type, id) => {
+    await create.execute(TYPES[type].create);
+    const command = { type, id, expectedVersion: 1 } as unknown as Parameters<
       ArchiveContentItem["execute"]
     >[0];
     await expect(archive.execute(command)).rejects.toThrow(ZodError);
@@ -434,5 +443,13 @@ describe("the LOCALIZED lookup table", () => {
     await create.execute(TYPES.profile.create);
     expect(await ports.read((scope) => LOCALIZED.profile.exists(scope, MISSING))).toBe(true);
     expect(await ports.read((scope) => LOCALIZED.project.exists(scope, PROJECT))).toBe(false);
+  });
+
+  it("counts any stored Now page as existing, and loads it only by its own id", async () => {
+    expect(await ports.read((scope) => LOCALIZED.now.exists(scope, NOW))).toBe(false);
+    await create.execute(TYPES.now.create);
+    expect(await ports.read((scope) => LOCALIZED.now.exists(scope, MISSING))).toBe(true);
+    expect(await stored("now", MISSING)).toBeUndefined();
+    expect((await stored("now", NOW))?.version).toBe(1);
   });
 });

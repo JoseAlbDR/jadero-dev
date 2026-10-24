@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import type { ApprovalChecklist } from "../domain/approval-checklist.js";
 import { CvBullet, type CvBulletParent } from "../domain/cv-bullet.js";
 import { ExperienceItem } from "../domain/experience-item.js";
@@ -8,6 +8,7 @@ import {
   type KnowledgeEntryProvenance,
 } from "../domain/knowledge-entry.js";
 import type { Locale } from "../domain/locale.js";
+import { Now } from "../domain/now.js";
 import { Post } from "../domain/post.js";
 import { Profile } from "../domain/profile.js";
 import { Project, type ProjectDocument } from "../domain/project.js";
@@ -147,6 +148,32 @@ export function newEntry(): KnowledgeEntry {
 }
 
 /**
+ * A new Now page with no revision, never stored.
+ * @returns the Now page at version 0.
+ */
+export function newNow(): Now {
+  return Now.create(randomUUID());
+}
+
+/**
+ * Saves one complete owner revision of a Now page's locale with a fresh id.
+ * @param now the Now page.
+ * @param locale the locale.
+ * @param minutes the save time, minutes after `at()`.
+ * @param title a word in the body, to tell revisions apart.
+ * @returns the new revision's id.
+ */
+export function saveNowRevision(
+  now: Now,
+  locale: Locale,
+  minutes = 0,
+  title = "Placeholder",
+): string {
+  const document = { body: `${title} (${locale}): placeholder text about these days.` };
+  return now.saveRevision(locale, document, "owner", randomUUID(), at(minutes)).id;
+}
+
+/**
  * A new profile with no revision, never stored.
  * @returns the profile at version 0.
  */
@@ -215,7 +242,18 @@ export function saveExperienceItemRevision(
  */
 export function newPost(): Post {
   const id = randomUUID();
-  return Post.create({ id, slug: `placeholder-${id.slice(0, 8)}` });
+  return Post.create({ id, slug: `placeholder-${id.slice(0, 8)}`, kind: "post", wp: null });
+}
+
+/**
+ * A new journal post with no revision, never stored.
+ * @param wp its work package; a random one by default, because one journal post per WP is unique
+ * and the tests of one file share a database.
+ * @returns the journal post at version 0.
+ */
+export function newJournalPost(wp = randomInt(1, 2_000_000_000)): Post {
+  const id = randomUUID();
+  return Post.create({ id, slug: `journal-${id.slice(0, 8)}`, kind: "journal", wp });
 }
 
 /**

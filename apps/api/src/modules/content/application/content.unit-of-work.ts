@@ -1,6 +1,7 @@
 import type { CvBulletRepository } from "./cv-bullet.repository.js";
 import type { ExperienceItemRepository } from "./experience-item.repository.js";
 import type { KnowledgeEntryRepository } from "./knowledge-entry.repository.js";
+import type { NowRepository } from "./now.repository.js";
 import type { PostRepository } from "./post.repository.js";
 import type { ProfileRepository } from "./profile.repository.js";
 import type { ProjectRepository } from "./project.repository.js";
@@ -13,6 +14,8 @@ import type { SkillRepository } from "./skill.repository.js";
 export interface ContentScope {
   /** The profile repository (a singleton), bound to the transaction. */
   readonly profile: ProfileRepository;
+  /** The Now page repository (a singleton, WP-39 D2), bound to the transaction. */
+  readonly now: NowRepository;
   /** The experience items repository, bound to the transaction. */
   readonly experienceItems: ExperienceItemRepository;
   /** The projects repository, bound to the transaction. */

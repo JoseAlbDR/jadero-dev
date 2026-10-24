@@ -7,7 +7,9 @@ import { ArchiveContentItem } from "./application/use-cases/archive-content-item
 import { CreateContentItem } from "./application/use-cases/create-content-item.use-case.js";
 import { CreateKnowledgeEntry } from "./application/use-cases/create-knowledge-entry.use-case.js";
 import { DeleteKnowledgeEntry } from "./application/use-cases/delete-knowledge-entry.use-case.js";
+import { ImportJournalPost } from "./application/use-cases/import-journal-post.use-case.js";
 import { PublishContentItem } from "./application/use-cases/publish-content-item.use-case.js";
+import { PublishJournalPost } from "./application/use-cases/publish-journal-post.use-case.js";
 import { RequestKnowledgeEntryChanges } from "./application/use-cases/request-knowledge-entry-changes.use-case.js";
 import { SaveContentRevision } from "./application/use-cases/save-content-revision.use-case.js";
 import { SaveKnowledgeEntryRevision } from "./application/use-cases/save-knowledge-entry-revision.use-case.js";
@@ -18,7 +20,10 @@ import { DrizzleContentUnitOfWork } from "./infrastructure/drizzle-content.unit-
 import { SystemClock } from "./infrastructure/system-clock.js";
 import { UuidV7IdGenerator } from "./infrastructure/uuid-v7-id-generator.js";
 
-/** The write use cases, which WP-13's admin controllers will call behind their guard (Q2 A). */
+/**
+ * The write use cases, which WP-13's admin controllers will call behind their guard (Q2 A); the
+ * seed and the journal commands (WP-39 D3) call them from the command line.
+ */
 const useCases = [
   CreateContentItem,
   SaveContentRevision,
@@ -32,6 +37,8 @@ const useCases = [
   WithdrawKnowledgeEntry,
   DeleteKnowledgeEntry,
   SeedContent,
+  ImportJournalPost,
+  PublishJournalPost,
 ];
 
 /**

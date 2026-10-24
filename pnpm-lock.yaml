@@ -376,6 +376,9 @@ importers:
       rxjs:
         specifier: 'catalog:'
         version: 7.8.2
+      yaml:
+        specifier: 'catalog:'
+        version: 2.9.1
       zod:
         specifier: 'catalog:'
         version: 4.6.6

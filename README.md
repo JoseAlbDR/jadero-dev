@@ -189,7 +189,7 @@ real secrets; AI and mail providers are always `fake` in development and tests.
 
 | File | Copy to | Read by |
 |---|---|---|
-| [`apps/api/.env.example`](apps/api/.env.example) | `apps/api/.env` | `api`, `api-worker`, `db:migrate`, `db:seed` |
+| [`apps/api/.env.example`](apps/api/.env.example) | `apps/api/.env` | `api`, `api-worker`, `db:migrate`, `db:seed`, `journal:import`, `journal:publish` |
 | [`apps/agent/.env.example`](apps/agent/.env.example) | `apps/agent/.env` | `agent`, the consumer, `db:migrate` |
 | [`apps/web/.env.example`](apps/web/.env.example) | `apps/web/.env` | `web`, the e2e suite (`CSP_MODE`) |
 | [`.env.example`](.env.example) | (reference) | the connection strings of every service, for tools and a quick look |
@@ -235,6 +235,8 @@ Per package:
 | Command | What it does |
 |---|---|
 | `pnpm --filter @jadero/api db:seed` | Loads placeholder content through the content use cases; idempotent |
+| `pnpm --filter @jadero/api journal:import [dir]` | Imports the journal drafts (`docs/journal/` by default) as draft revisions, one line per file; idempotent, never publishes, refuses a draft with an owner check marker |
+| `pnpm --filter @jadero/api journal:publish <wp> [locales...]` | Publishes one work package's journal post (every locale with a pending draft by default); es and en must end up live |
 | `pnpm --filter @jadero/messaging topology` | Regenerates `infra/rabbitmq/definitions.json` and the servers' `infra/rabbitmq/server/` files from the topology code |
 | `pnpm --filter @jadero/contracts asyncapi` | Regenerates the event catalog |
 | `pnpm --filter @jadero/contracts compat:accept` | Freezes a new event version's schema |

@@ -29,6 +29,12 @@ export abstract class RecordStore<R extends VersionedRecord> {
   abstract read(key: string): R | undefined;
 
   /**
+   * Copies of every record, for a lookup by a field other than the key (a journal post by its WP).
+   * @returns the records in no particular order.
+   */
+  abstract list(): R[];
+
+  /**
    * Stores a copy of the record when the stored one is still at `expectedVersion`.
    * @param expectedVersion the version the caller loaded, 0 for a new item.
    * @param record the record at its next version.
@@ -69,6 +75,11 @@ export class InMemoryRecords<R extends VersionedRecord> extends RecordStore<R> {
   read(key: string): R | undefined {
     const row = this.rows.get(key);
     return row === undefined ? undefined : structuredClone(row);
+  }
+
+  /** @returns copies of every committed record. */
+  list(): R[] {
+    return [...this.rows.values()].map((row) => structuredClone(row));
   }
 
   /**
@@ -120,6 +131,13 @@ export class StagedRecords<R extends VersionedRecord> extends RecordStore<R> {
   read(key: string): R | undefined {
     const staged = this.staged.get(key);
     return staged ? structuredClone(staged.record) : this.committed.read(key);
+  }
+
+  /** @returns copies of every record, a staged one in place of its committed one. */
+  list(): R[] {
+    const byKey = new Map(this.committed.list().map((row) => [this.committed.keyOf(row), row]));
+    for (const [key, { record }] of this.staged) byKey.set(key, structuredClone(record));
+    return [...byKey.values()];
   }
 
   /**

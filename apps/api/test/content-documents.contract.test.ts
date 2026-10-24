@@ -4,6 +4,7 @@ import {
   experienceItemDto,
   knowledgeEntryDto,
   knowledgeEntryId,
+  nowDto,
   postDto,
   profileDto,
   projectDto,
@@ -33,6 +34,7 @@ import {
   knowledgeEntryRules,
 } from "../src/modules/content/domain/knowledge-entry.js";
 import type { DocumentRules } from "../src/modules/content/domain/localized-revisions.js";
+import { type NowDocument, nowRules } from "../src/modules/content/domain/now.js";
 import { type PostDocument, postRules } from "../src/modules/content/domain/post.js";
 import { type ProfileDocument, profileRules } from "../src/modules/content/domain/profile.js";
 import { type ProjectDocument, projectRules } from "../src/modules/content/domain/project.js";
@@ -131,6 +133,15 @@ suite<ProfileDocument>({
     headline: (d, v) => ({ ...d, headline: v }),
     summary: (d, v) => ({ ...d, summary: v }),
   },
+});
+
+suite<NowDocument>({
+  type: "Now",
+  rules: nowRules,
+  dto: nowDto,
+  toDto: (doc) => ({ ...doc, locale: "en", publishedAt: "2026-11-03T10:12:00.000Z" }),
+  minimal: { body: "Building the journal." },
+  blank: { body: (d, v) => ({ ...d, body: v }) },
 });
 
 suite<ExperienceItemDocument>({

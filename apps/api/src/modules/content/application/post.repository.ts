@@ -15,6 +15,15 @@ export abstract class PostRepository {
   abstract get(id: string): Promise<Post | undefined>;
 
   /**
+   * Loads the journal post of one work package (WP-39 D1), as `get` loads a post by id: the
+   * journal import upserts by WP. Blog posts are never returned.
+   * @param wp the work package number.
+   * @returns the journal post at its stored version, or undefined when the WP has none.
+   * @throws {StoredStateInvalid} when a stored document or pointer cannot be read back.
+   */
+  abstract findJournal(wp: number): Promise<Post | undefined>;
+
+  /**
    * Stores the post when it is still at `expectedVersion` (D5, compare-and-set): its layout,
    * every revision saved since it was loaded, and its per-locale pointers; the stored version
    * becomes `expectedVersion + 1`. `expectedVersion` 0 creates it. Atomic only inside the unit of
