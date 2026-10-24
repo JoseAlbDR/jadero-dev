@@ -1,4 +1,5 @@
 import type { PostPageDto, PostSummaryDto } from "@jadero/contracts";
+import { ContentApiError } from "./api";
 
 /** How many journal posts the /now page lists under "Latest journal posts". */
 export const NOW_JOURNAL_POSTS = 3;
@@ -23,4 +24,23 @@ export type NowJournal = Readonly<{
 export function nowJournal(page: PostPageDto): NowJournal {
   const latest = page.items.slice(0, NOW_JOURNAL_POSTS);
   return { lastFinished: latest[0] ?? null, latest };
+}
+
+/**
+ * Reads the journal feed for the /now page and derives its blocks, degrading like the Now text
+ * does (WP-39 D2: the page always renders). A failed read (the API unreachable, an error status or
+ * a payload its contract refuses, all a `ContentApiError`) gives the empty journal, so the page
+ * answers 200 without the two journal blocks instead of landing in the error boundary. Nothing is
+ * logged here: `fetchContent` already logged what its debug mode allows. Any other error (a missing
+ * `CONTENT_API_URL`, a Next.js control-flow error) is rethrown.
+ * @param read the read of the first page of `GET /v1/content/:locale/posts?kind=journal`.
+ * @returns the journal blocks, or both empty when the read failed or the journal is empty.
+ */
+export async function readNowJournal(read: () => Promise<PostPageDto>): Promise<NowJournal> {
+  try {
+    return nowJournal(await read());
+  } catch (error) {
+    if (error instanceof ContentApiError) return { lastFinished: null, latest: [] };
+    throw error;
+  }
 }

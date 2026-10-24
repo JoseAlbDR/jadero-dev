@@ -7,7 +7,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { PostList, PublishDate, postHref, WorkPackageLabel } from "@/components/post-list";
 import { contentLang } from "@/components/project-sections";
 import { getNow, getPosts } from "@/content/api";
-import { nowJournal } from "@/content/now";
+import { readNowJournal } from "@/content/now";
 import { formatPublishDate } from "@/content/posts";
 import { localeAlternates } from "@/i18n/alternates";
 import { requireLocale } from "@/i18n/locale";
@@ -47,18 +47,18 @@ export async function generateMetadata({ params }: NowPageProps): Promise<Metada
  * text is published in the locale, a short note takes its place and the page still answers 200.
  * The journal feed (`?kind=journal`, under `content:posts`) gives the last finished work package,
  * derived from the latest journal post (never a hand-edited field), and the latest three posts;
- * with no journal post both blocks are hidden. A failed call lands in the locale's error boundary.
+ * with no journal post, or when the feed read fails, both blocks are hidden and the page still
+ * renders. A failed Now text read (other than its 404) lands in the locale's error boundary.
  * @param props.params the route params with the locale segment.
  */
 export default async function NowPage({ params }: NowPageProps) {
   const locale = requireLocale((await params).locale);
   setRequestLocale(locale);
-  const [t, now, journalPage] = await Promise.all([
+  const [t, now, { lastFinished, latest }] = await Promise.all([
     getTranslations({ locale, namespace: "NowPage" }),
     getNow(locale),
-    getPosts(locale, "journal"),
+    readNowJournal(() => getPosts(locale, "journal")),
   ]);
-  const { lastFinished, latest } = nowJournal(journalPage);
   const lang = now ? contentLang(now.locale, locale) : undefined;
 
   return (

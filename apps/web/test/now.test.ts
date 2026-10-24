@@ -1,6 +1,7 @@
 import type { PostSummaryDto } from "@jadero/contracts";
 import { describe, expect, it } from "vitest";
-import { NOW_JOURNAL_POSTS, nowJournal } from "../src/content/now";
+import { ContentApiError } from "../src/content/api";
+import { NOW_JOURNAL_POSTS, nowJournal, readNowJournal } from "../src/content/now";
 
 /** A published journal post card of a work package, as the journal feed lists it. */
 function journal(wp: number): PostSummaryDto {
@@ -38,5 +39,31 @@ describe("nowJournal", () => {
 
   it("has nothing to show when no journal post is published, so the page hides both blocks", () => {
     expect(nowJournal({ items: [], nextCursor: null })).toEqual({ lastFinished: null, latest: [] });
+  });
+});
+
+describe("readNowJournal", () => {
+  it("derives the blocks from the feed when the read succeeds", async () => {
+    const page = { items: [journal(39), journal(12)], nextCursor: null };
+
+    const { lastFinished, latest } = await readNowJournal(async () => page);
+
+    expect(lastFinished?.wp).toBe(39);
+    expect(latest.map((p) => p.wp)).toEqual([39, 12]);
+  });
+
+  it("hides the journal blocks instead of failing the page when the feed read fails", async () => {
+    const failed = new ContentApiError("posts", 503, "Content API answered 503 for posts");
+
+    await expect(readNowJournal(() => Promise.reject(failed))).resolves.toEqual({
+      lastFinished: null,
+      latest: [],
+    });
+  });
+
+  it("rethrows an error that is not a content API failure", async () => {
+    const misconfigured = new Error("CONTENT_API_URL must be an absolute http(s) URL");
+
+    await expect(readNowJournal(() => Promise.reject(misconfigured))).rejects.toBe(misconfigured);
   });
 });

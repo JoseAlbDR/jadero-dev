@@ -306,12 +306,17 @@ export async function getProject(locale: Locale, projectSlug: string): Promise<P
 /**
  * `GET /v1/content/:locale/posts?kind=&cursor=`: one page of published posts of one kind, newest
  * first. The kind is always sent, so the blog asks for `post` and the journal for `journal`
- * explicitly instead of the blog leaning on the API's default.
+ * explicitly instead of the blog leaning on the API's default. The items are filtered by kind here
+ * too (defense in depth for expand/contract): an `api` older than WP-39 ignores `?kind=` and its
+ * posts parse with the contract's default kind `post`, so if `web` deploys first the journal, the
+ * /now tiles and the sitemap list no blog post under `/journal`. The API's cursor is kept as it is,
+ * so the next page still follows on from this one; a filtered page may hold fewer items than the
+ * API's page size, or none while `nextCursor` still points further.
  * @param locale the page locale.
  * @param kind `post` for the blog, `journal` for the journal (ADR-034).
  * @param cursor the `nextCursor` of the previous page, or a visitor's cursor already checked and
  *   rebuilt by `postCursorParam`; the first page when absent.
- * @returns the page and the cursor of the next one.
+ * @returns the page's posts of that kind and the cursor of the next page.
  */
 export async function getPosts(
   locale: Locale,
@@ -320,9 +325,10 @@ export async function getPosts(
 ): Promise<PostPageDto> {
   const query = new URLSearchParams({ kind });
   if (cursor) query.set("cursor", cursor);
-  return getContent("posts", `/v1/content/${locale}/posts?${query}`, postPageDto, [
+  const page = await getContent("posts", `/v1/content/${locale}/posts?${query}`, postPageDto, [
     contentTags.posts,
   ]);
+  return { ...page, items: page.items.filter((item) => item.kind === kind) };
 }
 
 /**
