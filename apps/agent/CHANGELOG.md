@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.2](https://github.com/JoseAlbDR/jadero-dev/compare/agent-v0.3.1...agent-v0.3.2) (2026-10-24)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @jadero/contracts bumped to 0.1.0
+    * @jadero/messaging bumped to 0.3.1
+
 ## [0.3.1](https://github.com/JoseAlbDR/jadero-dev/compare/agent-v0.3.0...agent-v0.3.1) (2026-10-24)
 
 

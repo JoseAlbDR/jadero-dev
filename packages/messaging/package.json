@@ -1,6 +1,6 @@
 {
   "name": "@jadero/messaging",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Messaging infrastructure shared by the services (ADR-012, ADR-029): the MessageBus port with in-memory and RabbitMQ adapters, the retry and dead-letter policy, the outbox relay and the inbox, plus the outbox and inbox tables as Drizzle schema (`@jadero/messaging/schema`). Infrastructure only, no domain code. Compiled to dist/.",
   "type": "module",

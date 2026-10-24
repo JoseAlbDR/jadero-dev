@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.0](https://github.com/JoseAlbDR/jadero-dev/compare/api-v0.3.1...api-v0.4.0) (2026-10-24)
+
+
+### Features
+
+* **web:** add the build journal and the now page ([#161](https://github.com/JoseAlbDR/jadero-dev/issues/161)) ([c260f3c](https://github.com/JoseAlbDR/jadero-dev/commit/c260f3c712379de13f52af75a14696d6486ac8ed))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @jadero/contracts bumped to 0.1.0
+    * @jadero/messaging bumped to 0.3.1
+
 ## [0.3.1](https://github.com/JoseAlbDR/jadero-dev/compare/api-v0.3.0...api-v0.3.1) (2026-10-24)
 
 

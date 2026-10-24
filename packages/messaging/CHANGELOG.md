@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.1](https://github.com/JoseAlbDR/jadero-dev/compare/messaging-v0.3.0...messaging-v0.3.1) (2026-10-24)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @jadero/contracts bumped to 0.1.0
+
 ## [0.3.0](https://github.com/JoseAlbDR/jadero-dev/compare/messaging-v0.2.0...messaging-v0.3.0) (2026-10-24)
 
 
