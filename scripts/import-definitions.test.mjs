@@ -104,7 +104,11 @@ const calls = (rec) =>
 describe("import-definitions.sh", () => {
   it("imports the file on stdin, then polls until every queue is listed with its type", () => {
     const all = stagingQueues();
-    const run = importDefinitions({ listings: ["", listing(all.slice(0, 2)), listing(all)] });
+    // Three listings mean two 1 s sleeps; bash's whole-second SECONDS makes a 2 s wait race them.
+    const run = importDefinitions({
+      listings: ["", listing(all.slice(0, 2)), listing(all)],
+      env: { RABBITMQ_IMPORT_TIMEOUT: "5" },
+    });
     assert.equal(run.status, 0, run.output);
     assert.match(run.output, new RegExp(`${all.length} queues on /staging listed`));
     assert.equal(readFileSync(join(run.rec, "stdin"), "utf8"), readFileSync(STAGING, "utf8"));
