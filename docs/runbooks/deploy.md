@@ -175,7 +175,7 @@ The last line of a run tells where it ended. A run with no final line after `che
 
 Uptime Kuma (`jadero-ops-uptime-kuma-1`) joins `jadero_prod` and `jadero_staging`, so it reaches every process type by name on its environment's network, including the workers and `agent`, which publish no port. Use the container name, not the service name: both projects name their services `api`, `agent`, `web`, and Kuma sits on both networks, so `api` could answer from either environment. Each process type serves its own health on the port its `PORT` sets in `infra/compose/compose.services.yml` (they listen on `0.0.0.0` inside the container, `LISTEN_HOST` in the images); `web` has no `/health/ready`, so its monitor asks `/robots.txt`, as its image's `HEALTHCHECK` does.
 
-Create them over the tunnel (`docs/runbooks/server-access.md` 2a, `http://localhost:3101`), each of type HTTP(s), with the same notification as `jadero backup`:
+Create them over the tunnel (`docs/runbooks/server-access.md` 2a, `http://localhost:3101`), each of type HTTP(s), interval 60 s, 2 retries before an alert, with the same email notification as `jadero backup`:
 
 | Monitor | URL |
 |---|---|
@@ -189,12 +189,16 @@ Create them over the tunnel (`docs/runbooks/server-access.md` 2a, `http://localh
 | `prod agent` | `http://jadero-prod-agent-1:3002/health/ready` |
 | `prod agent-consumer` | `http://jadero-prod-agent-consumer-1:3012/health/ready` |
 | `prod web` | `http://jadero-prod-web-1:3000/robots.txt` |
+| `site es` | `https://new.jadero.dev/es/`, with "Certificate Expiry Notification" on |
+| `site en` | `https://new.jadero.dev/en/`, with "Certificate Expiry Notification" on |
+| `site de` | `https://new.jadero.dev/de/`, with "Certificate Expiry Notification" on |
 | `jadero backup` | already there: type Push, interval 90000 s (`docs/runbooks/restore.md` 2e) |
 
 - Ready means the process can reach what a request needs (Postgres, and RabbitMQ for the workers and `agent`), so a broker or database outage turns these red too.
-- A deploy recreates the containers in seconds of downtime (ADR-049 "Downtime"): with a retry before an alert, a normal deploy does not page.
+- A deploy recreates the containers in seconds of downtime (ADR-049 "Downtime"): with 2 retries before an alert, a normal deploy does not page.
+- The three `site` monitors go through the public edge (nginx, TLS), so they also catch a broken certificate renewal; the expiry notification warns days before the certificate runs out. They move to `https://jadero.dev/` at the cutover.
 - `prod web` stays red until web's first production deploy (#162: the home page answers 404 on an empty content database); pause it until then.
-- Not in this table yet, from ADR-027 "Monitoring": the public site per locale, TLS expiry, the SSE endpoint (arrives with the chat) and an alert when a dead-letter queue is not empty.
+- Not in this table yet, from ADR-027 "Monitoring": the SSE endpoint (arrives with the chat) and an alert when a dead-letter queue is not empty (Kuma has no native monitor type for it; a follow-up).
 
 ### The external monitor (D-31)
 
