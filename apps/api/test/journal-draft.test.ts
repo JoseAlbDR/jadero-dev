@@ -157,6 +157,10 @@ describe("excerptOf", () => {
     expect(excerptOf("abcdefghijklmnopqrstuvwxyz", 10)).toBe("abcdefghi…");
   });
 
+  it("drops every angle bracket, so a comment split by the removals cannot survive", () => {
+    expect(excerptOf("Text <!<!---->-- x --> after")).toBe("Text !-- x -- after");
+  });
+
   it("is empty when there is no prose paragraph", () => {
     expect(excerptOf("## Only a heading")).toBe("");
   });

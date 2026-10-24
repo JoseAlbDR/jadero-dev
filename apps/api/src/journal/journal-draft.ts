@@ -141,7 +141,7 @@ export function slugFromTitle(title: string, max = SLUG_MAX): string {
 
 /**
  * The excerpt of a post: its first paragraph of prose (not a heading, list, quote, table, code or
- * HTML block) as plain text, without Markdown emphasis, code ticks or link targets, cut at a word
+ * HTML block) as plain text, without Markdown emphasis, code ticks, link targets or angle brackets, cut at a word
  * boundary with an ellipsis when longer than `max`.
  * @param body the post's Markdown, title heading already dropped.
  * @param max the longest excerpt.
@@ -159,6 +159,8 @@ export function excerptOf(body: string, max = EXCERPT_MAX): string {
     .replace(/`/g, "")
     .replace(/\*\*|__/g, "")
     .replace(/\*([^*\s][^*]*)\*/g, "$1")
+    // Plain text: no angle bracket survives, so no comment or tag the removals above missed.
+    .replace(/[<>]/g, "")
     .replace(/\s+/g, " ")
     .trim();
   if (text.length <= max) return text;
