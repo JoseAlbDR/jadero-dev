@@ -166,7 +166,18 @@ for queue in json.load(open(sys.argv[1]))["queues"]:
       "@{JADERO_ENV-}" "@{API_IMAGE-}" "@{AGENT_IMAGE-}" "@{WEB_IMAGE-}" \
       "@{COMPOSE_PROJECT_NAME-}" "$*" >> "$rec/compose-calls"
     case "$sub" in
-      run) fails migrate && exit 1; exit 0 ;;
+      run)
+        # What compose run does with a terminal on stdin: it sets the terminal's mode, which
+        # stops a background process group (SIGTTOU). deploy.sh must hand it no terminal.
+        # Its process group goes to run-pgid first, so a test can kill what stopped.
+        if [[ -t 0 ]]; then
+          echo tty >> "$rec/run-stdin"
+          ps -o pgid= -p $$ > "$rec/run-pgid"
+          stty -echo
+        else
+          echo no-tty >> "$rec/run-stdin"
+        fi
+        fails migrate && exit 1; exit 0 ;;
       stop) fails stop && exit 1; exit 0 ;;
       up)
         if [[ -n "@{STUB_SLOW_UP-}" ]]; then : > "$rec/up-started"; sleep "$STUB_SLOW_UP"; fi
@@ -184,6 +195,7 @@ const OP_STUB = bash`
 rec="$STUB_REC"
 printf '%s\n' "$*" >> "$rec/op-calls"
 printf 'JADERO_ENV=%s TOKEN=%s\n' "@{JADERO_ENV-}" "@{OP_SERVICE_ACCOUNT_TOKEN-}" >> "$rec/op-env"
+if [[ -t 0 ]]; then echo tty; else echo no-tty; fi > "$rec/op-stdin"
 in="" out=""
 while [[ $# -gt 0 ]]; do
   case "$1" in -i) in="$2"; shift 2 ;; -o) out="$2"; shift 2 ;; *) shift ;; esac
@@ -221,7 +233,9 @@ const MIGRATE_RUNS_LOOKUP =
 // the KILL), and moves the fake clock (DATE_STUB) past the limit plus the KILL's 10 s, as the
 // real wait would. When a word of STUB_EXIT is one of the command's words, it exits with
 // STUB_EXIT_STATUS at once and leaves the clock alone: a command that died on its own (an OOM
-// kill is 137). The real one is not on macOS, and a stub makes the timeout instant.
+// kill is 137). Otherwise it runs the command in its own process group, as the real one does
+// (setpgid, the shield against the terminal's SIGHUP). The real one is not on macOS, and a stub
+// makes the timeout instant.
 const TIMEOUT_STUB = bash`
 printf '%s\n' "$*" >> "$STUB_REC/timeout-calls"
 [[ "$1" == --kill-after=10 && "$2" =~ ^[1-9][0-9]*$ ]] || exit 125
@@ -237,7 +251,7 @@ done
 for word in @{STUB_EXIT-}; do
   [[ " $* " == *" $word "* ]] && exit "@{STUB_EXIT_STATUS:-1}"
 done
-exec "$@"
+exec perl -e 'setpgrp(0, 0) or exit 125; exec { $ARGV[0] } @ARGV; exit 127' "$@"
 `;
 
 // The real date (REAL_DATE, filled in when written), except that `date -u +%s` adds the seconds
@@ -513,7 +527,7 @@ describe("deploy.sh deploy, the happy path", () => {
     const files = `-f ${w.envDir}/releases/api-0.3.0/infra/compose/compose.services.yml -f ${w.envDir}/releases/api-0.3.0/infra/compose/compose.staging.yml`;
     const head = `JADERO_ENV=staging API_IMAGE=${REPO_PREFIX}api@sha256:${NEW} AGENT_IMAGE=${INERT} WEB_IMAGE=${INERT} COMPOSE_PROJECT_NAME= :: compose --project-name jadero-staging --profile api ${files}`;
     assert.deepEqual(composeCalls(w), [
-      `${head} run --rm --no-deps api-migrate`,
+      `${head} run --rm --no-deps -T api-migrate`,
       `${head} up -d --wait --wait-timeout 120 --no-deps api api-worker`,
     ]);
     const [smoke] = calls(w, "smoke");
@@ -636,7 +650,7 @@ describe("deploy.sh deploy, failures before provisioned abort and change nothing
     assert.equal(deploy(w, ["deploy", "staging", "api", "0.3.0"]).status, 0);
     const bounded = calls(w, "timeout").map((call) => call.split(" ").slice(1, 3).join(" "));
     assert.deepEqual(bounded, ["30 git", "30 op", "30 docker", "180 docker", "120 env"]);
-    assert.ok(calls(w, "timeout")[4].includes(" run --rm --no-deps api-migrate"));
+    assert.ok(calls(w, "timeout")[4].includes(" run --rm --no-deps -T api-migrate"));
   });
 
   it("refuses prod without an expected digest, and aborts on a different one", () => {
@@ -1153,6 +1167,33 @@ describe("deploy.sh rollback and redeploy", () => {
     assert.deepEqual(calls(w, "git"), []);
     assert.ok(!calls(w, "docker").some((c) => /^(login|pull)/.test(c)));
     assert.match(read(join(w.envDir, "api.env")), new RegExp(SECRET));
+  });
+
+  it("finishes a redeploy from an interactive terminal, compose kept off it", () => {
+    const w = at030();
+    // python3's pty.spawn gives deploy.sh a real pseudo-terminal on stdin as its controlling
+    // terminal, as the owner's sudo shell does (the same call on macOS and Linux). Before the
+    // fix the migrate run's stty stopped its process group and this hung until the timeout.
+    const ptyRun =
+      "import os, pty, sys\nsys.exit(os.waitstatus_to_exitcode(pty.spawn(sys.argv[1:])))";
+    let result;
+    try {
+      result = spawnSync("python3", ["-I", "-c", ptyRun, w.script, "redeploy", "staging", "api"], {
+        env: stubEnv(w),
+        stdio: ["ignore", "pipe", "pipe"],
+        encoding: "utf8",
+        timeout: 20_000,
+      });
+    } finally {
+      // A stopped group ignores the hangup deploy.sh ignores; kill it so no test leaves it.
+      const pgid = Number(read(join(w.rec, "run-pgid")).trim());
+      if (pgid > 1) spawnSync("kill", ["-KILL", `-${pgid}`]);
+    }
+    assert.equal(result.status, 0, `${result.stdout}${result.stderr}`);
+    assert.deepEqual(states(w), STATES);
+    assert.equal(read(join(w.rec, "op-stdin")), "tty\n", "deploy.sh ran with a terminal on stdin");
+    assert.deepEqual(lines(join(w.rec, "run-stdin")), ["no-tty"]);
+    assert.ok(composeCalls(w)[0].endsWith(" run --rm --no-deps -T api-migrate"));
   });
 });
 
