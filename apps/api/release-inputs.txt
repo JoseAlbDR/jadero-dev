@@ -213,7 +213,7 @@ y18n@5.0.8
 yaml@2.9.1
 yargs-parser@21.1.1
 yargs@17.7.3
-zod@4.6.5
+zod@4.6.6
 # Deploy files, fetched at the release tag (ADR-053): a change to one releases the service.
 infra/compose/compose.services.yml#api sha256:9be69a58d82148da998020252ee5d1ea7b11468117d68cc7e19278f048fd8ca8
 infra/compose/compose.staging.yml#api sha256:7fbe2c2f8b43f2832a4d7a9c1ab1db90c3453b011d652159aef26942c5aa3e0d
