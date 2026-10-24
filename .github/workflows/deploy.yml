@@ -93,6 +93,15 @@ jobs:
       id-token: write # the OIDC token Tailscale exchanges for an ephemeral node
       attestations: read # gh attestation verify on a manual deploy
     steps:
+      # Only the result parser of the last step, at this workflow's own commit: nothing else from
+      # the repository runs in a job that holds the deploy key. No token is kept in .git.
+      - name: Check out the result parser
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/ci/deploy-result.mjs
+          sparse-checkout-cone-mode: false
+
       # Every input reaches the shell as a variable and is checked before use. A call from
       # release.yml has no `action` input, so it is a deploy.
       - name: Check the inputs
@@ -268,8 +277,6 @@ jobs:
           set -e
           cat "$dir/stderr"
           echo "::$stop::"
-          last_line="$(tail -n 1 "$dir/journal")"
-          last="$(awk '{print $5}' <<<"$last_line")"
           {
             echo "### $command (exit $code)"
             echo
@@ -277,40 +284,12 @@ jobs:
             cat "$dir/journal"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          case "$code" in
-            0) echo "$SERVICE: $ACTION on $SERVER_ENV recorded" ;;
-            75) echo "::error::busy: another deploy holds the $SERVER_ENV lock; nothing was touched, rerun once it ends"; exit 1 ;;
-            1)
-              # Exactly the server's refusal of this request as not newer: the 6 fields of a
-              # journal line, its environment, service and version, state and reason, never a
-              # substring. Only on a call from release.yml: a manual deploy of an older version is
-              # a mistake to show (a downgrade is a rollback).
-              read -r _ line_env line_service line_version line_state line_reason line_rest \
-                <<<"$last_line" || true
-              if [ "$EVENT" != workflow_dispatch ] && [ -z "$line_rest" ] \
-                && [ "$line_env" = "$SERVER_ENV" ] && [ "$line_service" = "$SERVICE" ] \
-                && [ "$line_version" = "$VERSION" ] && [ "$line_state" = refused ] \
-                && [ "$line_reason" = reason=not-newer ]; then
-                echo "::notice::$SERVICE $VERSION not deployed to $SERVER_ENV: the server already runs this or a newer version (a later release got there first); nothing to do"
-                exit 0
-              fi
-              case "$last" in
-                aborted) echo "::error::aborted before the point of no return: nothing shared changed, the running release keeps serving; the reason is in the last journal line" ;;
-                rolled_back) echo "::error::rolled back: the new release failed after the point of no return and the previous one is healthy again; the reason is in the journal lines above" ;;
-                failed) echo "::error::FAILED: the rollback did not get healthy either; the environment needs the owner on the server (the journal /srv/jadero/$SERVER_ENV/deploy.log)" ;;
-                refused) echo "::error::refused by the server: nothing was touched; the reason is in the last journal line (not-newer: a downgrade is a rollback)" ;;
-                *) echo "::error::refused before the journal (deploy-entry, or bad input); see the server's message above" ;;
-              esac
-              exit 1 ;;
-            255)
-              if [ -s "$dir/journal" ]; then
-                echo "::error::the SSH session dropped mid-deploy; the server ignores the hangup and runs to its end state, so read the journal (/srv/jadero/$SERVER_ENV/deploy.log) before a rerun"
-              else
-                echo "::error::SSH failed before the server answered (tailnet, host key or key line); most likely nothing ran, the journal says for sure"
-              fi
-              exit 1 ;;
-            *) echo "::error::unexpected exit $code from the server"; exit 1 ;;
-          esac
+          # The exit code and the journal's last line become the job's result in a tested script
+          # (scripts/ci/deploy-result.mjs): 0 recorded, 75 busy, 1 an end state or a refusal, 255
+          # SSH. The one green exit 1 is the server's exact `refused reason=not-newer` line for
+          # this request on a call from release.yml. It prints fixed text and the job's inputs,
+          # never a server line.
+          CODE="$code" JOURNAL="$dir/journal" node scripts/ci/deploy-result.mjs
 
       - name: Remove the key
         if: always()

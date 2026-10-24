@@ -92,7 +92,9 @@ command as `deploy`: `deploy <env> <service> <version>` or `rollback <env> <serv
 `<env>` is the server's word, `staging` or `prod`. Standard input carries the registry user (the
 repository owner), the job's `GITHUB_TOKEN` (`packages: read`, valid until the job ends) and the
 digest; a rollback sends nothing. It prints the server's journal lines and writes them to the job
-summary.
+summary, then `scripts/ci/deploy-result.mjs` (the job's only checkout, sparse, at the workflow's
+commit; tested in `pnpm test:scripts`) turns the SSH exit code and the journal's last line into
+the job's result.
 
 A manual deploy has no `images` job behind it, so it resolves the tag's digest itself
 (`docker buildx imagetools inspect`, the top-level index, the same kind the images job pushed and
