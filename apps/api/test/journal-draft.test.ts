@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  EM_DASH,
   excerptOf,
   OWNER_CHECK_MARKER,
   parseJournalDraft,
@@ -61,6 +62,20 @@ describe("parseJournalDraft", () => {
       label: "wp-41 en",
       reason: `holds an ${OWNER_CHECK_MARKER} marker; review it first`,
     });
+  });
+
+  it("refuses an em dash in the title or the body, without quoting the text", () => {
+    const reason = "holds an em dash; use a comma, colon or new sentence";
+    const inTitle = parseJournalDraft(draft({ title: `"A title ${EM_DASH} secret words"` }));
+    const inBody = parseJournalDraft(draft({}, `# A title\n\nFirst ${EM_DASH} secret words.\n`));
+
+    for (const result of [inTitle, inBody]) {
+      expect(result).toEqual({ ok: false, label: "wp-41 en", reason });
+      expect(JSON.stringify(result)).not.toContain("secret words");
+    }
+    expect(
+      parseJournalDraft(draft({}, "# A title\n\nA hyphen - and an en dash \u2013 pass.\n")).ok,
+    ).toBe(true);
   });
 
   it("names the field of invalid front matter, never the value", () => {

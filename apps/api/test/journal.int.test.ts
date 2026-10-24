@@ -7,12 +7,16 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type JournalDatabase, runJournal } from "../src/journal/journal.module.js";
 import type { JournalOutput } from "../src/journal/journal-commands.js";
+import { contentSeed } from "../src/seed/content-seed-data.js";
+import { runSeed } from "../src/seed/seed.module.js";
 import { createContentTestDatabase } from "./setup/content-database.js";
 
 // WP-39 step 4 (D3, ADR-034): the journal commands' own path (a Nest application context without
 // HTTP, the Drizzle unit of work, the content use cases) against the migrated content schema. The
 // import runs twice (created, then unchanged, no new row); the publish fails without es (D-20) and
-// passes once es is imported. Tests in the file run in order and share the database.
+// passes once es is imported; `db:seed` after an import of WP-12 skips the seed's journal post
+// instead of failing on the one-journal-post-per-WP index. Tests in the file run in order and share
+// the database.
 let pool: pg.Pool;
 let drop: () => Promise<void>;
 let database: JournalDatabase;
@@ -125,5 +129,24 @@ describe("journal:import and journal:publish on Postgres", () => {
       ],
     });
     expect((await stored()).posts).toHaveLength(1);
+  });
+
+  it("runs db:seed after the import of WP-12 without breaking the one-per-WP index", async () => {
+    await writeFile(
+      join(dir, "wp-12.md"),
+      "---\nwp: 12\ntitle: The content domain\nstatus: approved\ndate: 2026-10-06\nlocale: en\n---\n\nWhat I built.\n",
+    );
+    expect((await run({ command: "import", dir })).lines).toContain("wp-12 en: created");
+
+    const report = await runSeed(database, contentSeed);
+
+    expect(report.post).toEqual({ created: 1, skipped: 1 });
+    const journal = await pool.query(
+      "SELECT slug, wp FROM content.posts WHERE kind = 'journal' ORDER BY wp",
+    );
+    expect(journal.rows).toEqual([
+      { slug: "journal-wp-12", wp: 12 },
+      { slug: "journal-wp-41", wp: 41 },
+    ]);
   });
 });

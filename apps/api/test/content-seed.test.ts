@@ -4,6 +4,7 @@ import type { ContentScope } from "../src/modules/content/application/content.un
 import { ApproveKnowledgeEntry } from "../src/modules/content/application/use-cases/approve-knowledge-entry.use-case.js";
 import { CreateContentItem } from "../src/modules/content/application/use-cases/create-content-item.use-case.js";
 import { CreateKnowledgeEntry } from "../src/modules/content/application/use-cases/create-knowledge-entry.use-case.js";
+import { ImportJournalPost } from "../src/modules/content/application/use-cases/import-journal-post.use-case.js";
 import { PublishContentItem } from "../src/modules/content/application/use-cases/publish-content-item.use-case.js";
 import { SaveContentRevision } from "../src/modules/content/application/use-cases/save-content-revision.use-case.js";
 import {
@@ -112,6 +113,31 @@ describe("SeedContent", () => {
     expect(report.profile).toEqual({ created: 0, skipped: 1 });
     const profile = await ports.read((scope) => scope.profile.find());
     expect(profile?.version).toBe(1);
+  });
+
+  it("skips the journal post when its work package already has one from the journal import", async () => {
+    const importPost = new ImportJournalPost(
+      ports.uow,
+      new CreateContentItem(ports.uow, ports.ids),
+      new SaveContentRevision(ports.uow, ports.ids, ports.clock),
+    );
+    const document = {
+      slug: "journal-imported",
+      title: "Imported",
+      excerpt: "",
+      body: "Text.",
+      tags: [],
+    };
+    await importPost.execute({ wp: 12, locale: "en", document });
+    const imported = await ports.read((scope) => scope.posts.findJournal(12));
+
+    const report = await seed.execute(contentSeed);
+
+    // The blog post is created; the seed's journal post of WP-12 finds the slot taken.
+    expect(report.post).toEqual({ created: 1, skipped: 1 });
+    const journal = await ports.read((scope) => scope.posts.findJournal(12));
+    expect(journal?.id).toBe(imported?.id);
+    expect(journal?.version).toBe(imported?.version);
   });
 
   it("leaves a failing item absent, not half-seeded, and keeps the items before it", async () => {

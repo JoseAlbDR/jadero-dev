@@ -9,6 +9,9 @@ import { type ImportJournalPostCommand, LOCALES } from "../modules/content/index
 /** The marker `/wrap-wp` leaves on a sentence where the agent guessed the owner's opinion. */
 export const OWNER_CHECK_MARKER = "<!-- owner: check -->";
 
+/** U+2014: the content rules (ADR-031, ADR-034) allow no em dash in a journal post. */
+export const EM_DASH = "\u2014";
+
 /** The longest localized slug the import derives from a title, cut at a word boundary. */
 export const SLUG_MAX = 100;
 
@@ -50,7 +53,8 @@ const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)([\s\S]*)$/;
  * Parses one journal draft: YAML front matter validated with Zod, the body with its title heading
  * dropped, and the post document derived from both (localized slug from the title, excerpt from the
  * first paragraph, no tags). Both statuses import, as draft revisions; a draft that still holds an
- * owner check marker is refused, so no guessed opinion reaches the database (ADR-034).
+ * owner check marker is refused, so no guessed opinion reaches the database (ADR-034), and so is
+ * one whose title, body or excerpt holds an em dash, which the content rules forbid.
  * @param text the whole file.
  * @returns the command to import, or the reason to refuse it.
  */
@@ -76,6 +80,10 @@ export function parseJournalDraft(text: string): ParsedJournalDraft | RefusedJou
     return refused(label, `holds an ${OWNER_CHECK_MARKER} marker; review it first`);
   }
   const body = withoutTitleHeading(match[2] ?? "", frontMatter.title);
+  // The excerpt comes from the body, so checking the title and the body covers all three texts.
+  if (frontMatter.title.includes(EM_DASH) || body.includes(EM_DASH)) {
+    return refused(label, "holds an em dash; use a comma, colon or new sentence");
+  }
   if (body.length === 0) return refused(label, "the body is empty");
   const slug = slugFromTitle(frontMatter.title);
   if (slug.length === 0) return refused(label, "the title gives no slug (no letters or digits)");
