@@ -183,7 +183,7 @@ exit 0
 const OP_STUB = bash`
 rec="$STUB_REC"
 printf '%s\n' "$*" >> "$rec/op-calls"
-printf 'JADERO_ENV=%s TOKEN=%s\n' "@{JADERO_ENV-}" "@{OP_SERVICE_ACCOUNT_TOKEN-}" >> "$rec/op-env"
+printf 'JADERO_ENV=%s CACHE=%s TOKEN=%s\n' "@{JADERO_ENV-}" "@{OP_CACHE-}" "@{OP_SERVICE_ACCOUNT_TOKEN-}" >> "$rec/op-env"
 in="" out=""
 while [[ $# -gt 0 ]]; do
   case "$1" in -i) in="$2"; shift 2 ;; -o) out="$2"; shift 2 ;; *) shift ;; esac
@@ -506,7 +506,7 @@ describe("deploy.sh deploy, the happy path", () => {
     for (const tool of ["docker", "op", "git"]) {
       assert.ok(!calls(w, tool).some((c) => c.includes(SECRET)), `${tool} argv holds no secret`);
     }
-    assert.equal(read(join(w.rec, "op-env")), `JADERO_ENV=staging TOKEN=${OP_TOKEN}\n`);
+    assert.equal(read(join(w.rec, "op-env")), `JADERO_ENV=staging CACHE=false TOKEN=${OP_TOKEN}\n`);
   });
 
   it("migrates, then starts api and api-worker by digest on the staging project only", () => {
@@ -1204,7 +1204,11 @@ describe("deploy.sh, mutual exclusion and lost sessions", () => {
       ]);
       assert.equal(probe.status, 0);
     } finally {
-      process.kill(daemon);
+      try {
+        process.kill(daemon);
+      } catch {
+        // Already gone: nothing to clean up.
+      }
     }
   });
 
