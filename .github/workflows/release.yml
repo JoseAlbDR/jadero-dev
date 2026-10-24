@@ -291,7 +291,7 @@ jobs:
             docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
               -v "$RUNNER_TEMP/image-oci:/image:ro" -v "$cache:/cache" -v "$report:/report" \
               -v "$GITHUB_WORKSPACE/.trivyignore.yaml:/trivyignore.yaml:ro" \
-              "$TRIVY_IMAGE" image --input /image --cache-dir /cache \
+              "$TRIVY_IMAGE" image --input /image --platform linux/amd64 --cache-dir /cache \
               --ignorefile /trivyignore.yaml --skip-version-check --disable-telemetry --quiet "$@"
           }
           # The secret table has a row per scanned file, so it is printed only on a finding.
@@ -329,6 +329,13 @@ jobs:
         run: |
           docker_config="${DOCKER_CONFIG:-$HOME/.docker}/config.json"
           if [ ! -f "$docker_config" ]; then echo "::error::no Docker config from the login"; exit 1; fi
+          # regctl's image has no shell and no credential helpers, so it can use only a token the
+          # login wrote into the config itself; a credsStore or credHelpers entry would leave it
+          # pushing without one.
+          if ! jq -e '.auths["ghcr.io"].auth' "$docker_config" > /dev/null; then
+            echo "::error::the Docker config holds no inline ghcr.io token (a credential helper?): regctl cannot run a helper"
+            exit 1
+          fi
           while read -r ref; do
             [ -n "$ref" ] || continue
             docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
