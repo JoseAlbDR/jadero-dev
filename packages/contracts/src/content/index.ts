@@ -22,6 +22,7 @@ export {
   knowledgeEntryType,
 } from "./knowledge-entries.js";
 export { type Locale, locale } from "./locale.js";
+export { type NowDto, nowDto } from "./now.js";
 export {
   cvBulletId,
   encodePostCursor,

@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import {
   type KnowledgeEntryDto,
+  type NowDto,
   type PostPageDto,
   type ProjectDto,
   type ProjectListDto,
@@ -26,7 +27,8 @@ import { CONTENT_READER, createContentTestDatabase } from "./setup/content-datab
 // WP-12 step 7a on Postgres: the query service (CQRS read side) and the /v1 routes, reading as the
 // read-only role `content_reader` while the seed writes as the owner. Placeholder content only
 // (ADR-031): the db:seed data plus an archived project, 22 more posts (a second page), one journal
-// post (WP-39 D1) and two entries that were approved, then withdrawn or deleted.
+// post (WP-39 D1) and two entries that were approved, then withdrawn or deleted. The seed itself
+// carries the /now page in three locales and the journal post of WP-12 (WP-39 D2).
 
 const ARCHIVED_PROJECT = "01990000-0000-7000-8000-000000000299";
 const EXTRA_POSTS = 22;
@@ -227,9 +229,20 @@ describe("DrizzleContentQueries on Postgres, as content_reader", () => {
     const journal = await queries.posts("en", "journal");
     expect(journal.items.map((post) => [post.slug, post.kind, post.wp])).toEqual([
       ["journal-wp-39", "journal", 39],
+      ["journal-wp-12", "journal", 12],
     ]);
     expect(journal.nextCursor).toBeNull();
     expect(await queries.post("es", "diario-wp-39")).toMatchObject({ kind: "journal", wp: 39 });
+  });
+
+  it("reads the /now page per locale with the time its published text last moved", async () => {
+    const german = await queries.now("de");
+    expect(german).toMatchObject({ locale: "de", body: expect.stringContaining("Gerade") });
+    const { rows } = await owner.query<{ published_at: Date }>(
+      "SELECT published_at FROM content.now_translations WHERE locale = 'de'",
+    );
+    expect(german?.publishedAt).toBe(rows[0]?.published_at.toISOString());
+    expect((await queries.now("es"))?.locale).toBe("es");
   });
 
   it("stores first_published_at at millisecond precision, the precision of the feed cursor", async () => {
@@ -274,6 +287,7 @@ describe("GET /v1/content over HTTP, against Postgres", () => {
   it("answers each route with 200, the public cache headers and the body's language", async () => {
     const routes: [string, string][] = [
       ["/v1/content/es/profile", "es"],
+      ["/v1/content/de/now", "de"],
       ["/v1/content/de/experience", "de, en"],
       ["/v1/content/de/projects", "de, en"],
       ["/v1/content/de/projects/beispiel-fallstudie", "de"],
@@ -330,7 +344,25 @@ describe("GET /v1/content over HTTP, against Postgres", () => {
   it("lists the journal posts on ?kind=journal", async () => {
     const { res, body } = await getJson<PostPageDto>("/v1/content/en/posts?kind=journal");
     expect(res.status).toBe(200);
-    expect(body.items).toMatchObject([{ slug: "journal-wp-39", kind: "journal", wp: 39 }]);
+    expect(body.items).toMatchObject([
+      { slug: "journal-wp-39", kind: "journal", wp: 39 },
+      { slug: "journal-wp-12", kind: "journal", wp: 12 },
+    ]);
+  });
+
+  it("answers the /now page with its update time, and 304 on a matching If-None-Match", async () => {
+    const { res, body } = await getJson<NowDto>("/v1/content/en/now");
+    expect(res.status).toBe(200);
+    expect(body).toEqual({
+      locale: "en",
+      body: expect.stringContaining("Right now"),
+      publishedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
+    });
+    const again = await http()
+      .get("/v1/content/en/now")
+      .set("If-None-Match", String(res.headers.etag));
+    expect(again.status).toBe(304);
+    expect(again.text).toBe("");
   });
 
   it("never sends an entry's private provenance, nor a hidden entry", async () => {
@@ -377,6 +409,7 @@ describe("the content_reader role", () => {
     expect(await failureCode("SELECT * FROM content.knowledge_entry_provenance")).toBe("42501");
     expect(await failureCode("SELECT * FROM messaging.outbox")).toBe("42501");
     expect(await failureCode("SELECT * FROM content.profile")).toBe("42501");
+    expect(await failureCode("SELECT * FROM content.now")).toBe("42501");
   });
 
   it("cannot write: read-only by default (25006), and without the privilege when it turns that off (42501)", async () => {
@@ -385,5 +418,20 @@ describe("the content_reader role", () => {
     expect(await failureCode(insert)).toBe("25006");
     await client.query("SET default_transaction_read_only = off");
     expect(await failureCode(insert)).toBe("42501");
+  });
+});
+
+// Last, because it removes the seeded /now page from the shared database.
+describe("GET /v1/content/:locale/now with nothing published, against Postgres", () => {
+  it("is a 404 problem marked no-store in every locale, German falling back to nothing", async () => {
+    await owner.query(
+      "DELETE FROM content.now_translations; DELETE FROM content.now_revisions; DELETE FROM content.now;",
+    );
+    for (const locale of ["es", "en", "de"]) {
+      const res = await http().get(`/v1/content/${locale}/now`);
+      expect(res.status, locale).toBe(404);
+      expect(res.headers["content-type"], locale).toContain("application/problem+json");
+      expect(res.headers["cache-control"], locale).toBe("no-store");
+    }
   });
 });

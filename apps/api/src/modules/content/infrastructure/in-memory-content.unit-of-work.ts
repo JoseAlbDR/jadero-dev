@@ -10,6 +10,7 @@ import {
 } from "./in-memory-experience-item.repository.js";
 import type { KnowledgeEntryRecord } from "./in-memory-knowledge-entry.repository.js";
 import { InMemoryKnowledgeEntryRepository } from "./in-memory-knowledge-entry.repository.js";
+import { InMemoryNowRepository, nowRecords } from "./in-memory-now.repository.js";
 import { InMemoryPostRepository, type PostRecord } from "./in-memory-post.repository.js";
 import { InMemoryProfileRepository, profileRecords } from "./in-memory-profile.repository.js";
 import type { ProjectRecord } from "./in-memory-project.repository.js";
@@ -24,6 +25,7 @@ import { InMemorySkillRepository, type SkillRecord } from "./in-memory-skill.rep
 @Injectable()
 export class InMemoryContentStore {
   readonly profile = profileRecords();
+  readonly now = nowRecords();
   readonly experienceItems = new InMemoryRecords<ExperienceItemRecord>();
   readonly projects = new InMemoryRecords<ProjectRecord>();
   readonly posts = new InMemoryRecords<PostRecord>();
@@ -51,6 +53,7 @@ export class InMemoryContentUnitOfWork extends ContentUnitOfWork {
    */
   async run<T>(work: (scope: ContentScope) => Promise<T>): Promise<T> {
     const profile = new StagedRecords(this.store.profile);
+    const now = new StagedRecords(this.store.now);
     const experienceItems = new StagedRecords(this.store.experienceItems);
     const projects = new StagedRecords(this.store.projects);
     const posts = new StagedRecords(this.store.posts);
@@ -59,6 +62,7 @@ export class InMemoryContentUnitOfWork extends ContentUnitOfWork {
     const knowledgeEntries = new StagedRecords(this.store.knowledgeEntries);
     const result = await work({
       profile: new InMemoryProfileRepository(profile),
+      now: new InMemoryNowRepository(now),
       experienceItems: new InMemoryExperienceItemRepository(experienceItems),
       projects: new InMemoryProjectRepository(projects),
       posts: new InMemoryPostRepository(posts),
@@ -67,7 +71,16 @@ export class InMemoryContentUnitOfWork extends ContentUnitOfWork {
       cvBullets: new InMemoryCvBulletRepository(cvBullets, { experienceItems, projects }),
       knowledgeEntries: new InMemoryKnowledgeEntryRepository(knowledgeEntries),
     });
-    const tables = [profile, experienceItems, projects, posts, skills, cvBullets, knowledgeEntries];
+    const tables = [
+      profile,
+      now,
+      experienceItems,
+      projects,
+      posts,
+      skills,
+      cvBullets,
+      knowledgeEntries,
+    ];
     for (const table of tables) table.check();
     for (const table of tables) table.commit();
     return result;

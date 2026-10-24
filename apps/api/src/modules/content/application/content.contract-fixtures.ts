@@ -8,6 +8,7 @@ import {
   type KnowledgeEntryProvenance,
 } from "../domain/knowledge-entry.js";
 import type { Locale } from "../domain/locale.js";
+import { Now } from "../domain/now.js";
 import { Post } from "../domain/post.js";
 import { Profile } from "../domain/profile.js";
 import { Project, type ProjectDocument } from "../domain/project.js";
@@ -144,6 +145,32 @@ export function newEntry(): KnowledgeEntry {
     revisionId: randomUUID(),
     at: at(),
   });
+}
+
+/**
+ * A new Now page with no revision, never stored.
+ * @returns the Now page at version 0.
+ */
+export function newNow(): Now {
+  return Now.create(randomUUID());
+}
+
+/**
+ * Saves one complete owner revision of a Now page's locale with a fresh id.
+ * @param now the Now page.
+ * @param locale the locale.
+ * @param minutes the save time, minutes after `at()`.
+ * @param title a word in the body, to tell revisions apart.
+ * @returns the new revision's id.
+ */
+export function saveNowRevision(
+  now: Now,
+  locale: Locale,
+  minutes = 0,
+  title = "Placeholder",
+): string {
+  const document = { body: `${title} (${locale}): placeholder text about these days.` };
+  return now.saveRevision(locale, document, "owner", randomUUID(), at(minutes)).id;
 }
 
 /**

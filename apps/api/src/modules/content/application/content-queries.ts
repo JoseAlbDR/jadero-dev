@@ -3,6 +3,7 @@ import type {
   KnowledgeEntryDto,
   KnowledgeEntryListDto,
   Locale,
+  NowDto,
   PostCursorPosition,
   PostDto,
   PostKind,
@@ -33,6 +34,13 @@ export abstract class ContentQueries {
    * @returns the published profile, or undefined when there is none.
    */
   abstract profile(locale: Locale): Promise<ProfileDto | undefined>;
+
+  /**
+   * @param locale the requested locale.
+   * @returns the published /now page with the time its published text last changed, or undefined
+   * when there is none (WP-39 D2).
+   */
+  abstract now(locale: Locale): Promise<NowDto | undefined>;
 
   /**
    * @param locale the requested locale.

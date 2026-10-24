@@ -254,6 +254,15 @@ describe("profile", () => {
   });
 });
 
+describe("now (WP-39 D2)", () => {
+  it("hold one row at most", async () => {
+    await run("INSERT INTO content.now (id, version) VALUES ($1, 1)", [randomUUID()]);
+    await expect(
+      run("INSERT INTO content.now (id, version) VALUES ($1, 1)", [randomUUID()]),
+    ).rejects.toEqual(rejection("23505", "now_singleton"));
+  });
+});
+
 describe("post kind (WP-39 D1: a journal post names its WP, one journal post per WP)", () => {
   /** Inserts a post with this kind and WP; `kind` undefined leaves the column default. */
   function post(kind: string | undefined, wp: number | null): Promise<void> {

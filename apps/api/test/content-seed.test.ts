@@ -42,6 +42,8 @@ function loadSeeded(
   switch (item.type) {
     case "profile":
       return scope.profile.find();
+    case "now":
+      return scope.now.find();
     case "experience-item":
       return scope.experienceItems.get(item.id);
     case "project":
@@ -77,9 +79,10 @@ describe("SeedContent", () => {
     const report = await seed.execute(contentSeed);
     expect(report).toEqual({
       profile: { created: 1, skipped: 0 },
+      now: { created: 1, skipped: 0 },
       "experience-item": { created: 2, skipped: 0 },
       project: { created: 2, skipped: 0 },
-      post: { created: 1, skipped: 0 },
+      post: { created: 2, skipped: 0 },
       skill: { created: 2, skipped: 0 },
       "cv-bullet": { created: 3, skipped: 0 },
       "knowledge-entry": { created: 1, skipped: 0 },

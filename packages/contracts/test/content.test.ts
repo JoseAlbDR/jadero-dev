@@ -9,6 +9,7 @@ import {
   knowledgeEntryParams,
   locale,
   localizedSlugParams,
+  nowDto,
   postDto,
   postListQuery,
   postPageDto,
@@ -29,6 +30,7 @@ describe("content fixtures", () => {
   // and `web` reads with; a fixture that drifts from its schema fails here.
   const cases: [string, z.ZodType][] = [
     ["profile", profileDto],
+    ["now", nowDto],
     ["experience", experienceListDto],
     ["projects", projectListDto],
     ["project", projectDto],

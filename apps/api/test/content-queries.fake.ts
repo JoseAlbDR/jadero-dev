@@ -3,6 +3,7 @@ import type {
   KnowledgeEntryDto,
   KnowledgeEntryListDto,
   Locale,
+  NowDto,
   PostCursorPosition,
   PostDto,
   PostKind,
@@ -45,6 +46,8 @@ const germanProject: ProjectDto = {
 export class FakeContentQueries extends ContentQueries {
   lastKind: PostKind | undefined;
   lastCursor: PostCursorPosition | undefined;
+  /** Whether a /now page is published; a test sets it to false to see the 404. */
+  nowPublished = true;
 
   /** {@inheritDoc ContentQueries.profile} */
   async profile(locale: Locale): Promise<ProfileDto | undefined> {
@@ -55,6 +58,12 @@ export class FakeContentQueries extends ContentQueries {
       summary: "Placeholder.",
       links: [{ kind: "website", url: "https://example.com" }],
     };
+  }
+
+  /** {@inheritDoc ContentQueries.now} */
+  async now(locale: Locale): Promise<NowDto | undefined> {
+    if (!this.nowPublished) return undefined;
+    return { locale, body: "Placeholder.", publishedAt: "2026-11-03T10:12:00.000Z" };
   }
 
   /** {@inheritDoc ContentQueries.experience} */

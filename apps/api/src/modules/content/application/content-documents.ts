@@ -11,6 +11,7 @@ import {
   type KnowledgeEntryType,
 } from "../domain/knowledge-entry.js";
 import { LOCALES, type Locale } from "../domain/locale.js";
+import type { NowDocument } from "../domain/now.js";
 import type { PostDocument, PostKind } from "../domain/post.js";
 import type { ProfileDocument, ProfileLinkKind } from "../domain/profile.js";
 import type { ProjectDocument, ProjectKind } from "../domain/project.js";
@@ -48,6 +49,9 @@ export const profileDocumentSchema: z.ZodType<ProfileDocument> = z.object({
   summary: z.string(),
   links: z.array(z.object({ kind: z.enum(keysOf(linkKinds)), url: z.string() })),
 });
+
+/** One locale of the /now page (WP-39 D2). */
+export const nowDocumentSchema: z.ZodType<NowDocument> = z.object({ body: z.string() });
 
 const locationTypes = {
   remote: true,

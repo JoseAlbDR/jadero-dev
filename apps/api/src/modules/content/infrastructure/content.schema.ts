@@ -228,6 +228,24 @@ export const profileTranslations = translationTable(
   {},
 );
 
+/**
+ * The /now page (WP-39 D2), a singleton like the profile: the unique index on a constant allows one
+ * row at most, and it has no archive, so no `archived_at`.
+ */
+export const now = content.table("now", { id: uuid().primaryKey(), version: version() }, () => [
+  uniqueIndex("now_singleton").on(sql`(true)`),
+]);
+
+export const nowRevisions = revisionTable("now_revisions", uuid("now_id").notNull(), now.id);
+
+export const nowTranslations = translationTable(
+  "now_translations",
+  uuid("now_id").notNull(),
+  now.id,
+  nowRevisions,
+  {},
+);
+
 /** One row per experience item. */
 export const experienceItems = content.table("experience_items", {
   id: uuid().primaryKey(),

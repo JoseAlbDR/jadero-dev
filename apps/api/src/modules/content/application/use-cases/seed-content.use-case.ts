@@ -77,6 +77,7 @@ function localizedMember<K extends LocalizedType, L extends z.ZodRawShape>(
 const contentSeedItems: z.ZodType<readonly ContentSeedItem[]> = z.array(
   z.discriminatedUnion("type", [
     localizedMember("profile", uuidId, layoutFields.profile),
+    localizedMember("now", uuidId, layoutFields.now),
     localizedMember("experience-item", uuidId, layoutFields["experience-item"]),
     localizedMember("project", uuidId, layoutFields.project),
     localizedMember("post", uuidId, layoutFields.post),
@@ -106,7 +107,7 @@ const SEED_CHECKLIST: ApprovalChecklist = {
 /**
  * Loads placeholder content through the use cases (Q2 A), so seeded data passes the same rules as
  * any other. Idempotent by "create if missing, never touch what exists" (owner decision A): every
- * item has a fixed id; an item already stored (for the profile, any profile) is skipped, never
+ * item has a fixed id; an item already stored (for a singleton, any profile or Now) is skipped, never
  * updated; a missing one is created, given a revision per locale and published (entries: created
  * and approved) in ONE unit of work run, one aggregate per transaction, so a failure leaves that
  * item absent, never half-seeded, and the next run tries it again. Never upserts, never truncates.
@@ -190,6 +191,7 @@ export class SeedContent {
 function emptyReport(): SeedReport {
   return {
     profile: { created: 0, skipped: 0 },
+    now: { created: 0, skipped: 0 },
     "experience-item": { created: 0, skipped: 0 },
     project: { created: 0, skipped: 0 },
     post: { created: 0, skipped: 0 },

@@ -6,6 +6,7 @@ import type {
   KnowledgeEntryListDto,
   KnowledgeEntrySummaryDto,
   Locale,
+  NowDto,
   PostCursorPosition,
   PostDto,
   PostKind,
@@ -27,6 +28,7 @@ import {
   experienceItemDocumentSchema,
   knowledgeEntryDocumentSchema,
   localeSchema,
+  nowDocumentSchema,
   postDocumentSchema,
   postKindSchema,
   profileDocumentSchema,
@@ -83,6 +85,13 @@ function alternatesOf(translations: string, itemId: string): SQL {
 const alternatesRow = z.partialRecord(localeSchema, z.string());
 
 const profileRow = z.object({ id: z.string(), locale: localeSchema, document: z.unknown() });
+
+const nowRow = z.object({
+  id: z.string(),
+  locale: localeSchema,
+  published_at: z.iso.datetime(),
+  document: z.unknown(),
+});
 
 const experienceRow = z.object({
   id: z.string(),
@@ -158,6 +167,25 @@ export class DrizzleContentQueries extends ContentQueries {
       summary: doc.summary,
       links: doc.links.map((link) => ({ kind: link.kind, url: link.url })),
     };
+  }
+
+  /** {@inheritDoc ContentQueries.now} */
+  async now(locale: Locale): Promise<NowDto | undefined> {
+    // `published_at` (when the pointer last moved), not `first_published_at`: a later edit is what
+    // the page's "updated on" date shows.
+    const [row] = await this.rows(
+      nowRow,
+      sql`SELECT t.now_id AS id, t.locale, r.document,
+          to_char(t.published_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+            AS published_at
+        FROM content.now_translations t
+        JOIN content.now_revisions r ON r.id = t.published_revision_id
+        WHERE ${chosenTranslation("content.now_translations", "now_id", locale)}
+        LIMIT 1`,
+    );
+    if (!row) return undefined;
+    const doc = readStored(nowDocumentSchema, row.document, row.id, "now document");
+    return { locale: row.locale, body: doc.body, publishedAt: row.published_at };
   }
 
   /** {@inheritDoc ContentQueries.experience} */

@@ -6,6 +6,7 @@ import {
   cvBulletParentSchema,
   experienceItemDocumentSchema,
   localeSchema,
+  nowDocumentSchema,
   postDocumentSchema,
   postKindSchema,
   profileDocumentSchema,
@@ -65,13 +66,14 @@ export interface ArchiveContentItemCommandOf<K extends ArchivableType> {
   readonly expectedVersion: number;
 }
 
-/** Archives an item of any type but the profile. */
+/** Archives an item of any type but the singletons (the profile, Now). */
 export type ArchiveContentItemCommand = {
   [K in ArchivableType]: ArchiveContentItemCommandOf<K>;
 }[ArchivableType];
 
 const documentSchemas = {
   profile: profileDocumentSchema,
+  now: nowDocumentSchema,
   "experience-item": experienceItemDocumentSchema,
   project: projectDocumentSchema,
   post: postDocumentSchema,
@@ -94,6 +96,7 @@ const sortOrder = z.int();
 
 const layoutFields = {
   profile: {},
+  now: {},
   "experience-item": { sortOrder },
   project: {
     slug: z.string(),
@@ -112,6 +115,7 @@ export const createContentItemCommand: z.ZodType<CreateContentItemCommand> = z.d
   "type",
   [
     z.object({ type: z.literal("profile"), id: uuidId.optional(), ...layoutFields.profile }),
+    z.object({ type: z.literal("now"), id: uuidId.optional(), ...layoutFields.now }),
     z.object({
       type: z.literal("experience-item"),
       id: uuidId.optional(),
@@ -138,6 +142,7 @@ function saveMember<K extends LocalizedType>(type: K, id: z.ZodType<string>) {
 export const saveContentRevisionCommand: z.ZodType<SaveContentRevisionCommand> =
   z.discriminatedUnion("type", [
     saveMember("profile", uuidId),
+    saveMember("now", uuidId),
     saveMember("experience-item", uuidId),
     saveMember("project", uuidId),
     saveMember("post", uuidId),
@@ -159,6 +164,7 @@ export const publishContentItemCommand: z.ZodType<PublishContentItemCommand> = z
   "type",
   [
     publishMember("profile", uuidId),
+    publishMember("now", uuidId),
     publishMember("experience-item", uuidId),
     publishMember("project", uuidId),
     publishMember("post", uuidId),
@@ -171,7 +177,10 @@ function archiveMember<K extends ArchivableType>(type: K, id: z.ZodType<string>)
   return z.object({ type: z.literal(type), id, expectedVersion });
 }
 
-/** Validates `ArchiveContentItemCommand`; the profile is not a member, so it cannot be archived. */
+/**
+ * Validates `ArchiveContentItemCommand`; the singletons (the profile, Now) are not members, so they
+ * cannot be archived.
+ */
 export const archiveContentItemCommand: z.ZodType<ArchiveContentItemCommand> = z.discriminatedUnion(
   "type",
   [

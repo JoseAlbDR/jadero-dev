@@ -3,6 +3,8 @@ import {
   experienceListDto,
   localeParams,
   localizedSlugParams,
+  type NowDto,
+  nowDto,
   type PostDto,
   type PostPageDto,
   type ProfileDto,
@@ -56,6 +58,21 @@ export class LocalizedContentController {
     const profile = await this.queries.profile(params.locale);
     if (!profile) throw new NotFoundException(`No published profile in ${params.locale}.`);
     return profile;
+  }
+
+  /**
+   * `GET /v1/content/:locale/now` (WP-39 D2).
+   * @param params the locale.
+   * @returns the published /now page and when its text last changed.
+   * @throws {NotFoundException} when no /now page is published in that locale (or, for German, in
+   * English either).
+   */
+  @Get("now")
+  @SerializeOptions({ schema: nowDto })
+  async now(@Param({ schema: localeParams }) params: LocaleParams): Promise<NowDto> {
+    const now = await this.queries.now(params.locale);
+    if (!now) throw new NotFoundException(`No published now page in ${params.locale}.`);
+    return now;
   }
 
   /**

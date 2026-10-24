@@ -6,12 +6,14 @@ import {
   newCvBullet,
   newEntry,
   newExperienceItem,
+  newNow,
   newPost,
   newProfile,
   newProject,
   newSkill,
   saveCvBulletRevision,
   saveExperienceItemRevision,
+  saveNowRevision,
   savePostRevision,
   saveProfileRevision,
   saveProjectRevision,
@@ -21,6 +23,7 @@ import type { ContentUnitOfWork } from "./content.unit-of-work.js";
 import type { CvBulletRepository } from "./cv-bullet.repository.js";
 import type { ExperienceItemRepository } from "./experience-item.repository.js";
 import type { KnowledgeEntryRepository } from "./knowledge-entry.repository.js";
+import type { NowRepository } from "./now.repository.js";
 import type { PostRepository } from "./post.repository.js";
 import type { ProfileRepository } from "./profile.repository.js";
 import type { ProjectRepository } from "./project.repository.js";
@@ -28,13 +31,14 @@ import type { SkillRepository } from "./skill.repository.js";
 
 /**
  * What the unit of work contract needs for each test: the unit of work and readers outside it, over
- * storage that holds no profile (the singleton).
+ * storage that holds no profile and no Now page (the singletons).
  */
 export interface ContentUnitOfWorkFixture {
   /** The unit of work under test. */
   readonly unitOfWork: ContentUnitOfWork;
   /** Repositories outside any transaction, over the same storage: they see only committed data. */
   readonly profile: ProfileRepository;
+  readonly now: NowRepository;
   readonly experienceItems: ExperienceItemRepository;
   readonly projects: ProjectRepository;
   readonly posts: PostRepository;
@@ -85,6 +89,8 @@ export function contentUnitOfWorkContract(
       const fixture = await make();
       const profile = newProfile();
       saveProfileRevision(profile, "es");
+      const now = newNow();
+      saveNowRevision(now, "es");
       const item = newExperienceItem();
       saveExperienceItemRevision(item, "es");
       const post = newPost();
@@ -95,6 +101,7 @@ export function contentUnitOfWorkContract(
       saveCvBulletRevision(bullet, "es");
       await fixture.unitOfWork.run(async (scope) => {
         await scope.profile.save(profile, 0);
+        await scope.now.save(now, 0);
         // The parent first: its foreign key is checked when the bullet's row is inserted.
         await scope.experienceItems.save(item, 0);
         await scope.posts.save(post, 0);
@@ -102,6 +109,7 @@ export function contentUnitOfWorkContract(
         await scope.cvBullets.save(bullet, 0);
       });
       expect((await fixture.profile.find())?.id).toBe(profile.id);
+      expect((await fixture.now.find())?.id).toBe(now.id);
       expect((await fixture.experienceItems.get(item.id))?.version).toBe(1);
       expect((await fixture.posts.get(post.id))?.version).toBe(1);
       expect((await fixture.skills.get(skill.id))?.version).toBe(1);
