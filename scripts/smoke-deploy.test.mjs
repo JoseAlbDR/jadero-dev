@@ -1,7 +1,8 @@
 // Runs with the Node test runner (`node --test`), like the other scripts: no dependencies.
 //
 // Tests `infra/scripts/smoke-deploy.sh`, the deploy's smoke checks (WP-9 D7), with curl and
-// docker stubs on PATH: curl answers 200 unless the URL holds a STUB_DOWN word (then 502), docker
+// docker stubs on PATH: curl answers 200 unless the URL holds a STUB_DOWN word (then 502) or is a
+// locale with a trailing slash (then 308, as Next.js redirects /es/ to /es), docker
 // fails a container probe named in STUB_DOWN and answers the heartbeat SELECT from ping-<n> files,
 // one per poll (the last repeats). Nothing reaches a server, a container or the network.
 import assert from "node:assert/strict";
@@ -29,6 +30,7 @@ const CURL_STUB = [
   'printf "%s\\n" "$*" >> "$STUB_REC/curl-calls"',
   'url="${*: -1}"',
   'for word in ${STUB_DOWN:-}; do [[ "$url" == *"$word"* ]] && { printf 502; exit 0; }; done',
+  '[[ "$url" =~ /(es|en|de)/$ ]] && { printf 308; exit 0; }',
   "printf 200",
 ].join("\n");
 
@@ -123,9 +125,9 @@ describe("smoke-deploy.sh, each check gates only its path", () => {
     const urls = calls(r.rec, "curl").map((c) => c.split(" ").at(-1));
     assert.deepEqual(urls, [
       "http://127.0.0.1:3121/health/ready",
-      "https://new.jadero.dev/es/",
-      "https://new.jadero.dev/en/",
-      "https://new.jadero.dev/de/",
+      "https://new.jadero.dev/es",
+      "https://new.jadero.dev/en",
+      "https://new.jadero.dev/de",
       "https://new.jadero.dev/api/v1/content/en/projects",
     ]);
     // Through the edge, connected to this host: nginx, TLS and routing, no DNS.
@@ -179,9 +181,9 @@ describe("smoke-deploy.sh, each check gates only its path", () => {
       calls(r.rec, "curl").map((c) => c.split(" ").at(-1)),
       [
         "http://127.0.0.1:3111/health/ready",
-        "http://127.0.0.1:3110/es/",
-        "http://127.0.0.1:3110/en/",
-        "http://127.0.0.1:3110/de/",
+        "http://127.0.0.1:3110/es",
+        "http://127.0.0.1:3110/en",
+        "http://127.0.0.1:3110/de",
         "http://127.0.0.1:3111/v1/content/en/projects",
       ],
     );
