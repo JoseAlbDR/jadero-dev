@@ -157,8 +157,12 @@ describe("excerptOf", () => {
     expect(excerptOf("abcdefghijklmnopqrstuvwxyz", 10)).toBe("abcdefghi…");
   });
 
-  it("drops every angle bracket, so a comment split by the removals cannot survive", () => {
-    expect(excerptOf("Text <!<!---->-- x --> after")).toBe("Text !-- x -- after");
+  it("removes a comment that removing another one put back together", () => {
+    expect(excerptOf("Text <!<!---->-- x --> after")).toBe("Text after");
+  });
+
+  it("drops a stray angle bracket", () => {
+    expect(excerptOf("Text <b>bold</b> and a < b")).toBe("Text bbold/b and a b");
   });
 
   it("is empty when there is no prose paragraph", () => {

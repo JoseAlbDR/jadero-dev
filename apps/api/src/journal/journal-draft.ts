@@ -140,6 +140,21 @@ export function slugFromTitle(title: string, max = SLUG_MAX): string {
 }
 
 /**
+ * Removes HTML comments until none is left, so removing one cannot join the pieces of another.
+ * @param text the Markdown to clean.
+ * @returns the text without HTML comments.
+ */
+function withoutComments(text: string): string {
+  let previous: string;
+  let current = text;
+  do {
+    previous = current;
+    current = current.replace(/<!--[\s\S]*?-->/g, "");
+  } while (current !== previous);
+  return current;
+}
+
+/**
  * The excerpt of a post: its first paragraph of prose (not a heading, list, quote, table, code or
  * HTML block) as plain text, without Markdown emphasis, code ticks, link targets or angle brackets, cut at a word
  * boundary with an ellipsis when longer than `max`.
@@ -153,8 +168,7 @@ export function excerptOf(body: string, max = EXCERPT_MAX): string {
     .map((block) => block.trim())
     .find((block) => block.length > 0 && !/^(#|[-*+]\s|\d+\.\s|>|```|~~~|\||<)/.test(block));
   if (paragraph === undefined) return "";
-  const text = paragraph
-    .replace(/<!--[\s\S]*?-->/g, "")
+  const text = withoutComments(paragraph)
     .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/`/g, "")
     .replace(/\*\*|__/g, "")
