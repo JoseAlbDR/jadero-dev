@@ -10,7 +10,7 @@ const postgresUrl = z.url({ protocol: /^postgres(ql)?$/ });
 const apiSharedEnv = platformEnv.extend({
   SERVICE_NAME: z.string().min(1).default("api"),
   DATABASE_URL: postgresUrl,
-  // Room for a readiness check, the relay's batch and the heartbeat at once (api-worker too).
+  // Room for a readiness check and the request handlers at once; api-worker raises it below.
   DATABASE_POOL_MAX: z.coerce.number<string>().int().min(1).default(4),
 });
 
@@ -63,14 +63,24 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
 
 /**
  * The environment of `api-worker`, the second process type of `api` (report section 3.2): the shared
- * variables, plus the broker it publishes to and the heartbeat interval. Its `PORT` serves health
+ * variables with a larger pool, plus the broker it publishes to and consumes from, the heartbeat
+ * interval, and web's revalidation route with its signing key. Its `PORT` serves health
  * checks only. No `DATABASE_READ_URL`: the worker serves no public reads, so it never holds that
  * credential.
  */
 export const apiWorkerEnv = apiSharedEnv.extend({
   SERVICE_NAME: z.string().min(1).default("api-worker"),
+  // The relay, the readiness check, the revalidation consumer's prefetch of 2, the daily snapshot
+  // job and the cleanups: prefetch stays below the pool (ADR-054), so 6 instead of the shared 4.
+  DATABASE_POOL_MAX: z.coerce.number<string>().int().min(1).default(6),
   RABBITMQ_URL: z.url({ protocol: /^amqps?$/ }),
   HEARTBEAT_INTERVAL_MS: z.coerce.number<string>().int().min(1000).default(300_000),
+  // web's revalidation route (WP-14 D6), reached on the environment's private network, never
+  // through nginx. Required: a worker that cannot revalidate would dead-letter every content event.
+  WEB_REVALIDATE_URL: z.url({ protocol: /^https?$/ }),
+  // The HMAC key the revalidation call is signed with, shared with web only (ADR-047). At least 32
+  // characters, so a placeholder like "secret" fails at boot. Never logged.
+  REVALIDATE_SECRET: z.string().min(32),
 });
 
 /** The parsed `api-worker` environment. */
@@ -78,7 +88,7 @@ export type ApiWorkerEnv = z.output<typeof apiWorkerEnv>;
 
 /**
  * The configuration of `api-worker`: the shared fields of {@link ApiConfig}, without the read-only
- * connection, plus the broker and the heartbeat.
+ * connection, plus the broker, the heartbeat and the revalidation call.
  */
 export abstract class ApiWorkerConfig {
   abstract readonly nodeEnv: ApiWorkerEnv["NODE_ENV"];
@@ -91,6 +101,10 @@ export abstract class ApiWorkerConfig {
   abstract readonly databasePoolMax: number;
   abstract readonly rabbitmqUrl: string;
   abstract readonly heartbeatIntervalMs: number;
+  /** web's `POST /api/revalidate`, for example `http://web:3000/api/revalidate`. */
+  abstract readonly webRevalidateUrl: string;
+  /** The key that signs each revalidation call. Never logged. */
+  abstract readonly revalidateSecret: string;
 }
 
 /**
@@ -108,5 +122,7 @@ export function toApiWorkerConfig(env: ApiWorkerEnv): ApiWorkerConfig {
     databasePoolMax: env.DATABASE_POOL_MAX,
     rabbitmqUrl: env.RABBITMQ_URL,
     heartbeatIntervalMs: env.HEARTBEAT_INTERVAL_MS,
+    webRevalidateUrl: env.WEB_REVALIDATE_URL,
+    revalidateSecret: env.REVALIDATE_SECRET,
   };
 }

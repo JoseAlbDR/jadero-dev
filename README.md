@@ -195,6 +195,9 @@ real secrets; AI and mail providers are always `fake` in development and tests.
 | [`.env.example`](.env.example) | (reference) | the connection strings of every service, for tools and a quick look |
 
 Each variable is explained by a comment in its example file. `.env` files are gitignored.
+`REVALIDATE_SECRET` must hold the same value in `apps/api/.env` and `apps/web/.env`: `api-worker`
+signs each call to `web`'s internal `POST /api/revalidate` (at `WEB_REVALIDATE_URL`) with it, and
+`web` answers 401 to a call it cannot verify.
 
 ## Scripts reference
 

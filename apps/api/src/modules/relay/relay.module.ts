@@ -8,7 +8,8 @@ import { RelayLifecycle } from "./relay.lifecycle.js";
 
 /**
  * `api-worker`'s messaging: the RabbitMQ bus as the `MessageBus` port, the outbox relay over
- * `api`'s pool, the heartbeat, and the broker readiness check.
+ * `api`'s pool, the heartbeat, and the broker readiness check. The revalidation consumer subscribes
+ * on the same bus.
  */
 @Module({
   imports: [PingModule],
@@ -17,8 +18,12 @@ import { RelayLifecycle } from "./relay.lifecycle.js";
       provide: MessageBus,
       useFactory: (config: ApiWorkerConfig, log: PinoLogger) => {
         log.setContext("MessageBus");
+        // Prefetch 2 for the revalidation consumer (WP-14), below the worker's pool of 6 (ADR-054):
+        // each delivery takes a connection for its inbox check and record, beside the relay's batch,
+        // the readiness check and the cleanups. The relay itself only publishes.
         return new RabbitMqMessageBus({
           uri: config.rabbitmqUrl,
+          prefetch: 2,
           logger: new Logger("RabbitMQ"),
           log,
         });

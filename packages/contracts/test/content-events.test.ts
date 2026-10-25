@@ -10,8 +10,11 @@ import {
   knowledgeSnapshotV1,
   MAX_REVALIDATE_CHANGES,
   publishedSchema,
+  REVALIDATE_MAX_SKEW_SECONDS,
+  REVALIDATE_SIGNATURE_HEADER,
   revalidateChange,
   revalidateRequest,
+  revalidateSignature,
 } from "../src/index.js";
 
 type Json = Record<string, unknown>;
@@ -313,10 +316,45 @@ describe("revalidateRequest", () => {
     expect(revalidateRequest.safeParse({ tags: ["content:projects"] }).success).toBe(false);
   });
 
+  it("refuses a kind web does not cache", () => {
+    expect(revalidateChange.safeParse({ kind: "page", id: uuid }).success).toBe(false);
+    expect(revalidateRequest.safeParse({ changes: [{ kind: "page", id: uuid }] }).success).toBe(
+      false,
+    );
+  });
+
   it("refuses an empty list and a list over the limit", () => {
     expect(revalidateRequest.safeParse({ changes: [] }).success).toBe(false);
     const many = Array.from({ length: MAX_REVALIDATE_CHANGES + 1 }, () => change);
     expect(revalidateRequest.safeParse({ changes: many }).success).toBe(false);
     expect(revalidateRequest.safeParse({ changes: many.slice(1) }).success).toBe(true);
+  });
+});
+
+describe("revalidateSignature", () => {
+  const digest = "a".repeat(64);
+
+  it("parses the timestamp and the hex digest", () => {
+    expect(revalidateSignature.parse(`t=1793700721,v1=${digest}`)).toEqual({
+      timestamp: 1793700721,
+      digest,
+    });
+  });
+
+  it.each([
+    ["no timestamp", `v1=${digest}`],
+    ["a short digest", "t=1793700721,v1=abc"],
+    ["an uppercase digest", `t=1793700721,v1=${"A".repeat(64)}`],
+    ["another scheme", `t=1793700721,v0=${digest}`],
+    ["extra parts", `t=1793700721,v1=${digest},v2=${digest}`],
+    ["a negative timestamp", `t=-1,v1=${digest}`],
+    ["an empty value", ""],
+  ])("refuses %s", (_name, value) => {
+    expect(revalidateSignature.safeParse(value).success).toBe(false);
+  });
+
+  it("names the header in lowercase and allows five minutes of clock skew", () => {
+    expect(REVALIDATE_SIGNATURE_HEADER).toBe("x-jadero-signature");
+    expect(REVALIDATE_MAX_SKEW_SECONDS).toBe(300);
   });
 });

@@ -66,10 +66,14 @@ export {
 } from "./projects.js";
 export {
   MAX_REVALIDATE_CHANGES,
+  REVALIDATE_MAX_SKEW_SECONDS,
+  REVALIDATE_SIGNATURE_HEADER,
   type RevalidateChange,
   type RevalidateRequest,
+  type RevalidateSignature,
   revalidateChange,
   revalidateRequest,
+  revalidateSignature,
 } from "./revalidate.js";
 export {
   type Alternates,

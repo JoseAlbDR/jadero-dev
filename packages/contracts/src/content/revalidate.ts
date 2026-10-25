@@ -36,3 +36,33 @@ export const revalidateRequest = z.object({
 
 /** A revalidation call's body. */
 export type RevalidateRequest = z.infer<typeof revalidateRequest>;
+
+/**
+ * The header that signs a revalidation call (WP-14 D6, ADR-047, the internal signature of
+ * ADR-008), lowercase as Node and the Fetch API hand header names over.
+ */
+export const REVALIDATE_SIGNATURE_HEADER = "x-jadero-signature";
+
+/**
+ * How far, in seconds, the signature's timestamp may be from the receiver's clock, either way. A
+ * captured header stops working after it; a replay inside it only repeats a harmless
+ * revalidation (WP-14 D5).
+ */
+export const REVALIDATE_MAX_SKEW_SECONDS = 300;
+
+/**
+ * The value of {@link REVALIDATE_SIGNATURE_HEADER}: `t=<unix seconds>,v1=<hex HMAC-SHA256>`, the
+ * HMAC keyed with `REVALIDATE_SECRET` over `"<t>.<raw body>"`, the webhook signature shape of
+ * Stripe. Parsed into the timestamp and the 32-byte digest in hex; the cryptography itself lives in
+ * the two services, since this package holds schemas only.
+ */
+export const revalidateSignature = z
+  .string()
+  .regex(/^t=\d{1,12},v1=[0-9a-f]{64}$/)
+  .transform((value) => {
+    const [t = "", v1 = ""] = value.split(",").map((part) => part.slice(part.indexOf("=") + 1));
+    return { timestamp: Number(t), digest: v1 };
+  });
+
+/** A parsed revalidation signature. */
+export type RevalidateSignature = z.output<typeof revalidateSignature>;

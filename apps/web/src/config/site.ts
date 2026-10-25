@@ -81,3 +81,17 @@ export function cspMode(): CspMode {
   }
   return parsed.data;
 }
+
+/** Shorter keys are refused, so a placeholder like `secret` never verifies anything. */
+const revalidateSecretSchema = z.string().min(32);
+
+/**
+ * The key `api-worker` signs revalidation calls with (`REVALIDATE_SECRET`, WP-14 D6, ADR-047),
+ * server only and read per request, so a server started without it still serves pages and only
+ * the revalidation route refuses every call. Never logged.
+ * @returns the key, or `undefined` when it is unset or shorter than 32 characters.
+ */
+export function revalidateSecret(): string | undefined {
+  const parsed = revalidateSecretSchema.safeParse(process.env.REVALIDATE_SECRET);
+  return parsed.success ? parsed.data : undefined;
+}

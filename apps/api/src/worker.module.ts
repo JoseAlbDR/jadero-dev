@@ -8,11 +8,13 @@ import {
 import { type DynamicModule, Module } from "@nestjs/common";
 import { ApiWorkerConfig } from "./config/api-config.js";
 import { BrokerReadinessCheck, RelayModule } from "./modules/relay/index.js";
+import { RevalidationModule } from "./modules/revalidation/index.js";
 
 /**
  * The root module of `api-worker`, `api`'s second process type (report section 3.2): same code and
- * database, its own process, memory limit and restart policy. It runs the outbox relay and the
- * heartbeat, and serves `/health/*` only; ready means Postgres and RabbitMQ both answer.
+ * database, its own process, memory limit and restart policy. It runs the outbox relay, the
+ * heartbeat and the revalidation consumer (WP-14), and serves `/health/*` only; ready means
+ * Postgres and RabbitMQ both answer.
  */
 @Module({})
 export class WorkerModule {
@@ -37,6 +39,7 @@ export class WorkerModule {
         }),
         TelemetryModule,
         RelayModule,
+        RevalidationModule,
       ],
       providers: [{ provide: ApiWorkerConfig, useValue: config }],
       exports: [ApiWorkerConfig],
