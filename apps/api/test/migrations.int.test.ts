@@ -52,7 +52,7 @@ describe("api migrations from zero, as an ordinary role", () => {
     ).toEqual([{ rolsuper: false, rolcreatedb: false }]);
   });
 
-  it("create the outbox and the content tables and record one row per journal entry; a second run applies nothing", async () => {
+  it("create the outbox, the inbox and the content tables and record one row per journal entry; a second run applies nothing", async () => {
     const url = await emptyDatabase();
     await runMigrations({ service: "api", url, migrationsFolder: folder });
     await runMigrations({ service: "api", url, migrationsFolder: folder });
@@ -87,6 +87,7 @@ describe("api migrations from zero, as an ordinary role", () => {
       "content.skill_translations",
       "content.skills",
       "drizzle.__drizzle_migrations",
+      "messaging.inbox",
       "messaging.outbox",
     ]);
     // Drizzle stores each entry's `when` as created_at (bigint, a string in pg).

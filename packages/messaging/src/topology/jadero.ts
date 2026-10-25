@@ -1,4 +1,10 @@
-import { systemPingV1 } from "@jadero/contracts";
+import {
+  contentArchivedV1,
+  contentPublishedV1,
+  knowledgeEntryApprovedV1,
+  knowledgeEntryWithdrawnV1,
+  systemPingV1,
+} from "@jadero/contracts";
 import type { BrokerAccess, BrokerUser, ConsumerQueue } from "./definitions.js";
 
 /**
@@ -8,11 +14,25 @@ import type { BrokerAccess, BrokerUser, ConsumerQueue } from "./definitions.js";
  */
 export const JADERO_QUEUES: readonly ConsumerQueue[] = [
   { name: "agent.system.ping", service: "agent", bindings: [systemPingV1.routingKey] },
+  // api-worker's revalidation consumer calls web when public content changes (WP-14 D4). One queue
+  // per purpose: WP-18's PDF CV gets its own, so a slow render never delays a revalidation.
+  // `knowledge.snapshot.v1` is not bound: nothing in web depends on it, and its first consumer is
+  // the agent's read model (WP-20).
+  {
+    name: "api.revalidate",
+    service: "api",
+    bindings: [
+      contentPublishedV1.routingKey,
+      contentArchivedV1.routingKey,
+      knowledgeEntryApprovedV1.routingKey,
+      knowledgeEntryWithdrawnV1.routingKey,
+    ],
+  },
 ];
 
 /**
  * The local dev users, with fixed dev passwords like the Postgres roles in compose (never used
- * outside a laptop). `api` publishes through `api-worker`'s relay; `agent` reads its queues.
+ * outside a laptop). `api` publishes through `api-worker`'s relay and reads its own queues; `agent` reads its queues.
  */
 export const DEV_USERS: readonly BrokerUser[] = [
   { name: "dev", password: "dev", administrator: true },

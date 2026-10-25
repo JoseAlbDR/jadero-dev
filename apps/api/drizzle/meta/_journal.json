@@ -43,6 +43,13 @@
       "when": 1792860659376,
       "tag": "0005_now",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792932850599,
+      "tag": "0006_messaging_inbox",
+      "breakpoints": true
     }
   ]
 }

@@ -40,6 +40,17 @@
       }
     },
     {
+      "name": "api.retry",
+      "vhost": "/staging",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {
+        "alternate-exchange": "jadero.unrouted"
+      }
+    },
+    {
       "name": "jadero.dlx",
       "vhost": "/staging",
       "type": "direct",
@@ -97,6 +108,51 @@
     },
     {
       "name": "agent.system.ping.dlq",
+      "vhost": "/staging",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    },
+    {
+      "name": "api.revalidate",
+      "vhost": "/staging",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    },
+    {
+      "name": "api.revalidate.retry.10s",
+      "vhost": "/staging",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    },
+    {
+      "name": "api.revalidate.retry.1m",
+      "vhost": "/staging",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    },
+    {
+      "name": "api.revalidate.retry.10m",
+      "vhost": "/staging",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    },
+    {
+      "name": "api.revalidate.dlq",
       "vhost": "/staging",
       "durable": true,
       "auto_delete": false,
@@ -169,6 +225,86 @@
       "destination_type": "queue",
       "routing_key": "agent.system.ping.dlq",
       "arguments": {}
+    },
+    {
+      "source": "jadero.events",
+      "vhost": "/staging",
+      "destination": "api.revalidate",
+      "destination_type": "queue",
+      "routing_key": "content.published.v1",
+      "arguments": {}
+    },
+    {
+      "source": "jadero.events",
+      "vhost": "/staging",
+      "destination": "api.revalidate",
+      "destination_type": "queue",
+      "routing_key": "content.archived.v1",
+      "arguments": {}
+    },
+    {
+      "source": "jadero.events",
+      "vhost": "/staging",
+      "destination": "api.revalidate",
+      "destination_type": "queue",
+      "routing_key": "knowledge.entry.approved.v1",
+      "arguments": {}
+    },
+    {
+      "source": "jadero.events",
+      "vhost": "/staging",
+      "destination": "api.revalidate",
+      "destination_type": "queue",
+      "routing_key": "knowledge.entry.withdrawn.v1",
+      "arguments": {}
+    },
+    {
+      "source": "api.retry",
+      "vhost": "/staging",
+      "destination": "api.revalidate",
+      "destination_type": "queue",
+      "routing_key": "api.revalidate",
+      "arguments": {}
+    },
+    {
+      "source": "api.retry",
+      "vhost": "/staging",
+      "destination": "api.revalidate.retry.10s",
+      "destination_type": "queue",
+      "routing_key": "api.revalidate.retry.10s",
+      "arguments": {}
+    },
+    {
+      "source": "api.retry",
+      "vhost": "/staging",
+      "destination": "api.revalidate.retry.1m",
+      "destination_type": "queue",
+      "routing_key": "api.revalidate.retry.1m",
+      "arguments": {}
+    },
+    {
+      "source": "api.retry",
+      "vhost": "/staging",
+      "destination": "api.revalidate.retry.10m",
+      "destination_type": "queue",
+      "routing_key": "api.revalidate.retry.10m",
+      "arguments": {}
+    },
+    {
+      "source": "jadero.dlx",
+      "vhost": "/staging",
+      "destination": "api.revalidate.dlq",
+      "destination_type": "queue",
+      "routing_key": "api.revalidate",
+      "arguments": {}
+    },
+    {
+      "source": "api.retry",
+      "vhost": "/staging",
+      "destination": "api.revalidate.dlq",
+      "destination_type": "queue",
+      "routing_key": "api.revalidate.dlq",
+      "arguments": {}
     }
   ],
   "policies": [
@@ -226,6 +362,62 @@
         "message-ttl": 600000,
         "dead-letter-exchange": "agent.retry",
         "dead-letter-routing-key": "agent.system.ping"
+      }
+    },
+    {
+      "vhost": "/staging",
+      "name": "api.revalidate",
+      "pattern": "^api\\.revalidate$",
+      "apply-to": "queues",
+      "priority": 10,
+      "definition": {
+        "dead-letter-strategy": "at-least-once",
+        "overflow": "reject-publish",
+        "dead-letter-exchange": "jadero.dlx",
+        "dead-letter-routing-key": "api.revalidate",
+        "delivery-limit": 20
+      }
+    },
+    {
+      "vhost": "/staging",
+      "name": "api.revalidate.retry.10s",
+      "pattern": "^api\\.revalidate\\.retry\\.10s$",
+      "apply-to": "queues",
+      "priority": 10,
+      "definition": {
+        "dead-letter-strategy": "at-least-once",
+        "overflow": "reject-publish",
+        "message-ttl": 10000,
+        "dead-letter-exchange": "api.retry",
+        "dead-letter-routing-key": "api.revalidate"
+      }
+    },
+    {
+      "vhost": "/staging",
+      "name": "api.revalidate.retry.1m",
+      "pattern": "^api\\.revalidate\\.retry\\.1m$",
+      "apply-to": "queues",
+      "priority": 10,
+      "definition": {
+        "dead-letter-strategy": "at-least-once",
+        "overflow": "reject-publish",
+        "message-ttl": 60000,
+        "dead-letter-exchange": "api.retry",
+        "dead-letter-routing-key": "api.revalidate"
+      }
+    },
+    {
+      "vhost": "/staging",
+      "name": "api.revalidate.retry.10m",
+      "pattern": "^api\\.revalidate\\.retry\\.10m$",
+      "apply-to": "queues",
+      "priority": 10,
+      "definition": {
+        "dead-letter-strategy": "at-least-once",
+        "overflow": "reject-publish",
+        "message-ttl": 600000,
+        "dead-letter-exchange": "api.retry",
+        "dead-letter-routing-key": "api.revalidate"
       }
     }
   ],

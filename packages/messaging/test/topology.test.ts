@@ -39,7 +39,8 @@ describe("infra/rabbitmq/definitions.json", () => {
   });
 
   it("gives every consumer queue three wait queues that return to it, and a DLQ", () => {
-    for (const { name } of JADERO_QUEUES) {
+    for (const { name, service } of JADERO_QUEUES) {
+      const retry = `${service}.retry`;
       // The type is the only argument; everything that may change later is a policy.
       expect(committed.queues.find((q) => q.name === name)?.arguments).toEqual({
         "x-queue-type": "quorum",
@@ -63,12 +64,12 @@ describe("infra/rabbitmq/definitions.json", () => {
         // Back through the retry exchange to this queue only: other consumers never see a retry.
         expect(policyOf(wait)?.definition).toMatchObject({
           "message-ttl": ttl,
-          "dead-letter-exchange": "agent.retry",
+          "dead-letter-exchange": retry,
           "dead-letter-routing-key": name,
         });
       }
       expect(committed.bindings).toContainEqual(
-        expect.objectContaining({ source: "agent.retry", destination: name, routing_key: name }),
+        expect.objectContaining({ source: retry, destination: name, routing_key: name }),
       );
       expect(committed.bindings).toContainEqual(
         expect.objectContaining({
@@ -85,7 +86,7 @@ describe("infra/rabbitmq/definitions.json", () => {
       ]) {
         expect(committed.bindings).toContainEqual(
           expect.objectContaining({
-            source: "agent.retry",
+            source: retry,
             destination: target,
             routing_key: target,
           }),
@@ -97,7 +98,7 @@ describe("infra/rabbitmq/definitions.json", () => {
   it("sends unroutable events and copies to jadero.unrouted instead of dropping them", () => {
     const exchanges = (committed as unknown as { exchanges: { name: string; arguments: object }[] })
       .exchanges;
-    for (const name of ["jadero.events", "agent.retry"]) {
+    for (const name of ["jadero.events", "agent.retry", "api.retry"]) {
       expect(exchanges.find((e) => e.name === name)?.arguments).toEqual({
         "alternate-exchange": "jadero.unrouted",
       });
@@ -108,8 +109,15 @@ describe("infra/rabbitmq/definitions.json", () => {
     const byUser = new Map(committed.permissions.map((p) => [p.user, p]));
     const api = byUser.get("api");
     const agent = byUser.get("agent");
-    expect(api).toMatchObject({ configure: "^$", read: "^$" });
+    expect(api).toMatchObject({ configure: "^$" });
     expect(new RegExp(api?.write ?? "").test("jadero.events")).toBe(true);
+    // api-worker's revalidation consumer reads its own queue and retries through api.retry only.
+    expect(new RegExp(api?.read ?? "").test("api.revalidate")).toBe(true);
+    expect(new RegExp(api?.read ?? "").test("api.revalidate.dlq")).toBe(false);
+    expect(new RegExp(api?.read ?? "").test("agent.system.ping")).toBe(false);
+    expect(new RegExp(api?.write ?? "").test("api.retry")).toBe(true);
+    expect(new RegExp(api?.write ?? "").test("agent.retry")).toBe(false);
+    expect(new RegExp(agent?.read ?? "").test("api.revalidate")).toBe(false);
     expect(agent).toMatchObject({ configure: "^$" });
     expect(new RegExp(agent?.read ?? "").test("agent.system.ping")).toBe(true);
     expect(new RegExp(agent?.read ?? "").test("agent.system.ping.dlq")).toBe(false);
