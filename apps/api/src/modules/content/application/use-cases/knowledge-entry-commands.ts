@@ -131,11 +131,14 @@ export async function transitionKnowledgeEntry(
  * out only when the entry had an approved revision live before the change. It reads the approval
  * pointer, never the state: an approved entry edited again is `draft` with its older approved
  * revision still live, and a draft or an entry in review that was never approved had nothing public.
+ * The tombstone carries that live revision (read before the change, which clears the pointer), not
+ * the latest one, so a consumer compares it with the approval it holds.
  * @param entry the loaded entry, before the change.
  * @param reason why it goes: `withdrawn` or `deleted`.
  * @param at when the change happened.
  * @param change applies the domain method (`withdraw` or `delete`) to the entry.
  * @returns the tombstone data when something public disappeared, nothing otherwise.
+ * @throws Error when the live revision is not loaded (a repository bug: it always loads it).
  */
 export function withdrawalIfLive(
   entry: KnowledgeEntry,
@@ -143,7 +146,9 @@ export function withdrawalIfLive(
   at: Date,
   change: () => void,
 ): KnowledgeEntryWithdrawnData | undefined {
-  const wasLive = entry.approvedRevisionId !== null;
+  const liveId = entry.approvedRevisionId;
+  const live = liveId === null ? null : entry.revision(liveId);
+  if (liveId !== null && !live) throw new Error(`${entry.id}: live revision ${liveId} not loaded`);
   change();
-  return wasLive ? knowledgeEntryWithdrawn(entry.id, reason, at) : undefined;
+  return live ? knowledgeEntryWithdrawn(entry.id, live, reason, at) : undefined;
 }

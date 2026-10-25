@@ -18,6 +18,7 @@ export interface ContentEventWriterFixture {
 const withdrawn: KnowledgeEntryWithdrawnData = {
   entryId: "kb-contract-entry",
   locale: "en",
+  revision: { id: "01a1a10a-9e8d-7c6b-8a59-4f3e2d1c0b0a", number: 1 },
   reason: "withdrawn",
   at: "2026-10-25T10:00:00.000Z",
 };

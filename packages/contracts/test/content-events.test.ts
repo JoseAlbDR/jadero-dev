@@ -259,6 +259,16 @@ describe("knowledge.entry.withdrawn.v1", () => {
     );
   });
 
+  it("refuses a tombstone without the live revision, which consumers order it by", () => {
+    const { revision: _r, ...without } = data;
+    expect(knowledgeEntryWithdrawnV1.data.safeParse(without).success).toBe(false);
+  });
+
+  it("refuses a revision without a positive number", () => {
+    const revision = { ...(data.revision as Json), number: 0 };
+    expect(knowledgeEntryWithdrawnV1.data.safeParse({ ...data, revision }).success).toBe(false);
+  });
+
   it("is a tombstone: a document sent by mistake is dropped", () => {
     const parsed = knowledgeEntryWithdrawnV1.data.parse({ ...data, document: { title: "x" } });
     expect(parsed).not.toHaveProperty("document");

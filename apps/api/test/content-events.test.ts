@@ -454,12 +454,18 @@ describe("the knowledge entry use cases write the knowledge events", () => {
     expect(outbox()).toEqual([]);
   });
 
-  it("withdraw of an approved entry writes a tombstone with reason withdrawn", async () => {
-    await createApproved();
+  it("withdraw of an approved entry writes a tombstone with reason withdrawn and the live revision", async () => {
+    const revisionId = await createApproved();
     ports.clock.advance(1);
     await withdraw.execute({ id: ENTRY, expectedVersion: 2 });
     expect(dataOf(knowledgeEntryWithdrawnV1.routingKey)).toEqual([
-      { entryId: ENTRY, locale: "en", reason: "withdrawn", at: "2026-10-10T10:01:00.000Z" },
+      {
+        entryId: ENTRY,
+        locale: "en",
+        revision: { id: revisionId, number: 1 },
+        reason: "withdrawn",
+        at: "2026-10-10T10:01:00.000Z",
+      },
     ]);
   });
 
@@ -477,25 +483,38 @@ describe("the knowledge entry use cases write the knowledge events", () => {
     expect(outbox()).toEqual([]);
   });
 
-  it("withdraw of a draft whose older approved revision is still live writes one tombstone", async () => {
-    await createApproved();
-    await saveEntry.execute({
+  it("withdraw of a draft whose older approved revision is still live carries that revision, not the draft", async () => {
+    const liveId = await createApproved();
+    const draft = await saveEntry.execute({
       id: ENTRY,
       document: entryDocument("Sample entry, revised"),
       provenance: PRIVATE,
       expectedVersion: 2,
     });
     await withdraw.execute({ id: ENTRY, expectedVersion: 3 });
+    expect(draft.revisionId).not.toBe(liveId);
     expect(dataOf(knowledgeEntryWithdrawnV1.routingKey)).toEqual([
-      { entryId: ENTRY, locale: "en", reason: "withdrawn", at: NOON },
+      {
+        entryId: ENTRY,
+        locale: "en",
+        revision: { id: liveId, number: 1 },
+        reason: "withdrawn",
+        at: NOON,
+      },
     ]);
   });
 
-  it("delete of an approved entry writes a tombstone with reason deleted", async () => {
-    await createApproved();
+  it("delete of an approved entry writes a tombstone with reason deleted and the live revision", async () => {
+    const revisionId = await createApproved();
     await remove.execute({ id: ENTRY, expectedVersion: 2 });
     expect(dataOf(knowledgeEntryWithdrawnV1.routingKey)).toEqual([
-      { entryId: ENTRY, locale: "en", reason: "deleted", at: NOON },
+      {
+        entryId: ENTRY,
+        locale: "en",
+        revision: { id: revisionId, number: 1 },
+        reason: "deleted",
+        at: NOON,
+      },
     ]);
   });
 

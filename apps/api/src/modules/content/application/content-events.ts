@@ -289,16 +289,25 @@ export function knowledgeEntryApproved(entry: KnowledgeEntry): KnowledgeEntryApp
 
 /**
  * The `knowledge.entry.withdrawn.v1` tombstone of an entry: no document, only what a read model
- * needs to drop it.
+ * needs to drop it, plus the revision that was live, so a consumer can ignore a tombstone older
+ * than the approval it holds (delivery order is not promised).
  * @param entryId the entry's id.
+ * @param live the id and number of the approved revision that was live before the change.
  * @param reason `withdrawn` (may come back with a new approval) or `deleted` (final).
  * @param at when it happened, from the use case's clock.
  * @returns the event data.
  */
 export function knowledgeEntryWithdrawn(
   entryId: string,
+  live: KnowledgeEntryWithdrawnData["revision"],
   reason: KnowledgeEntryWithdrawnData["reason"],
   at: Date,
 ): KnowledgeEntryWithdrawnData {
-  return { entryId, locale: KNOWLEDGE_ENTRY_LOCALE, reason, at: at.toISOString() };
+  return {
+    entryId,
+    locale: KNOWLEDGE_ENTRY_LOCALE,
+    revision: { id: live.id, number: live.number },
+    reason,
+    at: at.toISOString(),
+  };
 }

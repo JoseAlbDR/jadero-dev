@@ -36,8 +36,10 @@ const cvBulletParent = z.discriminatedUnion("kind", [
  * Event-carried state transfer (WP-14 D2): `item` holds the item's fields that do not depend on the
  * locale (its base row: canonical slug, kind, sort order and the like) and `document` the published
  * text of this locale, so a read model needs no call back to `api`. Each document is a pick of the
- * public read schema of the same type, so the event and `GET /v1/content` cannot drift apart and an
- * event never carries a field the public API does not show. `revision.number` orders versions: a
+ * public read schema of the same type, so `document` and `GET /v1/content` cannot drift apart and a
+ * document never carries a field the public API does not show. `item` is not a pick: some of its
+ * base-row fields (a sort order, a CV bullet's parent and importance) are not in the read DTOs, but
+ * none of them is private. `revision.number` orders versions: a
  * consumer that already holds a higher number for the same `aggregate`, `id` and `locale` ignores
  * an older event, since delivery order is not promised.
  */
