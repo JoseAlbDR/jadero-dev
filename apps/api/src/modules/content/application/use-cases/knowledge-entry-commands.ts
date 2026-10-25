@@ -1,3 +1,4 @@
+import { knowledgeEntryWithdrawnV1 } from "@jadero/contracts";
 import { z } from "zod";
 import type { ApprovalChecklist } from "../../domain/approval-checklist.js";
 import { ItemNotFound } from "../../domain/content.errors.js";
@@ -12,6 +13,7 @@ import {
   knowledgeEntryDocumentSchema,
   knowledgeEntryProvenanceSchema,
 } from "../content-documents.js";
+import type { KnowledgeEntryWithdrawnData } from "../content-events.js";
 
 // The commands of the knowledge entry use cases. Entries keep their own use cases (owner decision):
 // English only, approved per entry with the checklist (ADR-031), not published per locale.
@@ -97,10 +99,12 @@ export async function loadKnowledgeEntry(scope: ContentScope, id: string): Promi
 
 /**
  * The one flow of every entry transition without data of its own: validate, load, apply the
- * domain method, save with the caller's version, all in one transaction.
+ * domain method, save with the caller's version and write the tombstone the transition returns,
+ * all in one transaction (WP-14 D1).
  * @param uow the module's unit of work.
  * @param command the entry and the version the caller loaded.
- * @param transition the domain method to apply.
+ * @param transition applies the domain method; returns the `knowledge.entry.withdrawn.v1` data to
+ * write when the change took something public away, nothing otherwise.
  * @returns the entry and its new version.
  * @throws {ZodError} when the command breaks its schema; nothing runs.
  * @throws {ItemNotFound} when no entry has the id.
@@ -110,13 +114,14 @@ export async function loadKnowledgeEntry(scope: ContentScope, id: string): Promi
 export async function transitionKnowledgeEntry(
   uow: ContentUnitOfWork,
   command: KnowledgeEntryTransitionCommand,
-  transition: (entry: KnowledgeEntry) => void,
+  transition: (entry: KnowledgeEntry) => KnowledgeEntryWithdrawnData | undefined,
 ): Promise<ChangedKnowledgeEntry> {
   const parsed = knowledgeEntryTransitionCommand.parse(command);
   return uow.run(async (scope) => {
     const entry = await loadKnowledgeEntry(scope, parsed.id);
-    transition(entry);
+    const tombstone = transition(entry);
     await scope.knowledgeEntries.save(entry, parsed.expectedVersion);
+    if (tombstone) await scope.events.write(knowledgeEntryWithdrawnV1, tombstone);
     return { id: entry.id, version: parsed.expectedVersion + 1 };
   });
 }

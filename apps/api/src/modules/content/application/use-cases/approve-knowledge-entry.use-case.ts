@@ -1,7 +1,9 @@
+import { knowledgeEntryApprovedV1 } from "@jadero/contracts";
 import { Injectable } from "@nestjs/common";
 import type { ApproveResult } from "../../domain/knowledge-entry.js";
 import { Clock } from "../clock.js";
 import { type ContentScope, ContentUnitOfWork } from "../content.unit-of-work.js";
+import { knowledgeEntryApproved } from "../content-events.js";
 import {
   type ApproveKnowledgeEntryCommand,
   approveKnowledgeEntryCommand,
@@ -11,7 +13,8 @@ import {
 /**
  * Approves one revision of an entry (D4, ADR-031): the revision the owner reviewed, still the
  * latest (Trace 2a), with every checklist box ticked. Approving the live revision again changes
- * nothing, so nothing is saved and no version is bumped.
+ * nothing, so nothing is saved, no version is bumped and no event is written; a real approval
+ * writes one `knowledge.entry.approved.v1` in the same unit of work (WP-14 D1, ADR-031).
  */
 @Injectable()
 export class ApproveKnowledgeEntry {
@@ -47,7 +50,9 @@ export class ApproveKnowledgeEntry {
   ): Promise<ApproveResult> {
     const entry = await loadKnowledgeEntry(scope, command.id);
     const result = entry.approve(command.revisionId, command.checklist, this.clock.now());
-    if (!result.alreadyApproved) await scope.knowledgeEntries.save(entry, command.expectedVersion);
+    if (result.alreadyApproved) return result;
+    await scope.knowledgeEntries.save(entry, command.expectedVersion);
+    await scope.events.write(knowledgeEntryApprovedV1, knowledgeEntryApproved(entry));
     return result;
   }
 }

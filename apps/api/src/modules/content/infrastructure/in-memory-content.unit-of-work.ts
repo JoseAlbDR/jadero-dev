@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { type ContentScope, ContentUnitOfWork } from "../application/content.unit-of-work.js";
+import type { WrittenContentEvent } from "../application/content-event-writer.js";
+import { InMemoryContentEventWriter } from "./in-memory-content-event-writer.js";
 import {
   type CvBulletRecord,
   InMemoryCvBulletRepository,
@@ -19,8 +21,8 @@ import { InMemoryRecords, StagedRecords } from "./in-memory-records.js";
 import { InMemorySkillRepository, type SkillRecord } from "./in-memory-skill.repository.js";
 
 /**
- * The fakes' storage, one table per aggregate type, shared by the in-memory unit of work and the
- * repositories bound outside it, so a read outside `run` sees what `run` committed.
+ * The fakes' storage, one table per aggregate type plus the outbox, shared by the in-memory unit
+ * of work and the repositories bound outside it, so a read outside `run` sees what `run` committed.
  */
 @Injectable()
 export class InMemoryContentStore {
@@ -32,12 +34,14 @@ export class InMemoryContentStore {
   readonly skills = new InMemoryRecords<SkillRecord>();
   readonly cvBullets = new InMemoryRecords<CvBulletRecord>();
   readonly knowledgeEntries = new InMemoryRecords<KnowledgeEntryRecord>();
+  /** The committed events, in commit order: the fake `messaging.outbox`. */
+  readonly events: WrittenContentEvent[] = [];
 }
 
 /**
  * The fake unit of work (ADR-009): `work` runs on staged views of every table, applied in one
  * synchronous step only when `work` resolves and no staged item changed meanwhile, and dropped when
- * it throws. Passes the same contract suite as `DrizzleContentUnitOfWork`.
+ * it throws; the events it wrote go to the store's outbox in the same step, or are dropped with it. Passes the same contract suite as `DrizzleContentUnitOfWork`.
  */
 @Injectable()
 export class InMemoryContentUnitOfWork extends ContentUnitOfWork {
@@ -60,6 +64,7 @@ export class InMemoryContentUnitOfWork extends ContentUnitOfWork {
     const skills = new StagedRecords(this.store.skills);
     const cvBullets = new StagedRecords(this.store.cvBullets);
     const knowledgeEntries = new StagedRecords(this.store.knowledgeEntries);
+    const events = new InMemoryContentEventWriter();
     const result = await work({
       profile: new InMemoryProfileRepository(profile),
       now: new InMemoryNowRepository(now),
@@ -70,6 +75,7 @@ export class InMemoryContentUnitOfWork extends ContentUnitOfWork {
       // The parents through this run's staged views: a parent saved earlier in the run is found.
       cvBullets: new InMemoryCvBulletRepository(cvBullets, { experienceItems, projects }),
       knowledgeEntries: new InMemoryKnowledgeEntryRepository(knowledgeEntries),
+      events,
     });
     const tables = [
       profile,
@@ -83,6 +89,7 @@ export class InMemoryContentUnitOfWork extends ContentUnitOfWork {
     ];
     for (const table of tables) table.check();
     for (const table of tables) table.commit();
+    events.commitTo(this.store.events);
     return result;
   }
 }

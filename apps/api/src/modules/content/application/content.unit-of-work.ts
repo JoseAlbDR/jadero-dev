@@ -1,3 +1,4 @@
+import type { ContentEventWriter } from "./content-event-writer.js";
 import type { CvBulletRepository } from "./cv-bullet.repository.js";
 import type { ExperienceItemRepository } from "./experience-item.repository.js";
 import type { KnowledgeEntryRepository } from "./knowledge-entry.repository.js";
@@ -8,8 +9,8 @@ import type { ProjectRepository } from "./project.repository.js";
 import type { SkillRepository } from "./skill.repository.js";
 
 /**
- * What a unit of work hands its work: one repository per content aggregate, all bound to one
- * transaction. WP-14 adds the outbox writer, so a publish and its event commit together.
+ * What a unit of work hands its work: one repository per content aggregate and the event writer,
+ * all bound to one transaction, so a publish and its event commit together (WP-14 D1).
  */
 export interface ContentScope {
   /** The profile repository (a singleton), bound to the transaction. */
@@ -28,6 +29,8 @@ export interface ContentScope {
   readonly cvBullets: CvBulletRepository;
   /** The knowledge entries repository, bound to the transaction. */
   readonly knowledgeEntries: KnowledgeEntryRepository;
+  /** The outbox of the transaction: an event written here commits or rolls back with the run. */
+  readonly events: ContentEventWriter;
 }
 
 /**

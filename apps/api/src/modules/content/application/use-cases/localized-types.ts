@@ -15,6 +15,18 @@ import { Project, type ProjectDocument, type ProjectKind } from "../../domain/pr
 import type { Revision, RevisionOrigin } from "../../domain/revision.js";
 import { Skill, type SkillDocument } from "../../domain/skill.js";
 import type { ContentScope } from "../content.unit-of-work.js";
+import {
+  type ContentArchivedData,
+  type ContentPublishedData,
+  CV_BULLET_EVENTS,
+  EXPERIENCE_ITEM_EVENTS,
+  type LocalizedEvents,
+  NOW_EVENTS,
+  POST_EVENTS,
+  PROFILE_EVENTS,
+  PROJECT_EVENTS,
+  SKILL_EVENTS,
+} from "../content-events.js";
 import type { IdGenerator } from "../id-generator.js";
 
 // The lookup table behind the generic use cases (owner decision, granularity B): one use case per
@@ -110,6 +122,22 @@ export interface Tracked<TDoc extends object> {
    * @param expectedVersion the version the caller loaded, 0 for a new item.
    */
   save(expectedVersion: number): Promise<void>;
+  /** The item's integration events (WP-14 D1), bound to it like `save`. */
+  readonly events: TrackedEvents;
+}
+
+/** The events of one tracked item, built from its state after the change (see `content-events`). */
+export interface TrackedEvents {
+  /**
+   * The `content.published.v1` data of one locale whose pointer just moved.
+   * @param locale the locale.
+   */
+  published(locale: Locale): ContentPublishedData;
+  /**
+   * The `content.archived.v1` data after an archive, or undefined when nothing of the item was
+   * ever public (or the type cannot be archived).
+   */
+  archived(): ContentArchivedData | undefined;
 }
 
 /** The entry of one localized type in the lookup table. */
@@ -139,33 +167,45 @@ export interface LocalizedTypeEntry<K extends LocalizedType> {
   exists(scope: ContentScope, id: string): Promise<boolean>;
 }
 
-/** Pairs an aggregate with its repository's save. */
+/** Pairs an aggregate with its repository's save and its type's events. */
 function tracked<TDoc extends object, TItem extends LocalizedItem<TDoc>>(
   item: TItem,
   save: (item: TItem, expectedVersion: number) => Promise<void>,
+  events: LocalizedEvents<TItem>,
 ): Tracked<TDoc> {
-  return { item, save: (expectedVersion) => save(item, expectedVersion) };
+  return {
+    item,
+    save: (expectedVersion) => save(item, expectedVersion),
+    events: {
+      published: (locale) => events.published(item, locale),
+      archived: () => events.archived?.(item),
+    },
+  };
 }
 
 /** The lookup table: one entry per localized type, keyed by the command's `type`. */
 export const LOCALIZED: { readonly [K in LocalizedType]: LocalizedTypeEntry<K> } = {
   profile: {
     create: (scope, fields, ids) =>
-      tracked(Profile.create(fields.id ?? ids.next()), (p, v) => scope.profile.save(p, v)),
+      tracked(
+        Profile.create(fields.id ?? ids.next()),
+        (p, v) => scope.profile.save(p, v),
+        PROFILE_EVENTS,
+      ),
     load: async (scope, id) => {
       const profile = await scope.profile.find();
       if (!profile || profile.id !== id) return undefined;
-      return tracked(profile, (p, v) => scope.profile.save(p, v));
+      return tracked(profile, (p, v) => scope.profile.save(p, v), PROFILE_EVENTS);
     },
     exists: async (scope) => (await scope.profile.find()) !== undefined,
   },
   now: {
     create: (scope, fields, ids) =>
-      tracked(Now.create(fields.id ?? ids.next()), (n, v) => scope.now.save(n, v)),
+      tracked(Now.create(fields.id ?? ids.next()), (n, v) => scope.now.save(n, v), NOW_EVENTS),
     load: async (scope, id) => {
       const now = await scope.now.find();
       if (!now || now.id !== id) return undefined;
-      return tracked(now, (n, v) => scope.now.save(n, v));
+      return tracked(now, (n, v) => scope.now.save(n, v), NOW_EVENTS);
     },
     exists: async (scope) => (await scope.now.find()) !== undefined,
   },
@@ -174,10 +214,13 @@ export const LOCALIZED: { readonly [K in LocalizedType]: LocalizedTypeEntry<K> }
       tracked(
         ExperienceItem.create({ id: fields.id ?? ids.next(), sortOrder: fields.sortOrder }),
         (item, v) => scope.experienceItems.save(item, v),
+        EXPERIENCE_ITEM_EVENTS,
       ),
     load: async (scope, id) => {
       const item = await scope.experienceItems.get(id);
-      return item && tracked(item, (i, v) => scope.experienceItems.save(i, v));
+      return (
+        item && tracked(item, (i, v) => scope.experienceItems.save(i, v), EXPERIENCE_ITEM_EVENTS)
+      );
     },
     exists: async (scope, id) => (await scope.experienceItems.get(id)) !== undefined,
   },
@@ -192,10 +235,11 @@ export const LOCALIZED: { readonly [K in LocalizedType]: LocalizedTypeEntry<K> }
           sortOrder: fields.sortOrder,
         }),
         (project, v) => scope.projects.save(project, v),
+        PROJECT_EVENTS,
       ),
     load: async (scope, id) => {
       const project = await scope.projects.get(id);
-      return project && tracked(project, (p, v) => scope.projects.save(p, v));
+      return project && tracked(project, (p, v) => scope.projects.save(p, v), PROJECT_EVENTS);
     },
     exists: async (scope, id) => (await scope.projects.get(id)) !== undefined,
   },
@@ -209,10 +253,11 @@ export const LOCALIZED: { readonly [K in LocalizedType]: LocalizedTypeEntry<K> }
           wp: fields.wp ?? null,
         }),
         (post, v) => scope.posts.save(post, v),
+        POST_EVENTS,
       ),
     load: async (scope, id) => {
       const post = await scope.posts.get(id);
-      return post && tracked(post, (p, v) => scope.posts.save(p, v));
+      return post && tracked(post, (p, v) => scope.posts.save(p, v), POST_EVENTS);
     },
     exists: async (scope, id) => (await scope.posts.get(id)) !== undefined,
   },
@@ -221,10 +266,11 @@ export const LOCALIZED: { readonly [K in LocalizedType]: LocalizedTypeEntry<K> }
       tracked(
         Skill.create({ id: fields.id ?? ids.next(), sortOrder: fields.sortOrder }),
         (skill, v) => scope.skills.save(skill, v),
+        SKILL_EVENTS,
       ),
     load: async (scope, id) => {
       const skill = await scope.skills.get(id);
-      return skill && tracked(skill, (s, v) => scope.skills.save(s, v));
+      return skill && tracked(skill, (s, v) => scope.skills.save(s, v), SKILL_EVENTS);
     },
     exists: async (scope, id) => (await scope.skills.get(id)) !== undefined,
   },
@@ -238,10 +284,11 @@ export const LOCALIZED: { readonly [K in LocalizedType]: LocalizedTypeEntry<K> }
           importance: fields.importance,
         }),
         (bullet, v) => scope.cvBullets.save(bullet, v),
+        CV_BULLET_EVENTS,
       ),
     load: async (scope, id) => {
       const bullet = await scope.cvBullets.get(id);
-      return bullet && tracked(bullet, (b, v) => scope.cvBullets.save(b, v));
+      return bullet && tracked(bullet, (b, v) => scope.cvBullets.save(b, v), CV_BULLET_EVENTS);
     },
     exists: async (scope, id) => (await scope.cvBullets.get(id)) !== undefined,
   },

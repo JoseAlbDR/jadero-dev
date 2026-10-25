@@ -1,3 +1,4 @@
+import { contentArchivedV1 } from "@jadero/contracts";
 import { Injectable } from "@nestjs/common";
 import { InvalidTransition } from "../../domain/content.errors.js";
 import { Clock } from "../clock.js";
@@ -14,7 +15,9 @@ export interface ArchivedContentItem {
 /**
  * Archives an experience item, project, post, skill or CV bullet: every locale is hidden at once
  * and every revision and pointer is kept (no per-locale unpublish, D-20). The singletons (the
- * profile, Now) are not archivable: the command schema has no member for them.
+ * profile, Now) are not archivable: the command schema has no member for them. An item that had a
+ * published locale writes one `content.archived.v1` tombstone in the same unit of work (WP-14 Q2 A);
+ * one never published writes none, since nothing public disappears.
  */
 @Injectable()
 export class ArchiveContentItem {
@@ -35,11 +38,13 @@ export class ArchiveContentItem {
   async execute(command: ArchiveContentItemCommand): Promise<ArchivedContentItem> {
     const parsed = archiveContentItemCommand.parse(command);
     return this.uow.run(async (scope) => {
-      const { item, save } = await loadLocalized(scope, parsed.type, parsed.id);
+      const { item, save, events } = await loadLocalized(scope, parsed.type, parsed.id);
       // Unreachable through the schema, which has no singleton member; kept as the domain's answer.
       if (!item.archive) throw new InvalidTransition(item.id, "archive", "it cannot be archived");
       item.archive(this.clock.now());
       await save(parsed.expectedVersion);
+      const tombstone = events.archived();
+      if (tombstone) await scope.events.write(contentArchivedV1, tombstone);
       return { id: item.id, version: parsed.expectedVersion + 1 };
     });
   }

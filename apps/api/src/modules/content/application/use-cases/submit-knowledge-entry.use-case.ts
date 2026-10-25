@@ -19,6 +19,10 @@ export class SubmitKnowledgeEntry {
    * `transitionKnowledgeEntry`.
    */
   async execute(command: KnowledgeEntryTransitionCommand): Promise<ChangedKnowledgeEntry> {
-    return transitionKnowledgeEntry(this.uow, command, (entry) => entry.submit());
+    return transitionKnowledgeEntry(this.uow, command, (entry) => {
+      entry.submit();
+      // Draft-side: nothing public changes, so no event (ADR-031).
+      return undefined;
+    });
   }
 }
