@@ -454,12 +454,40 @@ describe("the knowledge entry use cases write the knowledge events", () => {
     expect(outbox()).toEqual([]);
   });
 
-  it("withdraw writes a tombstone with reason withdrawn", async () => {
+  it("withdraw of an approved entry writes a tombstone with reason withdrawn", async () => {
     await createApproved();
     ports.clock.advance(1);
     await withdraw.execute({ id: ENTRY, expectedVersion: 2 });
     expect(dataOf(knowledgeEntryWithdrawnV1.routingKey)).toEqual([
       { entryId: ENTRY, locale: "en", reason: "withdrawn", at: "2026-10-10T10:01:00.000Z" },
+    ]);
+  });
+
+  it("withdraw writes nothing when nothing was ever approved: a draft or an entry in review", async () => {
+    await createEntry.execute({ id: ENTRY, document: entryDocument(), provenance: PRIVATE });
+    await withdraw.execute({ id: ENTRY, expectedVersion: 1 });
+
+    await createEntry.execute({
+      id: "kb-in-review",
+      document: entryDocument(),
+      provenance: PRIVATE,
+    });
+    await submit.execute({ id: "kb-in-review", expectedVersion: 1 });
+    await withdraw.execute({ id: "kb-in-review", expectedVersion: 2 });
+    expect(outbox()).toEqual([]);
+  });
+
+  it("withdraw of a draft whose older approved revision is still live writes one tombstone", async () => {
+    await createApproved();
+    await saveEntry.execute({
+      id: ENTRY,
+      document: entryDocument("Sample entry, revised"),
+      provenance: PRIVATE,
+      expectedVersion: 2,
+    });
+    await withdraw.execute({ id: ENTRY, expectedVersion: 3 });
+    expect(dataOf(knowledgeEntryWithdrawnV1.routingKey)).toEqual([
+      { entryId: ENTRY, locale: "en", reason: "withdrawn", at: NOON },
     ]);
   });
 

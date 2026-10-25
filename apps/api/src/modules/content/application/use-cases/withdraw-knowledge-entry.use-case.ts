@@ -1,17 +1,19 @@
 import { Injectable } from "@nestjs/common";
 import { Clock } from "../clock.js";
 import { ContentUnitOfWork } from "../content.unit-of-work.js";
-import { knowledgeEntryWithdrawn } from "../content-events.js";
 import {
   type ChangedKnowledgeEntry,
   type KnowledgeEntryTransitionCommand,
   transitionKnowledgeEntry,
+  withdrawalIfLive,
 } from "./knowledge-entry-commands.js";
 
 /**
  * Withdraws an entry: the approved pointer is cleared at once, so its page and its place in the
- * agent's index go (D4); a new revision and an approval bring it back. Writes one
- * `knowledge.entry.withdrawn.v1` (reason `withdrawn`) in the same unit of work (WP-14 D1).
+ * agent's index go (D4); a new revision and an approval bring it back. When the entry had an
+ * approved revision live, writes one `knowledge.entry.withdrawn.v1` (reason `withdrawn`) in the
+ * same unit of work (WP-14 D1); a draft or an entry in review that was never approved had nothing
+ * public, so it writes none. Same rule as delete (`withdrawalIfLive`).
  */
 @Injectable()
 export class WithdrawKnowledgeEntry {
@@ -30,8 +32,7 @@ export class WithdrawKnowledgeEntry {
   async execute(command: KnowledgeEntryTransitionCommand): Promise<ChangedKnowledgeEntry> {
     return transitionKnowledgeEntry(this.uow, command, (entry) => {
       const at = this.clock.now();
-      entry.withdraw(at);
-      return knowledgeEntryWithdrawn(entry.id, "withdrawn", at);
+      return withdrawalIfLive(entry, "withdrawn", at, () => entry.withdraw(at));
     });
   }
 }

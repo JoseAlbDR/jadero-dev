@@ -13,7 +13,7 @@ import {
   knowledgeEntryDocumentSchema,
   knowledgeEntryProvenanceSchema,
 } from "../content-documents.js";
-import type { KnowledgeEntryWithdrawnData } from "../content-events.js";
+import { type KnowledgeEntryWithdrawnData, knowledgeEntryWithdrawn } from "../content-events.js";
 
 // The commands of the knowledge entry use cases. Entries keep their own use cases (owner decision):
 // English only, approved per entry with the checklist (ADR-031), not published per locale.
@@ -124,4 +124,26 @@ export async function transitionKnowledgeEntry(
     if (tombstone) await scope.events.write(knowledgeEntryWithdrawnV1, tombstone);
     return { id: entry.id, version: parsed.expectedVersion + 1 };
   });
+}
+
+/**
+ * The one emission rule of withdraw and delete (WP-14 D1): a `knowledge.entry.withdrawn.v1` goes
+ * out only when the entry had an approved revision live before the change. It reads the approval
+ * pointer, never the state: an approved entry edited again is `draft` with its older approved
+ * revision still live, and a draft or an entry in review that was never approved had nothing public.
+ * @param entry the loaded entry, before the change.
+ * @param reason why it goes: `withdrawn` or `deleted`.
+ * @param at when the change happened.
+ * @param change applies the domain method (`withdraw` or `delete`) to the entry.
+ * @returns the tombstone data when something public disappeared, nothing otherwise.
+ */
+export function withdrawalIfLive(
+  entry: KnowledgeEntry,
+  reason: KnowledgeEntryWithdrawnData["reason"],
+  at: Date,
+  change: () => void,
+): KnowledgeEntryWithdrawnData | undefined {
+  const wasLive = entry.approvedRevisionId !== null;
+  change();
+  return wasLive ? knowledgeEntryWithdrawn(entry.id, reason, at) : undefined;
 }
