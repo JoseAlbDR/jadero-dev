@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 #
 # The web image (WP-7, ADR-049 restating ADR-048 "Images"; ADR-026; docs/learning/wp-7.md D1 to D5).
 # Build from the repository root: docker build -f apps/web/Dockerfile -t jadero-web:dev .
