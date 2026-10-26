@@ -112,8 +112,8 @@ catalogs:
       specifier: 5.0.5
       version: 5.0.5
     amqp-connection-manager:
-      specifier: 5.0.0
-      version: 5.0.0
+      specifier: 5.0.1
+      version: 5.0.1
     amqplib:
       specifier: 0.10.9
       version: 0.10.9
@@ -569,7 +569,7 @@ importers:
         version: 2.11.0(@opentelemetry/api@1.9.1)
       amqp-connection-manager:
         specifier: 'catalog:'
-        version: 5.0.0(amqplib@0.10.9)
+        version: 5.0.1(amqplib@0.10.9)
     devDependencies:
       '@jadero/config':
         specifier: workspace:*
@@ -3331,6 +3331,9 @@ packages:
   '@types/body-parser@1.19.6':
     resolution: {integrity: sha512-HLFeCYgz89uk22N5Qg3dvGvsv46B8GLvKKo1zKG4NybA8U2DiEO3w9lqGg29t/tfLRJpJ6iQxnVw4OnB7MoM9g==}
 
+  '@types/chai-as-promised@8.0.2':
+    resolution: {integrity: sha512-meQ1wDr1K5KRCSvG2lX7n7/5wf70BeptTKst0axGvnN6zqaVpRqegoIbugiAPSqOW9K9aL8gDVrm7a2LXOtn2Q==}
+
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
 
@@ -3534,9 +3537,9 @@ packages:
   ajv@8.20.0:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
 
-  amqp-connection-manager@5.0.0:
-    resolution: {integrity: sha512-88yQzqa5RSBgnLl504XjvCQJ7d+osskdwvg35Lwm1LRbfLjNU9p7SQUMSP82BB7mseiq9tIUPJ3HE3eXQbpjEw==}
-    engines: {node: '>=10.0.0', npm: '>5.0.0'}
+  amqp-connection-manager@5.0.1:
+    resolution: {integrity: sha512-VclpgvjFSiK6D2LDcZfvqLHZ8dC0xbtmuyMRlzKe9PqWRn6uvTelxzKbWBlQzOeM+2MUK6m6f93o4ia/5NGuig==}
+    engines: {node: '>=22.0.0'}
     peerDependencies:
       amqplib: '*'
 
@@ -5471,8 +5474,8 @@ packages:
     resolution: {integrity: sha512-cdGef/drWFoydD1JsMzuFf8100nZl+GT+yacc2bEced5f9Rjk4z+WtFUTBu9PhOi9j/jfmBPu0mMEY4wIdAF8A==}
     engines: {node: '>= 0.6.0'}
 
-  promise-breaker@6.0.0:
-    resolution: {integrity: sha512-BthzO9yTPswGf7etOBiHCVuugs2N01/Q/94dIPls48z2zCmrnDptUUZzfIb+41xq0MnYZ/BzmOd6ikDR4ibNZA==}
+  promise-breaker@7.0.0:
+    resolution: {integrity: sha512-bjYI+g+J8NZEugNDu1+Mp7emS2lyGbDnhJ/6hFqUwnyvfMnpQ+ZhTXQjibRcJg6n/D+YlHRv3mXrkA3Gz0URcg==}
 
   prompts@2.4.2:
     resolution: {integrity: sha512-NxNv/kLguCA7p3jE8oL2aEBsrJWgAakBpgmgK6lpPWV+WuOmY6r2/zbAVnP+T8bQlA0nzHXSJSJW0Hq7ylaD2Q==}
@@ -6079,6 +6082,9 @@ packages:
   typed-array-length@1.0.8:
     resolution: {integrity: sha512-phPGCwqr2+Qo0fwniCE8e4pKnGu/yFb5nD5Y8bf0EEeiI5GklnACYA9GFy/DrAeRrKHXvHn+1SUsOWgJp6RO+g==}
     engines: {node: '>= 0.4'}
+
+  typed-emitter@2.1.0:
+    resolution: {integrity: sha512-g/KzbYKbH5C2vPkaXGu8DJlHrGKHLsM25Zg9WuC9pMGfuvT+X25tZQWo5fK1BjBm8+UrVE9LDCvaY0CQk+fXDA==}
 
   typescript@6.0.3:
     resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
@@ -6872,7 +6878,7 @@ snapshots:
       '@golevelup/nestjs-discovery': 7.1.0(@nestjs/common@12.1.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(@nestjs/core@12.1.2)
       '@nestjs/common': 12.1.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0)
       '@nestjs/core': 12.1.2(@nestjs/common@12.1.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(@nestjs/platform-express@12.1.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      amqp-connection-manager: 5.0.0(amqplib@0.10.9)
+      amqp-connection-manager: 5.0.1(amqplib@0.10.9)
       amqplib: 0.10.9
       lodash: 4.18.1
       reflect-metadata: 0.2.2
@@ -8642,6 +8648,10 @@ snapshots:
       '@types/connect': 3.4.38
       '@types/node': 24.19.2
 
+  '@types/chai-as-promised@8.0.2':
+    dependencies:
+      '@types/chai': 5.2.3
+
   '@types/chai@5.2.3':
     dependencies:
       '@types/deep-eql': 4.0.2
@@ -8866,10 +8876,12 @@ snapshots:
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
-  amqp-connection-manager@5.0.0(amqplib@0.10.9):
+  amqp-connection-manager@5.0.1(amqplib@0.10.9):
     dependencies:
+      '@types/chai-as-promised': 8.0.2
       amqplib: 0.10.9
-      promise-breaker: 6.0.0
+      promise-breaker: 7.0.0
+      typed-emitter: 2.1.0
 
   amqplib@0.10.9:
     dependencies:
@@ -11021,7 +11033,7 @@ snapshots:
 
   process@0.11.10: {}
 
-  promise-breaker@6.0.0: {}
+  promise-breaker@7.0.0: {}
 
   prompts@2.4.2:
     dependencies:
@@ -11904,6 +11916,10 @@ snapshots:
       is-typed-array: 1.1.15
       possible-typed-array-names: 1.1.0
       reflect.getprototypeof: 1.0.10
+
+  typed-emitter@2.1.0:
+    optionalDependencies:
+      rxjs: 7.8.2
 
   typescript@6.0.3: {}
 
