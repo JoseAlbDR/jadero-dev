@@ -1,6 +1,6 @@
 # jadero.dev v2 Plan (archived artifact)
 
-Archive of the review page at artifact id `HJZzB1Bkafy3t22kcUnHVA`, taken on 2026-10-04 from version 1790988459-6bab (ADR-046). The owner used it to mark each of the 76 plan decisions with a choice and a note.
+Archive of the review page, taken on 2026-10-04 from version 1790988459-6bab of artifact id `HJZzB1Bkafy3t22kcUnHVA` (ADR-046). That artifact lives in the owner's old Claude account and opens only from it. Since 2026-10-30 the page is artifact id `5KJyHgJgPv8jUnff24Hfrt` in the new account, published from this folder as it is (version 1, id 1793381084-a99f), private to the owner. The owner used it to mark each of the 76 plan decisions with a choice and a note.
 
 | File | Size | What it is |
 | --- | --- | --- |
@@ -24,4 +24,6 @@ Archive of the review page at artifact id `HJZzB1Bkafy3t22kcUnHVA`, taken on 202
 
 ## Republish
 
-Only on the owner's request. Regenerate `data.json` from `docs/plan/decisions.json` (`cp docs/plan/decisions.json docs/artifacts/v2-plan/data.json`), then publish `index.html` with the Artifact tool, `url` built from the artifact id above and `files` mapping `data.json` to this folder's copy. Do not pass `capabilities`, so the page keeps `db` and `user`, and never write to the `marks` collection: it holds the owner's marks.
+On 2026-10-30 the page was published as a new artifact in the owner's new account (`5KJyHgJgPv8jUnff24Hfrt`) with `capabilities` `db` and `user` and this folder's `data.json` as it is, not regenerated; the main session then re-seeded its `marks` collection from `owner-marks.json`.
+
+From then on, only on the owner's request. Regenerate `data.json` from `docs/plan/decisions.json` (`cp docs/plan/decisions.json docs/artifacts/v2-plan/data.json`), then publish `index.html` with the Artifact tool, `url` built from the new account's artifact id (`5KJyHgJgPv8jUnff24Hfrt`) and `files` mapping `data.json` to this folder's copy. Do not pass `capabilities`, so the page keeps `db` and `user`, and never write to the `marks` collection: it holds the owner's marks.
