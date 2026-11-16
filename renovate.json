@@ -5,7 +5,9 @@
   "timezone": "Etc/UTC",
   "minimumReleaseAge": "3 days",
   "internalChecksFilter": "strict",
-  "dependencyDashboard": true,
+  "dependencyDashboard": {
+    "enabled": true
+  },
   "automerge": false,
   "semanticCommits": "enabled",
   "semanticCommitScope": "deps",
