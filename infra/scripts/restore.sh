@@ -38,7 +38,7 @@ export LC_ALL=C
 
 # The ops Postgres image of infra/compose/compose.ops.yml, so the restore runs the same server
 # and extensions; scripts/backup-scripts.test.mjs keeps the two equal.
-readonly POSTGRES_IMAGE=pgvector/pgvector:0.8.7-pg18-trixie@sha256:9d9c930220cb9bf2f956d10a8f909cf9973d9672ca0278aef2c1e6facccad2e0
+readonly POSTGRES_IMAGE=pgvector/pgvector:0.8.7-pg18-trixie@sha256:ab49524d18df7200b74ac9a475e1db6297fc1eb57da4c214c63d10ecc4b754fa
 
 # The tables whose data backup.sh never saves (ADR-017); their counts are shown, never compared.
 readonly EXCLUDED_TABLE_DATA=(checkpoints.checkpoints checkpoints.checkpoint_blobs checkpoints.checkpoint_writes)
