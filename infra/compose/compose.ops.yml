@@ -149,7 +149,7 @@ services:
   uptime-kuma:
     <<: *base
     # The rootless build: runs as the image's node user (uid 1000); data in SQLite in its volume.
-    image: louislam/uptime-kuma:2.5.6-slim-rootless@sha256:6eb4e96a7cbdb8a5d6779aa26dce2cb97dcea65b486856b9b2280f73a1d0adf4
+    image: louislam/uptime-kuma:2.5.12-slim-rootless@sha256:212d2131952eded9b2508620455f15f5c2c85c262aafd23b97a7447c53e1d1bc
     cap_drop: [ALL]
     read_only: true
     tmpfs: ["/tmp:size=16m"]
