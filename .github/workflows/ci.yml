@@ -47,7 +47,7 @@ jobs:
       # Node from .nvmrc and pnpm from packageManager. Its store cache stays off (the default):
       # the steps below restore it on every run and save it on main only.
       - name: Set up pnpm and Node
-        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
         with:
           node-version-file: .nvmrc
           cache: false
@@ -144,7 +144,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up pnpm and Node
-        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
         with:
           node-version-file: .nvmrc
           cache: false
@@ -209,7 +209,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up pnpm and Node
-        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
         with:
           node-version-file: .nvmrc
           cache: false
@@ -303,7 +303,7 @@ jobs:
       # Turborepo is only needed to select the affected services on a pull request.
       - name: Set up pnpm and Node
         if: github.event_name == 'pull_request'
-        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
         with:
           node-version-file: .nvmrc
           cache: false
